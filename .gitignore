@@ -25,7 +25,22 @@ gnulib-local
 gnulib
 ChangeLog
 
-# Generated C files.
+# Generated files.
+INSTALL
+config.h.in
+example-vms/structured/structured-parser.c
+example-vms/structured/structured-parser.h
+example-vms/structured/structured-scanner.c
+example-vms/structured/structured-scanner.h
+example-vms/structured/structuredvm-vm-main.c
+example-vms/structured/structuredvm-vm.h
+example-vms/structured/structuredvm-vm1.c
+example-vms/structured/structuredvm-vm2.c
+example-vms/uninspired/uninspired-vm-main.c
+example-vms/uninspired/uninspired-vm.h
+example-vms/uninspired/uninspired-vm1.c
+example-vms/uninspired/uninspired-vm2.c
+scripts/jitter-config.in
 jitter/jitter-parser.c
 jitter/jitter-parser.h
 jitter/jitter-scanner.c
