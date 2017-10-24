@@ -1,12 +1,6 @@
 Copyright (C) 2016, 2017 Luca Saiu
 Written by Luca Saiu
 
-build-aux/git-version-gen and bootstrap.conf come from GNUlib, for
-which the following copyright holds:
-  Copyright (C) 2006-2017 Free Software Foundation, Inc.
-Again it is is distributed under the GNU General Public License
-version 3 or later, like this package.
-
 Jitter is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -19,6 +13,18 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+bootstrap and bootstrap.conf come from GNUlib, for
+which the following copyright holds:
+  Copyright (C) 2006-2017 Free Software Foundation, Inc.
+Those files are distributed under the GNU General Public License
+version 3 or later, like this package.
+
+Other files from the GNU Autoconf, Automake, Gnulib and Libtool are not
+maintained in the Jitter repository, but are automatically copied into
+source tarballs.  They are all distributed under licenses compatible
+with Jitter's.
 
 
 Authors
