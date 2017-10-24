@@ -45,9 +45,9 @@ AM_INIT_AUTOMAKE
 # Check for the C compiler and its features.
 ################################################################
 
-# We need a recent C compiler.
+# We need a C compiler.
 AC_PROG_CC
-AC_PROG_CC_C99
+
 
 # Check for Jitter.
 ################################################################
