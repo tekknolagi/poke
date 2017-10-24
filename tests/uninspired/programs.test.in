@@ -1,0 +1,43 @@
+#!@SHELL@
+# Jitter testsuite: VM programs.  This is -*- sh -*-, to be preprocessed.
+# Copyright (C) 2017 Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Include my little testsuite library.  Among the rest this sourcing enters the
+# directory containing *this* script (not the utility script).
+. "@abs_top_builddir@/tests/utility"
+
+# Print a range for test case indices.
+echo 1..16
+
+# Test a simple program decrementing a register up to zero; the first version
+# uses only the %r0 register, which should be fast; the second uses %r100,
+# which should be slow.  These contain no unconditional jumps, and always
+# execute at least one iteration.
+jitter_run_uninspired_case_all_dispatches "count-down" "0" ""
+jitter_run_uninspired_case_all_dispatches "count-down-slow-register" "0" ""
+
+# Similar to the previous cases, but using two registers.  This tests a simple
+# program decrementing a register up to zero while incrementing another from
+# zero; the first version uses registers %r0 and %r1, which should be fast; the
+# second uses %r100 and %r101, which should be slow.
+# These check for the termination condition at the end of each iteration, and
+# contain one conditional and one unconditional jump.
+jitter_run_uninspired_case_all_dispatches "count-up-down" "12345" ""
+jitter_run_uninspired_case_all_dispatches "count-up-down-slow-registers" "12345" ""

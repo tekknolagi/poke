@@ -1,0 +1,42 @@
+# This is an -*- asm -*- file, so to speak.
+
+# A simple input program to be parsed.
+
+# Copyright (C) 2016 Luca Saiu
+# Updated in 2017 by Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+        mov 3333333333, %r0
+        mov 1, %r1
+
+        b $check
+
+$r0-bigger:
+        sub %r0, %r1, %r0
+$check:
+        bgt %r0, %r1, $r0-bigger
+        beq %r0, %r1, $done
+
+$r0-smaller:
+        sub %r1, %r0, %r1
+        blt %r0, %r1, $r0-smaller
+        bne %r0, %r1, $r0-bigger
+
+$done:
+        printfixnum %r1

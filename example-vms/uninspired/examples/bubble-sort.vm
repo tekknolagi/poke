@@ -1,0 +1,89 @@
+# This is an -*- asm -*- file, so to speak.
+
+# A simple bubble-sort benchmark.
+
+# Copyright (C) 2016 Luca Saiu
+# Updated in 2017 by Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Vector in %r0
+# Vector size in %r5 (in words)
+        mov 100000, %r5
+
+# Initialize the vector, making it sorted in decreasing order.
+        mallocwords %r5, %r0
+        mov 0, %r2
+        sub %r5, 1, %r3
+$initializationloop:
+        beq %r2, %r5, $initializationend
+        storewithwordoffset %r3, %r0, %r2
+        add %r2, 1, %r2
+        sub %r3, 1, %r3
+        b   $initializationloop
+$initializationend:
+        #b $printvector
+
+# Word index starting from whose point (included) the arrays is sorted %r1
+# Scratch index %r2
+# Scratch element %r3
+# Scratch element %r4
+
+# The vector is not sorted.
+        sub %r5, 1, %r1
+
+# Sort the vector.
+$sortouterloop:
+        beq %r1, 0, $sortend
+        # Move the maximum element in [0, %r1) to the (%r1 - 1)-th cell.
+        mov 0, %r2
+$sortinnerloop:
+        bge %r2, %r1, $sortinnerloopend
+        loadwithwordoffset %r0, %r2, %r3
+        add %r2, 1, %r2
+        loadwithwordoffset %r0, %r2, %r4
+        ble %r3, %r4, $sortinnerloop
+        # Swap the elements at (%r2 - 1) and %r2.
+        # FIXME: I could do this much better with one more register.  An elegant
+        # solution would be keeping a register hodling %r0 - 1 $
+        storewithwordoffset %r3, %r0, %r2
+        sub %r2, 1, %r2
+        storewithwordoffset %r4, %r0, %r2
+        add %r2, 1, %r2
+        b   $sortinnerloop
+$sortinnerloopend:
+        sub %r1, 1, %r1
+        b   $sortouterloop
+$sortend:
+
+        # Skip the printing part, for benchmarking.
+        b $end
+
+# Print the vector content, now sorted.
+$printvector:
+        mov                0, %r2
+$printvectorloop:
+        beq                %r2, %r5, $end
+        loadwithwordoffset %r0, %r2, %r1
+        printfixnum        %r1
+        add                %r2, 1, %r2
+        b                  $printvectorloop
+
+# Done.
+$end:
+        nop

@@ -1,0 +1,59 @@
+# This is an -*- asm -*- file, so to speak.
+# Square root approximation by Newton's method, useful as a floating-point test.
+
+# Copyright (C) 2017 Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# y_i = y_{i-1} - (y_{i-1}^2 - x) / (2 y_{i-1})
+# y_i converges to sqrt(x).
+
+# See for example
+# https://en.wikipedia.org/wiki/Newton's_method#Square_root_of_a_number
+
+# %r0 holds an iteration counter.
+# %f0 holds the parameter x
+# %f1 holds the current best approximation, y_{i-1}.  At the end of
+#     each iteration %f1 is replaced with y_i.
+# %f2 and %f3 are temporaries.
+
+        # Initialization
+        mov 1000, %r0      # Set iteration counter
+        fset 2, %f0        # Set parameter
+        fset 1, %f1        # Set initial guess
+$loop:
+        # %f2 = y{i-1}^2 - x
+        fmul %f1, %f1, %f2
+	fsub %f2, %f0, %f2
+
+        # %f3 = 2 y{i-1}
+        fadd %f1, %f1, %f3
+
+        # %f2 = (y{i-1}^2 - x) / (2 y{i-1})
+        fdiv %f2, %f3, %f2
+
+        # y_i := y{i-1} - (y{i-1}^2 - x) / (2 y{i-1})
+        fsub %f1, %f2, %f1
+
+        # Decrement and loop if we're not done.
+        sub %r0, 1, %r0
+        bnz %r0, $loop
+
+        # End of the loop.
+        # Print the last approximation.
+        fprint %f1

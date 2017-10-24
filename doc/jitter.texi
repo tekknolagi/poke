@@ -1,0 +1,3279 @@
+\input texinfo.tex @c This is -*- Texinfo -*-.
+
+@c This file is part of the Jitter manual.
+@c Copyright (C) 2017  Luca Saiu
+@c Written by Luca Saiu
+
+@c Permission is granted to copy, distribute and/or modify this
+@c document under the terms of the GNU Free Documentation License,
+@c Version 1.3 or any later version published by the Free Software
+@c Foundation; with no Invariant Sections, no Front-Cover Texts, and
+@c no Back-Cover Texts.  A copy of the license is included in the
+@c section entitled ``GNU Free Documentation License''.
+
+
+@c File name and title
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@setfilename jitter.info
+@include version.texi
+@settitle Jitter @value{VERSION}
+
+
+@c Global settings
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@syncodeindex pg cp
+@documentencoding UTF-8
+
+@ignore
+@fonttextsize 10
+@afivepaper
+@smallbook
+@c @pagesizes 200mm,100mm
+@c @cropmarks
+@end ignore
+
+@c This is for production of a nice manual; I might want to enable it
+@c when the actual manual is written.  The default (start chapters on
+@c pages of any parity) looks less nice.
+@c @setchapternewpage odd
+
+@c This come in handy for private testing printouts.
+@c @setchapternewpage off
+
+
+@c Information for the Info directory
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@dircategory Programming
+@direntry
+* The Jitter manual: (jitter).        Generating efficient language virtual machines.
+* jitter: (jitter).                   Invoking @command{jitter}.
+* @command{jitter-config}: (jitter).  Invoking @command{jitter-config}.
+@end direntry
+
+
+@c Macros
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@iftex
+@macro epsilonsubscript{subscript}
+@inlineraw{tex,$@varepsilon_{\subscript\}$}@inlineraw{tex,{}}
+@end macro
+@end iftex
+
+@ifnottex
+@ifhtml
+@macro epsilonsubscript{subscript}
+@inlineraw{html,&epsilon;<sub>\subscript\</sub>}
+@end macro
+@end ifhtml
+@ifnothtml
+@macro epsilonsubscript{subscript}
+epsilon\subscript\
+@end macro
+@end ifnothtml
+@end ifnottex
+
+@macro epsilonzero{}
+@epsilonsubscript{0}
+@end macro
+
+@macro epsilonone{}
+@epsilonsubscript{1}
+@end macro
+
+@rmacro fixme{text}
+@strong{[@emph{FIXME}: \text\]}
+@end rmacro
+
+@rmacro rephrase{text}
+@strong{[@emph{REPHRASE}: \text\]}
+@end rmacro
+
+
+@c Copying conditions
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@copying
+This is the manual for Jitter
+@c (edition @value{EDITION} for
+(version @value{VERSION},
+last updated on @value{UPDATED}), an efficient virtual machine generator.
+
+Copyright @copyright{} 2017  Luca Saiu.  Written by Luca Saiu.
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation;
+@c FIXME[licensetext]: enable this if I decide to embed the license in the text.
+@c with the Invariant Sections being ``GNU General Public License'' and
+@c ``GNU Free Documentation License'',
+with no Front-Cover texts and with the Back-Cover text being
+``@emph{You have freedom to copy and modify this manual, like GNU
+software.}''.
+
+@c FIXME[licensetext]: enable this if I decide to embed the license in the text.
+@c A copy of the license is included in the section entitled ``GNU Free
+@c Documentation License''.
+A copy of the GNU Free Documentation License is available along with the
+software source code as @file{doc/COPYING.DOC}, and also on the web at
+@url{https://www.gnu.org/licenses/fdl.html}.
+@end quotation
+
+@c @c FIXME[contactingme] Isn't this silly?  My contact information is on the cover.
+@c The author's personal web site at @url{http://ageinghacker.net} contains
+@c his contact information.
+@end copying
+
+
+@c Title page
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@titlepage
+@title Jitter
+@subtitle for version @value{VERSION}, updated in @value{UPDATED-MONTH}
+@c @author Luca Saiu (@email{positron@@gnu.org}, @url{http://ageinghacker.net})
+@c @author Luca Saiu (@url{http://ageinghacker.net})
+@c @author Luca Saiu (@email{positron@@gnu.org})
+@author Luca Saiu
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+
+@c Contents (only actually used for the hardcopy version)
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@contents
+
+
+@c First page for the Info version, with the main menu
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@ifnottex
+@node Top
+@top Jitter
+
+@c An @insertcopying within the Top node is not explicitly mandated by
+@c the GNU Standards, nor even suggested in the Texinfo documentation;
+@c however without such a line the Info and HTML versions don't bear any
+@c copying information near the beginning.  Notice that the very short
+@c introduction about what the software is comes from @copying.
+@insertcopying
+@end ifnottex
+
+@menu
+@c What this software is and how it came to be
+* Introduction::            What Jitter is and why it is useful.
+@c Tutorial documentation
+* Working with the Jitter sources::  How to configure, build and test Jitter, natively or cross-compiling.
+* Tutorial::                A simple but realistic example explained in detail.
+@c Reference documentation
+* Invoking @command{jitter}:: Generating C files with Jitter from the command line.
+* Compiling Jittery programs:: How to build executable from VMs and your code.
+* Writing VM specifications:: How to describe your virtual machine's behavior.
+* Standalone VMs::          Using a generated VM as a self-contained program.
+* C API::                   Calling C code from your VM and your VM from C.
+* Internals::               How the generated virtual machines work.
+@c Licenses
+@c * GNU General Public License::     How you can share and modify the software.
+@c * GNU Free Documentation License:: How you can share and modify this manual.
+* This is free software::   How you can share and change the software and this manual.
+@c Bibliography
+* Bibliography::            Interesting scientific articles about efficient VMs.
+@c Indices
+* Index::                   The key words of this manual, with links.
+@c Temporary stuff, for myself
+* Stuff still to be written:: What will be in this manual but is not fully written yet.
+* Stuff still to be implemented:: What will exist in the implementation in the future.
+@end menu
+
+
+@c Introduction
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Introduction
+@unnumbered Introduction
+
+@c The introduction is written in the first person singular, and uses
+@c a more informal tone than the rest.  The clear fracture in style
+@c from the introduction to the first chapter is intentional, meant to
+@c convey first a more personal, vaguely sentimental touch, and then
+@c the reliable terseness of comprehensive documentation.  This
+@c distinction should be kept.
+
+@cindex specification
+@cindex portability
+@cindex high-level
+@cindex specification
+@cindex overhead, dispatching (zero)
+@cindex dispatching overhead (zero)
+@cindex zero, dispatching overhead
+Jitter is a software automatically building a portable, very
+efficient language virtual machine with performance close to
+native code, starting from a relatively high-level
+@dfn{specification} provided by the user.
+@cindex register, VM
+@cindex stack, VM
+@cindex runtime data structure, state
+@cindex state, runtime data structure
+@cindex data structure (state)
+The VM state may use registers, stacks, a combination of both or any
+runtime structure defined by user code; whenever possible the generator
+attempts to map such state data structures into hardware machine
+registers.
+@cindex C
+@cindex API
+The specification contains some C code associated to every VM
+instruction; the generator takes care of combining such small snippets
+into a whole body of code with low---often zero---dispatching and
+branching overhead.
+The generated code includes a simple C API to dynamically emit and
+execute VM code, and a self-contained driver program for running VM
+programs from text files.
+
+@cindex dispatch
+@cindex assembly code
+@cindex VM independence
+@cindex architecture-specific assembly
+@cindex conditional compilation
+The generated C code is heavily conditionalized and can be configured
+to run using different dispatching techniques, of varying
+sophistication; the most efficient dispatching techniques rely on some
+architecture-specific---but @emph{not} VM-specific---assembly support
+already included in this software; every dispatching model but one
+also relies on GNU C extensions.
+@cindex @code{switch} dispatching
+@cindex ANSI C
+@cindex C, ANSI
+As a fallback case, in the interest of portability, one dispatching
+technique is provided, @dfn{@code{switch} dispatching}, requiring nothing
+more than standard C.
+@*
+Configuration parameters are transparent with respect to the VM
+semantics and even the C API: a VM program will always behave in the
+same way independently from the dispatching technique and other
+configuration parameters, the only observable difference being
+execution speed.
+
+@cindex JIT
+As long as they are willing to respect the license most free software
+maintainers whose projects include an interpreter of some kind should
+seriously consider replacing their execution engine with a VM
+generated by this software.
+@c FIXME: first person singular.  Say ``jittery'' here?
+@cindex Jittery
+A @dfn{Jittery VM} will easily surpass any interpreter in performance
+and should even be competitive against JITs, with the sources being
+much easier to maintain and portability coming for free.
+
+@menu
+* Audience::                           Who this software was written for.
+* History::                            How Jitter came to be.
+* About language virtual machines::    Language VMs are not always the right idea.
+* Software and hardware requirements:: Some systems are better than others for VMs.
+* Design goals::                       What Jitter is trying to achieve.
+* Comparison with other systems::      Jitter compared to what other people are doing.
+* License::                            We should use the GNU GPL more.
+* Contacting the author::              You can discuss with me about Jitter.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Audience
+@section Audience
+@cindex audience
+@cindex assembly code
+@cindex C
+@cindex programming, low-level
+@cindex low-level programming
+Jitter is designed to generate production-quality language virtual
+machines, with a strong emphasis on performance.  Despite some effort
+to keep the discussion accessible I cannot in good conscience present
+the software or its documentation as suitable to beginning
+programmers.  Taking full advantage of Jitter requires proficiency
+with the C language, at least some understanding of assembly and
+an intuitive idea
+@cindex micro-architecture
+about the performance model of native code running on modern CPU
+micro-architectures, particularly with respect to
+@cindex latency, instruction
+@cindex instruction latency
+@cindex bandwidth, instruction
+@cindex instruction bandwidth
+@cindex out-of-order
+@cindex branch target prediction
+@cindex prediction, branch target
+@cindex target, branch prediction
+@cindex cache
+instruction bandwidth and latency, out-of-order execution, branch
+target prediction and cache effects.
+
+@cindex portability
+@cindex VMs for portability
+@cindex assembly code
+That said, everybody is welcome to try.
+With the caveat in @ref{About language virtual machines},
+beginning compiler writers
+might use a generated virtual machine instead of native
+assembly as a portability layer, even without mastering every
+intricacy of the implementation.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node History
+@section History
+@cindex history
+@cindex epsilon
+@cindex GNU epsilon
+@cindex @epsilonzero{}
+GNU epsilon (see @ref{Top,,, epsilon, The GNU epsilon Manual}) is a
+programming language and my own main project, still to be officially
+released as ``stable'', built on an extremely simple core language
+called @epsilonzero{} and augmented with powerful syntactic
+abstraction.  I have been working on epsilon for many years, rewriting
+it from scratch at least five times in a strenuous effort to make it
+``right''.  Even if many details of the implementation can still use
+more than some fine tuning, I believe that at least its general
+architecture is now correct.
+
+@cindex @epsilonzero{}
+@cindex standard C
+@cindex ANSI C
+@cindex C, standard
+@cindex C, GNU
+@cindex GNU C
+epsilon is a general-purpose language, combining very low-level
+control (ideally at a level finer than GNU C; certainly finer than
+standard C) with high-level features allowing the user to express and
+combine complex syntactic forms.  Ultimately every piece of epsilon
+code, no matter how complicated, gets rewritten into @epsilonzero{}
+before execution or compilation.  Interpreting @epsilonzero{}
+is easy, but very inefficient.
+
+@cindex @epsilonzero{}
+@cindex self-modification
+Even worse epsilon is written in itself: execution begins from a crude
+``bootstrap'' @epsilonzero{} interpreter running through the
+definitions of every high-level form, as macros and expression
+rewrites, which eventually make the language usable by humans.  This
+idea of incremental definition relies on an epsilon program modifying
+itself in the style currently popular in the ``dynamic language''
+community: global procedure, macro and variable definitions are added or
+replaced @emph{at run time}, in a way challenging the traditional idea
+of compilation.  On the other hand, and differently from what happens with
+the fashionable ``scripting languages'', epsilon programs usually
+reach a point in their execution after which they stop self-modifying
+and become suitable for traditional, efficient compilation to machine
+language.  This final compilation of non-self-modifying programs after
+they are automatically rewritten into @epsilonzero{} is,
+unsurprisingly, easier than in other languages; but executing a
+program while still in its ``dynamic'' form has always been
+frustratingly slow.
+@cindex embarrassing pause (interpretation, not GC)
+@cindex pause, embarrassing (interpretation, not GC)
+@cindex performance tuning, epsilon
+@cindex tuning, epsilon
+@cindex epsilon
+@cindex GNU epsilon
+Bootstrapping takes minutes even on a fast machine
+and interactive use, if not properly painful, lacks the expected
+smooth @emph{feel}, the occasional ``embarrassing pause'' at the end
+of a complex macro invokation reminding the user every time that the
+implementation has not been tuned quite in the right way.
+@ignore
+FIXME: this specific ergonomy problem may lie in the uneven time
+distribution rather than in the amount of delays: uniformly slow
+interactive language implementations, such as CPython, @emph{feel}
+better.
+@end ignore
+
+@cindex direct threading
+@cindex AST
+@cindex abstract syntax tree
+@cindex git
+@cindex stack
+Attempting to accelerate the @epsilonzero{} interpretation I quickly
+put together a stack-based direct-threaded interpreter, with the
+intention of using it in place of the current abstract-syntax-tree
+interpreter.  That implementation still lives on a git branch but I
+will not integrate it in the mainline: at only 4-6x its speedup was
+disappointing.
+
+@cindex dependency, from epsilon (none)
+@cindex patch-in
+@cindex specialization
+In order to experiment with fast interpreters I started a new
+threaded-code prototype independent from epsilon.  Very soon I had the
+idea of @dfn{specialization} (@pxref{specialization}), one of the
+few true innovations in this project along with patch-ins
+(@pxref{patch-ins}), despite its
+simplicity; the results were promising, but again the simple
+combination of direct threading and specialization was not enough to
+achieve the speedup I was expecting.  I found myself reading and
+re-reading scientific papers (@pxref{Bibliography}), and adding more
+sophisticated ideas to my prototype to the point where it is now
+debatable whether the software still counts as an @emph{interpreter}
+generator.
+@*
+Some ideas definitely belong more in JITs than in threaded
+interpreters, and in fact the most advanced dispatching model
+supported by Jitter requires no threaded code to be processed at run time,
+nor indeed any data structure representing a program other than an array
+of native machine instructions in executable memory---``interpreting''
+a program means jumping to its first native instruction, from where
+execution continues.
+@c FIXME: justify the name here?
+
+Soon enough what should I had planned as just a fun hack for a few
+weekends turned into something ambitious and useful for others,
+independent from epsilon which will now require it, but @emph{without
+being required itself} for compiling or running Jitter.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node About language virtual machines
+@section About language virtual machines
+@cindex managed (not)
+@cindex unmanaged
+@cindex fashion
+@cindex irrationality
+@cindex cultural inertia
+@cindex inertia, cultural
+Language virtual machines are fashionable: people like to compile to
+VMs for portability, and to reuse the same VM as a target for several
+different languages, forcing VM specifications on one hand to maintain
+backward compatibility, and on the other to provide some level of
+generality.
+
+The VM-runtime design nowadays has gotten so pervasive to be almost
+the expected default, to the point that the word ``unmanaged'' was
+coined to describe a language runtime @emph{not} depending on a
+virtual machine, as if directly generating physical machine
+instructions were some kind of oddity requiring justification.
+
+I disapprove of this trend.
+
+@menu
+* When not to use VMs::  For portability, computers as thin clients, fashion.
+* When to use VMs::      Truly dynamic code, doing better than interpreters.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node When not to use VMs
+@subsection When @emph{not} to use VMs
+
+@cindex portability
+@cindex porting
+@cindex VMs for portability
+First of all the idea of compiling to a VM for portability relies on
+the presence of some runtime system, usually very large and either
+written in a low-level language, therefore simply shifting the
+portability problem, or mostly built on the VM language itself making
+programs less efficient than it would be otherwise possible,
+particularly at start up.
+@*
+@cindex portability
+@cindex porting
+@cindex VMs for portability
+@cindex JIT
+Moreover most languages need some form of compilation to machine code
+to attain an acceptable level of performance.
+JITs are now a part
+of all language VMs aiming at serious performance, but again they are
+not trivial to port, and nowadays most JITs will target just the one or
+two most popular hardware architectures.
+@*
+@cindex portability
+@cindex rationalization
+@cindex C
+@cindex Autoconf
+@cindex Automake
+@cindex GNU Autoconf
+I have grown skeptical of claims about language VMs as a solution for
+portability: if that were really the main concern then simply using C
+plus some reasonable tool for handling configurations (GNU Autoconf
+comes to mind) would provide for even better portability, and without
+compromises on performance.
+
+@cindex JVM
+@cindex bytecode verification
+@cindex verification, bytecode
+@cindex safety
+@cindex sandboxing
+A few VMs offer also features unrelated to portability, particularly
+sandboxing or some startup safety checking of programs.  Ideas such as
+the JVM's ``bytecode verification'', while scientifically interesting,
+are a mismatch for most case uses and should never get in the way of
+running compiled code efficiently.
+
+@cindex coupling (lack thereof)
+@cindex decoupling
+@cindex API, public (VMs)
+@cindex VM as a stable API
+@cindex back-compatibility
+@cindex stable, VM specification
+@cindex JVM
+Exposing a VM as a software API decoupled from a compiler is a source
+of inefficiency when independent projects with different needs
+target the same VM, or even when a single compiler needs to evolve
+but at the same time needs to retain compatibility with a older
+versions of a VM satisfying a given specification; the impossibility
+of implementing efficient method tail calls in the JVM depends on such
+a case of excessive decoupling---and in some measure, I dare to say,
+on a community of programmers in general too conditioned by cultural
+inertia and irrational fashions to appreciate the benefit of a clean
+break.
+@*
+@cindex Java
+@cindex JVM
+@cindex mismatch, performance profile
+@cindex fitness (non-), performance profile
+@cindex performance profile mismatch
+Speaking of Java, the entire performance profile of the JVM stands out
+as a @emph{spectacularly} poor fit for server-side web programming, the most
+popular use case for the language: processes are spawned often, live
+for a short time, compute very little and only consist in running local,
+statically compiled bytecode on one physical machine with a known architecture;
+bytecode is hardly ever exchanged over the network or generated at run time.
+
+@cindex Java
+@cindex JavaScript
+@cindex JIT
+If Java is one case of incorrect application of VMs its example is
+not the only one, nor the worst.  Soon after web browsers started to
+include good JITs for JavaScript---an accomplishment in itself for
+such a difficult language to execute efficiently---people started to use
+JavaScript as a compilation target for @emph{lower}-level languages,
+usually restricting the generated
+code to the JavaScript subset that current web browsers can JIT-compile
+better.  What would have been an entertaining hack turned
+into a grotesque perversion of huge machine-generated code with mediocre
+performance, and very troubling political implications:
+@cindex Nineteen eighty-four
+@cindex 1984
+@cindex Orwell, George
+@cindex George Orwell
+@cindex surveillance
+@cindex privacy
+@cindex network
+@cindex political implications of web applications
+@cindex web applications, political implications
+@cindex bloat
+@cindex abstraction inversion
+distributing
+important software as generated JavaScript code to run on a web browser
+over the network prevents its users from easily changing the source,
+introduces gratuitous dependencies on the network when none would be
+needed, and potentially exposes user data to the server opening the
+concrete possibility of Orwellian surveillance nightmares.
+@*
+@cindex C
+@cindex Doom
+@cindex JavaScript
+@cindex 486
+@cindex i486
+@cindex 1993
+On the technical side some of these projects are very impressive: I
+have seen the old Doom game run on a web browser at amazing speed, the
+frame rate on my new computer almost approaching what my 486 could
+do in 1993.
+@cindex C
+@cindex JavaScript
+@cindex overhead
+@cindex multiplication, of overheads
+This is not sarcasm: the technical achievement @emph{is} impressive; the
+route from hand-written C code machine-translated to JavaScript, then after
+the network transfer loaded onto my client, turned into some
+intermediate representation and from there to native machine language
+running in a sandboxed environment, is not trivial by any mean.
+Considering that by stacking abstraction layers one on top of
+another their overheads @emph{multiply}, this result is good;
+and I am sure that there exist problem instances where this composed
+multiple machine-translation works even move efficiently.
+Whether such an organization makes sense, of course, is an entirely
+different matter.
+
+@cindex C
+@cindex Lua
+@cindex JavaScript
+This is not all.  I have seen @emph{interpreters} for high-level
+scripting languages, originally written in C and already quite
+inefficient when natively compiled, machine-translated into JavaScript
+to be run over a JIT in a client web browser, in order to interpret
+script code downloaded from the web.
+The performance impact is @emph{not} invisible, and the supposed advantage
+questionable at best:
+being able to run page scripts in some other (very similar) language rather
+than JavaScript, or running programs without having an interpreter
+installed---because of course in 2017 if you
+install software and just @emph{compute} on your computer you are no longer hip.
+@c ,
+@c @c Saint Steve Jobs will come back to spank you
+@c or something.
+
+@cindex craziness
+This craziness must stop.
+
+@cindex social conscience
+@cindex dumbing down
+@cindex empowering users
+@cindex fashion
+@cindex bad practice
+@cindex abstraction layer, redundancy of
+@cindex redundant abstraction layer
+As competent programmers with a social conscience we must strive to
+resist and reverse the dumbing down of software, to empower users
+again, and make software architectures more rational and, where possible,
+simpler; I believe that this entails, as a first step, moving
+applications away from the web and back to local computers directly
+controlled by the users.
+Redundant abstraction layers must all be stripped away, mercilessly.
+@*
+@cindex bad practice
+Without the illusion of changing irrational minds with rational
+arguments we should keep proposing alternative solutions; performance
+can be one advantage to present, as long as we use VMs
+@emph{sensibly}.  The current popularity of laughably bad practices in
+the field might make our job easier and unfold into a competitive
+advantage for our side.
+
+@ignore
+about the web: sum up the (very sensible, non-technical) objection by
+RMS to my proposals of destroying it all for technical reasons.
+@end ignore
+
+@ignore
+End users expect more and more to deal only with the web, relying on
+remote services to perform even trivial computations without even the
+thought of using their own computer to compute.  The interfaces they
+are exposed to are all too weak, and allow hardly any composition and
+no abstraction: the idea of a Unix pipe is difficult to visualize for
+somebody only accustomed to web interfaces; a shell function feels
+hopelessly abstract, like something only useful to experts occupied in
+weird tasks well out of the domain of ordinary people.
+@end ignore
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node When to use VMs
+@subsection When to use VMs
+
+@cindex native machine language
+@cindex machine language
+@cindex performance
+Even very complex programs run best when they are encoded in the
+language spoken by the hardware, which is native machine language.
+Only in favorable cases and with enormous effort some VMs may approach
+the same level of performance.
+@*
+Providing some form of JIT compilation is nowadays considered more
+or less a requirement for a language VM; still, supporting a JIT is
+necessary but almost certainly not sufficient to rival native performance.
+
+@cindex alternative to compilers
+@cindex alternative to interpreters
+@cindex regular expression
+@cindex self-modifying code
+The correct way of employing language VMs is not as an alternative to
+compilers, but @emph{as an alternative to interpreters}.  A few cases
+come to mind: programs which are subject to modify themselves often at
+run time, and lightweight utilities where code generation is necessary
+but complex compiler optimizations are too costly to pay off with
+respect to the program expected run time---regular expression matchers
+being an example.
+A program should employ a VM only for the dynamically generated part of
+the code, compiling the rest to machine code ahead of time.  This
+yields better performance and allows access to better tools for
+developing and debugging the bulk of the program.
+
+@cindex alternative to compilers
+@cindex second-tier performance
+@cindex ML implementation performance
+@cindex Lisp implementation performance
+@cindex assembly code
+@cindex architecture-specific assembly
+Adopting a VM as a compiler target instead of a full-fledged assembly
+backend might be a practical stopgap solution in some circumstances, but
+it is unrealistic in such cases to expect spectacular results:
+compiling to a fast VM will yield, in the best case, second-tier
+performance in the range of good ML or Lisp implementations---Usually
+simple, sensible systems written in a competent way, but without any
+concrete ambition of competing in speed with low-level designs.
+
+@cindex untyped
+@cindex dynamically typed
+@cindex tuning, of VMs
+@cindex variable name
+@cindex register
+@cindex stack slot
+@cindex static chain
+@cindex register window
+@cindex SPARC
+The details of course will depend on the VM language, and the established
+practice we are competing against.
+An @emph{untyped} VM will probably beat a more sophisticated system for a
+dynamically typed language where each primitive operation requires
+runtime type checks.  Intelligent VM designs will win against naïve
+versions: if any check can be moved from run time to VM code
+generation the resulting speedup is almost always worth the trouble:
+translating variable names into register numbers, stack slot indices
+or static chain distances is a good idea, and simpler systems performing
+run-time searches with variable names will be easily outperformed.
+@ignore
+FIXME: Compute some numbers and compare against pypy and luajit
+@end ignore
+@fixme{People just don't care, not playing the same game: scripting languages.
+We can beat even their JITs if we use untyped runtimes.}
+@fixme{is the intent of what I'm saying clear?  I want to say that
+naïf systems will be beaten by less naïf systems, but the opponents'
+naïveté should not be an excuse for making our systems inefficient.
+No, I don't think it's clear: I should say this.}
+
+
+@cindex decoupling
+As stated above in my discussion of decoupling it is important
+that a VM be specifically designed for the system it supports, to execute its
+code in the most efficient possible way; for this reason the VM
+language should ideally not be a specified public API declared stable,
+but should instead be subject to change in any future version of the
+software, to allow for performance tuning.  Many details will depend on the
+language being interpreted, and the performance tradeoff of some
+choices may not be obvious; for example parameter passing in a VM can
+employ registers, stacks, or SPARC-style register windows; it is
+entirely reasonable that a software author may want to switch from one
+solution to another in a new version, or even as a configuration-time
+decision based on hardware machine features.
+
+@ignore
+Even if the feature would be easy to add, right now Jitter does not
+support any efficient format to save and load VM programs: the user is
+supposed to generate VM programs programmatically, the exact VM
+instruction set being subject to change from version to version.
+Facilities for parsing, printing to text and disassembling VM programs
+@emph{are} provided, but more as debugging aids than to support a VM
+as a ``stable'' target.
+@end ignore
+
+@* @c Do not change whitespace before or after this.
+@cindex reuse, VM
+@cindex VM reuse
+@cindex threaded code
+@cindex replication
+@cindex assembly code
+@cindex architecture-specific assembly
+The paragraph above holds as an argument against the reuse of
+@emph{entire} language virtual machines.  Still some of the code involved
+in VMs, at a different level, can and should be reused.
+@*
+Even if writing a threaded virtual machine is easy, doing it with
+attention to efficiency requires some effort.  The idea of
+replication, which I have come to regard as essential, entails in
+practice automatic code generation techniques which, if conceptually
+simple, take time to implement.  The patch-ins infrastructure, if
+just as intuitive to understand, is almost as laborious to
+implement correctly.  Some other code related to replication is
+also very fragile to handle.  Even worse a few features, technically
+optional but very beneficial for performance, rely on a small amount
+of assembly code.  Interestingly such code is specific to the
+architecture but completely independent from the VM.  All these
+reasons make @emph{the VM generation infrastructure}, rather than VMs,
+worth sharing.
+@*
+Jitter is a solution for such reuse.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Software and hardware requirements
+@section Software and hardware requirements
+
+@cindex requirements, software
+@fixme{Anything non-GNU is secondary; some effort will be made to run
+with just a standard ANSI C compiler supporting only the simplest
+dispatching models, as long as the supported C standard is recent.
+There is no support yet, but I'd like a Jittery system to run on the
+metal, in kernel mode if there are protection rings.}
+
+@cindex requirements, hardware
+@fixme{What machines are ``small''.
+8-bit machines are too small.  16-bit machines might do, as long as their
+address space is wider than 16 bits.
+RAM is the issue.  8MB should be enough for good performance, and less
+might still be workable; 32MB is plenty.
+Some very small machines might still have enough RAM to host a Jittery
+system using threaded code, as long as some modification is made to
+the runtime not to unconditionally rely on @code{mmap}; contact me if
+you want to work in this direction.}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Design goals
+@section Design goals
+@cindex goals, design
+@cindex design goals
+
+@fixme{this should be short}
+
+@menu
+* Performance::                                    Jittery VMs must be fast.
+* Generality::                                     Sensible VMs should be implementable.
+* Minimizing and factoring machine dependencies::  Jitter lets you abstract over CPUs.
+* Expressivity and convenience::                   Ease of use is a minor goal.
+* Non-goals::                                      Some features are just bad.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Performance
+@subsection Performance
+@fixme{Realistically, a Jittery system will not be the fastest
+possible; a static system compiled with GCC will always win.  But I
+can certainly aim at a different optimum: Jittery programs can be much
+more expressive.  Jittery code will not be faster than native code,
+but it can be usually within a factor of 2 and almost always within a
+factor of 5, with Jitter being 1,000 times smaller than GCC.  I
+believe this is attainable.}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Generality
+@subsection Generality
+@fixme{sensible VM designs should be implemented.  And even the
+non-sensible ones I dislike.  Experimenting should be easy}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Minimizing and factoring machine dependencies
+@subsection Minimizing and factoring machine dependencies
+@cindex portability, hardware
+@cindex architecture
+Jitter already supports several CPU architectures:
+@pxref{Architecture-specific notes}.
+
+@cindex GCC
+@cindex dispatching model
+@cindex minimal threading
+@cindex direct threading
+@cindex icache
+@cindex dcache
+@cindex cache, instruction
+@cindex cache, data
+@cindex flush, data cache
+@cindex invalidate, instruction cache
+@cindex @code{__builtin___clear_cache}
+For not explicitly supported machines direct-threaded code is always
+available as a fallback option, which is as portable as GCC; even
+minimal-threading dispatching might work with no explicit porting effort
+where @code{mmap} is available and GCC's
+@code{__builtin___clear_cache} suffices to invalidate an icache range
+along with any necessary dcache flush.
+
+@cindex switch dispatching
+@cindex C compiler
+@cindex ANSI C compiler
+In the unlucky and mostly theoretical case that GCC support were not
+available for a CPU the user can always revert to @code{switch}
+dispatching, which is supposed to rely only on an ANSI C compiler.
+@fixme{Can I run at least minimal-threading dispatch with GCC on a
+non-GNU platform?  I think so; I should test on some free software BSD
+system [Answer: I can, as long as there is an @code{mmap}.  This
+should include BSDs and exclude Wine, but I guess Cygwin would
+work---not that I care.  @fixme{Make the availability of advanced
+threading models dependent on @code{mmap} in @file{configure.ac}.}]}
+
+@*
+@cindex API, Jitter
+@cindex dispatching model
+While dispatching models differ in performance, they are all functionally
+identical and controlled by the same API.
+
+@cindex porting
+@cindex register
+Jitter is trivial to port to register-based CPU architectures allowing for
+a sufficiently wide addressing space: @pxref{Porting}.
+
+@fixme{The kind of architecture-dependent code factoring described
+here has little to do with using VMs for portability: the point here
+is using VMs for expressivity and having the generated VM run easily
+on many platforms, as the machine-dependent code is factored within
+Jitter.  If anything, this is about portability @emph{at a meta
+level}, in the interest of the VM implementor rather than the user.
+Anyway if people want to use a Jittery VM as a portability layer,
+against my recommendations, they can.}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Expressivity and convenience
+@subsection Expressivity and convenience
+The ease of use of a VM is a secondary goal compared to its
+performance, but working on Jitter convinced me that, luckily, a
+convenient C API and intuitive debugging tools are at the very least
+@emph{not incompatible} with the need for fast execution on a wide
+range of CPUs.
+
+@anchor{compiling-expressions}
+Right now with Jitter the user has to generate (unspecialized) VM
+instruction herself, in particular taking care or register allocation
+for register-based VMs.  A Jittery VM right now is probably easier to
+use than a simple JIT requiring the same explicit register handling by
+the user, but less convenient than JITs which accept high-level
+expressions.
+
+@fixme{Some optional facility for compiling higher-level code
+involving expressions (with jumps) can be added to Jitter in the
+future; the fact that the VM details are specified by the user makes
+an automatic mapping from high-level to low-level code more difficult,
+but I think these problems can be solved.}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Non-goals
+@subsection Non-goals
+@cindex design non-goal
+@cindex design goal, non-
+@cindex goal, non- (design)
+
+@fixme{code size.  Particularly residual argument packing.  Even if I might play with
+indirect threading in the future, for fun}
+
+@fixme{object orientation: absolutely no, never in one million years.
+I don't believe in it and I never use it; you can build OO
+functionalities with a Jittery VM, but OO should not be a fundamental
+mechanism embedded in all data.  Procedures are immensely more
+important than methods.}
+
+@fixme{closures, function objects.  I don't dislike those, but again
+they are not fundamental and can be implemented on top of other
+control primitives.  Non-closing procedures are in practice more
+important than closures.}
+
+@fixme{type tagging for all data: absolutely not.  That is a recipe
+for destroying performance.  It can be implemented, if needed, within
+some VM instructions.  Doing that systematically would be a mistake}
+
+@fixme{exceptions: no, not a fundamental mechanism and way too dependent
+on the execution model (but I'm not against them).  They can be implemented.}
+
+@fixme{garbage collection: no, for the same reason.  But a GC must be easy to
+interface to the system.  Even one with precise pointer finding.}
+
+@fixme{safety features: static code verification, sandboxing: no,
+these kill either expressivity or performance.  Static checks can be
+added to the VM code generator, and dynamic checks to instructions.
+Personally I'd make them optional, but you're free to make things
+different.  Running code downloaded from who knows where should be
+discouraged.}
+
+@fixme{external representation for code, to be saved and loaded: I
+am not a fan of the idea and it is not implemented right now; anyway
+it could be added without a lot of pain; the only real problem is just that
+some constant expressions involving machine parameters such as the
+word size would need to be stored symbolically, in order to be
+evaluated at load time.  This can be done quite easily in the existing
+VM frontend; the C API would get uglier, but maybe not too much.
+The thing can be done in a VM-independent way,
+or possibly in a VM-dependent way yielding a very compact binary
+format.  Another problem, in the future, will be data embedded in
+programs.  Since introducing tagging in every word is out of the
+question, data would be in a state where saving is possible only right
+after initialization.  Again, this may complicate the C API.}
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Comparison with other systems
+@section Comparison with other systems
+
+@menu
+* Comparison with ahead-of-time compilers::  Jittery VMs versus traditional compilers.
+* Comparison with JITs::                     Jittery VMs versus Just In Time compilers.
+* Comparison with Vmgen and GForth::         Jitter versus Vmgen, another VM generator.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Comparison with ahead-of-time compilers
+@subsection Comparison with ahead-of-time compilers
+@fixme{something}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Comparison with JITs
+@subsection Comparison with JITs
+Even as it is, Jitter's frontend should run much faster than the
+alternative of spawning @command{gcc} or even just @command{as} plus
+@command{ld} processes, and then using @code{dlopen} to link object
+code.
+
+@fixme{JITs: Jitter is more portable and I believe it can generate
+code of similar quality.  Jitter is not yet as easy to use as JITs
+working with high-level expressions and abstracting over register
+allocation: right now some optimization effort has to come from user
+code (@pxref{compiling-expressions}).
+One could argue that an in-memory assembler is a form of JIT;
+compared to that alternative a Jittery VM is @emph{way} more convenient
+to use, but the combination of rewriting and specialization will probably
+always be slower than in-process assembling.  I believe that this last
+point will not cause a bottleneck in the entire application, but this is
+a conjecture to be validated experimentally.}
+
+@menu
+* C is only an implementation tool::  Your VMs can behave differently from C programs.
+@end menu
+
+@c @@@@@@@@@@@
+@node C is only an implementation tool
+@subsubsection C is only an implementation tool
+@cindex garbage collection
+@cindex coroutine
+@cindex thread, cooperative
+@cindex tagging, of objects
+@cindex introspection
+@cindex run-time type information
+@cindex type information, run-time
+@cindex C, runtime model
+There is no dependency on the C runtime model: for example switching
+the current call stack (when any exists) can be done from a VM
+instruction, with or without copying, to implement the equivalent of
+continuations or just cooperative threads or coroutines.  A Jittery
+system can support a garbage collector with exact pointer finding and
+a custom memory allocator, if so desired; runtime information about
+the type of each object can be made available at runtime if so
+desired---or not, when not needed.
+@cindex Andrew Appel
+@cindex Compiling with Continuations
+@cindex Forth
+@cindex stack
+@cindex register
+@cindex continuation
+@cindex accumulator
+@cindex activation record, function
+@cindex frame (function activation record)
+@cindex function activation record
+@cindex function frame
+@cindex procedure activation record
+@cindex procedure frame
+@cindex heap
+@cindex garbage collection
+Jitter
+makes it easy to experiment with unusual runtime data structures,
+for example a Forth-style dual-stack architecture, the
+stack-plus-accumulator
+organization adopted by Caml bytecode, or Appel's ``Compiling with
+Continuations'' model relying on a fixed number of registers and
+@emph{no stack}, with function activation
+records allocated on a garbage-collected heap.  Even C
+ABIs are only relevant when a Jittery VM calls external functions
+written in C.
+
+Jittery VMs' reliance on C at compile time does not prevent them from
+deviating from C's runtime model, possibly to a radical extent.
+In this sense a Jittery VM is not less general than a JIT directly emitting
+native machine instruction under user control.
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Comparison with Vmgen and GForth
+@subsection Comparison with Vmgen and GForth
+@cindex Vmgen
+@cindex GForth
+@fixme{vmgen}
+
+@fixme{I've learned a lot from the GForth people, particularly Anton
+Ertl's publications.}
+@fixme{What's new in Jitter: specialization, including instruction rewriting;
+and I'm particularly proud of my @code{JITTER_BRANCH_FAST} hack
+(@pxref{fast-branch-implementation}).
+I'm unconvinced about Ertl's [et al] proposal about literal patching,
+particularly with respect to GOTs, so I've solved the problem differently.
+My approach requires more manual porting work, despite remaining trivial
+(@pxref{Porting}), but in practice I believe that porting will be possible
+to a wider range of architectures---essentially, @emph{all} register
+machines with a sufficiently wide addressing space.  With the crucial exception
+of fast labels my instruction immediates are slightly less efficient than in
+Ertl's proposal.  In most instances this disadvantage is canceled, if not
+reversed, by specialization on immediates.}
+
+When using advanced dispatching models @fixme{Jitter} is more strongly
+reliant on GCC, and therefore more fragile, than Vmgen---and similar in this
+respect to @command{gforth-fast}.
+
+@fixme{Understandably, GForth and Vmgen are optimized for stacks and
+nullary VM instructions; Jitter is an attempt to generate efficient VM
+code using registers and VM instructions with arguments.  Jittery VMs
+are also efficient with nullary VM instructions, which are just a
+particularly easy subset of the cases to handle, and with Forth-style
+stacks, which are simple to implement with two registers each when
+using the TOS optimization, and just one each when not.}
+
+@fixme{My computers are named after the computer scientists I admire.  I've
+named my most powerful machine @samp{moore} after Chuck Moore, but I
+suspect Mr@. Moore wouldn't name his computer after me.
+Jitter violates his ideas about not being overly general until the
+need arises.}
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node License
+@section License
+
+@cindex free software
+@cindex GPL
+@cindex GNU GPL
+@cindex copyleft
+@cindex strong copyleft
+I believe free software projects have been using permissive licenses
+too much at least in the last ten years, in practice providing tools
+to the public on which to develop proprietary software to the
+disadvantage of the community.  I want to reverse that trend.
+Everybody is welcome to use Jitter, but it and the machines
+it produces will be covered by a strong copyleft.  If there has to be
+a competitive advantage, let that be in favor of free software.
+
+@cindex GNU
+@cindex FSF
+@cindex Free Software Foundation
+@cindex RMS
+@cindex Richard Stallman
+@cindex Stallman, Richard
+@cindex license
+@cindex copyleft
+@cindex copyright
+@cindex copyright assignment
+I plan to propose Jitter to the GNU Project, to be released as
+official GNU software.  If the project is accepted I will then
+immediately assign its copyright to the Free Software Foundation,
+which will then have the power to decide on the specific license as
+long as Jitter remains free software.  If RMS decided to use a more
+lax license for some strategic reason I would trust his judgement;
+indeed I cannot think of anybody I would trust more on these issues.
+But as long as I legally control this software, its code will be
+distributed only under strong copyleft.
+
+This is free software, released under the GNU General Public License,
+version 3 or later.
+
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Contacting the author
+@section Contacting the author
+@c FIXME[contactingme]
+@cindex author
+@cindex Luca Saiu
+@cindex Saiu, Luca
+You can find my contact information on my personal web site
+@url{http://ageinghacker.net}.
+
+@cindex email
+@cindex mailing list
+I enjoy discussing technical issues in a public forum; there is no
+mailing list specifically about Jitter right now, but you are free to
+use the epsilon public mailing list @email{epsilon-discuss@@gnu.org}
+for talking about Jitter as well.
+@cindex email
+Still, I particularly value and respect privacy.  If for any reason
+you prefer to communicate with me in private you can also contact me
+at @email{positron@@gnu.org}.
+
+@cindex ego
+As long as you respect the license you are welcomed to use Jitter in
+any way you like, even if your views about language VMs, or indeed
+about anything, happen to differ from mine (@pxref{About language
+virtual machines}).
+If you are building something fun or ambitious with Jitter I will
+appreciate a message from you, in case you feel like tickling my ego.
+Otherwise do not worry too much: my ego will survive by metabolizing
+its own fat for a very long time.
+@*
+@*
+@cindex hacking
+Happy hacking.
+
+
+@c Here starts the actual documentation, written in a more formal
+@c tone.  Everything from here on should be in the first person
+@c *plural*.
+
+@c Working with Jitter sources
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Working with the Jitter sources
+@chapter Working with the Jitter sources
+@cindex source code, Jitter
+@cindex packages, distribution
+@cindex distribution packages
+@cindex Debian
+@cindex test suite
+This chapter explains how to build Jitter from its source code,
+recommending a specific directory organization which will also be
+adopted in the following.  It does not cover package systems such as
+the one from the Debian GNU/Linux distribution.  Jitter is still a
+young project and as of Summer 2017 it has not yet been packaged by
+any distribution; anyway building it from the sources is trivial, and
+has the important advantage of giving access to the test suite.
+
+@cindex source code, Jitter
+@cindex Autoconf
+@cindex Automake
+@cindex Libtool
+@cindex GNU Autoconf
+@cindex GNU Automake
+@cindex GNU Libtool
+@cindex Gnulib
+Jitter follows the standard GNU build conventions and relies on
+Autoconf and Automake
+(@pxref{Top,,, autoconf, The GNU Autoconf Manual}
+and
+@ref{Top,,, automake, The GNU Automake Manual}).  It also uses
+Gnulib (@pxref{Top,,, libtool, The Gnulib Manual})
+for portability of the code-generating utility, but not in the
+generated C code, and
+GNU Libtool (@pxref{Top,,, libtool, The GNU Libtool Manual})
+for handling shared libraries.
+
+@cindex dependency, compile-time
+@cindex compiler, C
+@cindex C compiler
+@cindex header, C
+@cindex @command{make}
+@cindex Unix utility
+@cindex utility, Unix
+@cindex tarball
+@cindex GCC
+Jitter release tarballs have no mandatory compile-time dependencies
+other than what is normally needed to build programs written in C: a C
+compiler, C library headers, @command{make}, and a few standard
+utilities found in any Unix system such as @command{sed}.  Jitter is
+supposed to be very portable, but is developed and routinely tested
+only on GNU systems.  Advanced VM dispatching modes require GCC
+(@pxref{Top,,, gcc, The GNU Compiler Collection Manual}).
+
+@cindex emulator
+@cindex test suite
+@cindex cross compiling
+The way of building Jitter will look very familiar and unsurprising to
+anyone accustomed to the GNU build system, the only exception being the
+extra provision for running the test suite on cross-compiled programs
+through an emulator.
+
+@*
+@cindex git
+@cindex @file{README-hacking}
+Users unfamiliar with the GNU build system should start from the
+generic @file{INSTALL} file.
+
+Jitter development snapshots downloaded from the git repository
+also contain @file{README-hacking}, an additional text file with
+information for users working with unreleased versions.
+@cindex dependency, compile-time
+@cindex Flex
+@cindex Bison
+@cindex Libtool
+@cindex Autoconf
+@cindex Automake
+@cindex Texinfo
+@cindex help2man
+@cindex GNU Bison
+@cindex GNU Texinfo
+@cindex GNU help2man
+@cindex GNU Libtool
+@cindex GNU Autoconf
+@cindex GNU Automake
+@cindex git
+@cindex Version-Control System
+@cindex snapshot, git
+Working from a git snapshot requires git, of course, plus a few tools
+hopefully already installed on developer machines such as GNU Autoconf,
+GNU Automake, GNU Libtool, Flex, GNU Bison, GNU Texinfo and GNU help2man.
+@file{README-hacking} contains the whole dependency list, and in any
+case the @command{configure} script will check for each requirement
+and complain if any is missing.
+
+@c @@@@@@@
+@cindex @command{configure}
+
+@cindex build directory
+@cindex source directory
+
+@cindex architecture, CPU
+@cindex ISA (CPU architecture)
+
+@menu
+* Building conventions and tips::   Some suggestions for working with Jitter sources.
+* Configuration::                   You have to prepare the Jitter sources to be built.
+* Generating the documentation::    You can rebuild this manual in several formats.
+* Building::                        Compiling Jitter into a machine-language program, and libraries.
+* Running the test suite::          Automatic checks on Jitter to make sure it actually works.
+* Installing::                      Copying Jitter programs and data files to system directories.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@
+@node Building conventions and tips
+@section Building conventions and tips
+@fixme{directory organization, cross-compiling directories, reversible installation, stow,
+what a good build machine is, this is for GNU and likely BSD and everything else is untested}
+
+@menu
+* Cross-compiling::         Using one architecture to generate code for another.
+@end menu
+
+@c @@@@@@@
+@node Cross-compiling
+@subsection Cross-compiling [probably not: better to merge this into the previous sections]
+@cindex cross-compiling
+@cindex compiling, cross-
+@cindex crosstool-ng
+@cindex emulator
+@cindex QEmu
+@cindex architecture, CPU
+@cindex ISA (CPU architecture)
+@cindex Stow
+@cindex GNU Stow
+
+@fixme{(@pxref{Top,,, stow, The GNU Stow Manual})}
+
+@fixme{Cross-compilation: why cross-compiling Jitter is useful but a
+``cross-Jitter'' doesn't make sense}
+
+
+@c @@@@@@@
+@node Configuration
+@section Configuration
+@cindex @command{configure}
+@cindex @file{configure.ac}
+@cindex GNU build system
+@cindex Autoconf
+@cindex GNU Autoconf
+@cindex GNU Automake
+
+@fixme{be sure to read the output from @command{configure}; if @command{configure} fails without a
+clear error message, showing a syntax error with a line number, please send a bug report including
+information about your system, your @command{configure} command line and the complete output.}
+
+@c @@@@@@@
+@node Generating the documentation
+@section Generating the documentation
+@cindex Texinfo
+@cindex GNU Texinfo
+@cindex @TeX{}
+@cindex @LaTeX{} (non-requirement)
+@fixme{new versions of this manual; optional; the Info version is already there in tarballs}
+
+@c @@@@@@@
+@node Building
+@section Building
+
+@cindex @command{make}
+@cindex building, Jitter
+@cindex GNU build system
+@cindex compiling, Jitter
+@cindex Automake
+@cindex GNU Automake
+After configuration has succeeded building Jitter should be a simple
+matter of running @samp{make}.  This will generate the
+@command{jitter} program in the @file{bin} build subdirectory, plus
+one runtime library per enabled dispatching model.  Building should be
+fast.
+
+At this point it is recommended to build the examples as well, by
+typing @samp{make examples}.  Building examples entails executing
+the @file{bin/jitter} program which has just been generated, which is
+not possible under cross-compiling (as @file{bin/jitter} in this case
+will match the @emph{host}, rather than the @emph{build}, machine)
+unless an emulator was specified; if using an emulator, this is a good
+way of testing it for the first time on a relatively simple program.
+Building the examples involves compiling large generated C files, which
+will be slower than building @file{jitter} and the libraries, and will
+also require more RAM.
+@*
+If everything works the example programs will appear in the @file{bin}
+build subdirectory along with @file{jitter}.  Again the example
+programs will be one per dispatching model, each with the name
+@file{uninspired--} followed by the dispatching model name.  The
+``Uninspired'' VM, if not terribly original, is a representative example
+of a Jitter virtual machine, to be discussed later in some detail:
+@pxref{Tutorial}.
+
+It is still possible to cross-compile the example programs even
+without an emulator, by copying the generated C files from another
+build---for example a native build on the same machine.  After copying
+@file{example-vms/uninspired/*.[ch]} from another @emph{build}
+directory (the Uninspired generated files are not sources, and are not
+distributed either) to @file{example-vms/uninspired/} under the current
+(cross) @emph{build} directory @samp{make examples} should succeed; at
+that point the generated files @file{bin/uninspired--*} can be moved
+to the host machine and run.
+@*
+If the generated C files copied from elsewhere are not used by
+@samp{make examples} the reason may be a different timestamp: as a
+simple workaround you may @command{touch} them: the generated files have
+to be more recent than their dependencies for @command{make} not to attempt
+to regenerate them.
+
+The test suite will run the ``Uninspired'' VM programs under each enabled
+dispatching model, building the Uninspired VM executables as
+dependencies if not already present.
+
+
+@c @@@@@@@
+@node Running the test suite
+@section Running the test suite
+@cindex test suite
+@cindex test case
+@cindex suite, test
+@cindex check
+@cindex automatic tests
+@cindex @command{make check}
+@cindex @code{check}, make target
+@cindex GNU Automake
+@cindex TAP test protocol
+@cindex test protocol, TAP
+@cindex emulator
+@cindex QEmu
+@cindex Valgrind
+@cindex memory leak
+@cindex leak, memory
+@cindex initialization
+@cindex finalization
+The test suite works by compiling the Uninspired VM using all the enabled
+dispatching modes and then running small programs on top of it, comparing
+the program output against expected results.
+The test suite is supported in native configurations, and even on cross
+configurations as long as a working emulator is available to run the
+compiled VMs.
+
+You can execute the test suite by simply typing @code{make check}.
+
+The test suite will display a detailed textual report mentioning each
+test case, with color on most configurations---any red text indicates
+a problem.  The test suite output closes with a summary such as:
+@smallexample
+============================================================================
+Testsuite summary for Jitter 0.0.0.752-6a7a-dirty
+============================================================================
+# TOTAL: 74
+# PASS:  64
+# SKIP:  10
+# XFAIL: 0
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+============================================================================
+@end smallexample
+If the number of failures is zero, like in this example, then the test
+suite detected no problem; otherwise the output above the summary
+needs to be checked more carefully.
+
+@cindex GNU Automake
+@cindex TAP test protocol
+@cindex test protocol, TAP
+@cindex test
+The test suite relies on the functionality in GNU Automake and uses
+the TAP testing protocol; even used in a simple way as it is TAP
+allows for a fine-grained view about the specific nature of the failure,
+which helps when investigating a problem.  GNU Autoconf is
+also used for shell portability, and to check for optional utilities
+to be used at test time when available.  Most of the functionality used
+across multiple tests is factored in @file{tests/utility.in}; each
+subdirectory of @file{tests} contains one @dfn{test}, as a shell script
+(to be preprocessed at configure time in the source tree, and already
+preprocessed in the build tree), plus associated data files.
+@cindex test case
+@cindex case, test
+For example the source tree file
+@file{tests/interpreter/interpreter.test.in} is a shell script for the
+@samp{interpreter} test, to be preprocessed into the build tree file
+@file{tests/interpreter/interpreter.test}.  Each test may contain many
+individual @dfn{test cases}, each with a 1-based index and a short
+human-readable name.  Each test case may pass, fail, or
+@dfn{fail expectedly} when a feature is known to be broken.
+@cindex Valgrind
+@cindex memory leak
+Some test cases will be skipped, for example when a dispatching mode
+is not enabled, or if the user doesn't have Valgrind available to check
+for memory leaks, of again if the test case is only defined on
+configurations different from the current one, either lacking or not
+requiring a specific feature.
+
+Any @samp{FAIL} line is a symptom of a problem and should never be
+ignored.  An @samp{ERROR} line indicates an unexpected problem in the
+test script itself, and counts as a bug to report; please do so.
+
+The numbering of test cases will change across Jitter versions, but
+some reasonable care will be taken to keep test case names stable; if
+you are reporting an unexpected failure, along with the usual
+information, please quote the exact line in question, for example
+@smallexample
+FAIL: tests/interpreter/interpreter.test 44 - count-down minimal-threading
+@end smallexample
+The test suite subdirectory in the build tree will also contain
+data files potentially useful to analyze the program.  Unless such
+files are very large please include them in your reports as well.  In the
+case above you may include information about the failed
+@samp{interpreter} test case 44 named @samp{count-down minimal-threading}
+by sending a tarball containing the relevant files.  You can easily generate
+such a file from the build directory:
+@smallexample
+tar c tests/interpreter/interpreter-44.* | gzip -9 > interpreter-44.tar.gz
+@end smallexample
+
+@fixme{be sure to check particularly in critical cases: unusual platform, new GCC version, new Jitter version}
+
+@fixme{in case some test fails reconfigure disabling the offending dispatching model and try again}
+
+@cindex timeout (test suite)
+@fixme{A test case hanging is bad.  The Uninspired driver as invoked
+from the test suite is supposed to fail after a timeout and the test
+scripts contain similar provisions, but the machinery is not
+bulletproof, particularly with incorrect machine code running
+under emulators or on non-GNU systems.}
+
+@menu
+* A test suite is not a correctness proof::       Some bugs may always escape.
+@end menu
+
+@c @@@@
+@node A test suite is not a correctness proof
+@subsection A test suite is not a correctness proof
+@cindex correctness proof
+@cindex proof, correctness
+@cindex theorem
+@fixme{even all passes is not a correctness proof.  QEmu, by
+design, doesn't emulate L1i invalidation}
+
+@c @@@@@@@
+@node Installing
+@section Installing
+@cindex installing
+@cindex Stow
+@cindex GNU Stow
+
+
+@c Tutorial
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Tutorial
+@chapter Tutorial
+@cindex tutorial
+@cindex example
+
+@menu
+* Using a VM::                  Playing with an existing virtual machine.
+* A VM definition::             Why the example VM behaves like it does.
+@end menu
+
+@c @@@@@@@
+@node Using a VM
+@section Using a VM
+
+@menu
+* Predefined frontend::         Jitter comes with a parser and printer for your programs.
+* Disassembly::                 You can check the generated native code for correctness and efficiency.
+* C API tutorial::              Generating and executing VM code from a C program.
+* Building tutorial::           Convenient ways to compile programs with embedded VMs.
+@end menu
+
+@c @@@
+@node Predefined frontend
+@subsection Predefined frontend
+
+@c @@@
+@node Disassembly
+@subsection Disassembly
+
+@c @@@
+@node C API tutorial
+@subsection C API tutorial
+
+@c @@@
+@node Building tutorial
+@subsection Building tutorial
+
+@c @@@@@@@
+@node A VM definition
+@section A VM definition
+
+
+@c Invoking @command{jitter}
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@c This node name is required by the GNU standards.
+
+@node Invoking @command{jitter}
+@chapter Invoking @command{jitter}
+@cindex invoking
+@cindex command line
+@cindex @command{jitter}
+
+@c Compiling Jittery programs
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Compiling Jittery programs
+@chapter Compiling Jittery programs
+
+@menu
+* Generating and compiling C code::  These are two separate steps.
+* Building a Jittery program::       How to do it in practice.
+@end menu
+
+@c @@@@@@@
+@node Generating and compiling C code
+@section Generating and compiling C code
+@cindex two-stage build
+@cindex build, two-stage
+
+@menu
+* Cross-compiling VMs:: How to compile a VM to be run on an incompatible machine.
+@end menu
+
+@c @@@@
+@node Cross-compiling VMs
+@subsection Cross-compiling VMs
+@cindex cross-compiling
+@cindex compiling, cross-
+
+@c @@@
+@node Building a Jittery program
+@section Building a Jittery program
+@anchor{build-system}
+@cindex build system
+
+@menu
+* @command{jitter-config}::   A program printing the compiler options you need.
+* Autoconf and Automake::     Compiling Jittery programs with the GNU build system.
+* Make::                      Simple makefiles and dependencies.
+* Other systems::             You're on your own, but you have @command{jitter-config}.
+@end menu
+
+@c @@@
+@node @command{jitter-config}
+@subsection @command{jitter-config}
+@cindex @command{jitter-config}
+
+@c @@@
+@node Autoconf and Automake
+@subsection Autoconf and Automake
+@cindex Autoconf
+@cindex GNU Autoconf
+@cindex Automake
+@cindex GNU Automake
+@cindex Libtool
+@cindex GNU Libtool
+
+@fixme{the files @file{configure.ac} and @file{Makefile.am} in the
+Jitter distribution are much more complex than the ones needed to
+build an ordinary Jittery program, because they have to deal with a
+non-installed @command{jitter} and exactly specify dependencies on
+files which no longer change after installation.  Jitter's own build
+system also makes a considerable effort to support cross-compilation
+in a convenient way including a running a cross-@command{jitter} and
+even the test suite through an emulator, in an effort to test the
+critical part of the software as thoroughly as possible.  Ordinary
+Jittery program will avoid going to such lengths.}
+
+@c @@@
+@node Make
+@subsection Make
+@cindex @command{make}
+
+@c @@@
+@node Other systems
+@subsection Other systems
+@cindex script, shell (for building)
+
+
+@c The language
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Writing VM specifications
+@chapter Writing VM specifications
+
+@menu
+* Syntax::                      How to write a VM specification.
+* Instruction rewriting::       Specialized instructions should not be too many.
+* Emacs major mode for Jitter:: Editing VM specification with Emacs.
+* Performance tips::            Suggestions for making your VMs fast.
+@end menu
+
+@c @@@@@@@
+@node Syntax
+@section Syntax
+@cindex lexicon
+@cindex syntax
+@cindex specification syntax
+
+@subsection Header
+@cindex header, VM specification
+
+@subsection Embedding C code
+
+@subsection Meta-instructions
+
+@subsubsection Meta-instruction headers
+@cindex header, meta-instruction
+@cindex meta-instruction, header
+
+@subsubsection Meta-instruction properties
+
+@subsubsection Embedding C code in meta-instructions
+
+@c @@@@@@@
+@node Instruction rewriting
+@section Instruction rewriting
+@cindex rewriting
+@cindex instruction rewriting
+
+@c @@@@@@@
+@node Emacs major mode for Jitter
+@section Emacs major mode for Jitter
+@cindex Emacs, major mode for Jitter
+@cindex major mode (Emacs)
+@cindex mode, major (Emacs)
+
+@c @@@@@@@
+@node Performance tips
+@section Performance tips
+@cindex performance
+@cindex suggestions, performance
+@cindex tips, performance
+
+@fixme{for register machines having a lot of registers is important.
+@fixme{is it possible to have too many?  I see performance degradation on
+x86_64, but that is probably due to bad choices in residual registers.}
+Keeping the number of meta-instructions smaller, and making the non-critical
+ones non-relocatable, can buy you more fast registers.}
+
+@fixme{number of instruction arguments: residuals have a cost at run time;
+non-residuals have a cost at compile time, and may make the VM too large
+to compile}
+
+@fixme{optimize for the common case: for example making division
+non-relocatable will probably not be a problem: the time spent in
+division will hardly ever be significant, in any program.  This is
+probably true for multiplication as well, unless you're doing
+graphics.  You can always optimize the common (and cheaper) cases of
+multiplying by, dividing and taking the reminder or a power of two
+with rewrites into different, relocatable instructions:
+@math{a@ 2^b} can be rewritten into @samp{a << b},
+@math{a/2^b} into @samp{a >> b}
+and @math{a@ mod@ 2^b} into @samp{a & ((1 << b) - 1)}.  The rewrite
+targets can have one specialized literal.}
+
+@fixme{CISC vs RISC: cite the APL argument
+@fixme{my previous deleted text, to reword:
+@emph{The opponents of this argument point out at languages with very
+complex primitives such as APL, where the interpretation overhead
+becomes proportionally less significant compared to the time spent in
+primitives, each one performing a greater amount of useful work than
+in other designs.  The counter-argument has the merit of recognizing
+one source of the problem, and that languages like APL are indeed
+easier to deal with than others.  Still, the part of the community
+interested in playing with the fundamental elements of computation,
+which certainly includes me, will also demand systems providing
+control on a finer granularity, where each fundamental operation is
+kept as simple as possible and more complex behavior only emerges as
+composition of fundamental operations.  This is the case of epsilon,
+Forth, and to a slightly lesser extent, Lisp.}
+}}
+
+@fixme{CISC vs RISC, flags: orthogonality is not mandatory.  Having
+multiple flags registers like on the PowerPC, or using ordinary
+registers to store boolean conditions like on MIPS and Alpha looks
+neat, but VM flags registers will not be mapped to hardware flag
+registers: the ``pretty'' solution on the VM would force
+three-argument comparison instructions, bloating the instruction
+space, and on most machines would cost two comparisons instead of one
+per jump at run time.  The efficient solution for a VM in this case is
+a MIPS-style conditional branch instruction taking two arguments (but
+on a VM they can be immediate), and a fast label.  Flags should be
+considered inherently transient, and keeping their state in a register
+across VM instruction will cost machine instructions.
+You should resist the temptation of having both quotient and reminder
+computed by one VM instruction, unless the instruction is non-relocatable.}
+
+@fixme{On a VM implied operands (for example a frame pointer or even a
+heap allocation pointer held in a fixed register) are fine, as they
+reduce the number of VM instruction arguments, limiting their
+combinatorial explosion and affording you more fast registers.  It's
+perfectly acceptable to design your VM around your ABI: if you change
+your mind later, you can change the VM easily: it's not silicon.}
+
+@fixme{constants, particularly if big: specialize if known in advance.}
+
+@fixme{small but performance-performance constants, such as type or
+garbage-collection tags: specialize, and define a checking instruction
+doing only that, so as to keep the other instructions smaller.  It is
+probably better to keep the non-critical path used to handle errors
+slow, for example keeping the error handler address on a stack, rather
+than passing slow labels around.  Residual arguments are expensive, and
+should not be passed every time just to handle rare cases.}
+
+@fixme{fast branches: use the specific macros for conditional branches,
+rather than if (condition) BRANCH_FAST(JITTER_ARGF0);
+The specific macro generates faster code. @fixme{show the two disassemblies}}
+
+
+@menu
+* Performance tips for VM programs:: Generating fast programs for a fast VM.
+@end menu
+
+@c @@@@@@@
+@node Performance tips for VM programs
+@subsection Performance tips for VM programs
+
+@fixme{don't waste registers: lower-numbered is better}
+@fixme{VM registers in memory are still better than slow registers.}
+
+@fixme{constants, particularly if big: count down rather than up}
+
+
+@c Standalone VMs
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Standalone VMs
+@chapter Standalone VMs
+
+@cindex standalone
+
+
+@c C API
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node C API
+@chapter C API
+
+@menu
+* Initialization::              Setting up a VM before making programs.
+* Finalization::                Cleaning up the global state.
+* VM state::                    Runtime data structures manipulated by programs.
+* VM programs::                 Making and destroying VM programs.
+* Running VM programs::         How to call specialized programs.
+* Concurrency::                 Working with multiple threads.
+@end menu
+
+@c @@@@@@@
+@node Initialization
+@section Initialization
+@cindex initialization
+
+@c @@@@@@@
+@node Finalization
+@section Finalization
+@cindex finalization
+
+@c @@@@@@@
+@node VM state
+@section VM state
+@cindex VM state
+@cindex state, VM
+
+@c @@@@@@@
+@node VM programs
+@section VM programs
+@cindex VM program
+@cindex program, VM
+
+@menu
+* Program structure::       What VM programs are made of.
+* Adding labels::           How to name VM program points.
+* Adding instructions::     How to add VM instructions to a program.
+* Specialization::          Making a VM program ready for execution.
+* Multiple programs::       Making VM programs jump to one another.
+@end menu
+
+@c @@@
+@node Program structure
+@subsection Program structure
+@cindex program, VM, structure
+@cindex structure, VM program
+@cindex VM program, structure
+
+@c @@@
+@node Adding labels
+@subsection Adding labels
+@cindex label, C API
+
+@c @@@
+@node Adding instructions
+@subsection Adding instructions
+@cindex instruction, VM, C API
+@cindex VM instruction, C API
+
+@c @@@
+@node Specialization
+@subsection Specialization
+@cindex specialization
+
+@c @@@
+@node Multiple programs
+@subsection Multiple programs
+@cindex multiple VM programs
+@cindex VM programs, multiple
+@cindex program, VM, multiple
+
+@c @@@@@@@
+@node Running VM programs
+@section Running VM programs
+@cindex running VM program
+@cindex program, VM, running
+@cindex VM program, running
+
+@c @@@@@@@
+@node Concurrency
+@section Concurrency
+@cindex concurrency
+
+@fixme{The Jittery C API is thread-safe, including the Flex/Bison
+frontend.  After initialization no global variables are written, and
+the code is reentrant.  @fixme{This is currently true becasue I use a
+separate call to @code{mmap} for every native code allocation, but it
+will get more complicated: in the future I will need a mutex for code
+allocation, almost certainly hidden in the implementation.  I should
+mention here the dependency on POSIX threads, or as an alternative the
+need for the user to manually synchronize the one critical
+operation.}}
+
+@fixme{The VM @emph{state} data structures encodes the execution state
+of a single thread.  Having different threads working concurrently on
+different states, possibly executing the same code, @emph{is} supported.
+There is no global interpreter lock.}
+
+@fixme{The user needs to take care of synchronization herself, when
+needed.  Of course it is possible to break reentrancy from
+user code, but it should be easy to avoid that.}
+
+
+@c Internals
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Internals
+@chapter Internals
+
+@menu
+* Internals overview::            An quick look at the sources.
+* Specialization internals::      Making choices at compile time is better than at run time.
+* Patch-ins::                     Patching assembly into copies of compiled C code.
+* Rewriting internals::           How rewriting works.
+* Dispatch models::               How the program jumps from one VM instruction to the next.
+* Architecture-specific notes::   Details on how Jittery VMs work on each supported CPU.
+* Porting::                       Adding support for more CPU architectures.
+@end menu
+
+@c @@@@@@@
+@node Internals overview
+@section Internals overview
+@cindex internals overview
+@cindex overview, internals
+
+@menu
+* Naming conventions::       Finding your way among C identifiers and files.
+@end menu
+
+@c @@@@
+@node Naming conventions
+@subsection Naming conventions
+@cindex naming conventions, internals
+
+@fixme{The @command{jitter} C-code-generating program uses the
+namespace @code{jitterc} in its C source code and in the build system.
+This is to distinguish it from user code linked to a Jittery VM, which
+requires a @code{jitter} (no @code{c}) library, differently from the
+generator.  The distinction is immaterial to the user.}
+
+@c @@@@@@@
+@node Specialization internals
+@section Specialization internals
+@cindex specialization
+@anchor{specialization}
+
+@c @@@@@@@
+@node Patch-ins
+@section Patch-ins
+@cindex patch-in
+@anchor{patch-ins}
+
+@c @@@@@@@
+@node Rewriting internals
+@section Rewriting internals
+@cindex rewriting
+
+@c @@@@@@@
+@node Dispatch models
+@section Dispatch models
+@cindex dispatch
+
+@c @@@
+@subsection @code{switch} dispatching
+@cindex @code{switch} dispatching
+@cindex dispatching, @code{switch}
+@c @cindex ``threading'', @code{switch} @c This starts with "`" and looks ugly in the index.
+@cindex dispatch
+@cindex GCC
+@cindex GNU C
+@cindex ANSI C
+@cindex C, ANSI
+@cindex C, Standard
+@cindex @code{switch}
+
+@fixme{not currently implemented, even if very easy and portable}
+
+@fixme{slow: terrible branch target prediction, range check difficult to eliminate
+in practice @fixme{but I think a recent GCC version has made progress: check}}
+
+@c @@@
+@subsection Direct threading
+@cindex direct threading
+@cindex threading, direct
+@cindex dispatch
+@cindex GCC
+@cindex GNU C
+@cindex computed @code{goto}
+@cindex indirection, double
+@cindex memory indirection, double
+@cindex jump, doubly indirect
+
+@c @@@
+@subsection Minimal threading
+@cindex minimal threading
+@cindex threading, minimal
+@cindex dispatch
+@cindex replication
+@cindex GCC
+@cindex GNU C
+@cindex JIT
+@cindex computed @code{goto}
+@cindex indirection, double
+@cindex memory indirection, double
+@cindex jump, doubly indirect
+@anchor{replication}
+
+@c @@@
+@subsection No threading
+@cindex threading, no
+@cindex no threading
+@cindex dispatch
+@cindex replication
+@cindex GCC
+@cindex GNU C
+@cindex inline assembly
+@cindex assembly, inline @code{asm}
+@cindex JIT
+@cindex computed @code{goto}
+@cindex jump
+
+@subsubsection Fast labels
+@cindex fast label
+@cindex label, fast
+@cindex fast branch
+@cindex branch, fast
+@anchor{fast-branch-implementation}
+
+@c @@@@@@@
+@node Architecture-specific notes
+@section Architecture-specific notes
+@cindex port, jitter
+@cindex architecture
+@cindex machine, physical
+@cindex CPU
+@anchor{ports}
+@anchor{architecture-specific}
+@fixme{I @emph{do} have opinions about ISAs and about
+micro-architectures as well, but they are off-topic right now.}
+
+@fixme{Cross-toolchains are important for support, as are good
+single-process emulators such as qemu-user; whole-machine emulators and
+physical hardware, while useful, are much less convenient.  If support
+is lacking for an architecture, my lack of convenient access to such
+tools is probably the reason.  If you have practical suggestions about
+this (not requiring non-free software), please contact me.}
+
+@cindex register renaming
+@cindex register-starved architecture
+@cindex starvation, register-
+@cindex register-impoverished
+@cindex x86
+@cindex rationalization
+@fixme{Sixteen registers are not enough for compiled code, not to
+speak of Jitter.  I've heard more than once the absurd argument that
+register renaming (at the micro-architecture level, invisible to
+assembly) would be a solution to this problem.  Of course that is not
+the case: register renaming breaks some dependency chains by mapping
+different uses of the same architectural @emph{register} to different
+micro-architectural registers; but if the ISA is register-starved then
+some data in the program will be kept @emph{in memory} rather than in
+architectural registers---at which point register renaming cannot
+help.  As simple ignorance of one micro-architectural feature this
+mistake would be easy to forgive; but is it ignorance, or x86
+rationalization?}
+
+@*
+@fixme{explain how to read the table}
+@multitable @columnfractions .55 .15 .3
+@headitem Triplet @tab Works @tab Best dispatch
+@c @c --
+@c @item @code{?-unknown-linux-gnu}, @code{qemu-user}
+@c @tab  ?.?.?
+@c @tab  @code{}
+@c --
+@item @code{aarch64-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{alphaev4-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{arm-unknown-linux-gnueabi}, BeagleBone Black
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{arm-unknown-linux-gnueabi}, @code{qemu-user}
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{avr}
+@tab  no@footnote{I should not unconditionally rely on @code{mmap} on small embedded systems
+where all the memory is executable.  I should also learn how to use an AVR emulator.}
+@tab  -
+@c --
+@item @code{avr-unknown-elf}
+@tab  no@footnote{I enabled the newlib C library from the crosstool-ng configuration, but I see no C library at all---this might be my fault; obviously the compiler cannot build executables.  In any case the Jitter runtime currently relies on @code{mmap}, so this configuration has no hope of working without changes.}
+@tab  -
+@c --
+@item @code{i586-unknown-linux-gnu}, K6 200MHz
+@tab  probably@footnote{I have to replace an IDE cable and test.  Old unreliable hardware.}
+@tab  @code{minimal-threading}
+@c --
+@item @code{i586-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{i586-w64-mingw32}, Wine
+@tab  untested@footnote{I don't feel like polluting my computer with all the dependencies for the 32-bit version of Wine.  The platform is very low-priority.}
+@tab  ?
+@c --
+@item @code{m68k-unknown-uclinux-uclibc}
+@tab  untested@footnote{Testing the m68k architecture is extremely inconvenient for me: @code{qemu-user} is not usable for m68k, and crosstool only supports @code{nommu} kernels for m68k, and doesn't offer glibc as a choice; I should install a GNU/Linux distribution on a virtual machine, then use either a native compiler on the virtual machine or build a cross-toolchain by hand.  It can be done, but it will be annoying.}
+@tab  ?
+@c --
+@item @code{mips-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{no-threading}
+@c --
+@item @code{mips64-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{mips64el-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{mipsel-unknown-linux-gnu}, Lemote YeeLoong
+@tab  yes
+@tab  @code{no-threading}
+@c --
+@item @code{mipsel-unknown-linux-uclibc}, Ben NanoNote
+@tab  yes
+@tab  @code{no-threading}
+@c --
+@item @code{mipsel-unknown-linux-uclibc}, @code{qemu-user}
+@tab  yes
+@tab  @code{no-threading}
+@c --
+@item @code{powerpc-unknown-linux-gnu}, 750 600MHz
+@tab  yes
+@tab  @code{no-threading}
+@c --
+@item @code{powerpc-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{no-threading}
+@c --
+@item @code{powerpc64-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{powerpc64le-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{powerpcle-unknown-linux-gnu}, ?@footnote{QEmu seems to support little-endian PowerPC only in 64-bit mode.}
+@tab  probably
+@tab  probably @code{no-threading}
+@c --
+@item @code{s390-ibm-linux-gnu}, ?@footnote{I can't convince @command{qemu-s390x} to recognize as valid the executables generated by my cross-toolchain; I guess it only supports 64-bit executables.}
+@tab  untested
+@tab  ?
+@c --
+@item @code{s390x-ibm-linux-gnu}
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{sh4-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{direct-threading}
+@c --
+@item @code{sh4eb-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{direct-threading}
+@c --
+@item @code{sparc-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{sparc64-unknown-linux-gnu}, @code{qemu-user}
+@tab  yes
+@tab  @code{minimal-threading}
+@c --
+@item @code{x86_64-w64-mingw32}, Wine
+@tab  probably@footnote{The test suite programs currently fail cross-compiling for Wine, I guess because of a problem with the stupid file extensions.  However I can generate the direct-threaded interpreter, which appears to work correctly.}
+@tab  @code{direct-threading}
+@c --
+@item @code{x86_64-unknown-linux-gnu}, i7-4700MQ
+@tab  yes
+@tab  @code{no-threading}
+@end multitable
+
+
+@menu
+* Aarch64::         The 64-bit variant of ARM.
+* Alpha::           The Alpha architecture.
+* ARM::             The ARM 32-bit architecture.
+* AVR::             The AVR micro-controllers used in Arduino boards.
+* i386::            The i386 (or x86) CPUs, running in 32-bit protected mode.
+* m68k::            The 68000 CPU and its successors.
+* MIPS::            The MIPS architecture.
+* OpenRISC::        The OpenRISC architecture.
+* PowerPC::         The PowerPC and POWER architectures.
+* RISC-V::          The RISC-V architecture.
+* s390::            The s390 architecture.
+* SH::              The SH architecture and j-core.
+* SPARC::           The SPARC architecture.
+* x86_64::          The x86_64 CPU, running in long mode.
+@end menu
+
+
+@c @@@
+@node Aarch64
+@subsection Aarch64
+@cindex Aarch64
+Minimal-threading works, as long as the GCC builtin for icache
+invalidation is sufficient---I have no real hardware to test on and
+QEmu does not emulate caches.
+
+At some point I should implement no-threading as well, since the
+architecture is popular.
+
+@c @@@
+@node Alpha
+@subsection Alpha
+@cindex Alpha
+Minimal-threading works, as long as the GCC builtin for icache
+invalidation is sufficient.
+
+No-threading support for Alpha should be considered a low-priority
+task, unless some effort emerges to resurrect the ISA in a free
+hardware implementation; still one of these days I might do it, just
+for the pleasure of working with such a pretty architecture.
+
+@c @@@
+@node ARM
+@subsection ARM
+@cindex ARM (32-bit)
+Minimal-threading works.  At some point I should implement
+no-threading as well, since the architecture is popular.
+
+@c @@@
+@node AVR
+@subsection AVR
+@cindex AVR
+The AVR architecture is currently not supported, but the idea of
+running on a small embedded CPU with no operating system feels
+intriguing as an intellectual exercise.
+
+I might be able to make simple VMs, probably only with simple
+threading models, run on mid-range models.  The most powerful models
+addressing a 16MiB data RAM will work easily.
+
+AVR is not supported by QEmu, but there are other free software
+emulators; I have to learn how to use them.  I have cross compilers.
+
+@c @@@
+@node i386
+@subsection i386
+@cindex i386
+@cindex x86 (32-bit)
+Minimal-threading works.
+
+At some point I should implement no-threading as well.  The best route
+seems to be generalizing the x86_64 version with CPP conditionals.
+
+@c @@@
+@node m68k
+@subsection m68k
+@cindex m68k
+@cindex 68000
+Even without having ever tested a complete program I am quite
+confident that minimal-threading works already, as long as the GCC
+builtin for icache invalidation is sufficient.  PC-relative addressing
+can be completely disabled with a GCC command-line option, and I see
+no other problems.
+
+Looking at the generated assembly code, and differently from what I
+was expecting, I see no big issue with the architecture having
+separate register classes for pointers and integers: GCC can still
+keep @code{union jitter_word} objects in registers, and will just
+generate the occasional register-to-register move instruction when a
+VM register allocated to the ``wrong'' class is being used with
+operations for the other.
+
+Along with the i386/x86_64 the m68k is among the few surviving
+architecture I know having stack-based instructions for handling
+procedures, instead of branch-and-link.  Branch-and-link VM operations
+can be supported using the same technique I am using on x86_64, with
+the mismatch causing the same kind of inefficiency with procedure
+calls.  I anticipate that the problem will be more serious on m68k,
+its less aggressive implementations providing fewer opportunities to
+hide the added latency with instruction-level parallelism.
+
+Testing the m68k architecture is extremely inconvenient for me:
+@code{qemu-user} is not usable for m68k, crosstool only supports
+@code{nommu} kernels for m68k and does not offer the GNU libc as a
+choice; I should install a GNU/Linux distribution on a virtual
+machine, then use either a native compiler on the virtual machine or
+build a cross-toolchain by hand.  It can be done, but it will be
+annoying.
+
+
+@c @@@
+@node MIPS
+@subsection MIPS
+@cindex MIPS
+No-threading works on 32-bit MIPS with either endianness.
+Minimal-threading works on 64-bit MIPS as well, again both big- and
+little-endian.
+
+32-bit MIPS is very well supported and has patch-ins for branches,
+both unconditional and conditional, and procedures.
+
+I made conditional branches quite efficient despite the slightly
+unusual ISA in this respect: MIPS has no conditional flags or separate
+compare instruction, and can branch conditionally on either a
+two-register equality/inequality comparison or a more general
+one-register comparison against zero.  The comparison operation is
+part of the conditional branch instruction.  To allow for comparisons
+not expressible within the instruction (less, less-or-equal, greater,
+greater-than-equal between two registers or one register and and
+immediate) MIPS provides a three-operand set-on-less-than instruction,
+setting a general register to either zero or nonzero.  The other
+possible variants set-on-less-or-equal, set-on-greater and
+set-on-greater-or-equal are not provided.
+
+Delay slots are often, even if not always, filled with nops.  I can
+write a new pass to be run after replication to fill some delay slots
+with the instruction being jumped to, adjusting the target as well.
+This would be relatively easy, and cover other cases where the
+opportunity is now wasted; the same infrastructure should be reusable
+on SH and on SPARC, where ``annulled instructions'' would let me cover
+even more cases.
+
+For some reason GCC generates much better code for PowerPC than for
+MIPS when register pressure is high, even if the two architectures are
+very similar.  I should distill a test case and ask the GCC people.
+
+@cindex branch, MIPS
+@cindex patch-in, MIPS
+@cindex MIPS, branch
+@cindex MIPS, patch-in
+@fixme{MIPS branches are slightly unusual, and my solution for
+handling them with patch-ins is nice.}
+
+@cindex MIPS release 6
+@fixme{MIPS release 6 has some (good) new features, but I can't build
+a cross compiler with crosstool-ng.  I should write a script to do it
+myself.
+Supporting r6-specific instructions would be nice: compact branches,
+particularly the two-register conditional ones, are very nice.
+Pseudo-direct branches are deprecated, but not yet removed, in r6.
+Maybe I should just use @code{b} and @code{bal} instead of @code{j}
+and @code{jal}, even if the range is narrower; I already use relative
+conditional branches.
+It should be possible, and easy, to generate assembly code running on
+both r6 and on previous versions, even if the @emph{binary} code is
+not compatible; however I can't test without a cross compiler.  I have
+no r6 physical hardware.}
+
+@c @@@
+@node OpenRISC
+@subsection OpenRISC
+@cindex OpenRISC
+Untested.
+
+@fixme{I can't build a cross compiler with crosstool-ng.  I should
+write a script to do it myself.}
+As a CPU with free-hardware implementations this architecture should
+be high-priority.
+
+@c @@@
+@node PowerPC
+@subsection PowerPC
+@cindex PowerPC
+No-threading works on 32-bit PowerPC, with either endianness.
+Minimal-threading works on 64-bit PowerPC as well, with either
+endianness.
+
+PowerPC is well supported, and has patch-ins for unconditional
+branches and procedures; conditional-branch patch-ins will be
+added soon.
+
+The port includes some inline assembly code to invalidate the icache,
+tested on the PowerPC 750 but almost certainly correct for other
+PowerPC models as well.
+
+@cindex POWER
+POWER is currently untested; looking at the documentation I see some
+differences in the required icache invalidation code; however I can
+conditionalize that if I ever decide to support POWER, and keep a
+single port for both variants.
+
+I routinely test on an emulated 750 and occasionally on a real one,
+but I should try other models as well; if more recent models support
+PC-relative loads, which is probably the case, GCC using them might
+cause problems.
+
+@c @@@
+@node RISC-V
+@subsection RISC-V
+@cindex RISC-V
+Untested.
+
+@fixme{I can't build a cross compiler with crosstool-ng.  I should
+write a script to do it myself.
+QEmu doesn't seem to have user process emulation yet.}
+As a CPU with free-hardware implementations this architecture should
+be high-priority.
+
+@c @@@
+@node s390
+@subsection s390
+@cindex s390 (architecture)
+@cindex s390x (architecture)
+
+Minimal-threading works, as long as GCC's icache invalidation builtin
+is sufficient.
+
+I routinely test the 64-bit variant s390x, which is well supported by
+crosstool-ng and qemu-user.  At this time I can build but not run
+``31-bit'' s390 executables; still, I do not anticipate particular
+problems.
+
+@c @@@
+@node SH
+@subsection SH
+@cindex SH (architecture)
+@cindex j-core
+Minimal-threading is currently broken on SH, because of the limitation
+on instruction immediate width.  GCC solves the problem by using
+PC-relative loads of constants close to the code directly in the @code{text}
+section, a perfectly good strategy for ordinary C code but unfortunately
+incompatible with my relocated instruction intervals.  Sometimes GCC generates
+PC-relative loads even for accessing constant bitmasks or @emph{offsets}
+to be used for loading from the stack, when the constants are too wide to
+fit in instruction immediates; such cases are unfortunately common in C
+functions containing many automatic variables, or function calls.
+@*
+I need a workaround.
+
+Of course direct threading relies on C only, and works reliably.
+
+As a CPU with free-hardware implementations this architecture should
+be high-priority.  Even if not the easiest ISA to support in Jitter I
+find the SH an exceptionally beautiful design, already worth supporting
+on esthetic merit alone.
+
+@c @@@
+@node SPARC
+@subsection SPARC
+@cindex SPARC
+
+Minimal-threading works well on both 32 and 64-bit SPARCs, as long as
+the GCC builtin for icache invalidation is sufficient.  I should
+implement no-threading as well; it seems easy.  VM procedures will use
+the flat model, without register windows.
+
+@fixme{As a CPU with free-hardware implementations this architecture
+should be high-priority; are ASIC implementations actually available?}
+
+@c @@@
+@node x86_64
+@subsection x86_64
+@cindex x86_64
+
+No-threading works well.
+
+x86_64 is very well supported and has patch-ins for branches, both
+unconditional and conditional, and procedures.
+
+Compiling the interpreter with the GCC option @code{-mcmodel=large} is
+an easy and reliable way of preventing the compiler from using
+@code{%rip}-relative addressing to access data from relocated code:
+the trick is that x86_64 can only encode a displacement from
+@code{%rip} as a signed 32-bit field, while the large model allows
+for wider displacements.
+
+@fixme{explain how the ``main'' procedure implementation works.}
+The implementation also contains an alternative working implementation
+of procedures not using @code{call} and @code{ret}.  It relies on
+using a @code{%rip}-relative @code{leaq} to load the return address
+into a register, and then jumping; this alternative implementation is
+actually a branch-and-link, but since on my machine it seems slightly
+slower than the other solution it is disabled.  See
+@code{JITTER_BRANCH_AND_LINK_NO_CALL}.
+
+The irritating asymmetry of the operands allowed in x86_64 comparison
+instructions sometimes makes the order of comparisons (for example
+@code{JITTER_BRANCH_FAST_IF_LESS_SIGNED (@var{a}, @var{b}, @var{F})}
+versus @code{JITTER_BRANCH_FAST_IF_GREATER_SIGNED (@var{b}, @var{a},
+@var{F})}) affect performance.  I can, and plan to, use
+@code{__builtin_constant_p} to rewrite the conditional when one of the
+operands is a known literal, but GCC gives me no way of distinguishing
+a memory operand from a register operand.
+
+
+@c @@@@@@@
+@node Porting
+@section Porting
+@cindex port, Jitter
+@cindex porting Jitter
+@cindex architecture
+@cindex machine, physical
+@cindex CPU
+Jitter is trivial to port to register-based CPU architectures allowing for
+a sufficiently wide addressing space.
+
+@fixme{It should be easy for accumulator- and stack-based
+architectures as well, as long as they can address more than 16 bits;
+anyway these aren't common.}
+
+@fixme{It is possible to have a minimal port, requiring only assembly
+code for a word-sized load to memory and no patch-ins; this way it's
+easy to test each individual feature}
+
+@subsection Required files
+@cindex @file{machine.h}
+@cindex @file{machine-assembly.S}
+@cindex @file{machine-c.c}
+@cindex @file{Makefile.am}
+@cindex @file{configure.ac}
+
+
+@c This is free software
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node This is free software
+@chapter This is free software
+
+@cindex free software
+@cindex GNU General Public License
+@cindex license
+@cindex software license
+@cindex GPL
+@cindex warranty (none)
+@cindex no warranty
+
+@cindex free documentation
+@cindex GNU Free Documentation License
+@cindex GFDL
+@cindex documentation license
+@cindex license, for the documentation
+
+@c FIXME[licensetext]: include the complete license texts if the manual becomes
+@c long enough.
+@ignore
+@appendix GNU General Public License
+@include gpl.texi
+
+@c @node GNU Free Documentation License
+@c @appendix GNU Free Documentation License
+@appendix GNU Free Documentation License
+@include fdl.texi
+@end ignore
+
+
+@c Bibliography
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Bibliography
+@unnumbered Bibliography
+
+I should thank the GForth people here.
+
+
+@c Indices
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Index
+@unnumbered Index
+
+@cindex index
+@printindex cp
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@c The actual documentation for the user ends here.
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+@c Stuff still to be written
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Stuff still to be written
+@appendix Stuff still to be written
+
+Cross-compiling: configure with
+@code{--enable-emulator="$(pwd)/libtool --mode=execute qemu-ppc -r 4.6.7 -L /home/luca/usr-cross/powerpc-unknown-linux-gnu/sysroot"}
+
+Configuring with @code{--disable-shared} will speed up builds.
+
+Why not using Gnulib in generated code.
+
+I should find a good name for this software.  ``@file{vmgen}'', possibly
+the best choice, has already been taken by the GForth people for a
+project quite different from mine, but with a similar aim.
+
+I should explicitly say that the interpreters I care about use a
+@dfn{linear program representation}.  Tree- or graph-based
+interpreters are too inefficient to consider seriously.
+VM instruction may look like native machine instructions, but don't
+have to; the focus is performance, and the right solution depends on
+what can be implemented most efficiently in a VM.
+
+Motivation: potentially complex instructions, not a good fit for a
+traditional JIT; experimenting with calling conventions.
+
+I resisted the temptation of making the thing Lispy, mostly to get
+Jitter more easily acceptable to a wider community---even if I really
+hesitated when getting to parsing operators with precedence and
+associativity, and almost redid everything the sensible way, using
+s-expressions.
+
+On reusing VMs.
+
+Big and small machines.  ``Embededd'', whatever it means.
+
+Is it a JIT?
+
+Not even an attempt at being safe.
+
+Mention Forth and vmgen.  Mention QEmu as well.
+
+``Threaded-code'' has nothing to do with multi-threading and concurrency.
+
+The system is agnostic with respect to binary formats: it does not
+rely on ELF @fixme{not really} and does noting unusual at link time.  VMs can be made
+into dynamic library.  All the dynamic code patching happens at
+runtime, after startup, on code with has been already relocated in the
+native architecture and endianness --- some architecture-dependent
+part of the code patching is of course sensitive to endianness, but
+that can be handled with simple preprocessor conditionals (see for
+example MIPS instruction patching in
+@file{machine/mips/jitter/machine/jitter-machine-c.c}).  All current assembly code
+@emph{does} require the GNU assembler (in particular alternative
+macros, subsections and the section stack), and I will almost
+certainly rely on its features even more in the future.
+
+The code I care about: compilers, symbolic processing.  If I were
+doing, say, graphics, my priorities would be different and I'd have
+pursued some paths which I've left open.
+
+A program using a Jitter-generated VM does not need to
+know the dispatching model or the number of fast registers: it can be
+simply linked to one of several libraries generated for a given VM,
+all having a compatible APIs.  No preprocessor feature macros are
+needed externally and all such libraries are functionally
+interchangeable.
+
+Document how to install the Emacs major mode for Jitter, even if it is
+completely standard.
+
+Every dispatching model more sophisticated than
+@code{switch}-dispatching relies on GNU C, and freely uses GNU C
+extensions: @code{typeof}, computed gotos, nested functions, GCC
+builtins, function attributes, empty inline assembly with constraints
+to notify the compiler of variables changing value out of its control.
+More critically, some distpatching models also rely on non-trivial
+assumptions about code generated by GCC, which are subject to breaking
+with future GCC versions.  A reasonable effort will be made to keep
+jittery code from breaking, but the user is encouraged to always rerun
+the Jitter test suite after upgrading GCC.
+
+Very little assembly in the source code; almost all inline asm is
+actually platform-independent.
+
+Implementation limits:
+@itemize
+@item
+maximum number of residuals per specialized
+instruction equal to the number of bits in a word.  Of course this
+could be lifted, but it would be painful and almost certainly useless.
+This is because of
+@code{vmprefix_specialized_instruction_label_bitmasks}
+and
+@code{vmprefix_specialized_instruction_fast_label_bitmasks}.
+
+@item
+Depending on how I encode fast jump instruction placeholders in
+compiled code there will be other limit on the number of residuals,
+which however will be higher than the previous limit.  Or maybe I can
+store the information away from the placeholder, and keep a pointer
+@emph{to} the placeholder, keeping informations along with the
+pointer.  Yes, this is the best solution.
+@end itemize
+
+@code{!BEGINBASICBLOCK} marks the beginning of a basic block
+@emph{at the VM level}.  Within each VM instruction, and from a VM
+instruction to the very beginning of the next (which at the VM level
+is fall-through control), there may be other jumps; these do not
+require special provisions, except making sure that each instruction
+is compiled into an uninterrupted interval of native instructions,
+without ever referring to addresses out of the interval either for
+native instructions or data.
+
+@section (Meta-)language
+Shall I replace the phrase ``dispatching model'' with something else?
+I use it to describe two different runtime behaviors:
+@dfn{dispatching}, in the sense of jumping from one VM instruction to
+the next, and @dfn{argument access}.  Maybe I should just say
+``runtime''.
+
+About the word ``word'': it does not mean what it means in Gas.
+
+Replication/relocation: GForth's ``dynamic superinstructions with
+replication'' corresponds to my @emph{minimal-threading} dispatch
+model; my @emph{no-threading} dispatching model is close to what
+@command{gforth-fast} did.
+Jitter does not support ``dynamic superinstructions without
+replication''.
+
+GCC is @emph{not} called at run time; that would be very slow, and the
+result would probably be inferior (separately compiled code could not
+easy share runtime state such as VM registers, without resorting to
+globals in memory).  Gas is @emph{not} called at run time either.  In
+fact a Jittery VM doesn't need to invoke any external program to work
+except @command{objdump} for disassembling, and even that is only useful
+for debugging and developing, and therefore not critical for
+performance.  VMs do not rely on @file{ld.so} for loading or relocating
+generated code: everything is done in memory, on raw instruction
+bytes.  There is no @code{dlopen}.
+
+Jittery VMs might be useful as a tool to experiment with garbage
+collectors, since it allows for low-level control; Jitter gives the
+user much more control over the generated code compared to a compiler,
+and I guess replicated code could count as a reasonable approximation
+of compiler-generated code when evaluating the performance of a
+collector.  With Jitter it is easy to reserve (VM) registers for
+special purposes, and to play with weird stack organizations.
+
+Polemical references to what scripting languages do, to be softened:
+if your program spends most of the time accessing complicated
+associative data structures you should use external functions for
+this---or even better @emph{you should not do it}: arrays were
+developed for a reason.  Bignums are nice to have, but should not be
+used for @emph{all} numbers.  Having floating-point numbers
+@emph{only} is stupid for the same reason.  If you have a radical idea
+for a computation model and you want to encode everything in it, make
+sure that you can recognize the optimizable cases and reduce them to
+the fast version almost always.
+
+
+@section Frontend performance
+@code{mmap}; a lot of @code{malloc} and @code{free} which are
+difficult to do without, because of rewriting.  But custom heap
+allocators might be a good idea for the future, assuming the common
+use case is destroying a program after it's been specialized, and
+keeping only the specialized version; this is currently not possible
+as both program versions are kept in the same data structure, but that
+will change.
+
+Even in its current state Jitter's frontend should run much faster
+than the alternative of spawning @command{gcc} or even just
+@command{as} plus @command{ld} processes, and then using @code{dlopen}
+to link object code.
+
+Specialization can possibly be made faster (and the generated code
+certainly much smaller) by using simple automata techniques of the
+same family of those of Flex---the problem involves building an
+automaton for specialized instruction prefixes, which I think I can do
+directly in DFA form by using a hash at generation time.  I cannot
+really tell how much of a problem specialization performance is at run
+time without benchmarking a complete Jittery application.  As for
+compile time, specialization is heavyweight but not the bottleneck:
+the interpreter, being a single huge function, is more demanding on
+the compiler than a large set of small static functions calling each
+other.  Switching from the current approach based on custom code
+generated for each specialized instruction to a single generated table
+accessed by hand-written code would shift the load from the
+instruction cache to the data cache.  The table-based alternative
+would touch less memory, but possibly with worse spatial locality.
+
+The frontend works in passes: instruction specialization is a separate
+pass, working on every unspecialized instruction one after the other.
+This is probably good.  Will the specializer code and data remain in
+L1i and L1d between a specialization pass and the next?  I doubt it.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@section Markup samples for the reference part
+
+@deftypefn {Macro} SWAP @
+  (@var{A}, @var{B}) @code{SWAP} assigns the value of @var{A} to
+@var{B} and the value of @var{B} to @var{A}.
+
+Both @var{A} and @var{B} must be lvalues.  Each is evaluated exactly
+once, in an unspecified order.
+
+The macro expands to a statement, and there is no return value.
+@end deftypefn
+
+@c The example can also be put within the deftypefn block.  The output
+@c is indented differently.
+@example
+int a = 10, b = 20;
+SWAP(a, b);
+printf ("%i, %i\n", a, b);
+@print{} 20, 10
+@end example
+
+@deftypefn {Library Function} int sum @
+  (int @var{q}, float @var{w})
+...
+@end deftypefn
+
+@deftypevr {Global Variable} bool frobnicate
+...
+@end deftypevr
+
+@section GCC options
+This seems reasonable:
+@code{-O2 -fno-gcse -fno-plt -fpic -fpie -fno-crossjumping -fno-reorder-blocks -fno-thread-jumps -fno-jump-tables -fno-tree-switch-conversion}
+even if the result is not
+satisfactory when fast registers are too many---except on PowerPC,
+where the result keeps using registers well; that is surprising as
+MIPS should be very similar, but the generated code is much worse.
+
+x86_64: @code{-mcmodel=large} seems to avoid @code{%rip}-relative
+addressing altogether in generated code.  This is possibly a
+breakthrough, generalizable to other architectures.  Notice that my
+hackish way of generating assembly files hides the effect if I
+override CFLAGS from the @command{make} command line.
+
+SH: some subset of these options seems to greatly help in generating
+better (floating-point) code, even if it's still polluted with @code{fpscr}
+modifications and PC-relative loads crashing my replicated code:
+@code{-Ofast -funsafe-math-optimizations -ffast-math -fpic -maccumulate-outgoing-args -mprefergot -mnomacsave -mfmovd -ftree-vectorize}
+I guess the @code{fpscr} problem would disappear if I built a toolchain
+with only one floating-point width.
+
+@section Among design goals
+Jitter makes it possible to experiment with compilation techniques:
+even runtime features in my opinion too inefficient to use in
+production should still be convenient to implement on a VM.  The
+development of a runtime system can be made incremental, thanks to the
+easily modifiable nature of Jittery VMs.
+
+@section About tracing JITs
+They are very fashionable but I'm skeptical about them.  If we are
+already translating all the code to an intermediate representation
+such as the JVM bytecode or Jitter's unspecialized code we may as well
+accept the small additional linear-time overhead of specialization and
+compile @emph{everything} to native code.  In a very dynamic
+environment where code is rewritten multiple times at run time (like
+GNU epsilon does, in some execution phases) old native code can be
+garbage collected with finalizers, and its space reused for new
+generated code.
+
+I am personally unconvinced about the need for the additional
+complexity of tracing.  People who disagree with me can still use
+Jitter for generating native code from traces, collected with
+mechanisms of their own.
+
+@section VM instruction coarseness, or granularity
+It is debatable whether VM instructions should be RISC- or CISC-like.
+
+Native code makes the tradeoffs different from traditional threaded
+code, with a RISC design being more feasible, particularly elegant for a
+low-level source language and yielding smaller replicated code blocks:
+this reduced complexity should make place for increasing the number of
+fast VM registers, for better performance.
+
+On the other hand for a very dynamic system a CISC approach might pay
+off in dynamic compilation time, reducing the number of VM
+instructions to work with in exchange for larger, but fewer, blocks to
+copy: this boils down to comparing the performance of @code{memcpy}
+against additional VM code generation and specialization, with its
+complicated branching and memory access patterns---and @code{memcpy}
+is the obvious winner.
+Larger VM instructions will also give GCC ampler opportunities to optimize
+generating good native instruction schedules, allocating
+intra-instruction temporaries in temporary registers, and possibly
+unrolling loops.  Composing RISC-like VM instructions cannot yield
+native code of the same quality since GCC lacks information about the
+interaction between one instruction and the next, and can only work on
+each one in isolation.
+
+Whether all of this makes a difference in practice remains to be seen.
+If you have numbers to show, I am interested.
+
+@section What a ``basic block'' is
+Each ``basic block'' whose entry point is marked by a
+@code{!BEGINBASICBLOCK} specialized instructions in some dispatching
+models is actually an @dfn{extended basic block} in the sense of a
+linear sequence of specialized instructions beginning with its one
+@dfn{entry} specialized instruction (any number of predecessors) and
+containing one or more @dfn{exit} specialized instructions (any number
+of successors, also extended basic blocks) potentially branching out
+of the sequence.  An extended basic block may be entered only through
+its first specialized instruction, but specialized instructions
+exiting the extended basic block may occur at any point within the
+block, not necessarily at the end.
+
+A caller specialized instruction, even if conditional. always ends an
+extended basic block since returning from the procedure will jump back
+to the specialized instruction immediately following it, which
+therefore marks the beginning of a different extended basic block.  A
+callee specialized instruction is also always at the beginning of an
+extended basic block, as it can be a branch target---the difference
+between branch and branch-and-link being irrelevant for the purpose of
+basic block identification.
+
+The definition above would allow unconditional branches, unconditional
+procedure returns or @code{!EXITVM} specialized instructions to always
+end a basic block, since the following specialized instruction, if
+any, is not reachable through straight-line code and must be a branch
+target, if reachable at all.  Jitter does not delimit extended basic
+blocks in this way, instead checking (conservatively) which
+unspecialized instructions are possible branch @emph{targets}.  This
+yields slightly longer extended basic blocks, potentially containing
+dead code at the end.  I argue that this is not a problem in practice.
+The alternative would be having the user annotate meta-instructions to
+identify which ones perform @emph{unconditional} branches; incorrect
+annotations would lead to subtle bugs.  Caller meta-instructions
+@emph{do} require a user annotation in the form of the @code{caller}
+property, for the very purpose of correctly delimiting basic blocks,
+without which C macros for branch-and-link are not available to user
+code: but in this case the annotation cannot be forgotten if the
+meta-instruction code actually contains a branch-and-link operation,
+and even a redundant annotation does not yield incorrect code.
+
+I'm not currently using the phrase ``extended basic block'' since I've
+seen the same phrase used for slightly different concepts.  This might
+change in the future.
+
+
+
+@c Stuff still to be implemented.
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Stuff still to be implemented
+@appendix Stuff still to be implemented
+
+@section Emacs mode
+Emacs mode: the empty code block here should be recognized as valid, but it isn't.
+@example
+state-struct-c
+  code
+  end
+end
+@end example
+
+@section @code{mmap}
+@code{mmap} code to low addresses where
+possible.  By default Linux doesn't allow user processes to
+@code{mmap} the the very first page, but using the space from the
+second one (usually @code{0x1000} or @code{0x2000}) to @code{0xffff}
+can be a big win for slow labels on RISCs with 16-bit-only
+immediates and without fast label support---however the set of those
+machines is supposed to become very small.
+
+@section Word size on the target machine
+Make sure that @command{jitter} doesn't expand BITS_PER_WORD and
+similar macros according to the machine where @emph{it} runs; I'm
+almost positive it does now.
+
+This is difficult.  Shall I just generate every possibility?  A
+heavyweight solution would be generating every possibility separately
+in output C code, with @code{#ifdef}s around to only enable the used
+part.  This would make the generated code three times as big (even if
+not slower to compile) entailing three sets of definitions:
+@itemize
+@item 16-bit word
+--- it costs nothing more at this point;
+@item 32-bit word;
+@item 64-bit word.
+@end itemize
+If I do this it is imperative to do it in a non-invasive way, possibly
+by having @command{jitter} call itself more than once, collecting and appending
+the generated files; this way the code change can be localized.
+
+@section Non-relocatable instructions
+Locally @emph{un}wrap globals and functions.  This is easy and
+independent from the rest.
+
+Implement transfer registers, likely in memory, as offsets known at
+compile time relative to the @emph{base}.  This is easy.
+
+Second step: generate special specialized instructions (which is to
+say, without unspecialized counterparts) to transfer between ordinary
+and transfer registers, and to load transfer registers with immediates.
+
+Third step: do not specialize non-relocatable instructions, and insert
+transfer instructions around non-relocatable instructions at
+specialization time.
+
+@section Machine register use: single @emph{base} [almost done now]
+Use a single @emph{base} to point to memory residuals, slow registers and
+possibly transfer registers as well.  This is how to organize the
+array with multiple data types:
+@itemize
+@item
+first come the residual memory cells, whose number and classes are
+known;
+
+@item
+then come the transfer registers held in memory, whose number and
+classes are again known (shall I overlay transfer registers and memory
+residuals?  Any saving would be minimal unless I completely eliminate
+one of the two concepts, which will not be feasible with multiple
+user-specified data types---it would be feasible now);
+
+@item
+then come the slow registers, ordered first by index, then by class:
+for example, if there are
+three classes @math{A}, @math{B} and @math{C}
+and fast registers are
+6
+(@code{%a0}..@code{%a5},
+@code{%b0}..@code{%b5},
+@code{%c0}..@code{%c5})
+then the slow registers will be, in order,
+@code{%a6}, @code{%b6}, @code{%c6},
+@code{%a7}, @code{%b7}, @code{%c7},
+@code{%a8}, @code{%b8}, @code{%c8}, and so on.
+Slow-register residual arguments will be encoded as offsets from the
+base: no multiplication needed at run time.
+When more slow registers are needed at run time it is easy to grow the
+array with @code{realloc}: only the last part changes.
+@end itemize
+Alignment should be
+optimal, possibly by making each field aligned like the
+largest-alignment class---this is a simple solution, but it may be
+possible to do better.
+
+@subsection Base pointer not at offset zero
+The base should not necessarily point to the beginning of this memory
+buffer: it can point inside it, at a known offset: this would make
+offsets from the base smaller in modulo, giving access to the negative
+part as well, which might be important on architectures with only small
+immediates (SH, ARM).
+
+@section Alias argument class
+Rewriting may make some arguments of the same instruction always equal
+to one another; in this case only @emph{one} of them should be
+residualized.  This might be important with slow registers, but I
+haven't thought much of how to do it.  It's also important to respect
+modes: if one alias argument has input mode and another input/output
+mode, I @emph{am} allowed to modify the input/output version of it
+within the instruction: after all it's the same register.  Hum.  Maybe
+it's easier than I think.
+@*
+It's important that this optimization is automatic: it's not
+acceptable to pollute a VM specification with explicit two-argument
+versions of meta-instructions, just as rewrite targets.  Jitter should
+automatically discover that some arguments are redundant, and
+transform the definition.  I guess I will need an ``alias'' argument
+class, to be used internally and possibly for the user as well (or
+just to make my life easier when debugging).
+
+@subsection Scratch register not reserved
+Do not reserve the scratch register: just mark it as clobbered or set
+by inline asm in residual-loading code, so that GCC can reuse it as a
+temporary.  This would require GCC local register variables, but the
+thing is not trivial: residual loading routines can no longer just be
+copied before each instructions, but have to become patch-ins;
+otherwise GCC might insert code @emph{around} the local register
+variable declaration or inline asm, to save and restore the value
+previously held in the scratch register.
+
+This is a lot of work.  An easier compromise might be not to reserve
+the scratch register at all, and instead saving and restoring it from
+the assembly routines setting it.
+
+@section Frontend optimization
+Optimize the frontend.  In particular, turn checks for impossible
+conditions into @code{assert}s, and add a configure option to disable
+assertions.  Make fast unsafe versions of instruction-appending
+functions, to be used from debugged C code generators -- but not from
+the parser, whose input comes from the user.  Measure performance in
+generated VM instructions per second or possibly native instructions
+per second or bytes per second; on @code{moore} it's currently around
+1.7M VM instructions/second, including the parser overhead; I can't
+really tell if that's fast, without knowing the numbers for any JITs.
+
+@section Frontend cleanup
+Right now the frontend has data structures completely different from
+the ones in @command{jitter}.  Much of this distinction is reasonable, but some
+encoding, particularly in instruction arguments, could be shared.
+
+@section Memory directives
+Let the user specify data along with instructions in symbolic VM
+files, and a corresponding C API.
+
+Labels preceding instructions and data will need to be different
+because of the difference at specialization time, but it should not be
+a limitation to have them be even syntactically distinct.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@section Stack slot access
+Slow registers mapped to a stack, to make procedure calls easier?  Can
+I make that general?  I'd say not.
+
+But it would be easy to provide macros accessing the stack slots of a
+given non-TOS-optimized stack as l-values.  In order to be efficient
+they would be provided in two versions, working with indices and
+offsets.
+
+@section Convenience register spilling
+Adding macros to spill and unspill all the fast registers, and all
+registers up to a given index, would be easy.
+
+This of course would be convenient for the user but suboptimal, so the
+feature would consist in macros to be optionally possibly called in VM
+instruction code.
+
+@section A ridiculous i386/x86_64 optimization
+Add a different pair of call/prolog macros pushing the return address
+to a non-TOS-optimized stack.  This would be implemented with inline
+assembly on x86 by an @code{xchg} on the @code{%rsp} and a VM stack
+pointer, and on the other side as just an xchg; and in normal C for
+every other architectures.
+
+This may or may not be worth the trouble, and anyway should not be the
+main calling facility.
+
+@section No-threading: generate one C compilation unit per VM instruction
+A wild idea: instead of generating the no-threading ``interpreter'' as
+a C file containing one huge function with ~10000 labels, I could
+generate ~10000 small C compilation units each containing one
+function---one per VM instruction.  In order to guarantee
+compatibility when composing compiled code I would have to reserve
+registers myself for runtime state data structures: this can be done
+with GCC global register variables.  I would lose access to data on
+the stack shared by all the instructions, but I could use my base
+pointer instead of C's stack pointer, without any loss of efficiency.
+
+Instead of generating ~10000 C files I could generate just one, and
+use CPP to disable everything but one function at each compilation.
+That would make things a little cleaner.
+
+Pros:
+@itemize
+@item
+almost certainly better code: I get to decide exactly what part of the
+runtime state goes into registers.
+
+@item
+possibly break my dependency on GCC's @code{-fno-reorder-blocks},
+which is very critical right now---even if nobody has talked of
+removing that option I'm relying on its behavior, which is not
+guaranteed anywhere; in fact I'm surprised that GCC can even generate
+assembly code exactly respecting the order in the source;
+
+@item
+almost certainly, avoiding implicit reliance on code and data defined
+in an instruction block and used by another.  This currently breaks
+SH, where GCC uses PC-relative addressing to load constants too large
+to fit in immediates, which would be a good (and clever) solution
+normally, but a problem for my code-copying technique;
+
+@item
+Much less memory required for GCC.
+@end itemize
+
+Cons:
+@itemize
+@item
+How do I force GCC not to alter the stack pointer before the beginning
+or after the end of the code to be copied?  Can I actually reserve
+something like @code{%rsp} with @code{-ffixed-REG}?  The documentation
+is not completely clear, but I strongly doubt that.  [In fact, I can't].
+Were the QEmu people hit by this problem before they switched to their
+new code generator?
+
+I'm pessimistic here.  I can keep a global register variable in
+@code{%rsp} and reliably read and write it from C even without inline
+asm, but I can't prevent GCC from adjusting the stack whenever it
+wants, possibly right before my reads or after my writes.
+
+Until I find a solution, this idea is on hold.  Variations of this
+alter @code{%rsp} in places impossible to control:
+@smallexample
+//register void* rsp asm ("%rsp");
+register long a asm ("%rbx");
+register long b asm ("%r12");
+register long c asm ("%r13");
+register void* d asm ("%r14");
+
+extern void *beginning, *end;
+
+void
+f (void *label)
+@{
+  asm volatile ("# Function beginning");
+  if (__builtin_expect (label == 0, 0))
+    @{
+      beginning = && beginning_label;
+      end = && end_label;
+      return;
+    @}
+  goto * label;
+ beginning_label:
+  @{
+    asm volatile ("# After beginning");
+    a ++;
+
+    volatile long p [3000];
+    p [0] = 0;
+    p [1] = 1;
+    p [2] = 2;
+
+    asm volatile ("# Before end");
+  @}
+ end_label:
+  asm volatile ("# After end");
+@}
+@end smallexample
+
+@item
+A lot of time required for the linker.
+
+I suppose that the GCC part of the compilation would still be
+heavyweight in time, even it it would become easy to parallelize.  The
+stress would move from the compiler to the linker: can GNU LD
+efficiently link 10000 compiled modules, each containing one
+non-static function?  That is easy to test;
+
+@item
+More total time required for GCC?  I am curious about that;
+
+@item
+Nested C functions, as I mean to use them (several functions within
+the one interpreter function, called by replicated code from the
+interpreter function) would break.  But maybe I can work around that;
+
+@item
+Possibly very disruptive in Jitter.
+
+@item
+What about non-word-sized elements in the status?  Anyway, anything
+not fitting in a register would be accessible in memory base-relative.
+Everything would remain thread-local, which is good.
+@end itemize
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@c Footer.
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@bye

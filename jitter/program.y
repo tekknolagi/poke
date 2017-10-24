@@ -1,0 +1,404 @@
+/* VM-independent program frontend: Bison parser.
+
+   Copyright (C) 2016, 2017 Luca Saiu
+   Written by Luca Saiu
+
+   This file is part of Jitter.
+
+   Jitter is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   Jitter is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
+
+
+/* This code is included in the generated .c file, but not in the header. */
+%{
+  #include <stdio.h>
+  #include <limits.h>
+  #include <jitter/jitter.h>
+  #include <jitter/jitter-instruction.h>
+  #include <jitter/jitter-program.h>
+
+  #include <jitter/jitter-parser.h>
+  #include <jitter/jitter-scanner.h>
+  #include <jitter/jitter-fatal.h>
+
+  /* This is currently a fatal error.  I could longjmp away instead. */
+  static void
+  jitter_error (YYLTYPE *locp,
+                struct parser_arg *parser_arg, /*struct jitter_program *program,*/
+                yyscan_t scanner, const char *message)
+    __attribute__ ((noreturn));
+
+  /* Just a forward-declaration.  FIXME: the error-reporting code in the jitterc
+     parser is derived from this, but more advanced; I should integrate it. */
+  static void
+  jitter_simple_error (void *jitter_scanner, const char *message)
+    __attribute__ ((noreturn));
+
+/* Set the given lvalue, with the %type whose definition is union
+   jitter_literal, converting jitter_get_text (jitter_scanner) using the given
+   function.  These are useful to convert to a specified base, in the case of
+   signed and unsigned literals.  The lvalues will be either
+   $$.jitter_literal_signed or $$.jitter_literal_unsigned , and the functions to
+   call will be strtoll or strtoull . */
+#define JITTER_SET_BINARY(lvalue, function)           \
+  do                                                  \
+    {                                                 \
+      char *text = jitter_get_text (jitter_scanner);  \
+      * strchr (text, 'b') = '0';                     \
+      lvalue = function (text, NULL, 2);              \
+    }                                                 \
+  while (false)
+#define JITTER_SET_OCTAL(lvalue, function)            \
+  do                                                  \
+    {                                                 \
+      char *text = jitter_get_text (jitter_scanner);  \
+      char *oindex = strchr (text, 'o');              \
+      if (oindex != NULL)                             \
+        * oindex = '0';                               \
+      lvalue = function (text, NULL, 8);              \
+    }                                                 \
+  while (false)
+#define JITTER_SET_DECIMAL(lvalue, function)          \
+  do                                                  \
+    {                                                 \
+      char *text = jitter_get_text (jitter_scanner);  \
+      lvalue = function (text, NULL, 10);             \
+    }                                                 \
+  while (false)
+#define JITTER_SET_HEXADECIMAL(lvalue, function)      \
+  do                                                  \
+    {                                                 \
+      char *text = jitter_get_text (jitter_scanner);  \
+      lvalue = function (text, NULL, 16);             \
+    }                                                 \
+  while (false)
+
+/* Expand to an assignment of the given field of the given result as an
+   operation involving the given infix operator, and the fields with the same
+   names as the field of the result of the two given operands.  This is intended
+   for uses such as JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, +, $3)
+   . */
+#define JITTER_SET_OPERATION(field, result, operand1, operator, operand2)  \
+  do                                                                       \
+    {                                                                      \
+      result.field = operand1.field operator operand2.field;               \
+    }                                                                      \
+  while (false)
+
+%}
+
+/* We need a recent enough version of GNU Bison. */
+%require "2.3b" /* This is the first version supporting %define api.pure . */
+
+/* Use a prefix different from the default "yy" for the API. */
+%name-prefix "jitter_"
+// FIXME: the Bison documentation says that this is obsolete.  I should use
+// %define api.prefix {jitter_}
+// instead.  That will let me use more than one Bison parser in the
+// same executable.
+
+/* Generate a header file. */
+%defines
+
+/* This is a reentrant parser. */
+/*%define api.pure full*/ /* FIXME: I'd need to %require "3.0" for this.  Do I
+                             care about the difference?  Probably not. */
+%define api.pure
+
+/* We need to receive location information from the scanner, Bison-style. */
+%locations
+
+/* The parser and scanner functions both have additional parameters. */
+%lex-param { jitter_scan_t jitter_scanner }
+%parse-param { struct parser_arg *parser_arg }
+%parse-param { void* jitter_scanner }
+
+/* We don't need a %initial-action block, because the parser receives an already
+   initialized program; see the definition of jitter_parse_file_star . */
+
+/* This goes to the header file. */
+%code requires {
+  #include <stdio.h>
+
+  #include <jitter/jitter.h>
+  #include <jitter/jitter-instruction.h>
+  #include <jitter/jitter-program.h>
+  #include <jitter/jitter-vm.h>
+
+  /* The structure whose pointer is passed to the parser function.  FIXME:
+     revert to having just the program as a parser argument: the VM is reachable
+     from the program. */
+  struct parser_arg
+  {
+    /* The program to be parsed, empty on input. */
+    struct jitter_program *program;
+
+    /* Use slow registers only, even when fast registers would be available.  This
+       is not useful in production but can be handy for benchmarking an
+       unfavorable case, or to measure the speedup provided by fast registers. */
+    bool slow_registers_only;
+
+    /* VM-dependent data.  Not modified. */
+    const struct jitter_vm *vm;
+  };
+
+  /* Simplified error-reporting facilities calling vmprefix_error, suitable to be
+     called from the scanner and the parser without the complicated and
+     irrelevant parameters needed by vmprefix_error . */
+  void
+  jitter_scan_error (void *jitter_scanner) __attribute__ ((noreturn));
+  void
+  jitter_parse_error (void *jitter_scanner) __attribute__ ((noreturn));
+
+  /* Parse a program from a file for the pointed VM.  These functions are
+     VM-independent. */
+  struct jitter_program*
+  jitter_parse_file_star (FILE *input_file, const struct jitter_vm *vm)
+    __attribute__ ((nonnull (1, 2), returns_nonnull));
+  struct jitter_program*
+  jitter_parse_file (const char *input_file_name, const struct jitter_vm *vm)
+    __attribute__ ((nonnull (1, 2), returns_nonnull));
+
+  /* Same as jitter_parse_file_star and jitter_parse_file, but accepting a
+     further boolean parameter to determine whether the parsed program should be
+     automatically modified to only use slow registers. */
+  struct jitter_program*
+  jitter_parse_file_star_possibly_with_slow_registers_only
+    (FILE *input_file, const struct jitter_vm *vm, bool slow_registers_only)
+    __attribute__ ((nonnull (1, 2), returns_nonnull));
+  struct jitter_program*
+  jitter_parse_file_possibly_with_slow_registers_only
+    (const char *input_file_name, const struct jitter_vm *vm,
+     bool slow_registers_only)
+    __attribute__ ((nonnull (1, 2), returns_nonnull));
+}
+
+%union {
+  union jitter_literal literal;
+}
+
+%token INSTRUCTION_NAME REGISTER LABEL_LITERAL LABEL COMMA
+
+%token OPEN_PARENS CLOSE_PARENS
+%token SIGNED_BINARY_LITERAL SIGNED_OCTAL_LITERAL SIGNED_DECIMAL_LITERAL
+%token SIGNED_HEXADECIMAL_LITERAL
+%token UNSIGNED_BINARY_LITERAL UNSIGNED_OCTAL_LITERAL UNSIGNED_DECIMAL_LITERAL
+%token UNSIGNED_HEXADECIMAL_LITERAL
+%token BYTESPERWORD LGBYTESPERWORD BITSPERWORD
+%token PLUS MINUS TIMES DIV MOD
+%token UNSIGNED_PLUS UNSIGNED_MINUS UNSIGNED_TIMES UNSIGNED_DIV UNSIGNED_MOD
+%expect 100 /* FIXME: handle precedence and associativity.  Those shift/reduce
+               conflicts should only come from expressions, unless something
+               quite big escaped my attention. */
+%type <literal> int_expression
+
+%%
+
+instructions :
+  /* nothing */
+| instructions instruction
+;
+
+instruction :
+  labels instruction_name arguments
+;
+
+labels :
+  /* nothing */
+| labels label
+;
+
+label :
+  LABEL { char *label = jitter_get_text (jitter_scanner);
+          label [strlen (label) - 1] = '\0';  /* Remove the trailing colon. */
+          /* Add one to skip the prefix. */
+          jitter_append_symbolic_label (parser_arg->program, label + 1); }
+;
+
+instruction_name :
+  INSTRUCTION_NAME { char *name = jitter_get_text (jitter_scanner);
+                     jitter_append_instruction_name (parser_arg->program,
+                                                     name); }
+;
+
+arguments :
+  /* nothing */
+| argument after_one_argument
+;
+
+after_one_argument :
+  /* nothing*/
+| COMMA argument after_one_argument
+;
+
+int_expression :
+  SIGNED_BINARY_LITERAL       { JITTER_SET_BINARY($$.jitter_literal_signed,
+                                                  strtoll); }
+| SIGNED_OCTAL_LITERAL        { JITTER_SET_OCTAL($$.jitter_literal_signed,
+                                                 strtoll); }
+| SIGNED_DECIMAL_LITERAL      { JITTER_SET_DECIMAL($$.jitter_literal_signed,
+                                                   strtoll); }
+| SIGNED_HEXADECIMAL_LITERAL  { JITTER_SET_HEXADECIMAL($$.jitter_literal_signed,
+                                                       strtoll); }
+| UNSIGNED_BINARY_LITERAL     { JITTER_SET_BINARY($$.jitter_literal_unsigned,
+                                                  strtoull); }
+| UNSIGNED_OCTAL_LITERAL      { JITTER_SET_OCTAL($$.jitter_literal_unsigned,
+                                                 strtoull); }
+| UNSIGNED_DECIMAL_LITERAL    { JITTER_SET_DECIMAL($$.jitter_literal_unsigned,
+                                                   strtoull); }
+| UNSIGNED_HEXADECIMAL_LITERAL{ JITTER_SET_HEXADECIMAL($$.jitter_literal_unsigned,
+                                                       strtoull); }
+| BYTESPERWORD                { $$.jitter_literal_unsigned = SIZEOF_VOID_P; }
+| LGBYTESPERWORD              { $$.jitter_literal_unsigned = JITTER_LG_BYTES_PER_WORD; }
+| BITSPERWORD                 { $$.jitter_literal_unsigned = SIZEOF_VOID_P * CHAR_BIT; }
+| OPEN_PARENS int_expression CLOSE_PARENS { $$ = $2; }
+| int_expression PLUS int_expression
+     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, +, $3); }
+| int_expression MINUS int_expression
+     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, -, $3); }
+| int_expression TIMES int_expression
+     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, *, $3); }
+| int_expression DIV int_expression
+     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, /, $3); }
+| int_expression MOD int_expression
+     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, %, $3); }
+| int_expression UNSIGNED_PLUS int_expression
+     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, +, $3); }
+| int_expression UNSIGNED_MINUS int_expression
+     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, -, $3); }
+| int_expression UNSIGNED_TIMES int_expression
+     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, *, $3); }
+| int_expression UNSIGNED_DIV int_expression
+     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, /, $3); }
+| int_expression UNSIGNED_MOD int_expression
+     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, %, $3); }
+;
+
+argument :
+  int_expression { jitter_append_literal_parameter (parser_arg->program,
+                                                    $1); }
+| LABEL_LITERAL  { char *text = jitter_get_text (jitter_scanner) + 1; /* Skip the prefix. */
+                   jitter_append_symbolic_label_parameter (parser_arg->program,
+                                                           text); }
+| REGISTER       { char *text = jitter_get_text (jitter_scanner);
+                   char register_class_character = text [1];
+                   const struct jitter_register_class *register_class
+                     = parser_arg->program->vm->register_class_character_to_register_class
+                          (register_class_character);
+                   if (register_class == NULL)
+                     jitter_simple_error (jitter_scanner, "invalid register class");
+                   int register_id = strtol (text + 2, NULL, 10);
+                   if (parser_arg->slow_registers_only)
+                     register_id += register_class->fast_register_no;
+                   jitter_append_register_parameter (parser_arg->program,
+                                                     register_class,
+                                                     register_id); }
+;
+
+%%
+
+/* FIXME: the error-reporting facility in generator/generator.y is derived
+   from this, but improved. */
+void
+jitter_error (YYLTYPE *locp,
+              struct parser_arg *parser_arg,
+              yyscan_t jitter_scanner, const char *message)
+{
+  printf ("<INPUT>:%i: %s near \"%s\".\n",
+          jitter_get_lineno (jitter_scanner), message,
+          jitter_get_text (jitter_scanner));
+  exit (EXIT_FAILURE);
+}
+
+__attribute__ ((noreturn)) static void
+jitter_simple_error (void *jitter_scanner, const char *message)
+{
+  jitter_error (jitter_get_lloc (jitter_scanner),
+            NULL, /* We have no program here, but it's not important. */
+            jitter_scanner,
+            message);
+}
+
+void
+jitter_scan_error (void *jitter_scanner)
+{
+  jitter_simple_error (jitter_scanner, "scan error");
+}
+
+void
+jitter_parse_error (void *jitter_scanner)
+{
+  jitter_simple_error (jitter_scanner, "parse error");
+}
+
+struct jitter_program *
+jitter_parse_file_star_possibly_with_slow_registers_only
+   (FILE *input_file, const struct jitter_vm *vm,
+    bool slow_registers_only)
+{
+  yyscan_t scanner;
+  jitter_lex_init (&scanner);
+  jitter_set_in (input_file, scanner);
+
+  struct parser_arg pa;
+  pa.vm = (struct jitter_vm *) vm;
+  pa.slow_registers_only = slow_registers_only;
+  pa.program = jitter_make_program (vm);
+  /* FIXME: if I ever make parsing errors non-fatal, call jitter_lex_destroy before
+     returning, and finalize the program -- which might be incomplete! */
+  if (jitter_parse (& pa, scanner))
+    jitter_error (jitter_get_lloc (scanner),
+                  &pa,
+                  scanner, "parse error");
+  jitter_set_in (NULL, scanner);
+  jitter_lex_destroy (scanner);
+
+  return pa.program;
+}
+
+struct jitter_program *
+jitter_parse_file_possibly_with_slow_registers_only
+   (const char *input_file_name, const struct jitter_vm *vm,
+    bool slow_registers_only)
+{
+  FILE *f;
+  if ((f = fopen (input_file_name, "r")) == NULL)
+    {
+      printf ("failed opening file");
+      exit (EXIT_FAILURE);
+    }
+
+  /* FIXME: if I ever make parse errors non-fatal, I'll need to close the file
+     before returning. */
+  struct jitter_program *res
+    = jitter_parse_file_star_possibly_with_slow_registers_only
+         (f, vm, slow_registers_only);
+  fclose (f);
+  return res;
+}
+
+struct jitter_program *
+jitter_parse_file_star (FILE *input_file,
+                        const struct jitter_vm *vm)
+{
+  return jitter_parse_file_star_possibly_with_slow_registers_only
+            (input_file, vm, false);
+}
+
+struct jitter_program *
+jitter_parse_file (const char *input_file_name,
+                   const struct jitter_vm *vm)
+{
+  return jitter_parse_file_possibly_with_slow_registers_only
+            (input_file_name, vm, false);
+}

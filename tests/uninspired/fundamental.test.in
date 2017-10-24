@@ -1,0 +1,70 @@
+#!@SHELL@
+# Jitter testsuite: elementary tests.  This is -*- sh -*-, to be preprocessed.
+# Copyright (C) 2017 Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Include my little testsuite library.  Among the rest this sourcing enters the
+# directory containing *this* script (not the utility script).
+. "@abs_top_builddir@/tests/utility"
+
+# Print a range for test case indices.
+echo 1..84
+
+# Test simple program loading constants to registers and printing them.
+jitter_run_uninspired_case_all_dispatches "load-8-bit"  "125" ""
+jitter_run_uninspired_case_all_dispatches "load-16-bit" "32765" ""
+jitter_run_uninspired_case_all_dispatches "load-0xffff" "65535" ""
+jitter_run_uninspired_case_all_dispatches "load-32-bit" "2147483645" ""
+jitter_run_uninspired_case_all_dispatches "load-minus-one" "-1" ""
+jitter_run_uninspired_case_all_dispatches "load-minus-two" "-2" ""
+
+# Skip the 64-bit case on non-64-bit architectures.  Here we are assuming
+# architectures to be either 32- or 64-bit.
+if test "x@SIZEOF_VOID_P@" = "x8"; then
+    skip=""
+else
+    skip="skip"
+fi
+jitter_run_uninspired_case_all_dispatches "load-64-bit" "9223372036854775805" "$skip"
+
+# Check arithmetic operations with non-immediate operands.  Multiplication and
+# particularly division and remainder are critical on some machines relying on
+# library functions.
+jitter_run_uninspired_case_all_dispatches "add" "12345" ""
+jitter_run_uninspired_case_all_dispatches "sub" "12345" ""
+jitter_run_uninspired_case_all_dispatches "mul" "12345" ""
+jitter_run_uninspired_case_all_dispatches "div" "12345" ""
+jitter_run_uninspired_case_all_dispatches "mod" "12345" ""
+
+# Test loading labels to registers and (slow-)jumping thru registers.
+jitter_run_uninspired_case_all_dispatches "branch-thru-register" "12345" ""
+jitter_run_uninspired_case_all_dispatches "branch-thru-slow-register" "12345" ""
+
+# Check that unconditional branches work.
+jitter_run_uninspired_case_all_dispatches "unconditional-branch" "12345" ""
+
+# Check that conditional branches work.
+jitter_run_uninspired_case_all_dispatches "conditional-branch-not-taken" "12345" ""
+jitter_run_uninspired_case_all_dispatches "conditional-branch" "12345" ""
+
+# Check that procedures work.
+jitter_run_uninspired_case_all_dispatches "call-thru-register-leaf" "0/1/2" ""
+jitter_run_uninspired_case_all_dispatches "call-thru-register-non-leaf" "0/1/2/3/4" ""
+jitter_run_uninspired_case_all_dispatches "call-leaf" "0/1/2" ""
+jitter_run_uninspired_case_all_dispatches "call-non-leaf" "0/1/2/3/4" ""

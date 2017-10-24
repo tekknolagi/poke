@@ -1,0 +1,259 @@
+## Jitter specification for a stack VM, used in the structured language example.
+
+## Copyright (C) 2017 Luca Saiu
+## Written by Luca Saiu
+
+## This file is part of Jitter.
+
+## Jitter is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+
+## Jitter is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+
+## You should have received a copy of the GNU General Public License
+## along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+## Global configuration.
+#################################################################
+
+vm
+  set prefix "structuredvm"
+  tos-stack "jitter_int" "mainstack"
+end
+
+
+## Register classes.
+#################################################################
+
+register-class r 5
+  code
+    union jitter_word
+  end
+end
+
+
+## Functions and globals to wrap.
+#################################################################
+
+wrapped-functions
+  printf
+end
+
+wrapped-globals
+  stack_printf_format_string
+end
+
+early-c
+  code
+#   include <stdio.h>
+  end
+end
+late-c
+  code
+    static const char *stack_printf_format_string = "%" JITTER_PRIi "\n";
+  end
+end
+
+
+## Custom literal argument printer.
+#################################################################
+
+printer-c
+  code
+static void
+my_literal_printer (FILE *out, jitter_uint u)
+{
+  fprintf (out, "[%" JITTER_PRIu "]", u);
+}
+  end
+end
+
+
+## Instructions.
+#################################################################
+
+instruction nop ()
+  code
+  end
+end
+
+instruction drop ()
+  code
+    JITTER_DROP_MAINSTACK();
+  end
+end
+
+instruction push (?Rnl 0 1 -1 2 my_literal_printer)
+  code
+    jitter_int k = JITTER_ARGN0;
+    JITTER_PUSH_MAINSTACK(k);
+  end
+end
+
+instruction pop (!R)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_ARGN0 = top;
+  end
+end
+
+# Rationale: { pop %rN ; push %rN } can be rewritten into { setr %rN }
+instruction setr (!R)
+  code
+    JITTER_ARGN0 = JITTER_TOP_MAINSTACK();
+  end
+end
+
+instruction print ()
+  non-relocatable
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    printf (stack_printf_format_string, top);
+  end
+end
+
+instruction plus ()
+  code
+#define F(res, a, b) { res = a + b; }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction uminus ()
+  code
+    JITTER_TOP_MAINSTACK() = - JITTER_TOP_MAINSTACK();
+  end
+end
+
+instruction minus ()
+  code
+#define F(res, a, b) { res = a - b; }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction times ()
+  code
+#define F(res, a, b) { res = a * b; }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction divided ()
+  code
+#define F(res, a, b) { res = a / b; }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction remainder ()
+  code
+#define F(res, a, b) { res = a % b; }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction equal ()
+  code
+#define F(res, a, b) { res = (a == b); }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction different ()
+  code
+#define F(res, a, b) { res = (a != b); }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction less ()
+  code
+#define F(res, a, b) { res = (a < b); }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction lessorequal ()
+  code
+#define F(res, a, b) { res = (a <= b); }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction greater ()
+  code
+#define F(res, a, b) { res = (a > b); }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction greaterorequal ()
+  code
+#define F(res, a, b) { res = (a >= b); }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction logicaland ()
+  code
+#define F(res, a, b) { res = (a && b); }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction logicalor ()
+  code
+#define F(res, a, b) { res = (a || b); }
+    JITTER_BINARY_MAINSTACK(F);
+#undef F
+  end
+end
+
+instruction logicalnot ()
+  code
+    JITTER_TOP_MAINSTACK() = ! JITTER_TOP_MAINSTACK();
+  end
+end
+
+instruction b (?f)
+  code
+    JITTER_BRANCH_FAST(JITTER_ARGF0);
+  end
+end
+
+instruction bt (?f)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NONZERO(top, JITTER_ARGF0);
+  end
+end
+
+instruction bf (?f)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_ZERO(top, JITTER_ARGF0);
+  end
+end

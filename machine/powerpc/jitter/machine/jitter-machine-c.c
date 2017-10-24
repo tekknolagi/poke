@@ -1,0 +1,281 @@
+/* VM library: native code patching for PowerPC .
+
+   Copyright (C) 2017 Luca Saiu
+   Written by Luca Saiu
+
+   This file is part of Jitter.
+
+   Jitter is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   Jitter is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
+
+
+//#include <config.h>
+
+#include <stdint.h>
+#include <assert.h>
+#include <string.h>
+
+#include <jitter/jitter-fatal.h>
+
+#include <jitter/jitter-patch.h>
+#include <jitter/jitter-machine-common.h>
+
+#include "jitter-machine.h"
+
+
+void
+jitter_invalidate_icache (char *from, size_t byte_no)
+{
+  /* We have to invalidate every icache "block", which appears to mean L1I cache
+     line.  On some models the line width is 32 bytes, on others 64.  I have to
+     play it safe here, unless there is some good way of finding what the CPU
+     is, possibly at initialization.  The clcs instruction returns the cache
+     line size, but it only works on POWER -- not on PowerPC.
+
+     This method seems to work reliably on my machine, but it might be overkill.
+
+     For each block of written instructions:
+     - flush the block from dcache to "memory" (I hope this actually means
+       from L1D to L2);
+     - invalidate the same block in L1I.
+     After we have done this for every block, do a sync to wait until everything
+     which was supposed to go to "memory" is actually there.
+     Finally, do an isync to drop any previosuly prefetched instruction having
+     already found its way into the pipeline. */
+  char * const limit = from + byte_no;
+  char *p;
+  for (p = from ; p < limit; p += 32)
+    /* Both dcbf and icbi take two registers as parameters, whose contents are
+       summed to get a logical address, unless ther first register is %r0 --
+       in which case only the second register is used. */
+    asm volatile ("dcbf %%r0, %0\n\t"
+                  "icbi %%r0, %0\n\t"
+                  :
+                  : "r" (p)
+                  : "memory");
+
+  /* Ensure the instructions we wrote are now in memory. */
+  asm volatile ("sync");
+
+  /* Discard prefetched instructions.  It's unlikely that we have already
+     prefetched the new code or jitter was in its place before, but let's play
+     it safe. */
+  asm volatile ("isync");
+}
+
+enum jitter_routine_to_patch
+jitter_routine_for_loading_register (const char *immediate_pointer,
+                                     unsigned int residual_register_index,
+                                     const char *loading_code_to_write)
+{
+  int32_t immediate = * (int32_t*) immediate_pointer;
+
+  /* The PowerPC, differently from MIPS, has no good way of zero-extending a
+     16-bit immediate into a word; however it can sign-extend. */
+  if (jitter_fits_in_bits_sign_extended (immediate, 16))
+    switch (residual_register_index)
+      {
+      case 0:  return jitter_routine_load_sign_extended_16bit_to_register_0;
+      case 1:  return jitter_routine_load_sign_extended_16bit_to_register_1;
+      case 2:  return jitter_routine_load_sign_extended_16bit_to_register_2;
+      case 3:  return jitter_routine_load_sign_extended_16bit_to_register_3;
+      case 4:  return jitter_routine_load_sign_extended_16bit_to_register_4;
+      case 5:  return jitter_routine_load_sign_extended_16bit_to_register_5;
+      case 6:  return jitter_routine_load_sign_extended_16bit_to_register_6;
+      case 7:  return jitter_routine_load_sign_extended_16bit_to_register_7;
+      case 8:  return jitter_routine_load_sign_extended_16bit_to_register_8;
+      case 9:  return jitter_routine_load_sign_extended_16bit_to_register_9;
+      case 10:  return jitter_routine_load_sign_extended_16bit_to_register_10;
+      case 11:  return jitter_routine_load_sign_extended_16bit_to_register_11;
+      case 12:  return jitter_routine_load_sign_extended_16bit_to_register_12;
+      case 13:  return jitter_routine_load_sign_extended_16bit_to_register_13;
+      case 14:  return jitter_routine_load_sign_extended_16bit_to_register_14;
+      default: jitter_fatal ("impossible");
+      }
+  else
+    /* The only other case is loading a full 32-bit word. */
+    switch (residual_register_index)
+      {
+      case 0:  return jitter_routine_load_32bit_to_register_0;
+      case 1:  return jitter_routine_load_32bit_to_register_1;
+      case 2:  return jitter_routine_load_32bit_to_register_2;
+      case 3:  return jitter_routine_load_32bit_to_register_3;
+      case 4:  return jitter_routine_load_32bit_to_register_4;
+      case 5:  return jitter_routine_load_32bit_to_register_5;
+      case 6:  return jitter_routine_load_32bit_to_register_6;
+      case 7:  return jitter_routine_load_32bit_to_register_7;
+      case 8:  return jitter_routine_load_32bit_to_register_8;
+      case 9:  return jitter_routine_load_32bit_to_register_9;
+      case 10:  return jitter_routine_load_32bit_to_register_10;
+      case 11:  return jitter_routine_load_32bit_to_register_11;
+      case 12:  return jitter_routine_load_32bit_to_register_12;
+      case 13:  return jitter_routine_load_32bit_to_register_13;
+      case 14:  return jitter_routine_load_32bit_to_register_14;
+      default: jitter_fatal ("impossible");
+      }
+}
+
+enum jitter_routine_to_patch
+jitter_routine_for_loading_memory (const char *immediate_pointer,
+                                   unsigned int index,
+                                   const char *loading_code_to_write)
+{
+  jitter_fatal ("PowerPC residual memory: not implemented yet");
+}
+
+void
+jitter_patch_load_immediate_to_register (char *native_code,
+                                     size_t native_code_size,
+                                     const char *immediate_pointer,
+                                     enum jitter_routine_to_patch routine)
+{
+  uint32_t u = * (uint32_t*) immediate_pointer;
+  uint16_t low = u & ((1 << 16) - 1);
+  uint16_t high = u >> 16;
+  /* See the comments in machine-assembly.S about offsets. */
+  switch (routine)
+    {
+    case jitter_routine_load_sign_extended_16bit_to_register_0:
+    case jitter_routine_load_sign_extended_16bit_to_register_1:
+    case jitter_routine_load_sign_extended_16bit_to_register_2:
+    case jitter_routine_load_sign_extended_16bit_to_register_3:
+    case jitter_routine_load_sign_extended_16bit_to_register_4:
+    case jitter_routine_load_sign_extended_16bit_to_register_5:
+
+    case jitter_routine_load_sign_extended_16bit_to_memory:
+      /* Each of these routines is implemented by a single 32-bit instruction
+         with a literal in the rightmost 16 bits; they can all be patched in
+         the same way. */
+#ifdef WORDS_BIGENDIAN
+      memcpy (native_code + 2, &low, 2);
+#else
+      memcpy (native_code + 0, &low, 2);
+#endif // #ifdef WORDS_BIGENDIAN
+      break;
+    case jitter_routine_load_32bit_to_register_0:
+    case jitter_routine_load_32bit_to_register_1:
+    case jitter_routine_load_32bit_to_register_2:
+    case jitter_routine_load_32bit_to_register_3:
+    case jitter_routine_load_32bit_to_register_4:
+    case jitter_routine_load_32bit_to_register_5:
+    case jitter_routine_load_32bit_to_memory:
+      /* Not much more difficult.  Here we have two 32-bit instructions to
+         patch, each with a 16-bit literal in the end.  The high part comes
+         first. */
+#ifdef WORDS_BIGENDIAN
+      memcpy (native_code + 2, &high, 2);
+      memcpy (native_code + 6, &low, 2);
+#else
+      memcpy (native_code + 0, &high, 2);
+      memcpy (native_code + 4, &low, 2);
+#endif // #ifdef WORDS_BIGENDIAN
+      break;
+
+    default:
+      jitter_fatal ("impossible");
+    }
+}
+
+void
+jitter_patch_load_immediate_to_memory (char *native_code,
+                                   size_t native_code_size,
+                                   unsigned int memory_index,
+                                   const char *immediate_pointer,
+                                   enum jitter_routine_to_patch routine)
+{
+  jitter_fatal ("PowerPC residual memory: not implemented yet");
+}
+
+/* I keep this conditional to be able to test with patch-in disabled, by just
+   commenting one line in the header. */
+#ifdef JITTER_HAVE_PATCH_IN
+enum jitter_routine_to_patch
+jitter_routine_for_patch_in (const struct jitter_patch_in_descriptor *dp)
+{
+  jitter_uint patch_in_case = dp->patch_in_case;
+  if (patch_in_case != JITTER_PATCH_IN_CASE_FAST_BRANCH_UNCONDITIONAL)
+    jitter_fatal ("jitter_routine_for_patch_in: unsupported patch-in case");
+
+  return jitter_routine_jump_unconditional_26bit_offset_no_link;
+}
+#endif // #ifdef JITTER_HAVE_PATCH_IN
+
+/* I keep this conditional to be able to test with patch-in disabled, by just
+   commenting one line in the header. */
+#ifdef JITTER_HAVE_PATCH_IN
+void
+jitter_patch_patch_in (char *native_code,
+                       const char *immediate_pointer,
+                       const struct jitter_patch_in_descriptor *descriptor,
+                       enum jitter_routine_to_patch routine)
+{
+  switch (routine)
+    {
+    case jitter_routine_jump_unconditional_26bit_offset_no_link:
+      {
+        char *jump_target = * (char**) immediate_pointer;
+
+        /* On PowerPC relative branch targets are encoded as signed
+           displacements from the *beginning* of the jumping instruction, and
+           must fit in 26 bits.  The two least significant bits are flags which
+           I want to keep cleared; the six most significant bits are the
+           opcode. */
+        int64_t offset = jump_target - native_code;
+        if (! jitter_fits_in_bits_sign_extended (offset, 26))
+          jitter_fatal ("branch displacement too far");
+
+        /* This is apparently not needed.  I seem to be able to directly check
+           ((uint64_t) offset) & 3, as the PowerPC documentation seems to
+           vaguely suggest.  The mathematical reason escapes me right now, but
+           the thing works. */
+        /* uint64_t offset_absolute_value = offset < 0 ? - offset : offset; */
+        /* if (offset_absolute_value & 3) */
+        /*   jitter_fatal ("unaligned branch: this should never happen"); */
+        if (((uint64_t) offset) & 3)
+          jitter_fatal ("unaligned branch: this should never happen");
+
+        /* The instruction might be unaligned with respect to a 64-bit word (for
+           the future: PowerPC64 is not supported yet), but since PowerPC allows
+           unaligned memory accesses I'll just use a 32-bit pointer, and ignore
+           endianness problems. */
+        /* FIXME: this trick is very nice, but I'm worried about endianness; I
+           can't easily test on little-endian PowerPCs.  It works fine on a
+           big-endian machine. */
+        /*
+        struct b_instruction {
+          unsigned long opcode : 6;
+          signed long offset_without_00 : 24;
+          unsigned long flags : 2;
+        } __attribute__ ((packed));
+        struct b_instruction instruction
+          = {.opcode = 18u,
+             .offset_without_00 = offset >> 2,
+             .flags = 0};
+        * (struct b_instruction *) native_code = instruction;
+        */
+        /* FIXME: this should work with either endianness.  For the time being
+           I'm keeping it. */
+        uint32_t shifted_opcode = 18u << 26;
+        uint32_t truncated_offset = ((uint32_t) offset) & ((2u << 25) - 1);
+        uint32_t truncated_offset_with_flags_cleared = truncated_offset & ~ 3;
+        uint32_t instruction
+          = shifted_opcode | truncated_offset_with_flags_cleared;
+        * (uint32_t *) native_code = instruction;
+        break;
+      }
+    default:
+      jitter_fatal ("jitter_patch_patch_in: unsupported routine %li",
+                    (long) routine);
+    }
+}
+#endif // #ifdef JITTER_HAVE_PATCH_IN

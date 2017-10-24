@@ -1,0 +1,43 @@
+# This is an -*- asm -*- file, so to speak.
+
+# Euclid's subtraction-based algorithm, with a hand-written superinstruction.
+
+# Copyright (C) 2016 Luca Saiu
+# Updated in 2017 by Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+        mov 3333333333, %r0
+        mov 1, %r1
+
+$loop:
+        # The next instruction is a hand-written superinstruction, replacing
+        # the four instructions in the comment.  Only labels arguments are
+        # residual.
+        # beq %r0, %r1, $done
+        # blt %r0, %r1, $swap
+        # sub %r0, %r1, %r0
+        # b $loop
+        beqrzeroronebltrzeroronesubrzeroronerzerob $done, $swap, $loop
+$swap:
+        mov %r1, %r2
+        mov %r0, %r1
+        mov %r2, %r0
+        b $loop
+$done:
+        printfixnum %r1

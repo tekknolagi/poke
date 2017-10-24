@@ -1,0 +1,304 @@
+# Jitter testsuite: testsuite -*- sh -*- library, not to be run as a script.
+# Copyright (C) 2017 Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Running-as-script warning.
+###########################################################################
+
+# This file is meant to be sourced (with . in portable Bourne shell language),
+# not executed.
+
+
+# Global shell settings and definitions.
+###########################################################################
+
+# Make shell script mistakes easy to see by exiting the shell at the first
+# error.
+set -e
+
+# Enter the directory of the script sourcing this (not the directory containing
+# this script).
+jitter_test_subdirectory="$(@JITTER_DIRNAME@ $0)"
+cd "$jitter_test_subdirectory"
+
+# Store the name of the test script (which is the basename of the script
+# sourcing this one, without the .test extension) into a shell variable.  This
+# will be used to form the name of case files.
+# The test is identified by a name, within a directory; each case within the
+# test is identified by a 1-based index.
+jitter_test_name="$(@JITTER_BASENAME@ $0 .test)"
+
+# Test cases should all terminate very quickly, and no one test case is supposed
+# to ever run longer than this number of seconds, even on slow hardware or thru
+# emulators; exceeding the limit will be seen as a failure.
+# This is useful for tests which might incorrectly loop.
+jitter_timeout=1
+
+# If we have the GNU coreutils we can use timeout to avoid running a test case
+# too long.  If not we will run without it, and the test suite may hang.  We allow
+# for the test case to run for one more second than $jitter_timeout (and we send
+# it a KILL signal after yet another second); $jitter_timeout is the CPU time limit
+# (different from the elapsed time) as passed to --cpu-time-limit= in the
+# interpreter test cases.
+# As a last resort we also run the VM with --time-limit= , with a timeout
+# $jitter_wall_clock_time_factor times larger than the CPU time limit, to allow
+# for parallel runs.
+jitter_wall_clock_time_factor=3
+if    test "x@JITTER_TIMEOUT@" = "x" \
+   || test "x$jitter_timeout" = "x"  \
+   || test "x$jitter_timeout" = "x0"; then
+    jitter_timeout_command=""
+else
+    jitter_timeout_command="@JITTER_TIMEOUT@ --foreground --kill-after=$(($jitter_timeout + 2))s $(($jitter_timeout + 1))s"
+fi
+
+
+# Test case numbering and file name computation.
+###########################################################################
+
+# Increment the shell variable jitter_case_index , which is assumed to be
+# already defined.  Zero arguments.
+jitter_increment_case_index ()
+{
+    jitter_case_index=$(( $jitter_case_index + 1 ))
+}
+
+# Set the shell variables jitter_command_line_file , jitter_stdout_file and jitter_stderr_file as
+# appropriate for the current test case.  jitter_case_index is assumed to be
+# defined.
+jitter_define_file_names ()
+{
+    jitter_previous_case_index=$(( $jitter_case_index - 1 ))
+    jitter_previous_command_line_file="${jitter_test_name}-${jitter_previous_case_index}-command-line"
+    jitter_previous_stdout_file="${jitter_test_name}-${jitter_previous_case_index}.stdout"
+    jitter_previous_stderr_file="${jitter_test_name}-${jitter_previous_case_index}.stderr"
+    jitter_command_line_file="${jitter_test_name}-${jitter_case_index}.command-line"
+    jitter_stdout_file="${jitter_test_name}-${jitter_case_index}.stdout"
+    jitter_expected_stdout_file="${jitter_test_name}-${jitter_case_index}.expected"
+    jitter_stderr_file="${jitter_test_name}-${jitter_case_index}.stderr"
+}
+
+# Remove nonstandard log files for the current test case.  jitter_case_index is
+# assumed to be defined.
+jitter_remove_nonstandard_log_files ()
+{
+    jitter_define_file_names
+    rm -f "$jitter_command_line_file"
+    rm -f "$jitter_stdout_file"
+    rm -f "$jitter_expected_stdout_file"
+    rm -f "$jitter_stderr_file"
+}
+
+# This is not meant to be called out of this file.  Prepare for the next test
+# case by incrementing the case counter, computing file names, and deleting
+# previous versions of them if any.
+jitter_prepare_for_next_case ()
+{
+    jitter_increment_case_index
+    jitter_define_file_names
+    jitter_remove_nonstandard_log_files
+}
+
+# Prepare for the first case.  The next case test to run now has index 1...
+jitter_case_index=1
+
+# ...Define file names for the current test case.  This is useful for the script
+# to create an expected output file right from the beginning, in case the first
+# case needs one.
+jitter_define_file_names
+jitter_remove_nonstandard_log_files
+
+
+# Test case running.
+###########################################################################
+
+# Run a test case.
+# Arguments:
+# - test case description, which must fit in one line and perferably be shorter.
+# - the other arguments together make a command line to be run, whose exit code
+#   determines whether the test case succeeded.
+# The command is run with standard input redirected from /dev/null and standard
+# output and standard errors redirected to files whose name contains the
+# testcase index.  The command line is also saved to a file containing the case
+# index in its name.  This prints a single line consisting of a result, an
+# index, and the given description; the result is either "ok" or "not ok", the
+# index is a progressive 1-based integer, automatically set the first time and
+# then incremented.
+jitter_run_case ()
+{
+    jitter_description="$1"
+    shift
+
+    # Remove nonstandard log files generated by previous runs.
+    rm -f "$jitter_command_line_file" "$jitter_stdout_file" "$jitter_stderr_file"
+
+    # Run the test case, generating new nonstandard log files and remembering
+    # the exit status.
+    jitter_command_line="$@"
+    echo "$jitter_command_line" > "$jitter_command_line_file"
+    jitter_result=$( ($jitter_timeout_command $jitter_command_line) \
+                        < /dev/null \
+                        > "$jitter_stdout_file" \
+                        2> "$jitter_stderr_file" \
+                     && echo 'ok' || echo 'not ok')
+    echo "$jitter_result $jitter_case_index - $jitter_description"
+    jitter_prepare_for_next_case
+}
+
+# Run a test case and compare the standard output with an expected output.  This
+# behaves like jitter_run_case, except that the standard output is also compared
+# with the content of the expected output file for the test case, which must
+# already have been created by the test script and and have the standard name as
+# per ${jitter_expected_stdout_file} as defined in jitter_define_file_names .
+# The test is considered to fail if the exit value is nonzero *or* the output
+# differs.
+# Arguments like jitter_run_case .
+jitter_run_case_checking_output ()
+{
+    jitter_description="$1"
+    shift
+
+    # Remove nonstandard log files generated by previous runs.
+    rm -f "$jitter_command_line_file" "$jitter_stdout_file" "$jitter_stderr_file"
+
+    # Run the test case, generating new nonstandard log files and remembering
+    # the exit status.  Compare the actual output with what was expected
+    # (suppressing \r characters, for portability and replacing any \n
+    # characters except the last one with slashes), and take any difference as
+    # a failure.
+    jitter_command_line="$@"
+    echo "$jitter_command_line" > "$jitter_command_line_file"
+    jitter_result=$( ( ($jitter_timeout_command $jitter_command_line) \
+                          < /dev/null \
+                          > "$jitter_stdout_file" \
+                          2> "$jitter_stderr_file" \
+                        && test -f "$jitter_expected_stdout_file" \
+                        && (  @JITTER_TR@ -d '\r' < "$jitter_stdout_file" \
+                            | @JITTER_TR@ '\n' '/' \
+                            | @SED@ 's@/$@\n@' \
+                            | @JITTER_CMP@ -s - \
+                                              "$jitter_expected_stdout_file")) \
+                     && echo 'ok' || echo 'not ok')
+    echo "$jitter_result $jitter_case_index - $jitter_description"
+
+    jitter_prepare_for_next_case
+}
+
+# Skip a test case, still incrementing the case index and printing an
+# appropriate line.
+# At least one argument, the test case description like for jitter_run_case;
+# supplementary arguments are accepted and ignored.
+jitter_skip_case ()
+{
+    jitter_description="$1"
+    shift
+
+    jitter_command_line="# $@"
+    echo "$jitter_command_line" > "$jitter_command_line_file"
+
+    echo "ok $jitter_case_index - $jitter_description # SKIP"
+
+    jitter_prepare_for_next_case
+}
+
+# Run a testcase if a given string is non-empty, otherwise skip the testcase.
+# Arguments like jitter_run_case , with one more mandatory argument at first,
+# which is the string.
+# The first actual argument is meant to be a shell variable reference or an
+# Autoconf substitution.
+jitter_run_case_on ()
+{
+    jitter_possibly_empty_string="$1"
+    shift
+
+    if test "x$jitter_possibly_empty_string" = "x"; then
+        jitter_skip_case "$@"
+    else
+        jitter_run_case "$@"
+    fi
+}
+
+# Run two test cases with the same command line, one using valgrind if available
+# (skipping the case otherwise), and the other without it.  Arguments like
+# jitter_run_case.  For the valgrind testcase "@JITTER_VALGRIND@ -v" is prepended
+# to the command line, and "valgrind: " is prepended to the description.
+jitter_run_case_with_and_without_valgrind ()
+{
+    jitter_description="$1"
+    shift
+
+    # Run the non-Valgrind test case.
+    jitter_run_case "$jitter_description" "$@"
+
+    # Run the Valgrind test case.
+    jitter_run_case_on "@JITTER_VALGRIND@" \
+      "valgrind: $jitter_description" @JITTER_VALGRIND@ -v "$@"
+}
+
+# Run an uninspired test case with one dispatching model; skip the case if the
+# dispatching model is disabled.
+# Arguments:
+# - basename of the Uninspired program to interpret, without the .vm extension;
+# - expected output;
+# - the dispatching model name in a form nice to print, and used as a suffix in
+#   uninspired "interpreter" executable files;
+# - the dispatching model subst name, which expands to an nonempty string iff the
+#   dispatching model is enabled.
+# - "skip" if the test case has to be skipped, an empty string otherwise.
+jitter_run_uninspired_case ()
+{
+    program="$1"
+    expected_output="$2"
+    dispatching_model_name="$3"
+    dispatching_model_subst="$4"
+    skip="$5"
+    description="$program $dispatching_model_name"
+    if    test "x$dispatching_model_subst" = "x" \
+       || test "x$skip" = "xskip"; then
+        jitter_skip_case "$description"
+    else
+        echo "$expected_output" > "$jitter_expected_stdout_file"
+        jitter_run_case_checking_output "$description" \
+          @JITTER_EMULATOR@ \
+            "@abs_top_builddir@/bin/uninspired--$dispatching_model_name@EXEEXT@" \
+              --cpu-time-limit="$jitter_timeout" \
+              --time-limit="$(($jitter_timeout * $jitter_wall_clock_time_factor))" \
+              "@abs_top_srcdir@/tests/uninspired/$program.vm"
+    fi
+}
+
+# Run an intepreter test case per dispatching models.
+# Arguments:
+# - basename of the Uninspired program to interpret, without the .vm extension;
+# - expected output.
+# - "skip" if the test case has to be skipped, an empty string otherwise.
+jitter_run_uninspired_case_all_dispatches ()
+{
+    program="$1"
+    expected_output="$2"
+    skip="$3"
+    jitter_run_uninspired_case "$program" "$expected_output" \
+      "switch" "@JITTER_ENABLE_DISPATCH_SWITCH@" "$skip"
+    jitter_run_uninspired_case "$program" "$expected_output" \
+      "direct-threading" "@JITTER_ENABLE_DISPATCH_DIRECT_THREADING@" "$skip"
+    jitter_run_uninspired_case "$program" "$expected_output" \
+      "minimal-threading" "@JITTER_ENABLE_DISPATCH_MINIMAL_THREADING@" "$skip"
+    jitter_run_uninspired_case "$program" "$expected_output" \
+      "no-threading" "@JITTER_ENABLE_DISPATCH_NO_THREADING@" "$skip"
+}

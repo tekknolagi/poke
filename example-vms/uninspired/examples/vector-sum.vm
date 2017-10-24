@@ -1,0 +1,68 @@
+# This is an -*- asm -*-, so to speak, source file.
+
+# A simple vector sum benchmarking program.
+
+# Copyright (C) 2016 Luca Saiu
+# updated in 2017 by Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Allocate a vector in %r1 $
+# Keep a past-the-end pointer in %r2 $
+	mov 10000, %r0
+        mallocwords %r0, %r1
+        mul %r0, BYTESPERWORD, %r0
+        add %r1, %r0, %r2
+
+# Initialize the vector to contain the index value for each element.
+# %r3 keeps a copy of the vector beginning pointer.
+# %r0 scratch index.
+        mov %r1, %r3
+        mov 0, %r0
+$initializationloop:
+        storewithwordoffset %r0, %r1, 0
+        add %r0, 1, %r0
+        add %r1, BYTESPERWORD, %r1
+        blt %r1, %r2, $initializationloop
+
+# Restore the vector beginning pointer into %r1 $
+        mov %r3, %r1
+
+# Use %r4 as the outer loop index, counting down to 1.
+        mov 100000, %r4
+
+# Keep a pointer to the current element in %r1 $
+# Sum into %r0 $
+# Use %r3 as scratch, to keep the current vector element.
+        mov 0, %r0
+$outerloop:
+#        printfixnum %r4
+$loop:
+        loadwithwordoffset %r1, 0, %r3
+        add %r0, %r3, %r0
+        add %r1, BYTESPERWORD, %r1
+#        nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop
+        blt %r1, %r2, $loop
+
+#        printfixnum %r0
+
+        sub %r4, 1, %r4
+        sub %r1, (10000 * BYTESPERWORD), %r1
+        bgt %r4, 0, $outerloop
+
+        printfixnum %r0

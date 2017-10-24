@@ -1,0 +1,89 @@
+Copyright (C) 2017 Luca Saiu
+Written by Luca Saiu
+
+This file is part of Jitter.
+
+Jitter is free software: you can redistribute and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+Jitter is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this software.  If not, see <http://www.gnu.org/licenses/>.
+
+
+Obtaining the latest version
+============================
+
+Jitter is developed on a public git repository.
+[FIXME: not really: add a link when I make it official].
+
+
+How to compile from a git copy
+==============================
+
+You need an Internet connection, git, GNU Autoconf, GNU Automake, GNU Libtool,
+GNU Bison, Flex, GNU Texinfo, GNU help2man, plus the usual build tools.  The GNU
+Binutils are needed for disassembly support, and advanced dispatching mode rely
+on GCC.
+
+Running
+  ./bootstrap
+from the source directory will download Gnulib and copy some files needed at
+configuration time, and already included in tarballs.
+
+From that point on you can configure, compile and install as per the standard
+GNU conventions; see the generic INSTALL file and the Jitter manual for more
+information.
+
+Building in a separate directory is supported and encouraged.  Jitter supports
+cross-compilation.
+
+
+Package version name and git
+============================
+
+This section is only relevant if you work on a git version of Jitter.
+
+Jitter uses build-aux/git-version-gen , from Gnulib.  It is a compromise between
+the conflicting needs of automatically tracking commit numbers from the git
+history, and not regenerating configure too often.
+
+It is quite easy to get a version string older than it should be, when not
+forcing an update.  It is important to get this right when generating tarballs
+for others with make dist , and for releases.
+
+
+Updating PACKAGE_VERSION in the source tree
+-------------------------------------------
+
+A comment in git-version-gen says to delete .version before running autoconf; I
+almost always run autoreconf, which runs autoconf, thru the bootstrap script
+coming from Gnulib.  I've added an rm line to Jitter's bootstrap.conf , taking
+care of removing .version .
+
+Therefore, running
+  ./bootstrap
+in the source dir *seems* to be enough.  This regenerates configure with the
+good version name, and any make target in a build directory after that point
+will trigger a reconfiguration, and everything will be good.
+Tarballs will have .version and .tarball-version , both correctly updated.
+
+Without this kind of explicit updates any expansion PACKAGE_VERSION may be stale
+and refer to an older version; this is particularly relevant for bug reports
+mentioning a version number, which should not be taken at face value; this kind
+of distraction can easily happen even to experienced users knowing about the
+issue.
+
+
+Release checklist
+=================
+
+This information is for the maintainer only, and not relevant for other users.
+
+FIXME: write.
+[FIXME: git tag]

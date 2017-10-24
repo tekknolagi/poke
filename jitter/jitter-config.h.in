@@ -1,0 +1,66 @@
+/* Jitter: host configuration header to install.
+
+   Copyright (C) 2017 Luca Saiu
+   Written by Luca Saiu
+
+   This file is part of Jitter.
+
+   Jitter is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   Jitter is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
+
+
+#ifndef JITTER_CONFIG_H_
+#define JITTER_CONFIG_H_
+
+/* This host-dependent file is installed and used in the definition of some
+   fundamental types.  It is not for the user to see directly. */
+
+#undef HAVE_LONG_LONG_INT
+#undef HAVE_UNSIGNED_LONG_LONG_INT
+
+#undef SIZEOF_VOID_P
+#undef SIZEOF_SHORT
+#undef SIZEOF_INT
+#undef SIZEOF_LONG
+#undef SIZEOF_LONG_LONG
+
+#undef SIZEOF_FLOAT
+#undef SIZEOF_DOUBLE
+#undef SIZEOF_LONG_DOUBLE
+
+#undef WORDS_BIGENDIAN
+
+#undef JITTER_HAS_ASSEMBLY
+#undef DASHFPIC_MAKES_GCC_SEGFAULT
+
+/* These are needed by jitter-dispatch.h when no dispatching-model CPP macros
+   are defined from the command line. */
+#undef JITTER_BEST_DISPATCHING_MODEL_IS_DIRECT_THREADING
+#undef JITTER_BEST_DISPATCHING_MODEL_IS_MINIMAL_THREADING
+#undef JITTER_BEST_DISPATCHING_MODEL_IS_NO_THREADING
+
+/* These are needed for the driver, which doesn't have access to config.h when
+   compiled as a template. */
+#undef HAVE_SETRLIMIT
+#undef HAVE_ALARM
+#undef JITTER_HOST_OS_IS_GNU
+#undef JITTER_OBJDUMP
+#undef JITTER_CROSS_OBJDUMP
+#undef JITTER_OBJDUMP_OPTIONS
+#undef JITTER_HOST_TRIPLET
+#undef JITTER_BUILD_TRIPLET
+#undef JITTER_PACKAGE_NAME
+#undef JITTER_PACKAGE_VERSION
+#undef JITTER_PACKAGE_BUGREPORT
+
+#endif // #ifndef JITTER_CONFIG_H_

@@ -1,0 +1,1095 @@
+## An uninspired and unoriginal Jitter VM, useful as an example.
+
+## Copyright (C) 2016, 2017 Luca Saiu
+## Written by Luca Saiu
+
+## This file is part of Jitter.
+
+## Jitter is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+
+## Jitter is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+
+## You should have received a copy of the GNU General Public License
+## along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+## Global configuration.
+#################################################################
+
+vm
+  set prefix "uninspired"
+  tos-stack "union jitter_word" "stack"
+#  ntos-stack "union jitter_word" "stack"
+
+#  ntos-stack "union jitter_word" "return"
+end
+
+
+## Runtime state customization.
+#################################################################
+
+state-struct-runtime-c
+  code
+  end
+end
+
+
+## Register classes.
+#################################################################
+
+early-header-c
+  code
+  #include <string.h> // FIXME: remove after my tests with memcpy
+
+  union vmprefix_currently_unique_kind_register_t
+  {
+    /* Each of the following fields has the same name and a compatible type (in
+       this case exactly the same) as the corresponding fields in union
+       jitter_word .  This is useful for meta-instructions whose arguments may be
+       either immediates or registers. */
+    jitter_int fixnum;
+    jitter_uint ufixnum;
+    union jitter_word * restrict pointer;
+  };
+
+# define VECTOR_ELEMENT_TYPE  float//double//char//int//double //float
+# define VECTOR_ELEMENT_NO    2//1024//8//1024//512 //8//512//1024
+
+# define USE_ATTRIBUTE_VECTOR_SIZE
+
+#ifdef USE_ATTRIBUTE_VECTOR_SIZE
+  typedef VECTOR_ELEMENT_TYPE
+  vector
+    __attribute__ ((vector_size (VECTOR_ELEMENT_NO
+                                 * sizeof(VECTOR_ELEMENT_TYPE)),
+                    aligned));
+#else
+  typedef VECTOR_ELEMENT_TYPE
+  vector [VECTOR_ELEMENT_NO]
+    __attribute__ ((aligned));
+#endif // #ifdef USE_ATTRIBUTE_VECTOR_SIZE
+  end
+end
+
+register-class r 2 # 1 #2 #3
+  code
+    union vmprefix_currently_unique_kind_register_t
+  end
+end
+
+register-class f 2 # 0 #2
+  code
+    //float
+    //double
+    VECTOR_ELEMENT_TYPE
+  end
+end
+
+register-class v 0
+  code
+    vector
+  end
+end
+
+register-class c 0
+  code
+    unsigned char
+  end
+end
+
+
+## C code to include.
+#################################################################
+
+late-header-c
+  code
+  end
+end
+
+late-c
+  code
+  end
+end
+
+initialization-c
+  code
+  end
+end
+
+late-c
+  code
+    #include <stdio.h>
+    #include <stdlib.h>
+
+    static const char * const
+    vmprefix_printfixnum_decimal_hex_format_string
+      __attribute__ ((unused))
+      = "%" JITTER_PRIi " 0x%" JITTER_PRIx "\n";
+
+    static const char * const
+    vmprefix_printfixnum_format_string
+      __attribute__ ((unused))
+      = "%" JITTER_PRIi "\n";
+
+    static const char * const
+    vmprefix_printdouble_format_string
+      = "%f\n";
+
+    static const char * const
+    vmprefix_hcf_format_string = "Halting and catching fire\n";
+  end
+end
+
+
+## Functions and globals to wrap.
+#################################################################
+
+wrapped-functions
+  printf
+  fflush
+  fprintf
+  exit
+  rand
+  jitter_xmalloc
+end
+
+wrapped-globals
+  vmprefix_printfixnum_format_string
+  vmprefix_printdouble_format_string
+  vmprefix_printfixnum_decimal_hex_format_string
+  vmprefix_hcf_format_string
+end
+
+
+## Rewrites
+#################################################################
+
+rule remove-add-zero
+  when is ($2, 0)
+  rewrite
+    add ?Rn, ?Rn, ?R
+  into
+    # Nothing.
+end
+
+rule simplify-mul-2
+  when is ($2, 2)
+  rewrite
+    mul ?Rn, ?n, ?R
+  into
+    lshift $1, 1, $3
+end
+
+rule simplify-mul-3
+  when is ($2, 3)
+  rewrite
+    mul ?Rn, ?n, ?R
+  into
+    lshift $1, 1, $3; add $1, $3, $3
+end
+
+rule simplify-mul-4
+  when is ($2, 4)
+  rewrite
+    mul ?Rn, ?n, ?R
+  into
+    lshift $1, 2, $3
+end
+
+rule simplify-mul-5
+  when is ($2, 5)
+  rewrite
+    mul ?Rn, ?n, ?R
+  into
+    lshift $1, 2, $3; add $1, $3, $3
+end
+
+rule simplify-mul-10
+  when is ($2, 10)
+  rewrite
+    mul ?Rn, ?n, ?R
+  into
+    lshift $1, 3, $3; add $1, $3, $3
+end
+
+rule simplify-div-2
+  when is ($2, 2)
+  rewrite
+    div ?Rn, ?n, ?R
+  into
+    rshifta $1, 1, $3
+end
+
+rule reorder-commutative-operation-arguments
+  when and (has-property (insn, "commutative"),
+            precedes ($2, $1))
+  rewrite
+    insn ?Rnl, ?Rnl, !R  # I have to think of the semantics of argument
+                         # patterns.
+                         # What I need, I think, is to match when the actual
+                         # patterns are *at least* as general as specified.
+                         # An even better solution would be to match anything
+                         # matching the pattern as long as the template
+                         # rewriting is also correct, but this feels more
+                         # involved to implement.
+  into
+    $0 $2, $1, $3
+end
+
+# The preceding rule subsumes this.
+rule literal-argument-on-the-right
+  when and (has-property (insn, "commutative"),
+            is-literal ($1),
+            not (is-literal ($2)))
+  rewrite
+    insn ?n, ?Rn, !R
+  into
+    $0 $2, $1, $3
+end
+
+rule remove-operation-on-neutral-operand
+  when or (and (is (insn, "add"), is ($2, 0)),
+           and (is (insn, "sub"), is ($2, 0)),
+           and (is (insn, "mul"), is ($2, 1)),
+           and (is (insn, "div"), is ($2, 1)))
+  rewrite
+    insn ?R, ?n, !R
+  into
+    # Nothing.
+end
+
+rule turn-three-operand-into-two-operand
+  when not (equals ($2, $3))
+  rewrite
+    insn ?R, ?R, !R
+  into
+    mov $2, $3;
+    ins $1, $3, $3
+end
+
+
+## (Scratch) f-register instructions.
+#################################################################
+
+instruction fset (?Rn 0 1, !F)
+  code
+    JITTER_ARG1 = (double) JITTER_ARGN0;
+  end
+end
+
+instruction fadd (?F, ?F, !F)
+  code
+    JITTER_ARG2 = JITTER_ARG0 + JITTER_ARG1;
+  end
+end
+
+instruction fsub (?F, ?F, !F)
+  code
+    JITTER_ARG2 = JITTER_ARG0 - JITTER_ARG1;
+  end
+end
+
+instruction fmul (?F, ?F, !F)
+  code
+    JITTER_ARG2 = JITTER_ARG0 * JITTER_ARG1;
+  end
+end
+
+instruction fdiv (?F, ?F, !F)
+  code
+    JITTER_ARG2 = JITTER_ARG0 / JITTER_ARG1;
+  end
+end
+
+instruction fincr (!?F)
+  code
+    JITTER_ARG0 ++;
+  end
+end
+
+instruction fprint (?F)
+  code
+    printf (vmprefix_printdouble_format_string, JITTER_ARG0);
+  end
+end
+
+
+# ## (Scratch) v-register instructions.
+# #################################################################
+
+# instruction movvectorelementno (!R)
+#   code
+#     JITTER_ARGN0 = VECTOR_ELEMENT_NO;
+#   end
+# end
+
+# instruction movvectorelementsizeinbytes (!R)
+#   code
+#     JITTER_ARGN0 = VECTOR_ELEMENT_NO * sizeof (VECTOR_ELEMENT_TYPE);
+#   end
+# end
+
+# instruction vset (?Rn 0 1, !V)
+#   code
+#     int i;
+#     for (i = 0; i < VECTOR_ELEMENT_NO; i ++)
+#       JITTER_ARG1 [i] = (double) JITTER_ARGN0;
+#   end
+# end
+
+# instruction vload (?R, !V)
+#   code
+#     const VECTOR_ELEMENT_TYPE * restrict p
+#       = (VECTOR_ELEMENT_TYPE *) JITTER_ARGP0;
+#     int i;
+#     for (i = 0; i < VECTOR_ELEMENT_NO; i ++)
+#       JITTER_ARG1 [i] = p [i];
+#   end
+# end
+
+# instruction vstore (?V, ?R)
+#   code
+#     VECTOR_ELEMENT_TYPE * const restrict p
+#       = (VECTOR_ELEMENT_TYPE * const restrict) JITTER_ARGP1;
+#     /*
+#     static int JITTER_CONCATENATE_TWO(counter, JITTER_SPECIALIZED_INSTRUCTION_OPCODE) = 0;
+#     printf ("%i. Storing [%p, %p)...\n",
+#             JITTER_CONCATENATE_TWO(counter, JITTER_SPECIALIZED_INSTRUCTION_OPCODE) ++,
+#             p,
+#             ((char*) p) + VECTOR_ELEMENT_NO * sizeof (VECTOR_ELEMENT_TYPE));
+#     fflush (stdout);
+#     */
+#     int i;
+#     for (i = 0; i < VECTOR_ELEMENT_NO; i ++)
+#       p [i] = JITTER_ARG0 [i];
+#     //printf ("Still alive.\n"); fflush (stdout);
+#   end
+# end
+
+# instruction vadd (?V, ?V, !V)
+#   code
+# #ifdef USE_ATTRIBUTE_VECTOR_SIZE
+#     JITTER_ARG2 = JITTER_ARG0 + JITTER_ARG1;
+# #else
+#     int i;
+#     for (i = 0; i < VECTOR_ELEMENT_NO; i ++)
+#       JITTER_ARG2 [i] = JITTER_ARG0 [i] + JITTER_ARG1 [i];
+# #endif // #ifdef USE_ATTRIBUTE_VECTOR_SIZE
+#   end
+# end
+
+# instruction vaddtoscalar (?V, ?F)
+#   code
+#     VECTOR_ELEMENT_TYPE res = 0;
+#     int i;
+#     for (i = 0; i < VECTOR_ELEMENT_NO; i ++)
+#       res += JITTER_ARG0 [i];
+#     JITTER_ARG1 = res;
+#   end
+# end
+
+# instruction vmultoscalar (?V, ?F)
+#   code
+#     VECTOR_ELEMENT_TYPE res = 1;
+#     int i;
+#     for (i = 0; i < VECTOR_ELEMENT_NO; i ++)
+#       res *= JITTER_ARG0 [i];
+#     JITTER_ARG1 = res;
+#   end
+# end
+
+# instruction vmul (?V, ?V, !V)
+#   code
+# #ifdef USE_ATTRIBUTE_VECTOR_SIZE
+#     JITTER_ARG2 = JITTER_ARG0 * JITTER_ARG1;
+# #else
+#     int i;
+#     for (i = 0; i < VECTOR_ELEMENT_NO; i ++)
+#       JITTER_ARG2 [i] = JITTER_ARG0 [i] * JITTER_ARG1 [i];
+# #endif // #ifdef USE_ATTRIBUTE_VECTOR_SIZE
+#   end
+# end
+
+# instruction vmulscalar (?F, ?V, !V)
+#   code
+# #ifdef USE_ATTRIBUTE_VECTOR_SIZE
+#     JITTER_ARG2 = JITTER_ARG1 * JITTER_ARG0;
+# #else
+#     int i;
+#     for (i = 0; i < VECTOR_ELEMENT_NO; i ++)
+#       JITTER_ARG2 [i] = JITTER_ARG0 * JITTER_ARG1 [i];
+# #endif // #ifdef USE_ATTRIBUTE_VECTOR_SIZE
+#   end
+# end
+
+# instruction vmuldot (?V, ?V, !F)
+#   code
+#     VECTOR_ELEMENT_TYPE sum = 0;
+#     int i;
+#     for (i = 0; i < VECTOR_ELEMENT_NO; i ++)
+#       sum += JITTER_ARG0 [i] * JITTER_ARG1 [i];
+#     JITTER_ARG2 += sum;
+#   end
+# end
+
+# instruction vincr (!?V)
+#   code
+# #ifdef USE_ATTRIBUTE_VECTOR_SIZE
+#     JITTER_ARG0 += 1;
+# #else
+#     int i;
+#     for (i = 0; i < VECTOR_ELEMENT_NO; i ++)
+#       JITTER_ARG0 [i] ++;
+# #endif // #ifdef USE_ATTRIBUTE_VECTOR_SIZE
+#   end
+# end
+
+# instruction vprint (?V)
+#   code
+#     int i;
+#     for (i = 0; i < VECTOR_ELEMENT_NO; i ++)
+#     {
+#       VECTOR_ELEMENT_TYPE e = JITTER_ARG0 [i];
+#       printf (vmprefix_printdouble_format_string, (double) e); // I want to experiment with integer vectors as well.
+#     }
+#   end
+# end
+
+
+# ## (Scratch) c-register instructions.
+# #################################################################
+
+# instruction cset (?Rn 0 1, !C)
+#   code
+#     JITTER_ARG1 = JITTER_ARGN0;
+#   end
+# end
+
+# instruction cadd (?C, ?C, !C)
+#   code
+#     JITTER_ARG2 = JITTER_ARG0 + JITTER_ARG1;
+#   end
+# end
+
+# instruction cincr (!?C)
+#   code
+#     JITTER_ARG0 ++;
+#   end
+# end
+
+# instruction cprint (?C)
+#   code
+#     printf (vmprefix_printfixnum_format_string,
+#             (jitter_int) JITTER_ARG0);
+#   end
+# end
+
+
+## Procedure instructions.
+#################################################################
+
+instruction procedureprolog ()
+  callee
+  code
+    JITTER_TOP_STACK().label = JITTER_LINK;
+  end
+end
+
+instruction procedurereturn ()
+  code
+    const void * return_address = JITTER_TOP_STACK().label;
+    JITTER_DROP_STACK();
+    JITTER_RETURN(return_address);
+  end
+end
+
+instruction procedurecall (?f)
+  caller
+  code
+    JITTER_PUSH_UNSPECIFIED_STACK();
+    JITTER_BRANCH_AND_LINK_FAST(JITTER_ARGF0);
+  end
+end
+
+instruction procedurecallr (?Rl) # ?l would work as well.
+  caller
+  code
+    JITTER_PUSH_UNSPECIFIED_STACK();
+    JITTER_BRANCH_AND_LINK(JITTER_ARGP0);
+  end
+end
+
+
+## Stack meta-instructions (still dirty, mostly for testing).
+#################################################################
+
+# instruction pushreturn (?Rnl 0)
+#   code
+#     const union jitter_word word = {.pointer = (void* restrict)JITTER_ARG0.pointer};
+#     JITTER_PUSH_RETURN(word);
+#   end
+# end
+# instruction popreturn (!R)
+#   code
+#     JITTER_ARG0.pointer = JITTER_TOP_RETURN().pointer;
+#     JITTER_DROP_RETURN();
+#   end
+# end
+
+# instruction toreturn ()
+#   code
+#     union jitter_word word = JITTER_TOP_STACK();
+#     JITTER_DROP_STACK();
+#     JITTER_PUSH_RETURN(word);
+#   end
+# end
+# instruction fromreturn ()
+#   code
+#     union jitter_word word = JITTER_TOP_RETURN();
+#     JITTER_DROP_RETURN();
+#     JITTER_PUSH_STACK(word);
+#   end
+# end
+
+instruction stackpush (?Rnl 0 1)
+  code
+    union jitter_word w = {.fixnum = JITTER_ARGN0};
+    JITTER_PUSH_STACK(w);
+  end
+end
+instruction stackpushunspecified ()
+  code
+    JITTER_PUSH_UNSPECIFIED_STACK();
+  end
+end
+
+instruction stackset (?Rnl 0 1)
+  code
+    JITTER_TOP_STACK().fixnum = JITTER_ARGN0;
+  end
+end
+
+instruction stackpop (!R)
+  code
+    JITTER_ARGN0 = JITTER_TOP_STACK().fixnum;
+    JITTER_DROP_STACK();
+  end
+end
+
+instruction stackpeek (!R)
+  code
+    JITTER_ARGN0 = JITTER_TOP_STACK().fixnum;
+  end
+end
+
+instruction stackswaptop (?!R)
+  code
+    jitter_int old_top = JITTER_TOP_STACK().fixnum;
+    jitter_int old_register = JITTER_ARGN0;
+    JITTER_TOP_STACK().fixnum = old_register;
+    JITTER_ARGN0 = old_top;
+  end
+end
+
+instruction stackdup ()
+  code
+    JITTER_DUP_STACK();
+  end
+end
+
+instruction stackover ()
+  code
+    JITTER_OVER_STACK();
+  end
+end
+
+instruction stackdrop ()
+  code
+    JITTER_DROP_STACK();
+  end
+end
+
+# instruction returndrop ()
+#   code
+#     JITTER_DROP_RETURN();
+#   end
+# end
+
+instruction stacknip ()
+  code
+    JITTER_NIP_STACK();
+  end
+end
+
+instruction stackswap ()
+  code
+    JITTER_SWAP_STACK();
+  end
+end
+
+instruction stackplus ()
+  code
+#define PLUS(res, a, b) { res.fixnum = a.fixnum + b.fixnum; }
+    JITTER_BINARY_STACK(PLUS);
+#undef PLUS
+  end
+end
+
+instruction stacktimes ()
+  code
+#define TIMES(res, a, b) { res.fixnum = a.fixnum * b.fixnum; }
+    JITTER_BINARY_STACK(TIMES);
+#undef TIMES
+  end
+end
+
+instruction stackplusr (?R)
+  code
+#define PLUSR(res, a) { res.fixnum = a.fixnum + JITTER_ARGN0; }
+    JITTER_UNARY_STACK(PLUSR);
+#undef PLUSR
+  end
+end
+
+instruction stackoneplus ()
+  code
+#define ONEPLUS(res, a) { res.fixnum = a.fixnum + 1; }
+    JITTER_UNARY_STACK(ONEPLUS);
+#undef ONEPLUS
+  end
+end
+
+instruction stackoneminus ()
+  code
+#define ONEMINUS(res, a) { res.fixnum = a.fixnum - 1; }
+    JITTER_UNARY_STACK(ONEMINUS);
+#undef ONEMINUS
+  end
+end
+
+instruction stacknot ()
+  code
+    JITTER_TOP_STACK().fixnum = ! JITTER_TOP_STACK().fixnum;
+  end
+end
+
+instruction stackif (?f)
+  code
+    jitter_int condition = JITTER_TOP_STACK().fixnum;
+    JITTER_DROP_STACK();
+    JITTER_BRANCH_FAST_IF_NONZERO (condition, JITTER_ARGF0);
+  end
+end
+
+instruction stacknondroppingif (?f)
+  code
+    jitter_int condition = JITTER_TOP_STACK().fixnum;
+    JITTER_BRANCH_FAST_IF_NONZERO (condition, JITTER_ARGF0);
+  end
+end
+
+instruction stackprint ()
+  cold
+  non-relocatable
+  code
+    jitter_int top_number = JITTER_TOP_STACK().fixnum;
+    JITTER_DROP_STACK();
+    printf (vmprefix_printfixnum_decimal_hex_format_string,
+            (jitter_int) top_number, (jitter_int) top_number);
+  end
+end
+
+
+## Register move meta-instructions.
+#################################################################
+
+#instruction mov (?Rnl 0 1, !R)
+instruction mov (?Rnl 0 1, !R)
+  code
+    JITTER_ARGN1 = JITTER_ARGN0;
+  end
+end
+
+# instruction swap (?!R, ?!R)
+#   commutative
+#   code
+#     union jitter_word arg0_copy = JITTER_ARG0;
+#     JITTER_ARG0 = JITTER_ARG1;
+#     JITTER_ARG1 = arg0_copy;
+#   end
+# end
+
+
+## Arithmetic meta-instructions.
+#################################################################
+
+instruction add (?Rn 1 -1, ?Rn 1 -1, !R)
+#  commutative
+  two-operands
+  code
+    JITTER_ARGN2 = JITTER_ARGN0 + JITTER_ARGN1;
+  end
+end
+
+instruction sub (?Rn 0, ?Rn 1, !R)
+  two-operands
+  code
+    JITTER_ARGN2 = JITTER_ARGN0 - JITTER_ARGN1;
+  end
+end
+
+instruction mul (?Rn 2, ?Rn 2, !R)
+#  two-operands
+  commutative
+  code
+    JITTER_ARGN2 = JITTER_ARGN0 * JITTER_ARGN1;
+  end
+end
+
+instruction div (?Rn, ?Rn 2, !R)
+  non-relocatable # FIXME: this should only be non-relocatable on some architectures.
+  two-operands
+  code
+    JITTER_ARGN2 = JITTER_ARGN0 / JITTER_ARGN1;
+  end
+end
+
+instruction mod (?Rn, ?Rn 2, !R)
+  non-relocatable # FIXME: this should only be non-relocatable on some architectures.
+  two-operands
+  code
+    JITTER_ARGN2 = JITTER_ARGN0 % JITTER_ARGN1;
+  end
+end
+
+
+# ## Bitwise meta-instructions.
+# #################################################################
+
+# instruction and (?Rn 1, ?Rn 1, !R)
+# # commutative
+#   two-operands
+#   code
+#     JITTER_ARGN2 = JITTER_ARGN0 & JITTER_ARGN1;
+#   end
+# end
+
+# instruction or (?Rn, ?Rn, !R)
+# # commutative
+#   two-operands
+#   code
+#     JITTER_ARGN2 = JITTER_ARGN0 | JITTER_ARGN1;
+#   end
+# end
+
+# instruction xor (?Rn, ?Rn, !R)
+# # commutative
+#   two-operands
+#   code
+#     JITTER_ARGN2 = JITTER_ARGN0 ^ JITTER_ARGN1;
+#   end
+# end
+
+# instruction not (?Rn, !R)
+#   code
+#     JITTER_ARGN1 = ~ JITTER_ARGN0;
+#   end
+# end
+
+# instruction lshift (?Rn, ?Rn, !R)
+#   two-operands
+#   code
+#     JITTER_ARGN2 = JITTER_ARGN0 << JITTER_ARGN1;
+#   end
+# end
+
+# instruction rshifta (?Rn, ?Rn, !R)
+#   two-operands
+#   code
+#     JITTER_ARGN2 = JITTER_ARGN0 >> JITTER_ARGN1;
+#   end
+# end
+
+# instruction rshiftl (?Rn, ?Rn, !R)
+#   two-operands
+#   code
+#     JITTER_ARGU2 = JITTER_ARGU0 >> JITTER_ARGN1;
+#   end
+# end
+
+
+## Memory meta-instructions.
+#################################################################
+
+instruction loadwithbyteoffset (?R, ?Rn 0 BYTESPERWORD, !R)
+  two-operands # FIXME: not necessarily a good idea, but I want to test rewriting.
+  code
+    JITTER_ARGN2 = * (jitter_int*)((char*)JITTER_ARGP0 + JITTER_ARGN1);
+  end
+end
+
+instruction loadwithwordoffset (?R, ?Rn 0 1 2, !R)
+  two-operands # FIXME: not necessarily a good idea, but I want to test rewriting.
+  code
+    JITTER_ARGN2 = * ((jitter_int*)JITTER_ARGP0 + JITTER_ARGN1);
+  end
+end
+
+instruction storewithbyteoffset (?Rn, ?R, ?Rn 0 BYTESPERWORD)
+  code
+    * (jitter_int *)((char*)JITTER_ARGP1 + JITTER_ARGN2) = JITTER_ARGN0;
+  end
+end
+
+instruction storewithwordoffset (?Rn, ?R, ?Rn 0 1 2)
+  code
+    * ((jitter_int*)JITTER_ARGP1 + JITTER_ARGN2) = JITTER_ARGN0;
+  end
+end
+
+
+## Comparison meta-instructions.
+#################################################################
+
+# instruction eq (?Rn 0, ?Rn 0, !R)
+# #  commutative
+#   two-operands
+#   code
+#     JITTER_ARGN2 = ((JITTER_ARGN0 == JITTER_ARGN1) ? 1 : 0);
+#   end
+# end
+
+# instruction ne (?Rn 0, ?Rn 0, !R)
+#  commutative
+#   code
+#     JITTER_ARGN2 = ((JITTER_ARGN0 != JITTER_ARGN1) ? 1 : 0);
+#   end
+# end
+
+# instruction lt (?Rn 0, ?Rn 0, !R)
+#   two-operands
+#   code
+#     JITTER_ARGN2 = ((JITTER_ARGN0 < JITTER_ARGN1) ? 1 : 0);
+#   end
+# end
+
+# instruction gt (?Rn 0, ?Rn 0, !R)
+#   two-operands
+#   code
+#     JITTER_ARGN2 = ((JITTER_ARGN0 > JITTER_ARGN1) ? 1 : 0);
+#   end
+# end
+
+# instruction le (?Rn 0, ?Rn 0, !R)
+#   two-operands
+#   code
+#     JITTER_ARGN2 = ((JITTER_ARGN0 <= JITTER_ARGN1) ? 1 : 0);
+#   end
+# end
+
+# instruction ge (?Rn 0, ?Rn 0, !R)
+#   two-operands
+#   code
+#     JITTER_ARGN2 = ((JITTER_ARGN0 >= JITTER_ARGN1) ? 1 : 0);
+#   end
+# end
+
+
+## Branching meta-instructions.
+#################################################################
+
+instruction b (?f)
+  code
+    JITTER_BRANCH_FAST (JITTER_ARGF0);
+  end
+end
+
+instruction br (?R)
+  code
+    JITTER_BRANCH (JITTER_ARGP0);
+  end
+end
+
+# # An instruction I will use to check that residuals are numbered correctly
+# # even when fast labels are present.  Not useful in practice.
+# instruction testfast (?n, ?f, ?f, ?n)
+#   code
+#     JITTER_BRANCH_FAST_IF_ZERO (JITTER_ARGN0, JITTER_ARGF1);
+#     JITTER_BRANCH_FAST_IF_ZERO (JITTER_ARGN3, JITTER_ARGF2);
+#     /*
+#     if (JITTER_ARGN0 == 0)
+#       JITTER_BRANCH_FAST (JITTER_ARGF1);
+#     else if (JITTER_ARGN3 == 0)
+#       JITTER_BRANCH_FAST (JITTER_ARGF2);
+#     */
+#   end
+# end
+
+# FIXME: useful for testing, but possibly to keep as well.
+instruction bz (?Rn 0, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_ZERO (JITTER_ARGN0, JITTER_ARGF1);
+  end
+end
+
+# FIXME: useful for testing, but possibly to keep as well.
+instruction bnz (?Rn 0, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NONZERO (JITTER_ARGN0, JITTER_ARGF1);
+  end
+end
+
+# FIXME: useful for testing, but possibly to keep as well.
+instruction bpos (?Rn 0, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_POSITIVE (JITTER_ARGN0, JITTER_ARGF1);
+  end
+end
+
+# FIXME: useful for testing, but possibly to keep as well.
+instruction bnpos (?Rn 0, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NONPOSITIVE (JITTER_ARGN0, JITTER_ARGF1);
+  end
+end
+
+# FIXME: useful for testing, but possibly to keep as well.
+instruction bneg (?Rn 0, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NEGATIVE (JITTER_ARGN0, JITTER_ARGF1);
+  end
+end
+
+# FIXME: useful for testing, but possibly to keep as well.
+instruction bnneg (?Rn 0, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NONNEGATIVE (JITTER_ARGN0, JITTER_ARGF1);
+  end
+end
+
+instruction beq (?Rn 0, ?Rn 0, ?f)
+  # FIXME: I would like to be able to express some form of commutativity here,
+  # as the two non-label arguments *are* commutative.
+  code
+    JITTER_BRANCH_FAST_IF_EQUAL (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction bne (?Rn 0, ?Rn 0, ?f)
+  # FIXME: I would like to be able to express some form of commutativity here,
+  # as the two non-label arguments *are* commutative.
+  code
+    JITTER_BRANCH_FAST_IF_NOTEQUAL (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction blt (?Rn 0 1, ?Rn 0 1, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_LESS_SIGNED (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction bgt (?Rn 0 1, ?Rn 0 1, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_GREATER_SIGNED (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction ble (?Rn 0 1, ?Rn 0 1, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction bge (?Rn 0 1, ?Rn 0 1, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+
+## System meta-instructions.
+#################################################################
+
+instruction mallocwords (?Rn, !R)
+  cold
+  non-relocatable
+  code
+    JITTER_ARGP1 = jitter_xmalloc (sizeof (void *) * JITTER_ARGN0);
+    /*
+    size_t allocated_bytes = sizeof (void *) * JITTER_ARGN0;
+    printf ("malloced: [%p, %p) (%lu bytes or %lu words)\n",
+            JITTER_ARGP1, ((char*)JITTER_ARGP1) + allocated_bytes,
+            (unsigned long) allocated_bytes,
+            (unsigned long) (allocated_bytes / sizeof (void*)));
+    fflush (stdout);
+    */
+  end
+end
+
+instruction exit (?Rn)
+  cold
+  non-relocatable
+  code
+    exit ((long)JITTER_ARGN0);
+  end
+end
+
+
+# ## Debugging or special meta-instructions.
+# #################################################################
+
+instruction nop ()
+  code
+    /* Do nothing. */
+  end
+end
+
+instruction printfixnum (?Rn)
+  cold
+  non-relocatable
+  code
+    printf (vmprefix_printfixnum_format_string, (jitter_int) JITTER_ARGN0);
+/*
+    printf (vmprefix_printfixnum_decimal_hex_format_string,
+            (jitter_int) JITTER_ARGN0,
+            (jitter_int) JITTER_ARGN0);
+*/
+    fflush (NULL);
+  end
+end
+
+instruction hcf ()
+  cold
+  non-relocatable
+  code
+    printf (vmprefix_hcf_format_string);
+    while (true)
+      /* do nothing */;
+  end
+end
+
+instruction random (!R)
+  cold
+  non-relocatable
+  code
+    JITTER_ARGN0 = rand ();
+  end
+end
+
+instruction endvm ()
+  cold
+  code
+    JITTER_EXIT ();
+  end
+end
+
+
+## End.
+#################################################################

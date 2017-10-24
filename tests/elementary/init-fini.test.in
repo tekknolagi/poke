@@ -1,0 +1,54 @@
+# Jitter testsuite: elementary tests.  This is -*- sh -*-, to be preprocessed.
+# Copyright (C) 2017 Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+#!@SHELL@
+
+# Include my little testsuite library.  Among the rest this sourcing enters the
+# directory containing *this* script (not the utility script).
+. "@abs_top_builddir@/tests/utility"
+
+# Print a range for test case indices.
+echo 1..14
+
+# Initialize and finalize the Uninspired VM system in a for loop.
+jitter_run_case_with_and_without_valgrind "init-fini 0 times" \
+  @JITTER_EMULATOR@ ./uninspired-init-fini 0
+jitter_run_case_with_and_without_valgrind "init-fini once" \
+  @JITTER_EMULATOR@ ./uninspired-init-fini 1
+jitter_run_case_with_and_without_valgrind "init-fini 100 times" \
+  @JITTER_EMULATOR@ ./uninspired-init-fini 100
+
+# Initialize the Uninspired VM system, parse an Uninspired program from a file
+# containing just comments, specialize the program, destroy it and finalize the
+# VM system -- all in a for loop.
+program="@srcdir@/empty.vm"
+jitter_run_case_with_and_without_valgrind "load empty program once" \
+  @JITTER_EMULATOR@ ./uninspired-init-fini 1 "$program"
+jitter_run_case_with_and_without_valgrind "load empty program 100 times" \
+  @JITTER_EMULATOR@ ./uninspired-init-fini 100 "$program"
+
+# Initialize the Uninspired VM system, parse a nonempty Uninspired program from
+# a file, specialize the program, destroy it and finalize the VM system -- all
+# in a for loop.
+program="@abs_top_srcdir@/example-vms/uninspired/examples/euclid.vm"
+jitter_run_case_with_and_without_valgrind "load non-empty program once" \
+  @JITTER_EMULATOR@ ./uninspired-init-fini 1 "$program"
+jitter_run_case_with_and_without_valgrind "load non-empty program 100 times" \
+  @JITTER_EMULATOR@ ./uninspired-init-fini 100 "$program"

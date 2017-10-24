@@ -1,0 +1,1333 @@
+## Process this file with automake to produce Makefile.in .
+# Copyright (C) 2016, 2017 Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Global configration.
+# ################################################################
+
+AUTOMAKE_OPTIONS = subdir-objects info-in-builddir
+
+# I prefer to define all variables as empty in the beginning, and then add to
+# each group of them as part of the implementation of the same feature.
+ACLOCAL_AMFLAGS =
+AM_CPPFLAGS =
+BUILT_SOURCES =
+DISTCLEANFILES =
+EXTRA_DIST =
+EXTRA_LTLIBRARIES =
+EXTRA_PROGRAMS =
+SUFFIXES =
+TESTS =
+bin_PROGRAMS =
+bin_SCRIPTS =
+check_PROGRAMS =
+check_SCRIPTS =
+dist_flag_DATA =
+dist_lisp_LISP =
+dist_man1_MANS =
+dist_noinst_MANS =
+dist_template_DATA =
+info_TEXINFOS =
+jitterinclude_HEADERS =
+jittermachineinclude_HEADERS =
+lib_LTLIBRARIES =
+noinst_LTLIBRARIES =
+noinst_PROGRAMS =
+
+
+# # CFLAGS hack.
+# # ################################################################
+
+# # Notice that AM_CFLAGS has been AC_SUBSTed in configure.  See the appropriate
+# # section in configure.ac for rationale.
+
+
+# Installation directories.
+# ################################################################
+
+# I use the default directories for most installed files.  The few exceptions
+# are template and flag files, kept in a version-specific subdirectories; this
+# will make it easy to have multiple versions installed at the same time.
+# Notice that templates are architecture-independent but flags are
+# architecture-specific.
+flagdir = $(exec_prefix)/$(JITTER_FLAG_SUBDIRECTORY)
+templatedir = $(datarootdir)/$(JITTER_TEMPLATE_SUBDIRECTORY)
+
+# An installed jitterc will need its installation prefix (even if that can be
+# overridden with a command-line option) to access template files but the prefix
+# is only known very late, at make time.
+CPPFLAGS_FOR_PATHS = \
+  -DJITTER_FLAGDIR=$(flagdir) \
+  -DJITTER_TEMPLATEDIR=$(templatedir)
+
+# FIXME: I probably should do the same for headers.
+# jitterincludedir = $(includedir)/$(PACKAGE)/$(VERSION)
+
+# The headers needed to compile generated code are all installed in the same
+# package-specific directory, even if they are laid out differently in the
+# source tree.
+jitterincludedir = $(includedir)/$(PACKAGE)
+jittermachineincludedir = $(includedir)/$(PACKAGE)/machine
+
+# Where to install the Autoconf macro file for Jitter.
+aclocaldir = $(datarootdir)/aclocal
+
+
+# Autoconf macros.
+# ################################################################
+
+# We have one single file containing Autoconf macro definitions, to be
+# distributed and installed.
+aclocal_DATA = autoconf/jitter.m4
+EXTRA_DIST += $(aclocal_DATA)
+
+
+# Libtool updates.
+# ################################################################
+
+libtool: $(LIBTOOL_DEPS)
+	$(SHELL) ./config.status libtool
+# FIXME: what target should depend on libtool ?
+
+
+# GNUlib settings.
+# ################################################################
+
+SUBDIRS = gnulib-local
+ACLOCAL_AMFLAGS += -I build-aux
+EXTRA_DIST += build-aux/gnulib-cache.m4
+
+# Add other source files to the Gnulib library; this helps on stupid platforms
+# relying on the order of libraries in a link command line, where having the
+# extension files as part of the Jitter utility library wouldn't work.
+EXTRA_LTLIBRARIES += \
+  lib/libgnulib-extension--convenience.la
+lib_libgnulib_extension__convenience_la_SOURCES = \
+  jitter/jitter-missing.h jitter/jitter-missing.c
+lib_libgnulib_extension__convenience_la_CPPFLAGS = \
+  $(CPPFLAGS_FOR_GNULIB)
+EXTRA_LTLIBRARIES += \
+  lib/libgnulib--convenience.la
+lib_libgnulib__convenience_la_SOURCES =
+lib_libgnulib__convenience_la_LIBADD = \
+  gnulib-local/libgnulib.la \
+  lib/libgnulib-extension--convenience.la
+
+# If the project used Gnulib for every compilation, as it is normally the case, I
+# would simply do
+# AM_CPPFLAGS += -I$(top_builddir)/gnulib-local -I$(top_srcdir)/gnulib-local
+# LDADD = gnulib-local/libgnulib.la lib/libgnulib-extension.la ; but I don't
+# want this here because the generated code must run without Gnulib.
+# I *could* link libjitter against Gnulib, and that might be a good idea for the
+# future; however Gnulib's CPP include paths would not be used in generated code.
+CPPFLAGS_FOR_GNULIB = -I$(top_builddir)/gnulib-local -I$(top_srcdir)/gnulib-local
+LDADD_FOR_GNULIB = lib/libgnulib--convenience.la
+
+# Allow everything but Gnulib to be built with a single-level Makefile, as I
+# prefer; the only recusrive make invokation we need is for building libgnulib .
+gnulib-local/libgnulib.la:
+	$(MAKE) -C gnulib-local
+
+
+# Files machine-generated by Flex and Bison.
+# ################################################################
+
+# We have several scanners and parsers in this distribution, generated by Flex
+# and Bison in the source directory.
+
+# The actual scanner and parser sources are ".l" and ".y" files.  We will add to
+# this variable incrementally.
+FRONTEND_NON_GENERATED_FILES =
+
+# From the actual sources we generate ".c" and ".h" files.  We will add to this
+# incrementally as well.
+FRONTEND_GENERATED_FILES =
+
+# Of course we distribute the actual source files.  And we distribute the
+# generated C files as well, as per the GNU Coding standards.
+EXTRA_DIST += $(FRONTEND_NON_GENERATED_FILES) $(FRONTEND_GENERATED_FILES)
+
+# The generated scanner and parser are built early in the make process.  (Notice
+# that we can't to to the same with Jitter-generated files, even if conceptually
+# they would be similar: Jitter-generated files rely, of course, on Jitter, and
+# we don't have it yet.)
+BUILT_SOURCES += $(FRONTEND_GENERATED_FILES)
+
+
+# Files machine-generated by Jitter.
+# ################################################################
+
+# The C files generated by Jitter are, in a sense, similar to the C files
+# generated by Flex and Bison; we want to distribute the generated files as
+# well, mostly for the convenience of cross-compiling users and in the spirit of
+# the GNU Coding Standards, which suggest this practice in similar cases.
+# However this case is more difficult: we can't use use BUILT_SOURCES and have
+# the generated files built early in the make process -- not in *this* project,
+# as Jitter itself hasn't been built yet.
+
+# Jitter machine specifications are the actual sources.  This will be added to
+# incrementally.
+JITTER_NON_GENERATED_FILES =
+
+# From the actual sources we generate ".c" and ".h" files.  We will add to this
+# incrementally as well.
+JITTER_GENERATED_FILES =
+
+# We want to distribute both Jitter VM specifications and their generated files.
+# This is just like the frontend files in the previous section...
+EXTRA_DIST += $(JITTER_NON_GENERATED_FILES) $(JITTER_GENERATED_FILES)
+
+# ...But in this case we can't use BUILT_SOURCES.  We will use regular
+# dependencies.
+
+# A final remark on JITTER_GENERATED_FILES : it would make sense that such
+# generated files depended on the bin/jitter$(EXEEXT), but adding such
+# dependencies would break distcheck , forcing writes to the source directory
+# after bin/jitter$(EXEEXT) is rebuilt.
+#
+# In practice I find distcheck more important that my own convenience when
+# testing with examples after modifying Jitter; an ordinary user calling an
+# installed Jitter will never see this problem anyway.  On the other hand,
+# distcheck may be useful for people other than the maintainer.
+
+
+# Jitter utility library.
+# ################################################################
+
+# This utility library is used both at generation time by jitterc, and at run
+# time by the programs using VMs (see the SOURCES_FOR_LIBJITTER definition
+# below); in practice the user never needs to see it directly, and I prefer to
+# limit the number of libraries to link, so instead of having user programs link
+# lib/libjitterutility--convenience.la I am making it a Libtool convenience
+# library.
+# Some parts of this, such as jitter-malloc.[ch], are actually redundant when
+# using Gnulib; however we need them at runtime, since the generated code does
+# not rely on Gnulib.
+noinst_LTLIBRARIES += lib/libjitterutility--convenience.la
+lib_libjitterutility__convenience_la_SOURCES = \
+  jitter/jitter-cpp.h \
+  jitter/jitter-fatal.h jitter/jitter-fatal.c \
+  jitter/jitter-malloc.h jitter/jitter-malloc.c \
+  jitter/jitter-dynamic-buffer.h jitter/jitter-dynamic-buffer.c \
+  jitter/jitter-hash.h jitter/jitter-hash.c jitter/jitter-hash-random-table.c \
+  jitter/jitter-parse-int.h jitter/jitter-parse-int.c \
+  jitter/jitter-string.h jitter/jitter-string.c
+
+# The headers need to be installed and be available to the user or to the
+# Jitter-generated code in VMs, so they belong in the jitterinclude directory
+# along with the rest of the runtime library.
+jitterinclude_HEADERS += \
+  jitter/jitter-cpp.h \
+  jitter/jitter-fatal.h \
+  jitter/jitter-malloc.h \
+  jitter/jitter-dynamic-buffer.h \
+  jitter/jitter-hash.h \
+  jitter/jitter-parse-int.h \
+  jitter/jitter-string.h
+
+
+# jitterc frontend.
+# ################################################################
+
+# The jitterc scanner and parser generated by Flex and Bison.  We generate one C
+# file and one header for each one, as typical.
+FRONTEND_NON_GENERATED_FILES += jitterc/jitterc.l jitterc/jitterc.y
+FRONTEND_GENERATED_FILES += \
+  jitterc/jitterc-parser.c jitterc/jitterc-parser.h \
+  jitterc/jitterc-scanner.c jitterc/jitterc-scanner.h
+$(srcdir)/jitterc/jitterc-parser.c: jitterc/jitterc.y
+	$(YACC) -o "$@" "$(srcdir)/jitterc/jitterc.y"
+$(srcdir)/jitterc/jitterc-parser.h: jitterc/jitterc-parser.c
+$(srcdir)/jitterc/jitterc-scanner.c: jitterc/jitterc.l
+	$(LEX) --header-file=$(srcdir)/jitterc/jitterc-scanner.h -o"$@" \
+	  "$(srcdir)/jitterc/jitterc.l"
+$(srcdir)/jitterc/jitterc-scanner.h: jitterc/jitterc-scanner.c
+
+
+# jitter C-code-generator program.
+# ################################################################
+
+# This is the program generating C files from a ".jitter" VM specification.  Its
+# C sources and this Makefile.am always use the "jitterc" prefix, to distinguish
+# it from a generic user program embedding a Jittery VM.
+# Anyway the user does not need this distinction: the C-generating executable is
+# simply called "jitter".
+bin_PROGRAMS += bin/jitter
+bin_jitter_SOURCES = \
+  jitterc/jitterc-generate.c jitterc/jitterc-generate.h \
+  jitterc/jitterc-main.c \
+  jitterc/jitterc-utility.c jitterc/jitterc-utility.h \
+  jitterc/jitterc-mangle.c jitterc/jitterc-mangle.h \
+  jitterc/jitterc-vm.c jitterc/jitterc-vm.h \
+  jitterc/jitterc-parser.c jitterc/jitterc-parser.h \
+  jitterc/jitterc-scanner.c jitterc/jitterc-scanner.h
+bin_jitter_LDADD = \
+  lib/libjitterutility--convenience.la \
+  $(LDADD_FOR_GNULIB)
+bin_jitter_CPPFLAGS = \
+  $(CPPFLAGS_FOR_GNULIB) $(CPPFLAGS_FOR_PATHS)
+
+
+# jitter configuration utility.
+# ################################################################
+
+# The jitter-config shell script (preprocessed by config.status ).
+bin_SCRIPTS += scripts/jitter-config
+
+
+# M4sh machinery.
+# ################################################################
+
+# Add complex suffixes for implicit rules.  Even if there were a default rule
+# about how to split something like ".in.m4sh.in" I'd prefer not to rely on it.
+SUFFIXES += .in.m4sh .in
+
+# Implicit rule to turn an M4sh m4sh script ( .in.m4sh ) into a portable shell
+# script ( .in ) ready to be processed by aclocal for @-substitutions.
+# This implicit rule is meant to be always used with sources and targets both
+# in the source directory.
+# This cannot work on a machine without autom4te installed (autom4te comes with
+# Autoconf), so we intentionally fail in that case.
+if JITTER_HAS_AUTOM4TE
+.in.m4sh.in: m4-utility/jitter-script.m4sh
+	$(AUTOM4TE) \
+          --language=M4sh --prepend-include="$(top_srcdir)/m4-utility" \
+          --output="$@" "$^"
+else
+.in.m4sh.in:
+	@echo "cannot rebuild $@ without autom4te"
+	@echo "you need to install autoconf and reconfigure"
+	@exit 1
+endif # if JITTER_HAS_AUTOM4TE
+
+# The final scripts with @-substitution performed are all rebuilt automatically
+# when needed, again thanks to AC_CONFIG_FILES in configure.ac .
+
+# The built target files ( .in ) will be trivially distributed as they occur in
+# configure.ac's AC_CONFIG_FILES , but their source files ( .in.m4sh ) must be
+# explicitly listed here.
+EXTRA_DIST += \
+  scripts/jitter-config.in.m4sh
+
+# Also include the common M4sh library, included by the scripts above with
+# m4_include (and by Autoconf macros).  Notice that this is not processed by
+# aclocal.
+EXTRA_DIST += \
+  m4-utility/jitter-script.m4sh
+
+
+# VM program frontend based on flex and Bison.
+# ################################################################
+
+# The generated C files mentioned here are part of libjitter, for every
+# dispatching model; see the SOURCES_FOR_LIBJITTER definition below.
+
+# The frontend sources, machine-generated with flex and Bison, are
+# VM-independent, which may be slightly surprising: each VM instruction is
+# simply recognized by the scanner as one occurrence of the INSTRUCTION_NAME
+# token, and appended to the current program by the parser; checking for
+# instruction names and argument types is done out of the parser but still in
+# VM-independent code, using VM-dependent data structures.
+FRONTEND_NON_GENERATED_FILES += jitter/program.l jitter/program.y
+FRONTEND_GENERATED_FILES += \
+   jitter/jitter-parser.c jitter/jitter-parser.h \
+   jitter/jitter-scanner.c jitter/jitter-scanner.h
+$(srcdir)/jitter/jitter-parser.c: jitter/program.y
+	$(YACC) -o "$@" "$(srcdir)/jitter/program.y"
+$(srcdir)/jitter/jitter-parser.h: jitter/jitter-parser.c
+$(srcdir)/jitter/jitter-scanner.c: jitter/program.l
+	$(LEX) --header-file=$(srcdir)/jitter/jitter-scanner.h -o"$@" \
+	  "$(srcdir)/jitter/program.l"
+$(srcdir)/jitter/jitter-scanner.h: jitter/jitter-scanner.c
+
+
+# Jitter template files.
+# ################################################################
+
+# Template files are C sources used as data when running jitterc.  They are
+# copied into the generated code, systematically replacing any occurrence of the
+# text "vmprefix_" and "VMPREFIX_" with the appropriate VM prefix, in lower or
+# upper case.  jitterc may further append machine-generated code to template
+# copies.
+JITTER_TEMPLATES = \
+  templates/vm1.c templates/vm.h templates/vm-main.c
+
+# Templates need to be distributed and installed as well, since they are used at
+# generation time.  They are machine-independent.
+dist_template_DATA += $(JITTER_TEMPLATES)
+EXTRA_DIST += $(JITTER_TEMPLATES)
+
+
+# Jitter flag files.
+# ################################################################
+
+# Flag files are short text files containing command-line options for
+# preprocessing, compiling and linking C code generated by Jitter, associated to
+# each dispatching model.  Flags are architecture-dependent.
+
+
+# Jitter runtime libraries for every enabled dispatching model.
+# ################################################################
+
+# A separate Jitter runtime library will be compiled for each enabled
+# dispatching model; the sources are always the same, compiled with different
+# CPP definitions.  We use a variable *starting* with rather than ending with
+# "SOURCES" in order not to let Automake deduce the existence of any build
+# target just from the definition.  The variable SOURCES_FOR_LIBJITTER will
+# explicitly occur in defintions of other definitions following the usual
+# Automake conventions but this variable serves just for specifying the list of
+# source files, once and for all.
+# Notice that this also includes the libjitterutility sources; see the comments
+# libjitterutility comments above.
+# A few architecture-dependent files may be added later to the definition of
+# variable; see the comments in "Native-code libjitter sources for supported
+# architectures" below.
+SOURCES_FOR_LIBJITTER = \
+  jitter/jitter.c jitter/jitter.h \
+  jitter/jitter-config.h \
+  jitter/jitter-dispatch.h \
+  jitter/jitter-instruction.c jitter/jitter-instruction.h \
+  jitter/jitter-program.c jitter/jitter-program.h \
+  jitter/jitter-rewrite.c jitter/jitter-rewrite.h \
+  jitter/jitter-specialize.c jitter/jitter-specialize.h \
+  jitter/jitter-replicate.c jitter/jitter-replicate.h \
+  jitter/jitter-disassemble.c jitter/jitter-disassemble.h \
+  jitter/jitter-fast-branch.c jitter/jitter-fast-branch.h \
+  jitter/jitter-interpreter-private.h \
+  jitter/jitter-parser.c jitter/jitter-parser.h \
+  jitter/jitter-scanner.c jitter/jitter-scanner.h \
+  jitter/jitter-vm.c jitter/jitter-vm.h \
+  jitter/jitter-machine-common.S jitter/jitter-machine-common.h \
+  jitter/jitter-patch.c jitter/jitter-patch.h \
+  jitter/jitter-patch-in.c jitter/jitter-patch-in.h \
+  jitter/jitter-stack.c jitter/jitter-stack.h
+
+# The libjitter headers meant for public use (and all the headers they include
+# in their turn, transitively closed) also need to be installed.  Some
+# architecture-dependent files may be added later to the definition of this
+# variable; see the comments in "Native-code libjitter sources for supported
+# architectures" below.
+jitterinclude_HEADERS += \
+  jitter/jitter.h \
+  jitter/jitter-config.h \
+  jitter/jitter-dispatch.h \
+  jitter/jitter-fast-branch.h \
+  jitter/jitter-instruction.h \
+  jitter/jitter-machine-common.h \
+  jitter/jitter-program.h \
+  jitter/jitter-specialize.h \
+  jitter/jitter-disassemble.h \
+  jitter/jitter-interpreter-private.h \
+  jitter/jitter-patch-in.h \
+  jitter/jitter-parser.h \
+  jitter/jitter-scanner.h \
+  jitter/jitter-stack.h \
+  jitter/jitter-vm.h
+
+# Unconditionally define Jitter runtimes as one Libtool convenience library per
+# *existing* dispatching model, including the ones which are disabled and cannot
+# even compile on the current configuration.
+# Each convenience library for an enabled dispatching model will be LIBADDed to
+# the actual library to be installed; moreover the library for the best
+# dispatching model will be LIBADDed to the "default" libjitter library; this
+# avoids one duplicate compilation.
+
+# Direct-threading-dispatch libjitter convenience library.
+EXTRA_LTLIBRARIES += lib/libjitter--direct-threading--convenience.la
+lib_libjitter__direct_threading__convenience_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__direct_threading__convenience_la_CPPFLAGS = \
+  $(AM_CPPFLAGS) -DJITTER_DISPATCH_DIRECT_THREADING
+
+# Minimal-threading--convenience-dispatch libjitter convenience library.
+EXTRA_LTLIBRARIES += lib/libjitter--minimal-threading--convenience.la
+lib_libjitter__minimal_threading__convenience_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__minimal_threading__convenience_la_CPPFLAGS = \
+  $(AM_CPPFLAGS) -DJITTER_DISPATCH_MINIMAL_THREADING
+
+# No-threading--convenience-dispatch libjitter convenience library.
+EXTRA_LTLIBRARIES += lib/libjitter--no-threading--convenience.la
+lib_libjitter__no_threading__convenience_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__no_threading__convenience_la_CPPFLAGS = \
+  $(AM_CPPFLAGS) -DJITTER_DISPATCH_NO_THREADING
+
+# switch-dispatch libjitter non-convenience library.
+if JITTER_ENABLE_DISPATCH_SWITCH
+  lib_LTLIBRARIES += lib/libjitter--switch.la
+  lib_libjitter__switch_la_SOURCES =
+  lib_libjitter__switch_la_LIBADD = \
+    lib/libjitter--switch--convenience.la \
+    lib/libjitterutility--convenience.la
+endif # JITTER_ENABLE_DISPATCH_SWITCH
+
+# Direct-threading-dispatch libjitter non-convenience library.
+if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
+  lib_LTLIBRARIES += lib/libjitter--direct-threading.la
+  lib_libjitter__direct_threading_la_SOURCES =
+  lib_libjitter__direct_threading_la_LIBADD = \
+    lib/libjitter--direct-threading--convenience.la \
+    lib/libjitterutility--convenience.la
+endif # JITTER_ENABLE_DISPATCH_DIRECT_THREADING
+
+# Minimal-threading-dispatch libjitter non-convenience library.
+if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
+  lib_LTLIBRARIES += lib/libjitter--minimal-threading.la
+  lib_libjitter__minimal_threading_la_SOURCES =
+  lib_libjitter__minimal_threading_la_LIBADD = \
+    lib/libjitter--minimal-threading--convenience.la \
+    lib/libjitterutility--convenience.la
+endif # JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
+
+# No-threading-dispatch libjitter non-convenience library.
+if JITTER_ENABLE_DISPATCH_NO_THREADING
+  lib_LTLIBRARIES += lib/libjitter--no-threading.la
+  lib_libjitter__no_threading_la_SOURCES =
+  lib_libjitter__no_threading_la_LIBADD = \
+    lib/libjitter--no-threading--convenience.la \
+    lib/libjitterutility--convenience.la
+endif # JITTER_ENABLE_DISPATCH_NO_THREADING
+
+# Best-dispatch libjitter non-convenience library.
+lib_LTLIBRARIES += lib/libjitter.la
+lib_libjitter_la_SOURCES =
+lib_libjitter_la_LIBADD = \
+  lib/libjitter--$(JITTER_BEST_DISPATCHING_MODEL)--convenience.la \
+  lib/libjitterutility--convenience.la
+
+
+# Native-code libjitter sources for supported architectures.
+# ################################################################
+
+# Only if the host architecture is supported, as detected by configure, we add
+# architecture-dependent sources from the appropriate directory to libjitter and
+# to the installed headers.
+if JITTER_HAS_ASSEMBLY
+  # Search included file in "machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)" , so that
+  # including <jitter/machine/FILE> from a source will find
+  # machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/FILE .  This is only
+  # needed when compiling without installed headers: after installation the
+  # installed header will look into <jitter/machine/FILE> and find it in the
+  # default include path, without any -I option.
+  AM_CPPFLAGS += \
+    -I "$(top_srcdir)/machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)"
+
+  # Add architecture-dependent sources to libjitter.
+  # FIXME: Here, for some reason I can't exactly understand, and *only* here,
+  # using $(JITTER_ASSEMBLY_SUBDIRECTORY) instead of
+  # @JITTER_ASSEMBLY_SUBDIRECTORY@ yields an unexpanded
+  # "$(JITTER_ASSEMBLY_SUBDIRECTORY)" as part of pathnames.  The header file
+  # doesn't seem to be a problem, but either the C file or the assembly file
+  # suffices to cause the issue.
+  SOURCES_FOR_LIBJITTER += \
+     machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/jitter-machine.h \
+     machine/@JITTER_ASSEMBLY_SUBDIRECTORY@/jitter/machine/jitter-machine-assembly.S \
+     machine/@JITTER_ASSEMBLY_SUBDIRECTORY@/jitter/machine/jitter-machine-c.c
+
+  # One architecture-specific header is used when compiling generated code, even
+  # if it's never included directly by user code.  This is needed in particular
+  # for reserving registers.
+  jittermachineinclude_HEADERS += \
+    machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/jitter-machine.h
+endif # if JITTER_HAS_ASSEMBLY
+
+# All the source files for every architecture have to be distributed,
+# independently from which ones we use, if any, in the current configuration.
+EXTRA_DIST += \
+  machine/mips/jitter/machine/jitter-machine.h \
+  machine/mips/jitter/machine/jitter-machine-assembly.S \
+  machine/mips/jitter/machine/jitter-machine-c.c \
+  machine/powerpc/jitter/machine/jitter-machine.h \
+  machine/powerpc/jitter/machine/jitter-machine-assembly.S \
+  machine/powerpc/jitter/machine/jitter-machine-c.c \
+  machine/sparc/jitter/machine/jitter-machine.h \
+  machine/sparc/jitter/machine/jitter-machine-assembly.S \
+  machine/sparc/jitter/machine/jitter-machine-c.c \
+  machine/x86_64/jitter/machine/jitter-machine.h \
+  machine/x86_64/jitter/machine/jitter-machine-assembly.S \
+  machine/x86_64/jitter/machine/jitter-machine-c.c
+
+
+# A remark about building examples and their library dependencies.
+# ################################################################
+
+# All the example executables depend on the main Jitter library (in the variant
+# for every relevant dispatching model) but these dependencies are not enforced.
+# Automake doesn't automatically track these dependencies, because we link
+# libraries in *_LDADD , thru $(JITTER_*LDADD) , with -lLIBRARY rather than
+# libLIBRARY.la .  The practice here is more useful as an example for Jitter
+# users.
+#
+# The dependencies could be enforced by defining EXTRA_target_DEPENDENCIES for
+# each example target, if I wanted the thing to be completely proper.  But
+# Jitter users never need to think about this, and it's better not frighten them
+# with the added complexity.
+#
+# In practice building the target "all" before building any specific example
+# program is enough.
+
+
+# Examples and benchmarks: "examples" taget for the user.
+# ################################################################
+
+# Again out of convenience, I make it depend on all , so that a user can build
+# the examples before having built the rest, which would normally fail
+# because of BUILT_SOURCES.  This target is convenient for the user to build
+# manually, and doesn't occur as a dependency of any other target.  examples:
+# $(EXTRA_PROGRAMS)
+examples: all
+	$(MAKE) $(EXTRA_PROGRAMS)
+
+
+# Uninspired example VM.
+# ################################################################
+
+# The Uninspired VM specification it the actual source...
+JITTER_NON_GENERATED_FILES += example-vms/uninspired/uninspired.jitter
+
+# ...And from there we generate C files.
+GENERATED_C_FILES_FOR_UNINSPIRED = \
+  example-vms/uninspired/uninspired-vm.h \
+  example-vms/uninspired/uninspired-vm1.c \
+  example-vms/uninspired/uninspired-vm2.c \
+  example-vms/uninspired/uninspired-vm-main.c
+JITTER_GENERATED_FILES += $(GENERATED_C_FILES_FOR_UNINSPIRED)
+
+# Default settings for the uninspired VM, easy to override from the make command
+# line -- but already built targets must be deleted manually.
+# FIXME: This is mostly for myself, as the jitterc command line interface is
+# going to change.
+UNINSPIRED_MAX_FAST_REGISTER_NO = 1
+UNINSPIRED_MAX_NONRESIDUAL_NO = -1
+
+PROGRAMS_UNINSPIRED =
+EXTRA_PROGRAMS += $(PROGRAMS_UNINSPIRED)
+
+# # The Jitter-generated C files for Uninspired have to be built early for Make to
+# # find source-to-source dependencies.
+# BUILT_SOURCES += $(GENERATED_C_FILES_FOR_UNINSPIRED)
+
+# How to generate the first generated file -- this actually generates all of
+# them.  The dependency on Makefile.am lets me play with generation options here
+# without touching the source files.  Shall I remove the dependency?  Probably.
+# By convention all the generated files but the first depend on the first.
+# See the comment above in "Files machine-generated by Jitter" about why
+# there is no dependency on bin/jitter$(EXEEXT) .
+$(srcdir)/example-vms/uninspired/uninspired-vm.h: example-vms/uninspired/uninspired.jitter $(JITTER_TEMPLATES)
+	$(JITTER_EMULATOR) bin/jitter$(EXEEXT) \
+          "$(srcdir)/example-vms/uninspired/uninspired.jitter" \
+          --output "$(srcdir)/example-vms/uninspired/" \
+          --frontend \
+          --max-fast-register-no=$(UNINSPIRED_MAX_FAST_REGISTER_NO) \
+          --max-nonresidual-no=$(UNINSPIRED_MAX_NONRESIDUAL_NO) \
+          --template-directory="$(srcdir)/templates/"
+$(srcdir)/example-vms/uninspired/uninspired-vm1.c: example-vms/uninspired/uninspired-vm.h
+$(srcdir)/example-vms/uninspired/uninspired-vm2.c: example-vms/uninspired/uninspired-vm.h
+$(srcdir)/example-vms/uninspired/uninspired-vm-main.c: example-vms/uninspired/uninspired-vm.h
+
+# Uninspired VM program: switch.
+if JITTER_ENABLE_DISPATCH_SWITCH
+  PROGRAMS_UNINSPIRED += bin/uninspired--switch
+  bin_uninspired__switch_SOURCES = \
+    $(GENERATED_C_FILES_FOR_UNINSPIRED)
+  bin_uninspired__switch_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(top_srcdir)/example-vms/uninspired/" \
+    $(JITTER_SWITCH_CPPFLAGS) $(CPPFLAGS_FOR_GNULIB)
+  bin_uninspired__switch_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_SWITCH_CFLAGS)
+  bin_uninspired__switch_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_SWITCH_LDFLAGS)
+  bin_uninspired__switch_LDADD = \
+    $(JITTER_SWITCH_LDADD) $(LDADD_FOR_GNULIB)
+endif # JITTER_ENABLE_DISPATCH_SWITCH
+
+# Uninspired VM program: direct threading.
+if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
+  PROGRAMS_UNINSPIRED += bin/uninspired--direct-threading
+  bin_uninspired__direct_threading_SOURCES = \
+    $(GENERATED_C_FILES_FOR_UNINSPIRED)
+  bin_uninspired__direct_threading_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(top_srcdir)/example-vms/uninspired/" \
+    $(JITTER_DIRECT_THREADING_CPPFLAGS) $(CPPFLAGS_FOR_GNULIB)
+  bin_uninspired__direct_threading_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_DIRECT_THREADING_CFLAGS)
+  bin_uninspired__direct_threading_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_DIRECT_THREADING_LDFLAGS)
+  bin_uninspired__direct_threading_LDADD = \
+    $(JITTER_DIRECT_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+endif # JITTER_ENABLE_DISPATCH_DIRECT_THREADING
+
+# Uninspired VM program: minimal threading.
+if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
+  PROGRAMS_UNINSPIRED += bin/uninspired--minimal-threading
+  bin_uninspired__minimal_threading_SOURCES = \
+    $(GENERATED_C_FILES_FOR_UNINSPIRED)
+  bin_uninspired__minimal_threading_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(top_srcdir)/example-vms/uninspired/" \
+    $(JITTER_MINIMAL_THREADING_CPPFLAGS) $(CPPFLAGS_FOR_GNULIB)
+  bin_uninspired__minimal_threading_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_MINIMAL_THREADING_CFLAGS)
+  bin_uninspired__minimal_threading_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_MINIMAL_THREADING_LDFLAGS)
+  bin_uninspired__minimal_threading_LDADD = \
+    $(JITTER_MINIMAL_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+endif # JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
+
+# Uninspired VM program: no threading.
+if JITTER_ENABLE_DISPATCH_NO_THREADING
+  PROGRAMS_UNINSPIRED += bin/uninspired--no-threading
+  bin_uninspired__no_threading_SOURCES = \
+    $(GENERATED_C_FILES_FOR_UNINSPIRED)
+  bin_uninspired__no_threading_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(top_srcdir)/example-vms/uninspired/" \
+    $(JITTER_NO_THREADING_CPPFLAGS) $(CPPFLAGS_FOR_GNULIB)
+  bin_uninspired__no_threading_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_NO_THREADING_CFLAGS)
+  bin_uninspired__no_threading_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_NO_THREADING_LDFLAGS)
+  bin_uninspired__no_threading_LDADD = \
+    $(JITTER_NO_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+endif # JITTER_ENABLE_DISPATCH_NO_THREADING
+
+# Examples VM programs for the Uninspired VM example, to be distributed.
+EXTRA_DIST += \
+  example-vms/uninspired/examples/euclid.vm \
+  example-vms/uninspired/examples/euclid-faster.vm \
+  example-vms/uninspired/examples/euclid-super.vm \
+  example-vms/uninspired/examples/euclid-x86_64.s \
+  example-vms/uninspired/examples/euclid.pir \
+  example-vms/uninspired/examples/euclid.py \
+  example-vms/uninspired/examples/euclid-symmetric.py \
+  example-vms/uninspired/examples/euclid-simple-assignments.py \
+  example-vms/uninspired/examples/counter.vm \
+  example-vms/uninspired/examples/counter-mips.s \
+  example-vms/uninspired/examples/counter-mips-using-delay-slot.s \
+  example-vms/uninspired/examples/counter-sparc.s \
+  example-vms/uninspired/examples/counter-x86_64.s \
+  example-vms/uninspired/examples/counter.pir \
+  example-vms/uninspired/examples/counter.py \
+  example-vms/uninspired/examples/counter-iterator.py \
+  example-vms/uninspired/examples/bubble-sort.vm \
+  example-vms/uninspired/examples/bubble-sort-random.vm \
+  example-vms/uninspired/examples/sqrt-2.vm \
+  example-vms/uninspired/examples/threading-benchmark.vm \
+  example-vms/uninspired/examples/vector-sum.vm
+
+
+# Structured language example.  The VM isn't really "structured".
+# ################################################################
+
+# The Uninspired VM specification it the actual source...
+JITTER_NON_GENERATED_FILES += example-vms/structured/structured.jitter
+
+# ...And from there we generate C files.  The main driver is not always used, to
+# we define a convenience variable with it, and another without.
+GENERATED_C_FILES_FOR_STRUCTURED_MAIN_EXCLUDED = \
+  example-vms/structured/structuredvm-vm.h \
+  example-vms/structured/structuredvm-vm1.c \
+  example-vms/structured/structuredvm-vm2.c
+GENERATED_C_FILES_FOR_STRUCTURED_MAIN_INCLUDED = \
+  $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_EXCLUDED) \
+  example-vms/structured/structuredvm-vm-main.c
+JITTER_GENERATED_FILES += $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_INCLUDED)
+
+# Default settings for the structured-language VM, easy to override from the
+# make command line -- but already built targets must be deleted manually.
+# FIXME: This is mostly for myself, as the jitterc command line interface is
+# going to change.
+STRUCTUREDVM_MAX_FAST_REGISTER_NO = 5
+STRUCTUREDVM_MAX_NONRESIDUAL_NO = -1
+
+EXTRA_PROGRAMS += $(PROGRAMS_STRUCTURED)
+
+# # The Jitter-generated C files for the structured-language VM have to be built
+# # early for Make to find source-to-source dependencies.
+# BUILT_SOURCES += $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_INCLUDED)
+
+# Defined a variable for the structured-language example sources.  It will be
+# reused several times.
+SOURCES_FOR_STRUCTURED = \
+  example-vms/structured/structured-syntax.h \
+  example-vms/structured/structured-scanner.c \
+  example-vms/structured/structured-scanner.h \
+  example-vms/structured/structured-parser.c \
+  example-vms/structured/structured-parser.h \
+  example-vms/structured/structured-code-generator.h \
+  example-vms/structured/structured-code-generator.c \
+  $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_EXCLUDED) \
+  example-vms/structured/structured-main.c
+
+# Like above, define a variable for the sources of the structured-VM standalone
+# program.  These are particularly simple: everything generated by Jitter
+# including the main driver file, and nothing else.
+SOURCES_FOR_STRUCTUREDVM = $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_INCLUDED)
+
+# The list of programs in the structured example will be added to incrementally.
+PROGRAMS_STRUCTURED =
+
+# The structured-language example and the matching standalone "structured" VM,
+# with direct-threading dispatch.
+PROGRAMS_STRUCTURED += bin/structured
+bin_structured_SOURCES = $(SOURCES_FOR_STRUCTURED)
+bin_structured_CPPFLAGS = \
+  $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/structured" $(JITTER_CPPFLAGS)
+bin_structured_CFLAGS = \
+  $(AM_CFLAGS) $(JITTER_CFLAGS)
+bin_structured_LDADD = \
+  $(AM_LDADD) $(JITTER_LDADD)
+bin_structured_LDFLAGS = \
+  $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
+PROGRAMS_STRUCTURED += bin/structuredvm
+bin_structuredvm_SOURCES = $(SOURCES_FOR_STRUCTUREDVM)
+bin_structuredvm_CPPFLAGS = $(bin_structured_CPPFLAGS) $(CPPFLAGS_FOR_GNULIB)
+bin_structuredvm_CFLAGS = $(bin_structured_CFLAGS)
+bin_structuredvm_LDADD = $(bin_structured_LDADD) $(LDADD_FOR_GNULIB)
+bin_structuredvm_LDFLAGS = $(bin_structured_LDFLAGS)
+
+# The structured example , with switch dispatch.
+if JITTER_ENABLE_DISPATCH_SWITCH
+  PROGRAMS_STRUCTURED += bin/structured--switch
+  bin_structured__switch_SOURCES = $(SOURCES_FOR_STRUCTURED)
+  bin_structured__switch_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/structured" \
+    $(JITTER_SWITCH_CPPFLAGS)
+  bin_structured__switch_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_SWITCH_CFLAGS)
+  bin_structured__switch_LDADD = \
+    $(AM_LDADD) $(JITTER_SWITCH_LDADD)
+  bin_structured__switch_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_SWITCH_LDFLAGS)
+  PROGRAMS_STRUCTURED += bin/structuredvm--switch
+  bin_structuredvm__switch_SOURCES = $(SOURCES_FOR_STRUCTUREDVM)
+  bin_structuredvm__switch_CPPFLAGS = \
+    $(bin_structured__switch_CPPFLAGS) $(CPPFLAGS_FOR_GNULIB)
+  bin_structuredvm__switch_CFLAGS = \
+    $(bin_structured__switch_CFLAGS)
+  bin_structuredvm__switch_LDADD = \
+    $(bin_structured__switch_LDADD) $(LDADD_FOR_GNULIB)
+  bin_structuredvm__switch_LDFLAGS = \
+    $(bin_structured__switch_LDFLAGS)
+endif # JITTER_ENABLE_DISPATCH_SWITCH
+
+# The structured-language example and the matching standalone "structured" VM,
+# with direct-threading dispatch.
+if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
+  PROGRAMS_STRUCTURED += bin/structured--direct-threading
+  bin_structured__direct_threading_SOURCES = $(SOURCES_FOR_STRUCTURED)
+  bin_structured__direct_threading_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/structured" \
+    $(JITTER_DIRECT_THREADING_CPPFLAGS)
+  bin_structured__direct_threading_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_DIRECT_THREADING_CFLAGS)
+  bin_structured__direct_threading_LDADD = \
+    $(AM_LDADD) $(JITTER_DIRECT_THREADING_LDADD)
+  bin_structured__direct_threading_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_DIRECT_THREADING_LDFLAGS)
+  PROGRAMS_STRUCTURED += bin/structuredvm--direct-threading
+  bin_structuredvm__direct_threading_SOURCES = $(SOURCES_FOR_STRUCTUREDVM)
+  bin_structuredvm__direct_threading_CPPFLAGS = \
+    $(bin_structured__direct_threading_CPPFLAGS) $(CPPFLAGS_FOR_GNULIB)
+  bin_structuredvm__direct_threading_CFLAGS = \
+    $(bin_structured__direct_threading_CFLAGS)
+  bin_structuredvm__direct_threading_LDADD = \
+    $(bin_structured__direct_threading_LDADD) $(LDADD_FOR_GNULIB)
+  bin_structuredvm__direct_threading_LDFLAGS = \
+    $(bin_structured__direct_threading_LDFLAGS)
+endif # JITTER_ENABLE_DISPATCH_DIRECT_THREADING
+
+# The structured-language example and the matching standalone "structured" VM,
+# with minimal-threading dispatch.
+if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
+  PROGRAMS_STRUCTURED += bin/structured--minimal-threading
+  bin_structured__minimal_threading_SOURCES = $(SOURCES_FOR_STRUCTURED)
+  bin_structured__minimal_threading_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/structured" \
+    $(JITTER_MINIMAL_THREADING_CPPFLAGS)
+  bin_structured__minimal_threading_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_MINIMAL_THREADING_CFLAGS)
+  bin_structured__minimal_threading_LDADD = \
+    $(AM_LDADD) $(JITTER_MINIMAL_THREADING_LDADD)
+  bin_structured__minimal_threading_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_MINIMAL_THREADING_LDFLAGS)
+  PROGRAMS_STRUCTURED += bin/structuredvm--minimal-threading
+  bin_structuredvm__minimal_threading_SOURCES = $(SOURCES_FOR_STRUCTUREDVM)
+  bin_structuredvm__minimal_threading_CPPFLAGS = \
+    $(bin_structured__minimal_threading_CPPFLAGS) $(CPPFLAGS_FOR_GNULIB)
+  bin_structuredvm__minimal_threading_CFLAGS = \
+    $(bin_structured__minimal_threading_CFLAGS)
+  bin_structuredvm__minimal_threading_LDADD = \
+    $(bin_structured__minimal_threading_LDADD) $(LDADD_FOR_GNULIB)
+  bin_structuredvm__minimal_threading_LDFLAGS = \
+    $(bin_structured__minimal_threading_LDFLAGS)
+endif # JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
+
+# The structured-language example and the matching standalone "structured" VM,
+# with no-threading dispatch.
+if JITTER_ENABLE_DISPATCH_NO_THREADING
+  PROGRAMS_STRUCTURED += bin/structured--no-threading
+  bin_structured__no_threading_SOURCES = $(SOURCES_FOR_STRUCTURED)
+  bin_structured__no_threading_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/structured" \
+    $(JITTER_NO_THREADING_CPPFLAGS)
+  bin_structured__no_threading_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_NO_THREADING_CFLAGS)
+  bin_structured__no_threading_LDADD = \
+    $(AM_LDADD) $(JITTER_NO_THREADING_LDADD)
+  bin_structured__no_threading_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_NO_THREADING_LDFLAGS)
+  PROGRAMS_STRUCTURED += bin/structuredvm--no-threading
+  bin_structuredvm__no_threading_SOURCES = $(SOURCES_FOR_STRUCTUREDVM)
+  bin_structuredvm__no_threading_CPPFLAGS = \
+    $(bin_structured__no_threading_CPPFLAGS) $(CPPFLAGS_FOR_GNULIB)
+  bin_structuredvm__no_threading_CFLAGS = \
+    $(bin_structured__no_threading_CFLAGS)
+  bin_structuredvm__no_threading_LDADD = \
+    $(bin_structured__no_threading_LDADD) $(LDADD_FOR_GNULIB)
+  bin_structuredvm__no_threading_LDFLAGS = \
+    $(bin_structured__no_threading_LDFLAGS)
+endif # JITTER_ENABLE_DISPATCH_NO_THREADING
+
+# Structured-language scanner and parser generated by Flex and Bison.
+FRONTEND_NON_GENERATED_FILES += \
+  example-vms/structured/structured.l example-vms/structured/structured.y
+FRONTEND_GENERATED_FILES += \
+  example-vms/structured/structured-scanner.c \
+  example-vms/structured/structured-scanner.h \
+  example-vms/structured/structured-parser.c \
+  example-vms/structured/structured-parser.h
+$(srcdir)/example-vms/structured/structured-parser.c: example-vms/structured/structured.y
+	$(YACC) -o "$@" "$(srcdir)/example-vms/structured/structured.y"
+$(srcdir)/example-vms/structured/structured-parser.h: example-vms/structured/structured-parser.c
+$(srcdir)/example-vms/structured/structured-scanner.c: example-vms/structured/structured.l
+	$(LEX) --header-file="$(srcdir)/example-vms/structured/structured-scanner.h" -o"$@" \
+          "$(srcdir)/example-vms/structured/structured.l"
+$(srcdir)/example-vms/structured/structured-scanner.h: example-vms/structured/structured-scanner.c
+
+# Jitter-generated files for the structured-language VM, used for the structured
+# language.  By convention all the generated files but the first depend on the
+# first.
+# See the comment above in "Files machine-generated by Jitter" about why
+# there is no dependency on bin/jitter$(EXEEXT) .
+$(srcdir)/example-vms/structured/structuredvm-vm.h: example-vms/structured/structured.jitter $(JITTER_TEMPLATES)
+	$(JITTER_EMULATOR) bin/jitter$(EXEEXT) \
+          "$(srcdir)/example-vms/structured/structured.jitter" \
+          --output "$(srcdir)/example-vms/structured/" \
+          --frontend \
+          --max-fast-register-no=$(STRUCTUREDVM_MAX_FAST_REGISTER_NO) \
+          --max-nonresidual-no=$(STRUCTUREDVM_MAX_NONRESIDUAL_NO) \
+          --template-directory="$(srcdir)/templates/"
+$(srcdir)/example-vms/structured/structuredvm-vm1.c: example-vms/structured/structuredvm-vm.h
+$(srcdir)/example-vms/structured/structuredvm-vm2.c: example-vms/structured/structuredvm-vm.h
+$(srcdir)/example-vms/structured/structuredvm-vm-main.c: example-vms/structured/structuredvm-vm.h
+
+# Examples VM programs for the Uninspired VM example, to be distributed.
+EXTRA_DIST += \
+  example-vms/structured/examples/count-down.structured
+
+# The structured-language example comes with its own clean build system as an
+# example of an independent software using Jitter.  The sub-build system is not
+# used here, but we have to distribute the files.
+EXTRA_DIST += \
+  example-vms/structured/configure.ac \
+  example-vms/structured/Makefile.am \
+  example-vms/structured/COPYING \
+  example-vms/structured/README \
+  example-vms/structured/AUTHORS \
+  example-vms/structured/NEWS \
+  example-vms/structured/ChangeLog
+
+
+# Brainfuck example VM.
+# ################################################################
+
+# FIXME: this has not been tested in a long time.
+JITTER_NON_GENERATED_FILES += example-vms/brainfuck/brainfuck.jitter
+
+
+# Generate debugging assembly and preprocessed files for humans.
+# ################################################################
+
+# FIXME: this is revoltingly ugly and must be replaced with a different
+# mechanism.
+
+# How to generate assembly and preprocessed C files.  Of course the exact list
+# of files to be generated depends on which dispatching models are enabled.
+assembly: $(ASSEMBLY_FILES_FOR_UNINSPIRED)
+preprocessed: $(PREPROCESSED_FILES_FOR_UNINSPIRED)
+ASSEMBLY_FILES_FOR_UNINSPIRED =
+PREPROCESSED_FILES_FOR_UNINSPIRED =
+
+# Compiler options to produce readable assembly.
+READABLE_ASSEMBLY_FLAGS = \
+  -fverbose-asm \
+  $(JITTER_MACHINE_SPECIFIC_READABLE_ASSEMBLY_FLAGS)
+
+# Preprocessor options to produce readable preprocessed C.
+READABLE_PREPROCESSED_C_FLAGS =
+
+# Define a variable expanding to an indent command line working as a filter to
+# be run in a shell pipe, or cat as a fallback replacement if indent is not
+# available.  This currently assumes that the indent utility, if it exists, is
+# GNU indent.
+if JITTER_HAVE_INDENT
+  INDENT = \
+    "$(JITTER_INDENT)" \
+      --no-tabs --swallow-optional-blank-lines \
+      --line-length100 --preprocessor-indentation2 -
+else
+  INDENT = cat
+endif # JITTER_HAVE_INDENT
+
+# Assembly and preprocessed C for direct-threading dispatch.
+if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
+  ASSEMBLY_FILES_FOR_UNINSPIRED += uninspired--direct-threading.s
+  PREPROCESSED_FILES_FOR_UNINSPIRED += uninspired--direct-threading.i
+  uninspired--direct-threading.s: $(GENERATED_C_FILES_FOR_UNINSPIRED)
+	  $(CCAS) $(CCASFLAGS) $(AM_CPPFLAGS) $(DEFAULT_INCLUDES) $(AM_CFLAGS) \
+	    $(bin_uninspired__direct_threading_CPPFLAGS) \
+	    $(READABLE_ASSEMBLY_FLAGS) \
+	    -o $@ -S "example-vms/uninspired/uninspired-vm2.c"
+  uninspired--direct-threading.i: $(GENERATED_C_FILES_FOR_UNINSPIRED)
+	  $(CC) $(CFLAGS) $(AM_CPPFLAGS) $(DEFAULT_INCLUDES) \
+	    $(bin_uninspired__direct_threading_CPPFLAGS) \
+	    $(READABLE_PREPROCESSED_C_FLAGS) \
+	    -E -P "example-vms/uninspired/uninspired-vm2.c" | $(INDENT) > $@
+endif # JITTER_ENABLE_DISPATCH_DIRECT_THREADING
+
+# Assembly and preprocessed C for minimal-threading dispatch.
+if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
+  ASSEMBLY_FILES_FOR_UNINSPIRED += uninspired--minimal-threading.s
+  PREPROCESSED_FILES_FOR_UNINSPIRED += uninspired--minimal-threading.i
+  uninspired--minimal-threading.s: $(GENERATED_C_FILES_FOR_UNINSPIRED)
+	  $(CCAS) $(CCASFLAGS) $(AM_CPPFLAGS) $(DEFAULT_INCLUDES) $(AM_CFLAGS) \
+	    $(bin_uninspired__minimal_threading_CPPFLAGS) \
+	    $(READABLE_ASSEMBLY_FLAGS) \
+	    -o $@ -S "example-vms/uninspired/uninspired-vm2.c"
+  uninspired--minimal-threading.i: $(GENERATED_C_FILES_FOR_UNINSPIRED)
+	  $(CC) $(CFLAGS) $(AM_CPPFLAGS) $(DEFAULT_INCLUDES) \
+	    $(bin_uninspired__minimal_threading_CPPFLAGS) \
+	    $(READABLE_PREPROCESSED_C_FLAGS) \
+	    -E -P "example-vms/uninspired/uninspired-vm2.c" | $(INDENT) > $@
+endif # JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
+
+# Assembly and preprocessed C for no-threading dispatch.
+if JITTER_ENABLE_DISPATCH_NO_THREADING
+  ASSEMBLY_FILES_FOR_UNINSPIRED += uninspired--no-threading.s
+  PREPROCESSED_FILES_FOR_UNINSPIRED += uninspired--no-threading.i
+  uninspired--no-threading.s: $(GENERATED_C_FILES_FOR_UNINSPIRED)
+	  $(CCAS) $(CCASFLAGS) $(AM_CPPFLAGS) $(DEFAULT_INCLUDES) $(AM_CFLAGS) \
+	    $(bin_uninspired__no_threading_CPPFLAGS) \
+	    $(READABLE_ASSEMBLY_FLAGS) \
+	    -o $@ -S "example-vms/uninspired/uninspired-vm2.c"
+  uninspired--no-threading.i: $(GENERATED_C_FILES_FOR_UNINSPIRED)
+	  $(CC) $(CFLAGS) $(AM_CPPFLAGS) $(DEFAULT_INCLUDES) \
+	    $(bin_uninspired__no_threading_CPPFLAGS) \
+	    $(READABLE_PREPROCESSED_C_FLAGS) \
+	    -E -P "example-vms/uninspired/uninspired-vm2.c" | $(INDENT) > $@
+endif # JITTER_ENABLE_DISPATCH_NO_THREADING
+
+
+# More files to distribute: build system and small doc files.
+# ################################################################
+
+EXTRA_DIST += \
+  NO-WARRANTY \
+  bootstrap bootstrap.conf \
+  build-aux/git-version-gen \
+  build-aux/gitlog-to-changelog \
+  build-aux/trivial-source.c
+# Notice that README-hacking is *not* supposed to be distributed: in fact the
+# "bootstrap" script from Gnulib uses its presence to decide if the current
+# source directory comes from a VCS checkout or a tarball.
+
+# Distributes my NOTES file, at least provisionally, for the people who saw my
+# GHM talk and want a little (crudely) commented bibliography.
+EXTRA_DIST += \
+  NOTES
+
+
+# Texinfo documentation.
+# ################################################################
+
+TEXIINFO_OPTIONS = -I $(abs_top_builddir)/doc
+AM_MAKEINFOHTMLFLAGS = $(AM_MAKEINFOFLAGS) --number-sections --fill-column=100
+TEXI2PDF = $(JITTER_TEXI2DVI) --pdf --batch $(TEXIINFO_OPTIONS)
+
+info_TEXINFOS += \
+  doc/jitter.texi
+doc_jitter_TEXINFOS = \
+  $(srcdir)/doc/gpl.texi $(srcdir)/doc/fdl.texi
+
+EXTRA_DIST += \
+  doc/COPYING.DOC
+
+
+# Man pages
+# ################################################################
+
+# Man pages are generated with help2man from executables.  They have to be
+# distributed, so that the user doesn't need help2man installed just to compile
+# Jitter from the sources.  The rules to rebuild man pages are disabled if the
+# user doesn't have help2man.
+# Here I use the environment variable ARGP_HELP_FMT to override argp's default
+# look in --help , which make section headers start at the second column; that
+# does not play well with help2man .
+HELP2MAN_WITH_OPTIONS = \
+  ARGP_HELP_FMT='header-col=0'; export ARGP_HELP_FMT; \
+    $(HELP2MAN) --info-page='jitter' --source='Luca Saiu' --section=1
+
+# If we have no help2man or we are cross-compiling without an emulator, then we
+# cannot actually rebuild man pages.  In this case we will make copies from a
+# stub.
+dist_noinst_MANS += doc/missing-man-page.1
+
+dist_man1_MANS += \
+  scripts/jitter-config.1 \
+  jitterc/jitter.1
+
+# Rules for always-installed programs.
+if JITTER_CAN_REBUILD_MAN_PAGES
+if JITTER_HAS_HELP2MAN
+  # man pages are built from executables, but depend on the sources as
+  # recommended in the help2man documentation.
+  jitterc/jitter.1: jitterc/jitterc-main.c
+	  $(HELP2MAN_WITH_OPTIONS) --output=$@ "$(JITTER_EMULATOR) bin/jitter$(EXEEXT)"
+  scripts/jitter-config.1: scripts/jitter-config
+	  $(HELP2MAN_WITH_OPTIONS) --output=$@ scripts/jitter-config
+endif # if JITTER_HAS_HELP2MAN
+else # ! JITTER_CAN_REBUILD_MAN_PAGES
+  # We can't build real man pages on this system, so we just distribute copies
+  # of a single stub page.
+  jitterc/jitter.1: doc/missing-man-page.1
+	cp "$(srcdir)/doc/missing-man-page.1" "$@"
+  scripts/jitter-config.1: doc/missing-man-page.1
+	cp "$(srcdir)/doc/missing-man-page.1" "$@"
+endif # JITTER_CAN_REBUILD_MAN_PAGES
+
+
+# Emacs Lisp support.
+# ################################################################
+
+# The Emacs Lisp major mode for Jitter is to be installed and distributed;
+# byte-compilation is automatically enabled.
+dist_lisp_LISP += \
+  emacs/jitter-mode.el
+
+
+# Git versioning support.
+# ################################################################
+
+EXTRA_DIST += \
+  $(top_srcdir)/.version
+BUILT_SOURCES += \
+  $(top_srcdir)/.version
+
+$(top_srcdir)/.version:
+	echo $(VERSION) > "$@-t" && mv "$@-t" "$@"
+
+# Write a .tarball-version file into the dist directory (to be run before making
+# a tarball).
+dist-hook-git-versioning:
+	echo $(VERSION) > $(distdir)/.tarball-version
+
+
+# ChangeLog generation.
+# ################################################################
+
+JITTER_GITLOG_TO_CHANGELOG_FLAGS = \
+  --no-cluster \
+  --format='%s%n%n%b%n'
+
+# Replace the current ChangeLog with a text generated from the repo git log,
+# but only if we are actually building from git.  If not keep ChangeLog as it
+# is.
+if JITTER_BUILDING_FROM_GIT
+  dist-hook-changelog:
+	(cd "$(top_srcdir)" \
+           && ./build-aux/gitlog-to-changelog \
+                 $(JITTER_GITLOG_TO_CHANGELOG_FLAGS) \
+                 > ChangeLog)
+else
+  dist-hook-changelog:
+	@echo "Not rebuilding $(top_srcdir)/ChangeLog: no git log"
+endif # if JITTER_BUILDING_FROM_GIT
+
+# These rules are convenient aliases for the user to call interactively, in
+# order to manually regenerate the ChangeLog file.  They never fire because of
+# build dependencies.
+ChangeLog: dist-hook-changelog
+changelog: ChangeLog
+
+
+# Scratch.
+# ################################################################
+
+# built-sources: $(BUILT_SOURCES)
+# jitter-generated: $(JITTER_GENERATED_FILES)
+# jitter-non-generated: $(JITTER_NON_GENERATED_FILES)
+
+# jitter-generated-sources: $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_INCLUDED) $(GENERATED_C_FILES_FOR_UNINSPIRED)
+
+# EXTRA_DIST += $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_INCLUDED) $(GENERATED_C_FILES_FOR_UNINSPIRED)
+
+# EXTRA_bin_jitterc_DEPENDENCIES = lib/libgnulib--convenience.la
+# nodist_BUILT_SOURCES = bin/jitter$(EXEEXT)
+# nodist-built-sources: $(nodist_BUILT_SOURCES)
+
+
+#make-sure-that-jitterc-exists: bin/jitter$(EXEEXT)
+#	touch "$@"
+#EXTRA_DIST += make-sure-that-jitterc-exists
+
+#example-vms/structured/structuredvm-vm.h: make-sure-that-jitterc-exists
+#example-vms/uninspired/uninspired-vm.h: make-sure-that-jitterc-exists
+
+#EXTRA_example_vms_structured_structuredvm_vm_h_DEPENDENCIES = make-sure-that-jitterc-exists
+#EXTRA_example_vms_uninspired_uninspired_vm_h_DEPENDENCIES = make-sure-that-jitterc-exists
+
+
+
+# Distribution.
+# ################################################################
+
+# Make sure that generated C files exist before we make a distribution.
+# This helps with distcheck .
+dist-hook-built-sources: $(BUILT_SOURCES)
+
+# I like to keep different dist-hook s separate.
+dist-hook: dist-hook-git-versioning dist-hook-changelog dist-hook-built-sources
+
+
+# Test suite.
+# ################################################################
+
+# We use the TAP driver.
+TEST_LOG_DRIVER = \
+  env AM_TAP_AWK="$(JITTER_AWK)" \
+    $(SHELL) $(top_srcdir)/build-aux/tap-driver.sh
+
+# The test scripts.  These are processed by aclocal, so Automake already knows
+# their dependencies.  In order to completely disable the test suite if not
+# enabled at configure time, we define TESTS within an Automake conditional.
+if JITTER_ENABLE_TEST_SUITE
+  # FIXME: tests/elementary/init-fini.test is currently disabled
+  # TESTS += \
+  #   tests/elementary/init-fini.test \
+  #   tests/uninspired/interpreter.test
+  TESTS += \
+    tests/uninspired/fundamental.test \
+    tests/uninspired/programs.test
+  # Programs used by test scripts.  FIXME: remove tests/elementary/uninspired-init-fini .
+  check_PROGRAMS += \
+     $(PROGRAMS_UNINSPIRED)
+
+  # # Programs used by test scripts.  FIXME: remove tests/elementary/uninspired-init-fini .
+  # check_PROGRAMS += \
+  #    tests/elementary/uninspired-init-fini \
+  #    $(PROGRAMS_UNINSPIRED)
+
+  # tests_elementary_uninspired_init_fini_SOURCES = \
+  #   tests/elementary/uninspired-init-fini.c \
+  #   $(GENERATED_C_FILES_FOR_UNINSPIRED)
+  # # See the [no longer existing] comment for example-vms/uninspired/uninspired-main.c .
+  # $(srcdir)/tests/elementary/uninspired-init-fini.c: \
+  #   example-vms/uninspired/uninspired-vm.h
+  # tests_elementary_uninspired_init_fini_CPPFLAGS = \
+  #   $(AM_CPPFLAGS) -I example-vms/uninspired/
+  # tests_elementary_uninspired_init_fini_LDADD = \
+  #   lib/libjitter.la $(LDADD_FOR_GNULIB)
+  # Express inter- and intra-dependencies for test programs.
+  # tests/elementary/init-fini.log: tests/elementary/uninspired-init-fini
+  tests/uninspired/fundamental.log: $(check_PROGRAMS)
+  tests/uninspired/programs.log: $(check_PROGRAMS)
+else # JITTER_ENABLE_TEST_SUITE is false
+  TESTS += \
+    test-suite-disabled
+  test-suite-disabled:
+	  @echo 'The test suite has been disabled at configure time.'
+	  @exit 1
+endif # if JITTER_ENABLE_TEST_SUITE
+
+# Tests have to be distributed, but it's not needed to add them to EXTRA_DIST in
+# this case since all my tests are script processed by aclocal, and
+# AC_CONFIG_FILES inputs are automatically distributed.  However test suite data
+# have to be mentioned here, as they are not preprocessed and don't occur as
+# dependencies of other things.
+EXTRA_DIST += \
+  tests/elementary/empty.vm \
+  tests/uninspired/load-8-bit.vm \
+  tests/uninspired/load-16-bit.vm \
+  tests/uninspired/load-0xffff.vm \
+  tests/uninspired/load-32-bit.vm \
+  tests/uninspired/load-64-bit.vm \
+  tests/uninspired/load-minus-one.vm \
+  tests/uninspired/load-minus-two.vm \
+  tests/uninspired/add.vm \
+  tests/uninspired/sub.vm \
+  tests/uninspired/mul.vm \
+  tests/uninspired/div.vm \
+  tests/uninspired/mod.vm \
+  tests/uninspired/unconditional-branch.vm \
+  tests/uninspired/conditional-branch-not-taken.vm \
+  tests/uninspired/conditional-branch.vm \
+  tests/uninspired/count-down.vm \
+  tests/uninspired/count-down-slow-register.vm \
+  tests/uninspired/count-up-down.vm \
+  tests/uninspired/count-up-down-slow-registers.vm \
+  tests/uninspired/branch-thru-register.vm \
+  tests/uninspired/branch-thru-slow-register.vm \
+  tests/uninspired/call-thru-register-leaf.vm \
+  tests/uninspired/call-thru-register-non-leaf.vm \
+  tests/uninspired/call-leaf.vm \
+  tests/uninspired/call-non-leaf.vm
+
+# Every test script depends on tests/utility (an aclocal output, which Automake
+# knows how to build).  The generated script is not installed or distributed,
+# which is what I want.
+check_SCRIPTS += \
+  tests/utility
+
+
+# Cleanup.
+# ################################################################
+
+clean-local:
+	rm -r -f "$(builddir)/example-vms/*/*.$(OBJEXT)"
+	rm -r -f $(EXTRA_PROGRAMS) $(EXTRA_LTLIBRARIES)
+	rm -r -f $(GENERATED_C_FILES_FOR_UNINSPIRED)
+	rm -r -f $(GENERATED_C_FILES_FOR_STRUCTURED)
+	rm -f uninspired--*.[si]
+	rm -f tests/*/*.log
+	rm -f tests/*/*.tmp
+	rm -f tests/*/*.expected
+	rm -f tests/*/*.stdout
+	rm -f tests/*/*.stderr
+	rm -f tests/*/*.command-line
+
+# The flags/ subtree is generated by configure, and configuration-specific: it
+# should be removed by the distclean target.
+# All the man pages in Jitter are machine-generated, and they should be removed
+# at distclean time.
+distclean-local:
+	rm -rf flags
+	rm -f $(dist_man1_MANS)
+
+# The maintainer-clean target should remove built sources, from both the build
+# and the source directories.
+maintainer-clean-local:
+	rm -f $(DEBUG_ASSEMBLY_FILES)
+	(cd "$(srcdir)"; rm -f $(BUILT_SOURCES) $(JITTER_GENERATED_FILES))
