@@ -25,7 +25,6 @@ AUTOMAKE_OPTIONS = subdir-objects info-in-builddir
 
 # I prefer to define all variables as empty in the beginning, and then add to
 # each group of them as part of the implementation of the same feature.
-ACLOCAL_AMFLAGS =
 AM_CPPFLAGS =
 BUILT_SOURCES =
 DISTCLEANFILES =
@@ -110,7 +109,7 @@ libtool: $(LIBTOOL_DEPS)
 # ################################################################
 
 SUBDIRS = gnulib-local
-ACLOCAL_AMFLAGS += -I build-aux
+ACLOCAL_AMFLAGS = -I build-aux
 EXTRA_DIST += build-aux/gnulib-cache.m4
 
 # Add other source files to the Gnulib library; this helps on stupid platforms
