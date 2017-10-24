@@ -231,8 +231,6 @@ AC_PROG_MKDIR_P
 # tools which come with GCC.  Autoconf doesn't check for them by default, but
 # it's easy to do.  If the specialized tools aren't available we fall back on the
 # traditional ones.
-#AC_PROG_RANLIB  # FIXME: not needed with Libtool?
-#AM_PROG_AR  # FIXME: not needed with Libtool?
 AC_CHECK_TOOLS([RANLIB], [gcc-ranlib ranlib])
 AC_CHECK_TOOLS([AR], [gcc-ar ar])
 
