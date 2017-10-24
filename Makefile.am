@@ -1171,34 +1171,6 @@ ChangeLog: dist-hook-changelog
 changelog: ChangeLog
 
 
-# Scratch.
-# ################################################################
-
-# built-sources: $(BUILT_SOURCES)
-# jitter-generated: $(JITTER_GENERATED_FILES)
-# jitter-non-generated: $(JITTER_NON_GENERATED_FILES)
-
-# jitter-generated-sources: $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_INCLUDED) $(GENERATED_C_FILES_FOR_UNINSPIRED)
-
-# EXTRA_DIST += $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_INCLUDED) $(GENERATED_C_FILES_FOR_UNINSPIRED)
-
-# EXTRA_bin_jitterc_DEPENDENCIES = lib/libgnulib--convenience.la
-# nodist_BUILT_SOURCES = bin/jitter$(EXEEXT)
-# nodist-built-sources: $(nodist_BUILT_SOURCES)
-
-
-#make-sure-that-jitterc-exists: bin/jitter$(EXEEXT)
-#	touch "$@"
-#EXTRA_DIST += make-sure-that-jitterc-exists
-
-#example-vms/structured/structuredvm-vm.h: make-sure-that-jitterc-exists
-#example-vms/uninspired/uninspired-vm.h: make-sure-that-jitterc-exists
-
-#EXTRA_example_vms_structured_structuredvm_vm_h_DEPENDENCIES = make-sure-that-jitterc-exists
-#EXTRA_example_vms_uninspired_uninspired_vm_h_DEPENDENCIES = make-sure-that-jitterc-exists
-
-
-
 # Distribution.
 # ################################################################
 
