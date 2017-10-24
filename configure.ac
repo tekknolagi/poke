@@ -330,6 +330,8 @@ AM_CONDITIONAL([JITTER_HAS_HELP2MAN],
                [test "x$HAS_HELP2MAN" = "xyes"])
 AM_MISSING_PROG(HELP2MAN, help2man)
 
+# JITTER_CHECK_TESTSUITE_PROGS
+# ----------------------------
 # Check the availability of a program only used for the test suite in the
 # predefined binary paths.  The first program is the name of the substitution to
 # define (empty if the program is not found, otherwise its pathname); the second
