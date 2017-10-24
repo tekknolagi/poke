@@ -1054,11 +1054,6 @@ EXTRA_DIST += \
 # "bootstrap" script from Gnulib uses its presence to decide if the current
 # source directory comes from a VCS checkout or a tarball.
 
-# Distributes my NOTES file, at least provisionally, for the people who saw my
-# GHM talk and want a little (crudely) commented bibliography.
-EXTRA_DIST += \
-  NOTES
-
 
 # Texinfo documentation.
 # ################################################################
