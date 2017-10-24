@@ -31,6 +31,7 @@ AC_INIT([Jitter],
         [http://ageinghacker.net/jitter])
 AC_CONFIG_SRCDIR([NO-WARRANTY])
 AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIRS([build-aux])
 AC_REQUIRE_AUX_FILE([trivial-source.c])
 AC_CONFIG_HEADERS([config.h jitter/jitter-config.h])
 
