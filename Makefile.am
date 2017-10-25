@@ -50,13 +50,6 @@ noinst_LTLIBRARIES =
 noinst_PROGRAMS =
 
 
-# # CFLAGS hack.
-# # ################################################################
-
-# # Notice that AM_CFLAGS has been AC_SUBSTed in configure.  See the appropriate
-# # section in configure.ac for rationale.
-
-
 # Installation directories.
 # ################################################################
 

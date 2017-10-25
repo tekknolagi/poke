@@ -45,41 +45,6 @@ AC_CONFIG_HEADERS([config.h jitter/jitter-config.h])
 m4_include([autoconf/jitter.m4])
 
 
-dnl # CFLAGS hack.
-dnl ################################################################
-
-dnl # Using CFLAGS , AM_CFLAGS and target_CFLAGS as recommended in the Automake
-dnl # manual [Automake, §Flag Variables Ordering] is sensible in almost any
-dnl # situation, but unfortunately not for Jitter.
-
-dnl # Jitter is special in the sense that some generated C files *must* be compiled
-dnl # with certain GCC options, and those options are often negative (-fno-OPTION).
-dnl # The practice recommended by the Autoconf and Automake authors is to have a
-dnl # CFLAGS with reasonable defaults, overridable by the user, which is *appended*
-dnl # in the command line after either AM_CFLAGS or target_CFLAGS; that way CFLAGS
-dnl # takes priority, and its positive options cannot be overridden.
-
-dnl # For Jitter I adopted a different solution: some reasonable defaults go to
-dnl # AM_CFLAGS, and CFLAGS is left empty by default.  The make targets requiring
-dnl # special options will define target_CFLAGS as AM_CFLAGS followed by the
-dnl # required target-specific options; at build time CFLAGS will be appended to
-dnl # target_CFLAGS.
-
-dnl # With this solution the user is still entitled to override the per-target
-dnl # options by specifying a CFLAGS at build time (even when doing so might cause
-dnl # incorrect code to be generated -- the user is supposed to know what she is
-dnl # doing), but at least the default will not overrule the required
-dnl # target-specific options.
-
-dnl # Save the original CFLAGS specified at configure time, if any, into
-dnl # JITTER_ORIGINAL_CFLAGS .  Then define CFLAGS to be empty.  AM_CFLAGS will be
-dnl # defined below, after AC_PROG_CC , just like CFLAGS would be.
-dnl if test "x$CFLAGS" != "x"; then
-dnl   JITTER_ORIGINAL_CFLAGS="$CFLAGS"
-dnl fi
-dnl : ${CFLAGS=""}
-
-
 # Automake initialization.
 ################################################################
 
@@ -105,32 +70,6 @@ AC_DEFINE_UNQUOTED([JITTER_PACKAGE_BUGREPORT], ["$PACKAGE_BUGREPORT"],
 
 # Indeed, we rely on a C compiler.
 AC_PROG_CC
-
-dnl # This is the following of the CFLAGS hack explained above, setting AM_CFLAGS .
-dnl #
-dnl # By pre-defining CFLAGS above we have prevented AC_PROG_CC from setting it to a
-dnl # reasonable default.  The following code reimplements the documented semantics
-dnl # of AC_PROG_CC about the value of CFLAGS [Autoconf, §C Compiler Characteristics],
-dnl # but sets JITTER_DEFAULT_CFLAGS instead.
-dnl if test "x$JITTER_ORIGINAL_CFLAGS" = "x"; then
-dnl   JITTER_DEFAULT_CFLAGS=""
-dnl   # The Autoconf documentation does not actually refer to ac_cv_prog_cc_g so its
-dnl   # name might change in the future, but this is quite safe; the worst that can
-dnl   # happen is that we don't supply -g by default even con configuration where it
-dnl   # would work.
-dnl   if test "x$ac_cv_prog_cc_g" != "x"; then
-dnl     JITTER_DEFAULT_CFLAGS="$JITTER_DEFAULT_CFLAGS -g"
-dnl   fi
-dnl   if test "x$GCC" != "x"; then
-dnl     JITTER_DEFAULT_CFLAGS="$JITTER_DEFAULT_CFLAGS -O2"
-dnl   fi
-dnl else
-dnl   JITTER_DEFAULT_CFLAGS="$JITTER_ORIGINAL_CFLAGS"
-dnl fi
-dnl # Now we have a resonable JITTER_DEFAULT_CFLAGS .  Use that for AM_CFLAGS, so
-dnl # that in the Makefile the default options are *prepended* to Jitter
-dnl # runtime-specific options, and CFLAGS as specified by the user is *appended*.
-dnl AC_SUBST([AM_CFLAGS], [$JITTER_DEFAULT_CFLAGS])
 
 # Run the early part of the Gnulib initialization.  This is recommended
 # right after AC_PROG_CC .
