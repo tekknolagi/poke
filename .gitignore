@@ -1,4 +1,7 @@
+# Don't track my two build-aux directories.
 /build-aux
+/example-vms/structured/build-aux
+
 # I build under subdirectories of _build/ on my local computers.
 _build
 
