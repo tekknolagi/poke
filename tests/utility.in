@@ -256,10 +256,10 @@ jitter_run_case_with_and_without_valgrind ()
 # Arguments:
 # - basename of the executor program (VM or high-level), without the
 #   dispatching-model suffix;
-# - basename of the Uninspired program to interpret, without the .vm extension;
+# - basename of the program to interpret, without the .vm extension;
 # - expected output;
 # - the dispatching model name in a form nice to print, and used as a suffix in
-#   uninspired "interpreter" executable files;
+#   the executor executable files;
 # - the dispatching model subst name, which expands to an nonempty string iff the
 #   dispatching model is enabled.
 # - "skip" if the test case has to be skipped, an empty string otherwise.
@@ -282,7 +282,7 @@ jitter_run_program_case ()
             "@abs_top_builddir@/bin/$executor--$dispatching_model_name@EXEEXT@" \
               --cpu-time-limit="$jitter_timeout" \
               --time-limit="$(($jitter_timeout * $jitter_wall_clock_time_factor))" \
-              "@abs_top_srcdir@/tests/uninspired/$program.vm"
+              "@abs_top_srcdir@/tests/$executor/$program.vm"
     fi
 }
 
@@ -291,7 +291,7 @@ jitter_run_program_case ()
 # Arguments:
 # - basename of the executor program (VM or high-level), without the
 #   dispatching-model suffix;
-# - basename of the Uninspired program to interpret, without the .vm extension;
+# - basename of the program to interpret, without the .vm extension;
 # - expected output.
 # - "skip" if the test case has to be skipped, an empty string otherwise.
 jitter_run_program_case_all_dispatches ()
