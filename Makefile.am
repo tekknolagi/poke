@@ -206,6 +206,18 @@ EXTRA_DIST += $(JITTER_NON_GENERATED_FILES) $(JITTER_GENERATED_FILES)
 # distcheck may be useful for people other than the maintainer.
 
 
+# Machine-generated C files.
+# ################################################################
+
+# This is convenient both as a user target and as a dependency.  It is
+# impossible in general to build everything in parallel here, since Make needs
+# to have the C files available to discover their dependencies; hence the
+# recursive $(MAKE) invocation.
+generated-c-files: $(BUILT_SOURCES)
+	$(MAKE) bin/jitter$(EXEEXT) && \
+          $(MAKE) $(JITTER_GENERATED_FILES)
+
+
 # Jitter utility library.
 # ################################################################
 
@@ -592,9 +604,8 @@ EXTRA_DIST += \
 # Flex/Bison and Jitter must be available before building any program target;
 # this is why make is called recursively, which I normally wouldn't do.
 examples:
-	$(MAKE) all
-	$(MAKE) $(JITTER_GENERATED_FILES)
-	$(MAKE) $(EXTRA_PROGRAMS)
+	$(MAKE) generated-c-files && \
+          $(MAKE) $(EXTRA_PROGRAMS)
 
 
 # Uninspired example VM.
@@ -1129,6 +1140,14 @@ else # ! JITTER_CAN_REBUILD_MAN_PAGES
 	cp "$(srcdir)/doc/missing-man-page.1" "$@"
 endif # JITTER_CAN_REBUILD_MAN_PAGES
 
+# A user target to build man pages.  This lets the user build man pages without
+# having explicitly built programs first (conceptually, with help2man, man pages
+# would depend on executable programs, but such dependency is better not
+# expressed in a Makefile, as explained in the help2man documentation).
+mans:
+	$(MAKE) all && \
+          $(MAKE) $(dist_man1_MANS)
+
 
 # Emacs Lisp support.
 # ################################################################
@@ -1187,12 +1206,10 @@ changelog: ChangeLog
 # Distribution.
 # ################################################################
 
-# Make sure that generated C files exist before we make a distribution.
-# This helps with distcheck .
-dist-hook-built-sources: $(BUILT_SOURCES) $(JITTER_GENERATED_FILES)
-
 # I like to keep different dist-hook s separate.
-dist-hook: dist-hook-git-versioning dist-hook-changelog dist-hook-built-sources
+dist-hook: dist-hook-git-versioning \
+           dist-hook-changelog \
+           generated-c-files
 
 
 # Test suite.
