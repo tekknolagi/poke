@@ -1079,26 +1079,6 @@ AC_SUBST([JITTER_UNINSTALLED_LDFLAGS],
          [-L$jitter_abs_top_builddir/lib])
 
 
-# Temporary hacks, to investigate later.
-################################################################
-
-# My (cross-) GCC crashes on PowerPC if I specify -fpic or -fPIC thru
-# the function attribute "optimize" -- however these options should be
-# irrelevant on PowerPC, since according to the GCC documentation GCC
-# *always* generates PIC code on PowerPC.
-#
-# Sparc seems to have the same problem.
-#
-# FIXME: investigate and report the bug, if it's GCC's fault and not
-# mine.  For the time being, this workaround is sufficient.
-case "$host_cpu" in
-  powerpc*|ppc*|sparc*)
-  AC_MSG_WARN([working around a GCC problem which might actually be my fault...])
-  AC_DEFINE_UNQUOTED([DASHFPIC_MAKES_GCC_SEGFAULT], [1],
-                     [Work-around a GCC crash which might be a bug or my fault]);;
-esac
-
-
 # Debugging support.
 ################################################################
 

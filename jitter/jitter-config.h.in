@@ -41,7 +41,6 @@
 #undef WORDS_BIGENDIAN
 
 #undef JITTER_HAS_ASSEMBLY
-#undef DASHFPIC_MAKES_GCC_SEGFAULT
 
 /* These are needed by jitter-dispatch.h when no dispatching-model CPP macros
    are defined from the command line. */
