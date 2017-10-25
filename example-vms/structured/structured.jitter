@@ -31,7 +31,7 @@ end
 ## Register classes.
 #################################################################
 
-register-class r 5
+register-class r 2
   code
     union jitter_word
   end
@@ -69,7 +69,7 @@ printer-c
 static void
 my_literal_printer (FILE *out, jitter_uint u)
 {
-  fprintf (out, "[%" JITTER_PRIu "]", u);
+  fprintf (out, "%" JITTER_PRIu, u);
 }
   end
 end
@@ -255,5 +255,116 @@ instruction bf (?f)
     jitter_int top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
     JITTER_BRANCH_FAST_IF_ZERO(top, JITTER_ARGF0);
+  end
+end
+
+
+## Optimized instructions (scratch).
+#################################################################
+
+instruction dup ()
+  code
+    JITTER_DUP_MAINSTACK();
+  end
+end
+
+instruction set-r (?n 0 1 2 -1 my_literal_printer, !R)
+  code
+    JITTER_ARGN1 = JITTER_ARGN0;
+  end
+end
+
+instruction copy-to-r (!R)
+  code
+    JITTER_ARGN0 = JITTER_TOP_MAINSTACK();
+  end
+end
+
+instruction plusi (?n -1 0 1 2 my_literal_printer)
+  code
+    JITTER_TOP_MAINSTACK() += JITTER_ARGN0;
+  end
+end
+
+instruction minusi (?n 0 1 2 my_literal_printer)
+  code
+    JITTER_TOP_MAINSTACK() -= JITTER_ARGN0;
+  end
+end
+
+instruction minusr (?R)
+  code
+    JITTER_TOP_MAINSTACK() -= JITTER_ARGN0;
+  end
+end
+
+instruction eqi (?n 0 1 2 my_literal_printer)
+  code
+    JITTER_TOP_MAINSTACK() = (JITTER_TOP_MAINSTACK() == JITTER_ARGN0);
+  end
+end
+
+instruction neqi (?n 0 1 2 my_literal_printer)
+  code
+    JITTER_TOP_MAINSTACK() = (JITTER_TOP_MAINSTACK() != JITTER_ARGN0);
+  end
+end
+
+instruction beqi (?n -1 0 1 2 my_literal_printer, ?f)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_EQUAL(top, JITTER_ARGN0, JITTER_ARGF1);
+  end
+end
+
+instruction bneqi (?n -1 0 1 2 my_literal_printer, ?f)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTER_ARGN0, JITTER_ARGF1);
+  end
+end
+
+instruction beqr (?R, ?f)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_EQUAL(top, JITTER_ARGN0, JITTER_ARGF1);
+  end
+end
+
+instruction bneqr (?R, ?f)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTER_ARGN0, JITTER_ARGF1);
+  end
+end
+
+instruction bger (?R, ?f)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(top, JITTER_ARGN0, JITTER_ARGF1);
+  end
+end
+
+instruction pushr-minusr-pop (?R, ?R, !R)
+  code
+    JITTER_ARGN2 = JITTER_ARGN0 - JITTER_ARGN1;
+  end
+end
+
+instruction pushr-beqr (?R, ?R, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_EQUAL(JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction pushr-bger (?R, ?R, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(JITTER_ARGN0, JITTER_ARGN1,
+                                         JITTER_ARGF2);
   end
 end
