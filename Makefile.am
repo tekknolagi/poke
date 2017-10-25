@@ -618,7 +618,12 @@ JITTER_GENERATED_FILES += $(GENERATED_C_FILES_FOR_UNINSPIRED)
 UNINSPIRED_MAX_FAST_REGISTER_NO = 1
 UNINSPIRED_MAX_NONRESIDUAL_NO = -1
 
+# PROGRAMS_UNINSPIRED is a list of example programs to build based on the
+# Uninspired VM.  Which programs will be built exactly depends on the
+# configuration, so this variable will be added to incrementally.
 PROGRAMS_UNINSPIRED =
+
+# Every Uninspired program will be a program, not built by default.
 EXTRA_PROGRAMS += $(PROGRAMS_UNINSPIRED)
 
 # # The Jitter-generated C files for Uninspired have to be built early for Make to
@@ -756,7 +761,6 @@ JITTER_GENERATED_FILES += $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_INCLUDED)
 STRUCTUREDVM_MAX_FAST_REGISTER_NO = 5
 STRUCTUREDVM_MAX_NONRESIDUAL_NO = -1
 
-EXTRA_PROGRAMS += $(PROGRAMS_STRUCTURED)
 
 # # The Jitter-generated C files for the structured-language VM have to be built
 # # early for Make to find source-to-source dependencies.
@@ -780,8 +784,13 @@ SOURCES_FOR_STRUCTURED = \
 # including the main driver file, and nothing else.
 SOURCES_FOR_STRUCTUREDVM = $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_INCLUDED)
 
-# The list of programs in the structured example will be added to incrementally.
+# PROGRAMS_STRUCTURED is a list of example programs to build based on the
+# "Structured" VM.  Which programs will be built exactly depends on the
+# configuration, so this variable will be added to incrementally.
 PROGRAMS_STRUCTURED =
+
+# Every "Structured-VM" program will be a program, not built by default.
+EXTRA_PROGRAMS += $(PROGRAMS_STRUCTURED)
 
 # The structured-language example and the matching standalone "structured" VM,
 # with direct-threading dispatch.
