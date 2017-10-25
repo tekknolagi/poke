@@ -341,5 +341,6 @@ jitter_run_program_case_all_dispatches ()
 # three.
 jitter_run_uninspired_case_all_dispatches ()
 {
-    jitter_run_program_case_all_dispatches "uninspired" "$jitter_vm_timeout_options" ".vm" "$@"
+    jitter_run_program_case_all_dispatches "uninspired" \
+       "$jitter_vm_timeout_options" ".vm" "$@"
 }
