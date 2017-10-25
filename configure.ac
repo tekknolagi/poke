@@ -319,16 +319,21 @@ fi
 # pages are included in the distribution.
 AC_CHECK_PROG(HAS_HELP2MAN, help2man, yes, no)
 if test "x$HAS_HELP2MAN" != "xyes"; then
+  jitter_has_help2man="no"
   if test -e "$srcdir/jitterc/jitterc.1"; then
     AC_MSG_WARN([You need GNU help2man if you want to rebuild manual pages])
   else
     AC_MSG_WARN([You need GNU help2man to build manual pages if you compile
                  from git and you are not content with just man page stubs])
   fi
+else
+  jitter_has_help2man="yes"
 fi
-AM_CONDITIONAL([JITTER_HAS_HELP2MAN],
-               [test "x$HAS_HELP2MAN" = "xyes"])
 AM_MISSING_PROG(HELP2MAN, help2man)
+
+
+# Check for programs only used in the test suite.
+################################################################
 
 # JITTER_CHECK_TESTSUITE_PROGS
 # ----------------------------
@@ -668,6 +673,9 @@ if    test "x$jitter_cross_compiling" = "xyes" \
    jitter_can_rebuild_man_pages="no"
 else
    jitter_can_rebuild_man_pages="yes"
+fi
+if test "x$jitter_has_help2man" != "xyes"; then
+   jitter_can_rebuild_man_pages="no"
 fi
 AM_CONDITIONAL([JITTER_CAN_REBUILD_MAN_PAGES],
                [test "x$jitter_can_rebuild_man_pages" = "xyes"])

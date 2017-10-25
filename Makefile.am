@@ -1102,24 +1102,24 @@ HELP2MAN_WITH_OPTIONS = \
     $(HELP2MAN) --info-page='jitter' --source='Luca Saiu' --section=1
 
 # If we have no help2man or we are cross-compiling without an emulator, then we
-# cannot actually rebuild man pages.  In this case we will make copies from a
-# stub.
+# cannot actually rebuild man pages; in this case we will make copies from a
+# stub.  The stub has to be distributed even if it's not needed in the current
+# configuration.
 dist_noinst_MANS += doc/missing-man-page.1
 
+# The actual man pages.
 dist_man1_MANS += \
   scripts/jitter-config.1 \
   jitterc/jitter.1
 
 # Rules for always-installed programs.
 if JITTER_CAN_REBUILD_MAN_PAGES
-if JITTER_HAS_HELP2MAN
   # man pages are built from executables, but depend on the sources as
   # recommended in the help2man documentation.
   jitterc/jitter.1: jitterc/jitterc-main.c
 	  $(HELP2MAN_WITH_OPTIONS) --output=$@ "$(JITTER_EMULATOR) bin/jitter$(EXEEXT)"
   scripts/jitter-config.1: scripts/jitter-config
 	  $(HELP2MAN_WITH_OPTIONS) --output=$@ scripts/jitter-config
-endif # if JITTER_HAS_HELP2MAN
 else # ! JITTER_CAN_REBUILD_MAN_PAGES
   # We can't build real man pages on this system, so we just distribute copies
   # of a single stub page.
