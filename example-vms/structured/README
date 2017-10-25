@@ -49,7 +49,9 @@ or one-off scripts.  [FIXME: not yet, but that will be added].
 Generating files
 ================
 
-Building configure for the example requires Jitter to be already installed.
+Having the example directory in a suitable state for running
+  configure && make
+requires Jitter to be already installed.
 
 From the example source directory, run
 
