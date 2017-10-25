@@ -1052,21 +1052,6 @@ AM_CONDITIONAL([JITTER_HAVE_INDENT], ! test "x$JITTER_INDENT" = "x")
 # distributed with Automake.
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 
-dnl FIXME: this would be needed for autotest, but I'm not completely sure that
-dnl the complexity is justified right now.  Anyway I want to try it.
-dnl AC_CONFIG_TESTDIR(tests)
-
-dnl AC_CONFIG_FILES([tests/frontend/parse.sh],
-dnl                 [chmod +x tests/frontend/parse.sh])
-dnl AC_CONFIG_FILES([tests/frontend/idempotence.sh],
-dnl                 [chmod +x tests/frontend/idempotence.sh])
-dnl AC_CONFIG_FILES([tests/frontend/twice-defined-label.sh],
-dnl                 [chmod +x tests/frontend/twice-defined-label.sh])
-dnl AC_CONFIG_FILES([tests/frontend/undefined-label.sh],
-dnl                 [chmod +x tests/frontend/undefined-label.sh])
-dnl AC_CONFIG_FILES([tests/frontend/wrong-parameter.sh],
-dnl                 [chmod +x tests/frontend/wrong-parameter.sh])
-
 # Generate test suite scripts.
 AC_CONFIG_FILES([tests/utility]) # This should not be made executable.
 AC_CONFIG_FILES([tests/elementary/init-fini.test],
