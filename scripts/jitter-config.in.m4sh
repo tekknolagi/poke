@@ -343,14 +343,12 @@ while test "$#" != "0"; do
         # --long-option=value ; the '=' character is part of $argument .  Short
         # options cannot have arguments here.
         option="$(my_echo $argument | sed 's/=.*$//')"
-        option_argument="$(my_echo $argument | sed 's/^[^=]*=//')"
+        option_argument="$(my_echo $argument | sed 's/^@<:@^=@:>@*=//')"
     else
         # There is no argument.
         option="$argument"
         option_argument=""
     fi
-#    echo "option is $option"
-#    echo "option_argument is $option_argument"
 
     case "$option" in
         # Configuration options
