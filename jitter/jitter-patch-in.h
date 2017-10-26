@@ -280,8 +280,7 @@ struct jitter_patch_in_descriptor
                                          arg1,              \
                                          arg2,              \
                                          arg3)              \
-  asm volatile                                              \
-      goto (JITTER_ASM_PATCH_IN_PLACEHOLDER(size_in_bytes,  \
+  asm goto (JITTER_ASM_PATCH_IN_PLACEHOLDER(size_in_bytes,  \
                                             case,           \
                                             arg0,           \
                                             arg1,           \
