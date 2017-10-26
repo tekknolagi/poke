@@ -452,6 +452,12 @@ jitterinclude_HEADERS += \
 # dispatching model will be LIBADDed to the "default" libjitter library; this
 # avoids one duplicate compilation.
 
+# Switch-dispatch libjitter convenience library.
+EXTRA_LTLIBRARIES += lib/libjitter--switch--convenience.la
+lib_libjitter__switch__convenience_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__switch__convenience_la_CPPFLAGS = \
+  $(AM_CPPFLAGS) -DJITTER_DISPATCH_SWITCH
+
 # Direct-threading-dispatch libjitter convenience library.
 EXTRA_LTLIBRARIES += lib/libjitter--direct-threading--convenience.la
 lib_libjitter__direct_threading__convenience_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
