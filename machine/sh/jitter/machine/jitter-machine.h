@@ -199,11 +199,9 @@
                    target_index,                                               \
                    0, 0, 0 /* not used for this case */)                       \
                 : /* outputs. */                                               \
-                : /* inputs. */                                                \
+                : JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs. */          \
                 : /* clobbers. */                                              \
-                :   /* not actually used as a jump target */                   \
-                    JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL                 \
-                  , jitter_jump_anywhere_label /* gotolabels. */);             \
+                : JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL /* gotolabels. */); \
       /* Skip the rest of the specialized instruction, for compatibility */    \
       /* with more limited dispatches. */                                      \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                              \

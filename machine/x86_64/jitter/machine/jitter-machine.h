@@ -140,10 +140,10 @@
                    0, 0, 0 /* not used for this case */)                        \
                 : /* outputs */                                                 \
                 :   [jitter_operand0] constraints0 (operand0)                   \
-                  , [jitter_operand1] constraints1 (operand1) /* inputs */      \
+                  , [jitter_operand1] constraints1 (operand1)                   \
+                  , JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */          \
                 : "cc" /* clobbers */                                           \
-                : jitter_jump_anywhere_label,                                   \
-                  JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL /* goto labels */); \
+                : jitter_jump_anywhere_label /* goto labels */);                \
     }                                                                           \
   while (false)
 
@@ -310,11 +310,9 @@
                    0, 0, 0 /* not used for this case */)                        \
                 "jitter_return_address_%=:\n"                                   \
                 : /* outputs. */                                                \
-                : /* inputs. */                                                 \
+                : JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
                 : /* clobbers. */                                               \
-                :   /* the first label is not an actual jump target. */         \
-                    JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL                  \
-                  , jitter_jump_anywhere_label /* gotolabels. */);              \
+                : jitter_jump_anywhere_label /* gotolabels. */);                \
       /* Skip the rest of the specialized instruction, for compatibility */     \
       /* with more limited dispatches. */                                       \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                               \
@@ -381,9 +379,7 @@
                 : /* outputs */                                             \
                 : [target] "rm" (jitter_call_indirect_target) /* inputs */  \
                 : /* clobbers */                                            \
-                : jitter_jump_anywhere_label,                               \
-                  /* Not an actual jump target. */                          \
-                  JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL /* goto labels */); \
+                : jitter_jump_anywhere_label /* goto labels */);            \
       /* Make the rest of the VM instruction unreachable. */                \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                           \
     }                                                                       \
@@ -400,11 +396,9 @@
                    target_index,                                                \
                    0, 0, 0 /* not used for this case */)                        \
                 : /* outputs */                                                 \
-                : /* inputs */                                                  \
+                : JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
                 : /* clobbers */                                                \
-                : jitter_jump_anywhere_label,                                   \
-                  /* Not an actual jump target. */                              \
-                  JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL /* goto labels */); \
+                : jitter_jump_anywhere_label /* goto labels */);                \
       /* Make the rest of the VM instruction unreachable. */                    \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                               \
     }                                                                           \

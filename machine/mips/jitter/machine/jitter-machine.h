@@ -130,20 +130,20 @@
      0, 0, 0 /* not used for this case */)
 
 /* Emit a conditional branch instruction with one register operand. */
-#define JITTER_MIPS_BRANCH_FAST_CONDITIONAL_R(instruction_string, operand,    \
-                                              target_index)                   \
-  do                                                                          \
-    {                                                                         \
-      asm                                                                     \
-      goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)         \
-            "1:\n\t"                                                          \
-            instruction_string " %[jitter_operand], 1b"                       \
-            : /* outputs */                                                   \
-            : [jitter_operand] "r" (operand) /* inputs */                     \
-            : /* clobbers */                                                  \
-            : jitter_jump_anywhere_label,                                     \
-              JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL /* goto labels */);  \
-    }                                                                         \
+#define JITTER_MIPS_BRANCH_FAST_CONDITIONAL_R(instruction_string, operand,  \
+                                              target_index)                 \
+  do                                                                        \
+    {                                                                       \
+      asm                                                                   \
+      goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)       \
+            "1:\n\t"                                                        \
+            instruction_string " %[jitter_operand], 1b"                     \
+            : /* outputs */                                                 \
+            :   [jitter_operand] "r" (operand)                              \
+              , JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */          \
+            : /* clobbers */                                                \
+            : jitter_jump_anywhere_label /* goto labels */);                \
+    }                                                                       \
   while (false)
 
 /* Emit a conditional branch instruction with two register operands. */
@@ -157,10 +157,10 @@
             instruction_string " %[jitter_operand0], %[jitter_operand1], 1b"   \
             : /* outputs */                                                    \
             :   [jitter_operand0] "r" (operand0)                               \
-              , [jitter_operand1] "r" (operand1) /* inputs */                  \
+              , [jitter_operand1] "r" (operand1)                               \
+              , JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */             \
             : /* clobbers */                                                   \
-            : jitter_jump_anywhere_label,                                      \
-              JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL /* goto labels */);   \
+            : jitter_jump_anywhere_label /* goto labels */);                   \
      }                                                                         \
   while (false)
 
@@ -175,10 +175,10 @@
             "1:\n\t"                                                           \
             instruction_string " $0, %[jitter_operand1], 1b"                   \
             : /* outputs */                                                    \
-            : [jitter_operand1] "r" (operand1) /* inputs */                    \
+            :   [jitter_operand1] "r" (operand1)                               \
+              , JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */             \
             : /* clobbers */                                                   \
-            : jitter_jump_anywhere_label,                                      \
-              JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL /* goto labels */);   \
+            : jitter_jump_anywhere_label /* goto labels */);                   \
     }                                                                          \
   while (false)
 
@@ -193,10 +193,10 @@
             "1:\n\t"                                                           \
             instruction_string " %[jitter_operand0], $0, 1b"                   \
             : /* outputs */                                                    \
-            : [jitter_operand0] "r" (operand0) /* inputs */                    \
+            :   [jitter_operand0] "r" (operand0)                               \
+              , JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */             \
             : /* clobbers */                                                   \
-            : jitter_jump_anywhere_label,                                      \
-              JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL /* goto labels */);   \
+            : jitter_jump_anywhere_label /* gotolabels */);                    \
     }                                                                          \
   while (false)
 
@@ -468,11 +468,9 @@
                    target_index,                                               \
                    0, 0, 0 /* not used for this case */)                       \
                 : /* outputs. */                                               \
-                : /* inputs. */                                                \
+                : JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
                 : /* clobbers. */                                              \
-                :   /* not actually used as a jump target */                   \
-                    JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL                 \
-                  , jitter_jump_anywhere_label /* gotolabels. */);             \
+                : jitter_jump_anywhere_label /* gotolabels. */);               \
       /* Skip the rest of the specialized instruction, for compatibility */    \
       /* with more limited dispatches. */                                      \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                              \
