@@ -46,6 +46,7 @@ jitter_add_specialized_instruction_opcode
        the type is VM-dependent. */
     jitter_uint specialized_opcode)
 {
+  // FIXME: this comment is probably obsolete.
   /* Without replication p->specialized_program holds direct-threaded code (each
      VM thread followed by its zero or more residual arguments); without
      replication p->specialized_program does *not* hold threads, but only
@@ -59,7 +60,13 @@ jitter_add_specialized_instruction_opcode
                                    & replicated_block,
                                    sizeof (struct jitter_replicated_block));
 #ifndef JITTER_REPLICATE
+# if   defined(JITTER_DISPATCH_SWITCH)
+  union jitter_word w = {.fixnum = specialized_opcode};
+# elif defined(JITTER_DISPATCH_DIRECT_THREADING)
   union jitter_word w = {.thread = p->vm->threads [specialized_opcode]};
+# else
+#   error "replication enabled, but not switch nor direct-threading"
+# endif// #if defined(JITTER_DISPATCH_SWITCH)...
   jitter_dynamic_buffer_push (& p->specialized_program, & w, sizeof (w));
 #endif // #ifndef JITTER_REPLICATE
 }

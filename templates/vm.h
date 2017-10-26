@@ -291,7 +291,9 @@ vmprefix_parse_file_possibly_with_slow_registers_only (const char *input_file_na
 
 /* Declare a few machine-generated data structures, which together define a VM. */
 
-
+/* Threads or pointers to native code blocks of course don't exist with
+   switch-dispatching. */
+#ifndef JITTER_DISPATCH_SWITCH
 /* Every possible thread, indexed by enum jitter_specialized_instruction_opcode .
    This is used at specialization time, and the user shouldn't need to touch
    it. */
@@ -312,6 +314,7 @@ vmprefix_thread_ends;
    labels, which would have disastrous effects with replicated code. */
 extern const long *
 vmprefix_thread_sizes;
+#endif // #ifndef JITTER_DISPATCH_SWITCH
 
 /* This is defined in the machine-generated vm/meta-instructions.c . */
 extern struct jitter_hash_table

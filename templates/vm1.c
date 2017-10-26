@@ -128,12 +128,17 @@ JITTER_DISPATCH_DEPENDENT_GLOBAL_NAME;
 JITTER_PATCH_IN_DESCRIPTOR_DECLARATIONS(vmprefix)
 #endif // #ifdef JITTER_HAVE_PATCH_IN
 
+#ifndef JITTER_DISPATCH_SWITCH
 /* True iff thread sizes are all non-negative and non-huge.  We refuse to
    disassemble otherwise, and when replication is enabled we refuse to run
    altogether.  See the comment right below. */
 static bool
 vmprefix_thread_sizes_validated = false;
+#endif // #ifndef JITTER_DISPATCH_SWITCH
 
+/* Omit vmprefix_validate_thread_sizes_once for switch-dispatching, as threads
+   don't exist at all in that case.*/
+#ifndef JITTER_DISPATCH_SWITCH
 /* Check that VM instruction sizes are all non-negative; if even one is negative
    that is a symptom that the code has not been compiled -fno-reorder-blocks ,
    which would have disastrous effects with replication.  It's better to validate
@@ -180,6 +185,7 @@ vmprefix_validate_thread_sizes_once (void)
      return. */
   already_validated = true;
 }
+#endif // #ifndef JITTER_DISPATCH_SWITCH
 
 void
 vmprefix_initialize (void)
@@ -197,9 +203,11 @@ vmprefix_initialize (void)
      needs threads. */
   vmprefix_initialize_threads ();
 
+#ifndef JITTER_DISPATCH_SWITCH
   /* Validate thread sizes, to make sure they are all non-negative.  This only
      needs to be done once. */
   vmprefix_validate_thread_sizes_once ();
+#endif // ifndef JITTER_DISPATCH_SWITCH
 
   /* Initialize the object pointed by vmprefix_vm (see the comment above as to
      why we do it here).  Before actually setting the fields to valid data, fill
@@ -215,9 +223,13 @@ vmprefix_initialize (void)
       vmprefix_initialize_vm_configuration (& the_vmprefix_vm.configuration);
       //vmprefix_print_vm_configuration (stdout, & the_vmprefix_vm.configuration);
 
+/* Threads or pointers to native code blocks of course don't exist with
+   switch-dispatching. */
+#ifndef JITTER_DISPATCH_SWITCH
       the_vmprefix_vm.threads = (jitter_thread *)vmprefix_threads;
       the_vmprefix_vm.thread_sizes = (long *) vmprefix_thread_sizes;
       the_vmprefix_vm.thread_sizes_validated = vmprefix_thread_sizes_validated;
+#endif // #ifndef JITTER_DISPATCH_SWITCH
 
       the_vmprefix_vm.specialized_instruction_residual_arities
         = vmprefix_specialized_instruction_residual_arities;

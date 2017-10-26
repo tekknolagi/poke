@@ -74,12 +74,16 @@ struct jitter_vm
   /* Configuration-specific data for this VM. */
   struct jitter_vm_configuration configuration;
 
+/* Threads or pointers to native code blocks of course don't exist with
+   switch-dispatching. */
+#ifndef JITTER_DISPATCH_SWITCH
   /* True iff thread sizes are all nonnegative and not huge. */
   bool thread_sizes_validated;
 
   // FIXME: add a comment per field.
   jitter_thread *threads;
   long *thread_sizes;
+#endif // #ifndef JITTER_DISPATCH_SWITCH
 
   const size_t *specialized_instruction_residual_arities;
   const unsigned long *specialized_instruction_label_bitmasks;

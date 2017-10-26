@@ -19,8 +19,13 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-/* FIXME: this header is used internally by machine-generated interpreters.  It
-   is not for the user to see. */
+/* This header is used internally by machine-generated interpreters.  It
+   is not for the user to see.
+
+   For example, some functionality defined here may depend on
+   JITTER_VM_PREFIX_LOWER_CASE and JITTER_VM_PREFIX_UPPER_CASE, which are
+   defined by machine-generated code in a .c file, without polluting the user
+   name space. */
 
 #ifndef JITTER_INTERPRETER_PRIVATE_H_
 #define JITTER_INTERPRETER_PRIVATE_H_
@@ -336,16 +341,26 @@
 /* VM program termination.
  * ************************************************************************** */
 
-// FIXME: in GNU C this works with any dispatching model, but I should avoid
-// this in switch dispatching; in that case it's safe to simply jump to a
-// literal label.  Using a non-computed goto would be correct with
-// direct-threading dispatch as well, but this code is anything but critical.
-#define JITTER_EXIT()                                       \
-  do                                                        \
-    {                                                       \
-      JITTER_COMPUTED_GOTO (jitter_saved_exit_non_replicated_code_pointer);  \
-    }                                                       \
-  while (false)
+/* Exit the "interpreter" function and return to C. */
+#ifdef JITTER_REPLICATE
+  /* With replication enabled it's important to avoid tail-merging, which is why
+     this is a wrapped computed goto rather than a simple goto... */
+# define JITTER_EXIT()                                                         \
+    do                                                                         \
+      {                                                                        \
+        JITTER_COMPUTED_GOTO (jitter_saved_exit_non_replicated_code_pointer);  \
+      }                                                                        \
+    while (false)
+#else
+  /* ...But in the case of switch dispatching computed gotos may not be usable
+     at all, and with direct-threading there is no correctness problem. */
+# define JITTER_EXIT()              \
+    do                              \
+      {                             \
+        goto jitter_exit_vm_label;  \
+      }                             \
+    while (false)
+#endif // #ifdef JITTER_REPLICATE
 
 
 
@@ -374,8 +389,19 @@
 /* VM instruction prolog and epilog.
  * ************************************************************************** */
 
-/* A VM instruction prolog. */
-#define JITTER_INSTRUCTION_PROLOG(name, mangled_name, hotness_attribute)   \
+/* VM instruction prolog. */
+#if   defined(JITTER_DISPATCH_SWITCH)
+  /* VM instruction prolog: switch dispatching. */
+# define JITTER_INSTRUCTION_PROLOG(name, mangled_name, residual_arity)  \
+  case JITTER_CONCATENATE_THREE(JITTER_VM_PREFIX_LOWER_CASE,            \
+                                _specialized_instruction_opcode_,       \
+                                mangled_name):                          \
+    JITTER_COMMENT_IN_ASM_UNIQUE("Specialized instruction "             \
+                                 JITTER_STRINGIFY(name)                 \
+                                 ": begin");
+#else
+  /* VM instruction prolog: every non-switch dispatches. */
+# define JITTER_INSTRUCTION_PROLOG(name, mangled_name, hotness_attribute)   \
 { \
 JITTER_SEQUENCE_POINT; \
   JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL_OF(mangled_name):             \
@@ -383,6 +409,7 @@ JITTER_SEQUENCE_POINT; \
 JITTER_SEQUENCE_POINT; \
 JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
                       ": begin");
+#endif // defined(JITTER_DISPATCH_SWITCH)
 
 /* How many words are used to encode the current specialized instruction, given
    its residual arity.  According to the dispatching model there may be a word
@@ -390,7 +417,8 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
    This relies on JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY being defined,
    which is the case when this macro is used as intended, from specialized
    instruction code within the interpreter. */
-#if   defined(JITTER_DISPATCH_DIRECT_THREADING)
+#if   defined(JITTER_DISPATCH_SWITCH)           \
+   || defined(JITTER_DISPATCH_DIRECT_THREADING)
 # define JITTER_SPECIALIZED_INSTRUCTION_WORD_NO \
     (1 + JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY)
 #elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
@@ -410,21 +438,29 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
    instruction code within the interpreter.
    FIXME: shall I use the do..while (false) trick here?  This macro is expanded
    a lot of times, and never from user code. */
-#if   defined(JITTER_DISPATCH_DIRECT_THREADING)
-# define JITTER_SKIP_RESIDUALS  \
+#if   defined(JITTER_DISPATCH_SWITCH)                          \
+   || defined(JITTER_DISPATCH_DIRECT_THREADING)
+# define JITTER_SKIP_RESIDUALS                                 \
   JITTER_SET_IP(ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
 #elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define JITTER_SKIP_RESIDUALS  \
+# define JITTER_SKIP_RESIDUALS                                 \
   JITTER_SET_IP(ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
 #elif defined(JITTER_DISPATCH_NO_THREADING)
-# define JITTER_SKIP_RESIDUALS  \
+# define JITTER_SKIP_RESIDUALS                                 \
   /* do nothing. */
 #else
 # error "unknown dispatching model"
 #endif // #if   defined([dispatching model]...
 
 /* A VM instruction epilog. */
-#if   defined(JITTER_DISPATCH_DIRECT_THREADING)
+#if   defined(JITTER_DISPATCH_SWITCH)
+# define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
+    JITTER_SKIP_RESIDUALS;                                              \
+    JITTER_BRANCH_TO_IP();                                              \
+    JITTER_COMMENT_IN_ASM_UNIQUE("Specialized instruction "             \
+                                 JITTER_STRINGIFY(name)                 \
+                                 ": after jumping back to switch");
+#elif defined(JITTER_DISPATCH_DIRECT_THREADING)
 # define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
       JITTER_SKIP_RESIDUALS;                                            \
       JITTER_BRANCH_TO_IP();                                            \
@@ -643,23 +679,50 @@ JITTER_SEQUENCE_POINT; \
 /* VM branching.
  * ************************************************************************** */
 
-/* Internal macros setting the instruction pointer, only defined for dispatching
-   models where an instruction pointer exists. */
-#ifndef JITTER_DISPATCH_NO_THREADING
-#define JITTER_SET_IP(target_pointer)                   \
-  do                                                    \
-    {                                                   \
-      ip = (const union jitter_word*)(target_pointer);  \
-    }                                                   \
-  while (false)
+/* Expand to a statement jumping back to the dispatching switch.  This only
+   makes sense for switch dispatching, and is not defiend for any other
+   dispatching model. */
+#ifdef JITTER_DISPATCH_SWITCH
+# define JITTER_JUMP_TO_SWITCH                 \
+    do                                         \
+      {                                        \
+        goto jitter_dispatching_switch_label;  \
+      }                                        \
+    while (false)
 
-#define JITTER_BRANCH_TO_IP()            \
-  do                                     \
-    {                                    \
-      JITTER_COMPUTED_GOTO(ip->thread);  \
-    }                                    \
-  while (false)
-#endif // ifndef JITTER_DISPATCH_NO_THREADING
+#endif // #ifdef JITTER_DISPATCH_SWITCH
+
+/* Set the VM instruction pointer.  This is only defined for dispatching
+   models where an instruction pointer exists. */
+#if      defined(JITTER_DISPATCH_SWITCH)             \
+      || defined(JITTER_DISPATCH_DIRECT_THREADING)   \
+      || defined(JITTER_DISPATCH_MINIMAL_THREADING)
+# define JITTER_SET_IP(target_pointer)                    \
+    do                                                    \
+      {                                                   \
+        ip = (const union jitter_word*)(target_pointer);  \
+      }                                                   \
+    while (false)
+#endif // #if      defined(JITTER_DISPATCH_SWITCH) || ...
+
+/* Jump to the current VM instruction pointer.  This is only defined for
+   dispatching models where an instruction pointer exists.*/
+#if      defined(JITTER_DISPATCH_SWITCH)
+# define JITTER_BRANCH_TO_IP()  \
+    do                          \
+      {                         \
+        JITTER_JUMP_TO_SWITCH;  \
+      }                         \
+    while (false)
+#elif    defined(JITTER_DISPATCH_DIRECT_THREADING)   \
+      || defined(JITTER_DISPATCH_MINIMAL_THREADING)
+# define JITTER_BRANCH_TO_IP()             \
+    do                                     \
+      {                                    \
+        JITTER_COMPUTED_GOTO(ip->thread);  \
+      }                                    \
+    while (false)
+#endif // #if   defined(...
 
 /* Branch to a given VM label, represented as appropriate for the dispatching
    model. */
@@ -691,7 +754,8 @@ JITTER_SEQUENCE_POINT; \
           = (const union jitter_word *)jitter_state_runtime._jitter_link;  \
       }                                                                    \
     while (false)
-#if    defined(JITTER_DISPATCH_DIRECT_THREADING)   \
+#if    defined(JITTER_DISPATCH_SWITCH)             \
+    || defined(JITTER_DISPATCH_DIRECT_THREADING)   \
     || defined(JITTER_DISPATCH_MINIMAL_THREADING)
 # define _JITTER_PROCEDURE_PROLOG(link_lvalue)  \
     __JITTER_PROCEDURE_PROLOG_COMMON(link_lvalue)
@@ -724,7 +788,8 @@ JITTER_SEQUENCE_POINT; \
    and is only visible from caller instructions; this forces the user to
    correctly declare callers so that return labels can be handled in every
    case. */
-#if    defined(JITTER_DISPATCH_DIRECT_THREADING)   \
+#if    defined(JITTER_DISPATCH_SWITCH)             \
+    || defined(JITTER_DISPATCH_DIRECT_THREADING)   \
     || defined(JITTER_DISPATCH_MINIMAL_THREADING)
 # define _JITTER_BRANCH_AND_LINK(target_rvalue)               \
     do                                                        \
@@ -763,7 +828,8 @@ JITTER_SEQUENCE_POINT; \
    branch, but of course machine-specific implementation will use native return
    or branch-to-link-register instruction, with better branch target prediction
    performance. */
-#if    defined(JITTER_DISPATCH_DIRECT_THREADING)   \
+#if    defined(JITTER_DISPATCH_SWITCH)            \
+    || defined(JITTER_DISPATCH_DIRECT_THREADING)  \
     || defined(JITTER_DISPATCH_MINIMAL_THREADING)
 # define JITTER_RETURN(link_rvalue)  \
     _JITTER_RETURN_COMMON(link_rvalue)

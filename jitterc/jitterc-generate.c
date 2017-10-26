@@ -223,7 +223,7 @@ jitterc_emit_vm_name (const struct jitterc_vm *vm)
       if (strlen (name) > 0)
         name [0] = toupper (name [0]);
     }
-  EMIT("#define VMPREFIX_VM_NAME JITTER_STRINGIFY(%s)", name);
+  EMIT("#define VMPREFIX_VM_NAME JITTER_STRINGIFY(%s)\n", name);
   EMIT("\n");
   jitterc_fclose (f);
 }
@@ -1158,7 +1158,8 @@ jitterc_emit_state_h (const struct jitterc_vm *vm)
   EMIT("/* The VM state runtime data structure, using memory from the VM state backing. */\n");
   EMIT("struct vmprefix_state_runtime\n");
   EMIT("{\n");
-  EMIT("#if    defined(JITTER_DISPATCH_DIRECT_THREADING)         \\\n");
+  EMIT("#if    defined(JITTER_DISPATCH_SWITCH)                   \\\n");
+  EMIT("    || defined(JITTER_DISPATCH_DIRECT_THREADING)         \\\n");
   EMIT("    || defined(JITTER_DISPATCH_MINIMAL_THREADING)        \\\n");
   EMIT("    || (   defined(JITTER_DISPATCH_NO_THREADING)         \\\n");
   EMIT("        && ! defined(JITTER_MACHINE_SUPPORTS_PROCEDURE))\n");
@@ -2113,12 +2114,13 @@ jitterc_emit_interpreter_main_function
   EMIT("  vmprefix_save_registers (jitter_register_buffer);\n");
   EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n\n");
 
-  /* The main interpreter function begins with two big static arrays containing
-     the labels where every specialized instruction begins and ends (only when
-     replication is enabled), to be used only at initialization. */
+  /* The main interpreter function begins with three big static arrays containing
+     the labels where every specialized instruction begins and ends, and their sizes
+     (only when replication is enabled), to be used only at initialization. */
   EMIT("  /* Initialization.  This is only called once at startup. */\n");
   EMIT("  if (__builtin_expect (initialize, false))\n");
   EMIT("    {\n");
+  EMIT("#ifndef JITTER_DISPATCH_SWITCH\n");
   EMIT("      /* FIXME: I can do this with only one relocation, by keeping\n");
   EMIT("         a pointer to the first VM instruction beginning in a static\n");
   EMIT("         variable, and then having a static vector of offsets with\n");
@@ -2170,6 +2172,8 @@ jitterc_emit_interpreter_main_function
   EMIT("      vmprefix_thread_sizes = vmprefix_the_thread_sizes;\n");
   EMIT("      vmprefix_threads = vmprefix_the_threads;\n");
   EMIT("      vmprefix_thread_ends = vmprefix_the_thread_ends;\n");
+  EMIT("#endif // #ifndef JITTER_DISPATCH_SWITCH\n");
+  EMIT("\n");
   EMIT("      /* Back to regular C, without our reserved registers if any; I can share\n");
   EMIT("         the end code with the non-initialization case. */\n");
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
@@ -2308,6 +2312,17 @@ jitterc_emit_interpreter_main_function
   EMIT("    JITTER_JUMP_ANYWHERE;\n");
   EMIT("\n");
 
+  /* Generate the switch dispatcher, which expands to nothing unless
+     switch-dispatching is enabled. */
+  EMIT("#ifdef JITTER_DISPATCH_SWITCH\n");
+  EMIT("  /* This is the dispatching switch.  At the beginning of the first VM\n");
+  EMIT("     VM instruction and at the end of each other, control jumps here. */\n");
+  EMIT(" jitter_dispatching_switch_label:\n");
+  EMIT("  switch ((enum vmprefix_specialized_instruction_opcode) ip->fixnum)\n");
+  EMIT("    {\n");
+  EMIT("#endif // #ifdef JITTER_DISPATCH_SWITCH\n");
+  EMIT("\n");
+
   /* Generate code for special specialized instructions.  This has to be kept
      manually synchronized with jitterc-vm.c in case I add, remove or change
      any special specialized instruction. */
@@ -2395,6 +2410,15 @@ jitterc_emit_interpreter_main_function
      user code. */
   jitterc_emit_interpreter_ordinary_specialized_instructions (f, vm);
 
+  /* Close the dispatcher switch; of course this will expand to nothing unless
+     switch-dispatching is enabled. */
+  EMIT("#ifdef JITTER_DISPATCH_SWITCH\n");
+  EMIT("  default:\n");
+  EMIT("    jitter_fatal (\"invalid opcode for VM specialized instruction\");\n");
+  EMIT("  } /* switch */\n");
+  EMIT("#endif // #ifdef JITTER_DISPATCH_SWITCH\n");
+  EMIT("\n");
+
   /* Emit the final part of the function, consisting in the label to jump to
      before exiting from the interpreter. */
   EMIT("  /* The code jumps here when executing the special specialized instruction\n");
@@ -2463,6 +2487,9 @@ jitterc_emit_interpreter_wrappers
   EMIT("                // target(\"fdpic\")\n");
   EMIT("              ));\n");
   EMIT("\n");
+  EMIT("/* Threads or pointers to native code blocks of course don't exist with\n");
+  EMIT("   switch-dispatching. */\n");
+  EMIT("#ifndef JITTER_DISPATCH_SWITCH\n");
   EMIT("const jitter_thread *\n");
   EMIT("vmprefix_threads;\n");
   EMIT("\n");
@@ -2471,6 +2498,7 @@ jitterc_emit_interpreter_wrappers
   EMIT("\n");
   EMIT("const long *\n");
   EMIT("vmprefix_thread_sizes;\n");
+  EMIT("#endif // #ifndef JITTER_DISPATCH_SWITCH\n");
   EMIT("\n");
   /* FIXME: The no_reorder attribute is mostly an experiment: I'm playing with
      making the main interpreter function longer than the maximum offset for
@@ -2549,6 +2577,17 @@ jitterc_emit_interpreter (const struct jitterc_vm *vm)
   EMIT("   or consist in fallback definitions otherwise. */\n");
   EMIT("#include <jitter/jitter-fast-branch.h>\n\n");
   EMIT("#define JITTER_FAST_BRANCH_PREFIX vmprefix_\n\n");
+
+  /* Generate private macro definitions in the JITTER_ namespace, not exported
+     to the user via headers.  These are useful to compose VM-specific
+     identifiers via CPP token concatenation, in a way which is unobstrusive to
+     the user.  */
+  EMIT("/* These two macros are convenient for making VM-specific identifiers\n");
+  EMIT("   using VM-independent macros from a public header, without polluting\n");
+  EMIT("   the global namespace. */\n");
+  EMIT("#define JITTER_VM_PREFIX_LOWER_CASE %s\n", vm->lower_case_prefix);
+  EMIT("#define JITTER_VM_PREFIX_UPPER_CASE %s\n", vm->upper_case_prefix);
+  EMIT("\n");
 
   /* Emit register-access macros. */
   jitterc_emit_interpreter_register_access_macros (f, vm);

@@ -2008,8 +2008,6 @@ generator.  The distinction is immaterial to the user.}
 @cindex C, Standard
 @cindex @code{switch}
 
-@fixme{not currently implemented, even if very easy and portable}
-
 @fixme{slow: terrible branch target prediction, range check difficult to eliminate
 in practice @fixme{but I think a recent GCC version has made progress: check}}
 

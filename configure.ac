@@ -715,9 +715,7 @@ jitter_best_dispatch_model=""
 # Is switch dispatching enabled?  If so define a CPP feature macro.  Also define
 # a substitution and an Automake conditional.
 AC_MSG_CHECKING([if switch dispatching is enabled])
-# FIXME: replace help text below with "default=yes" when I actually implement
-# switch dispatching.
-default=no--unimplemented
+default=yes
 AC_ARG_ENABLE([dispatch-switch],
               AS_HELP_STRING([--enable-dispatch-switch],
               [enable switch dispatching: default no (unimplemented)]),

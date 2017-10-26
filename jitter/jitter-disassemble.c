@@ -42,6 +42,19 @@
    on Gnulib. */
 #include "config.h"
 
+/* Almost nothing of what follows is relevant with switch-dispatching. */
+#ifdef JITTER_DISPATCH_SWITCH
+void
+jitter_disassemble_program (const struct jitter_program *p, bool raw,
+                            const char *objdump_name,
+                            const char *objdump_options_or_NULL)
+{
+  /* Just refuse to disassemble under switch dispatching. */
+  printf ("<switch dispatching: refusing to disassemble>\n");
+}
+
+#else /* not switch-dispatching */
+
 static const char *
 endianness_option
 #ifdef WORDS_BIGENDIAN
@@ -415,3 +428,5 @@ jitter_disassemble_program (const struct jitter_program *p, bool raw,
   return;
 #endif // #ifdef JITTER_REPLICATE
 }
+
+#endif // #ifdef JITTER_DISPATCH_SWITCH
