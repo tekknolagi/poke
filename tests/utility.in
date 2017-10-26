@@ -172,7 +172,8 @@ jitter_run_case ()
 # already have been created by the test script and and have the standard name as
 # per ${jitter_expected_stdout_file} as defined in jitter_define_file_names .
 # The test is considered to fail if the exit value is nonzero *or* the output
-# differs.
+# differs in a significant way; see the internal comment about the kind of
+# normalization performed, which involves \r and \n characters.
 # Arguments like jitter_run_case .
 jitter_run_case_checking_output ()
 {
@@ -183,10 +184,17 @@ jitter_run_case_checking_output ()
     rm -f "$jitter_command_line_file" "$jitter_stdout_file" "$jitter_stderr_file"
 
     # Run the test case, generating new nonstandard log files and remembering
-    # the exit status.  Compare the actual output with what was expected
-    # (suppressing \r characters, for portability and replacing any \n
-    # characters except the last one with slashes), and take any difference as
-    # a failure.
+    # the exit status.
+    # Compare the actual output with what was expected, with the following
+    # normalizations:
+    # * suppress \r characters for portability;
+    # * replace each \n character except a trailing one with a slash;
+    # * if the actual output is completely empty replace it with a single \n.
+    #
+    # Take failure to execute the test case as a failure.
+    #
+    # In case the test case exited with success, take any difference between
+    # its output and the expected output as a failure.
     jitter_command_line="$@"
     echo "$jitter_command_line" > "$jitter_command_line_file"
     jitter_result=$( ( ($jitter_timeout_command $jitter_command_line) \
@@ -194,6 +202,9 @@ jitter_run_case_checking_output ()
                           > "$jitter_stdout_file" \
                           2> "$jitter_stderr_file" \
                         && test -f "$jitter_expected_stdout_file" \
+                        && if test "x$(cat $jitter_stdout_file)y" = "xy"; then \
+                              echo "" > "$jitter_stdout_file"; \
+                           fi \
                         && (  @JITTER_TR@ -d '\r' < "$jitter_stdout_file" \
                             | @JITTER_TR@ '\n' '/' \
                             | @SED@ 's@/$@\n@' \
