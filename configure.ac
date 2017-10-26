@@ -1060,6 +1060,8 @@ AC_CONFIG_FILES([tests/uninspired/fundamental.test],
                 [chmod +x tests/uninspired/fundamental.test])
 AC_CONFIG_FILES([tests/uninspired/programs.test],
                 [chmod +x tests/uninspired/programs.test])
+AC_CONFIG_FILES([tests/structured/programs.test],
+                [chmod +x tests/structured/programs.test])
 
 # Generate convenience emulator script.
 AC_CONFIG_FILES([scripts/emulator],

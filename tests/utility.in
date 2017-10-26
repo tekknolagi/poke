@@ -344,3 +344,10 @@ jitter_run_uninspired_case_all_dispatches ()
     jitter_run_program_case_all_dispatches "uninspired" \
        "$jitter_vm_timeout_options" ".vm" "$@"
 }
+
+# Same as jitter_run_uninspired_case_all_dispatches , for structured
+# (high-level) programs.
+jitter_run_structured_case_all_dispatches ()
+{
+    jitter_run_program_case_all_dispatches "structured" "" ".structured" "$@"
+}

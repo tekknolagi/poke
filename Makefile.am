@@ -1223,10 +1223,11 @@ if JITTER_ENABLE_TEST_SUITE
   #   tests/uninspired/interpreter.test
   TESTS += \
     tests/uninspired/fundamental.test \
-    tests/uninspired/programs.test
+    tests/uninspired/programs.test \
+    tests/structured/programs.test
   # Programs used by test scripts.  FIXME: remove tests/elementary/uninspired-init-fini .
   check_PROGRAMS += \
-     $(PROGRAMS_UNINSPIRED)
+     $(PROGRAMS_UNINSPIRED) $(PROGRAMS_STRUCTURED)
 
   # # Programs used by test scripts.  FIXME: remove tests/elementary/uninspired-init-fini .
   # check_PROGRAMS += \
@@ -1247,6 +1248,7 @@ if JITTER_ENABLE_TEST_SUITE
   # tests/elementary/init-fini.log: tests/elementary/uninspired-init-fini
   tests/uninspired/fundamental.log: $(check_PROGRAMS)
   tests/uninspired/programs.log: $(check_PROGRAMS)
+  tests/structured/programs.log: $(check_PROGRAMS)
 else # JITTER_ENABLE_TEST_SUITE is false
   TESTS += \
     test-suite-disabled
@@ -1262,6 +1264,9 @@ endif # if JITTER_ENABLE_TEST_SUITE
 # dependencies of other things.
 EXTRA_DIST += \
   tests/elementary/empty.vm \
+  tests/structured/begin-end.structured \
+  tests/structured/skip.structured \
+  tests/structured/euclid.structured \
   tests/uninspired/load-8-bit.vm \
   tests/uninspired/load-16-bit.vm \
   tests/uninspired/load-0xffff.vm \
