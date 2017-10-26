@@ -1266,6 +1266,7 @@ EXTRA_DIST += \
   tests/elementary/empty.vm \
   tests/structured/begin-end.structured \
   tests/structured/skip.structured \
+  tests/structured/conditional.structured \
   tests/structured/euclid.structured \
   tests/uninspired/load-8-bit.vm \
   tests/uninspired/load-16-bit.vm \

@@ -24,11 +24,14 @@
 . "@abs_top_builddir@/tests/utility"
 
 # Print a range for test case indices.
-echo 1..12
+echo 1..16
 
 # Test programs doing nothing.
 jitter_run_structured_case_all_dispatches "skip" "" ""
 jitter_run_structured_case_all_dispatches "begin-end" "" ""
+
+# Run a small program involving a conditional jump.
+jitter_run_structured_case_all_dispatches "conditional" "42" ""
 
 # Test a simple structure program computing the Maximum Common Divisor of two
 # naturals using Euclid's algorithm.
