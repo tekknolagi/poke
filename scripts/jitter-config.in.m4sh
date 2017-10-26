@@ -249,40 +249,40 @@ append_to_output ()
     case "$model" in
         switch)
             case "$flagname" in
-                cflags) output="@JITTER_SWITCH_CFLAGS@";;
-                cppflags) output="@JITTER_SWITCH_CPPFLAGS@";;
-                ldadd) output="@JITTER_SWITCH_LDADD@";;
-                ldflags) output="@JITTER_SWITCH_LDFLAGS@";;
+                cflags) new="@JITTER_SWITCH_CFLAGS@";;
+                cppflags) new="@JITTER_SWITCH_CPPFLAGS@";;
+                ldadd) new="@JITTER_SWITCH_LDADD@";;
+                ldflags) new="@JITTER_SWITCH_LDFLAGS@";;
                 *) fail_semantic "impossible: $flagname for $model";;
             esac;;
         direct-threading)
             case "$flagname" in
-                cflags) output="@JITTER_DIRECT_THREADING_CFLAGS@";;
-                cppflags) output="@JITTER_DIRECT_THREADING_CPPFLAGS@";;
-                ldadd) output="@JITTER_DIRECT_THREADING_LDADD@";;
-                ldflags) output="@JITTER_DIRECT_THREADING_LDFLAGS@";;
+                cflags) new="@JITTER_DIRECT_THREADING_CFLAGS@";;
+                cppflags) new="@JITTER_DIRECT_THREADING_CPPFLAGS@";;
+                ldadd) new="@JITTER_DIRECT_THREADING_LDADD@";;
+                ldflags) new="@JITTER_DIRECT_THREADING_LDFLAGS@";;
                 *) fail_semantic "impossible: $flagname for $model";;
             esac;;
         minimal-threading)
             case "$flagname" in
-                cflags) output="@JITTER_MINIMAL_THREADING_CFLAGS@";;
-                cppflags) output="@JITTER_MINIMAL_THREADING_CPPFLAGS@";;
-                ldadd) output="@JITTER_MINIMAL_THREADING_LDADD@";;
-                ldflags) output="@JITTER_MINIMAL_THREADING_LDFLAGS@";;
+                cflags) new="@JITTER_MINIMAL_THREADING_CFLAGS@";;
+                cppflags) new="@JITTER_MINIMAL_THREADING_CPPFLAGS@";;
+                ldadd) new="@JITTER_MINIMAL_THREADING_LDADD@";;
+                ldflags) new="@JITTER_MINIMAL_THREADING_LDFLAGS@";;
                 *) fail_semantic "impossible: $flagname for $model";;
             esac;;
         no-threading)
             case "$flagname" in
-                cflags) output="@JITTER_NO_THREADING_CFLAGS@";;
-                cppflags) output="@JITTER_NO_THREADING_CPPFLAGS@";;
-                ldadd) output="@JITTER_NO_THREADING_LDADD@";;
-                ldflags) output="@JITTER_NO_THREADING_LDFLAGS@";;
+                cflags) new="@JITTER_NO_THREADING_CFLAGS@";;
+                cppflags) new="@JITTER_NO_THREADING_CPPFLAGS@";;
+                ldadd) new="@JITTER_NO_THREADING_LDADD@";;
+                ldflags) new="@JITTER_NO_THREADING_LDFLAGS@";;
                 *) fail_semantic "impossible: $flagname for $model";;
             esac;;
         *)
             fail_semantic "this should never happen: model $model";;
     esac
-    output="$output $value"
+    output="$output $new"
 }
 
 
