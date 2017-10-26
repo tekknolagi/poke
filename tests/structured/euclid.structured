@@ -20,5 +20,15 @@
 
 
 begin
-   print 123
+   a := 1409286144;    // 7   *     3   * 2^26
+   b := 6615;          // 7^2 * 5 * 3^3
+   // The result will be: 7   *     3
+   while a <> b do
+      if a < b then
+         b := b - a
+      else
+         a := a - b
+      end
+   end;
+   print a
 end

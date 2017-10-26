@@ -32,4 +32,4 @@ jitter_run_structured_case_all_dispatches "begin-end" "" ""
 
 # Test a simple structure program computing the Maximum Common Divisor of two
 # naturals using Euclid's algorithm.
-jitter_run_structured_case_all_dispatches "euclid" "123" ""
+jitter_run_structured_case_all_dispatches "euclid" "21" ""
