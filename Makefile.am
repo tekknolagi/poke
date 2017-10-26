@@ -960,9 +960,10 @@ $(srcdir)/example-vms/structured/structuredvm-vm.h: example-vms/structured/struc
 $(srcdir)/example-vms/structured/structuredvm-vm1.c: example-vms/structured/structuredvm-vm-main.c
 $(srcdir)/example-vms/structured/structuredvm-vm2.c: example-vms/structured/structuredvm-vm-main.c
 
-# Examples VM programs for the Uninspired VM example, to be distributed.
+# Examples high-level programs for the Structured example, to be distributed.
 EXTRA_DIST += \
-  example-vms/structured/examples/count-down.structured
+  example-vms/structured/examples/count-down.structured \
+  example-vms/structured/examples/euclid.structured
 
 # The structured-language example comes with its own clean build system as an
 # example of an independent software using Jitter.  The sub-build system is not
