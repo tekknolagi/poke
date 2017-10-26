@@ -33,6 +33,6 @@ jitter_run_structured_case_all_dispatches "begin-end" "" ""
 # Run a small program involving a conditional jump.
 jitter_run_structured_case_all_dispatches "conditional" "42" ""
 
-# Test a simple structure program computing the Maximum Common Divisor of two
+# Test a simple structured program computing the Maximum Common Divisor of two
 # naturals using Euclid's algorithm.
 jitter_run_structured_case_all_dispatches "euclid" "21" ""
