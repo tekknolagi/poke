@@ -141,7 +141,7 @@ EOF
 help ()
 {
     cat <<EOF
-Usage: jitter-config OPTION [OPTION...]
+Usage: jitter-config OPTION @<:@OPTION...@:>@
 Print Jitter configuration information and compiler/linker flags to be used
 for generated code.
 
