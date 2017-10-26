@@ -257,9 +257,8 @@ struct jitter_patch_in_descriptor
                                         arg1,                         \
                                         arg2,                         \
                                         arg3)                         \
-  "\n" JITTER_ASM_COMMENT_PREFIX                                      \
-     " Patch-in " JITTER_STRINGIFY(case)" %= \n"                      \
-  "1:\n\t"                                                            \
+  JITTER_ASM_COMMENT_UNIQUE("Patch-in " JITTER_STRINGIFY(case))       \
+  "\n1:\n\t"                                                          \
   JITTER_ASM_SKIP_BYTES(size_in_bytes) "\n"                           \
   JITTER_ASM_PUSH_SUBSECTION "\t"                                     \
     JITTER_ASM_WORD " "                                               \
