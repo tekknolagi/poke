@@ -2140,6 +2140,19 @@ jitterc_emit_interpreter_main_function
            sins->mangled_name, comma);
     }
   EMIT("          };\n");
+
+  /* Also generate thread ends. */
+  EMIT("      static const jitter_thread vmprefix_the_thread_ends []\n");
+  EMIT("        = {\n");
+  FOR_LIST(i, comma, vm->specialized_instructions)
+    {
+      const struct jitterc_specialized_instruction* sins
+        = ((const struct jitterc_specialized_instruction*)
+           gl_list_get_at (vm->specialized_instructions, i));
+      EMIT("            && JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(%s)%s\n",
+           sins->mangled_name, comma);
+    }
+  EMIT("          };\n");
   EMIT("      static const long\n");
   EMIT("      vmprefix_the_thread_sizes [VMPREFIX_SPECIALIZED_INSTRUCTION_NO]\n");
   EMIT("        = {\n");
@@ -2156,6 +2169,7 @@ jitterc_emit_interpreter_main_function
   EMIT("          };\n");
   EMIT("      vmprefix_thread_sizes = vmprefix_the_thread_sizes;\n");
   EMIT("      vmprefix_threads = vmprefix_the_threads;\n");
+  EMIT("      vmprefix_thread_ends = vmprefix_the_thread_ends;\n");
   EMIT("      /* Back to regular C, without our reserved registers if any; I can share\n");
   EMIT("         the end code with the non-initialization case. */\n");
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
@@ -2451,6 +2465,9 @@ jitterc_emit_interpreter_wrappers
   EMIT("\n");
   EMIT("const jitter_thread *\n");
   EMIT("vmprefix_threads;\n");
+  EMIT("\n");
+  EMIT("const jitter_thread *\n");
+  EMIT("vmprefix_thread_ends;\n");
   EMIT("\n");
   EMIT("const long *\n");
   EMIT("vmprefix_thread_sizes;\n");

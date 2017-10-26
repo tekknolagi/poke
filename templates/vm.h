@@ -298,6 +298,12 @@ vmprefix_parse_file_possibly_with_slow_registers_only (const char *input_file_na
 extern const jitter_thread *
 vmprefix_threads;
 
+/* VM instruction end label.  These are not all reachable at run time, but
+   having them in a global array might prevent older GCCs from being too clever
+   in reordering blocks. */
+extern const jitter_thread *
+vmprefix_thread_ends;
+
 /* The size, in chars, of each thread's native code.  The elements are in the
    same order of vmprefix_threads.  Sizes could conceptually be of type size_t ,
    but in order to be defensive I'm storing pointer differences as signed
