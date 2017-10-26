@@ -159,6 +159,9 @@ vmprefix_validate_thread_sizes_once (void)
                             false))
         {
 #ifdef JITTER_REPLICATE
+          fprintf (stderr,
+                   "About specialized instruction %i (%s), with size %li\n",
+                   i, vmprefix_specialized_instruction_names [i], size);
           jitter_fatal ("a specialized instruction has negative or huge code "
                         "size: you are not compiling with -fno-reorder-blocks");
 #else
