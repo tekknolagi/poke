@@ -106,7 +106,12 @@ struct jitter_parameter
     /* The parameter, as an immediate literal. */
     union jitter_literal literal;
 
-    /* The parameter, as an 0-based unspecialized instruction index. */
+    /* The parameter, as an 0-based unspecialized instruction index.  Symbolic
+       labels are replaced with indices only by
+       jitter_backpatch_labels_in_unspecialized_program , after an unspecialized
+       program has been completely built.  It is not possible in general to do
+       this earlier even in the case of backward branches, because of
+       rewriting. */
     jitter_label_as_index label_as_index;
 
     /* Symbolic label literals are not stored here, in any form.  The
