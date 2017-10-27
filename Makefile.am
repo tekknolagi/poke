@@ -1134,28 +1134,31 @@ dist_man1_MANS += \
 
 # Rules for always-installed programs.
 if JITTER_CAN_REBUILD_MAN_PAGES
-  # man pages are built from executables, but depend on the sources as
-  # recommended in the help2man documentation.
-  jitterc/jitter.1: jitterc/jitterc-main.c
+  # Man pages are built from executables, but help2man's documentation
+  # recommends to express a dependency from the *source* file instead, so as not
+  # to force the user to have help2man installed.  This is sensible, but this
+  # solution based on an Automake conditional is even better and allows for more
+  # precise control and, importantly, parallel building.
+  jitterc/jitter.1: bin/jitter$(EXEEXT)
 	  $(HELP2MAN_WITH_OPTIONS) --output=$@ "$(JITTER_EMULATOR) bin/jitter$(EXEEXT)"
   scripts/jitter-config.1: scripts/jitter-config
 	  $(HELP2MAN_WITH_OPTIONS) --output=$@ scripts/jitter-config
 else # ! JITTER_CAN_REBUILD_MAN_PAGES
   # We can't build real man pages on this system, so we just distribute copies
   # of a single stub page.
+  # Notice that these rule don't fire for users building from a distributed
+  # source tarball, unless they modify the stub page: source tarballs already
+  # contain pre-generated man pages (presumably not copied from the stub), and
+  # an actual man pages never becomes older than the stub unless the user
+  # touches the stub.
   jitterc/jitter.1: doc/missing-man-page.1
 	cp "$(srcdir)/doc/missing-man-page.1" "$@"
   scripts/jitter-config.1: doc/missing-man-page.1
 	cp "$(srcdir)/doc/missing-man-page.1" "$@"
 endif # JITTER_CAN_REBUILD_MAN_PAGES
 
-# A user target to build man pages.  This lets the user build man pages without
-# having explicitly built programs first (conceptually, with help2man, man pages
-# would depend on executable programs, but such dependency is better not
-# expressed in a Makefile, as explained in the help2man documentation).
-mans:
-	$(MAKE) $(bin_PROGRAMS) $(bin_SCRIPTS) && \
-          $(MAKE) $(dist_man1_MANS)
+# A user target to build man pages.
+mans: $(dist_man1_MANS)
 
 
 # Emacs Lisp support.
