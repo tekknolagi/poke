@@ -113,10 +113,6 @@ struct jitter_parameter
        this earlier even in the case of backward branches, because of
        rewriting. */
     jitter_label_as_index label_as_index;
-
-    /* Symbolic label literals are not stored here, in any form.  The
-       information is in the the string hash tables within struct
-       jitter_program. */
   };
 
   /* Pointer to a malloc-allocated string holding the label symbolic name, or
