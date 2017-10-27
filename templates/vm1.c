@@ -163,9 +163,9 @@ vmprefix_validate_threads_once (void)
       {                                                                      \
         fprintf (stderr,                                                     \
                  "About specialized instruction %i (%s) at %p, size %liB\n", \
-                 i, vmprefix_specialized_instruction_names [i], \
-                 vmprefix_threads [i], \
-                 vmprefix_thread_sizes [i]);       \
+                 i, vmprefix_specialized_instruction_names [i],              \
+                 vmprefix_threads [i],                                       \
+                 vmprefix_thread_sizes [i]);                                 \
         jitter_fatal ("%s: you are not compiling with -fno-reorder-blocks",  \
                       error_text);                                           \
       }                                                                      \
