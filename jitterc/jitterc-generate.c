@@ -2358,6 +2358,18 @@ jitterc_emit_interpreter_main_function
   EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
   EMIT("\n");
 
+  /* !EXITVM special specialized instruction. */
+  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, cold)\n",
+       "!EXITVM", jitterc_mangle ("!EXITVM"));
+  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY 0\n");
+  EMIT("    JITTER_COMMENT_IN_ASM(\"!EXITVM special specialized instruction\");\n");
+  EMIT("    JITTER_EXIT();\n");
+  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, 0)\n",
+       "!EXITVM", jitterc_mangle ("!EXITVM"));
+  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
+  EMIT("  /* End of the special specialized instructions. */\n\n");
+  EMIT("\n");
+
   /* First unreachable special specialized instruction. */
   EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, cold)\n",
        "!UNREACHABLE0", jitterc_mangle ("!UNREACHABLE0"));
@@ -2392,18 +2404,6 @@ jitterc_emit_interpreter_main_function
   EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, 0)\n",
        "!UNREACHABLE2", jitterc_mangle ("!UNREACHABLE2"));
   EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
-  EMIT("\n");
-
-  /* !EXITVM special specialized instruction. */
-  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, cold)\n",
-       "!EXITVM", jitterc_mangle ("!EXITVM"));
-  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY 0\n");
-  EMIT("    JITTER_COMMENT_IN_ASM(\"!EXITVM special specialized instruction\");\n");
-  EMIT("    JITTER_EXIT();\n");
-  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, 0)\n",
-       "!EXITVM", jitterc_mangle ("!EXITVM"));
-  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
-  EMIT("  /* End of the special specialized instructions. */\n\n");
   EMIT("\n");
 
   /* Generate code for the ordinary specialized instructions as specified in
