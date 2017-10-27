@@ -327,10 +327,10 @@ jitter_disassemble_program (const struct jitter_program *p, bool raw,
                             const char *objdump_name,
                             const char *objdump_options_or_NULL)
 {
-  /* Refuse to disassemble if thread sizes are negative or huge. */
-  if (! p->vm->thread_sizes_validated)
+  /* Refuse to disassemble if threads are overlapping or of negative size. */
+  if (! p->vm->threads_validated)
     {
-      printf ("<thread sizes not validated: refusing to disassemble>\n");
+      printf ("<threads not validated: refusing to disassemble>\n");
       return;
     }
 

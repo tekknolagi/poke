@@ -77,8 +77,9 @@ struct jitter_vm
 /* Threads or pointers to native code blocks of course don't exist with
    switch-dispatching. */
 #ifndef JITTER_DISPATCH_SWITCH
-  /* True iff thread sizes are all nonnegative and not huge. */
-  bool thread_sizes_validated;
+  /* True iff threads appear to be valid: of non-negative size, sequential,
+     non-overlapping. */
+  bool threads_validated;
 
   // FIXME: add a comment per field.
   jitter_thread *threads;

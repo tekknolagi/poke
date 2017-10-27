@@ -133,52 +133,92 @@ JITTER_PATCH_IN_DESCRIPTOR_DECLARATIONS(vmprefix)
    disassemble otherwise, and when replication is enabled we refuse to run
    altogether.  See the comment right below. */
 static bool
-vmprefix_thread_sizes_validated = false;
+vmprefix_threads_validated = false;
 #endif // #ifndef JITTER_DISPATCH_SWITCH
 
 /* Omit vmprefix_validate_thread_sizes_once for switch-dispatching, as threads
    don't exist at all in that case.*/
 #ifndef JITTER_DISPATCH_SWITCH
-/* Check that VM instruction sizes are all non-negative; if even one is negative
-   that is a symptom that the code has not been compiled -fno-reorder-blocks ,
-   which would have disastrous effects with replication.  It's better to validate
-   sizes at startup and fail immediately than to crash at run time.
+/* Check that VM instruction sizes are all non-negative, and that no threads
+   starts before the end of the previous one.  Even one violation of such
+   conditions is a symptom that the code has not been compiled with
+   -fno-reorder-blocks , which would have disastrous effects with replication.
+   It's better to validate threads at startup and fail immediately than to crash
+   at run time.
 
-   If even one size appears to be wrong, refuse to disassemble when replication
-   is disabled, and refuse to run altogether if replication is enabled. */
+   If even one thread appears to be wrong then refuse to disassemble when
+   replication is disabled, and refuse to run altogether if replication is
+   enabled. */
 static void
-vmprefix_validate_thread_sizes_once (void)
+vmprefix_validate_threads_once (void)
 {
   /* Return if this is not the first time we got here. */
   static bool already_validated = false;
   if (already_validated)
     return;
 
-  /* Check every instruction size. */
+#ifdef JITTER_REPLICATE
+# define JITTER_FAIL(error_text)                                             \
+    do                                                                       \
+      {                                                                      \
+        fprintf (stderr,                                                     \
+                 "About specialized instruction %i (%s) at %p, size %liB\n", \
+                 i, vmprefix_specialized_instruction_names [i], \
+                 vmprefix_threads [i], \
+                 vmprefix_thread_sizes [i]);       \
+        jitter_fatal ("%s: you are not compiling with -fno-reorder-blocks",  \
+                      error_text);                                           \
+      }                                                                      \
+    while (false)
+#else
+# define JITTER_FAIL(ignored_error_text)  \
+    do                                    \
+      {                                   \
+        everything_valid = false;         \
+        goto out;                         \
+      }                                   \
+    while (false)
+#endif // #ifdef JITTER_REPLICATE
+
+  /* The minimum address the next instruction code has to start at.
+
+     This relies on NULL being zero, or in general lower in magnitude than any
+     valid pointer.  It is not worth the trouble to be pedantic, as this will be
+     true on every architecture where I can afford low-level tricks. */
+  jitter_thread lower_bound = NULL;
+
+  /* Check every thread.  We rely on the order here, following specialized
+     instruction opcodes. */
   int i;
   bool everything_valid = true;
   for (i = 0; i < VMPREFIX_SPECIALIZED_INSTRUCTION_NO; i ++)
     {
+      jitter_thread thread = vmprefix_threads [i];
       long size = vmprefix_thread_sizes [i];
-      if (__builtin_expect ((size < 0 || size > (1 << 24)),
-                            false))
-        {
-#ifdef JITTER_REPLICATE
-          fprintf (stderr,
-                   "About specialized instruction %i (%s), with size %li\n",
-                   i, vmprefix_specialized_instruction_names [i], size);
-          jitter_fatal ("a specialized instruction has negative or huge code "
-                        "size: you are not compiling with -fno-reorder-blocks");
-#else
-          everything_valid = false;
-          break;
-#endif // #ifdef JITTER_REPLICATE
-        }
+
+      /* Check that the current thread has non-negative non-huge size and
+         doesn't start before the end of the previous one.  If this is true for
+         all threads we can conclude that they are non-overlapping as well. */
+      if (__builtin_expect (size < 0, false))
+        JITTER_FAIL("a specialized instruction has negative code size");
+      if (__builtin_expect (size > (1 << 24), false))
+        JITTER_FAIL("a specialized instruction has huge code size");
+      if (__builtin_expect (lower_bound > thread, false))
+        JITTER_FAIL("non-sequential thread");
+
+      /* The next thread cannot start before the end of the current one. */
+      lower_bound = ((char*) thread) + size;
     }
+
+#undef JITTER_FAIL
+
+#ifndef JITTER_REPLICATE
+ out:
+#endif // #ifndef JITTER_REPLICATE
 
   /* If we have validated every thread size then disassembling appears safe. */
   if (everything_valid)
-    vmprefix_thread_sizes_validated = true;
+    vmprefix_threads_validated = true;
 
   /* We have checked the thread sizes, once and for all.  If this function gets
      called again, thru a second vmprefix initialization, it will immediately
@@ -204,9 +244,9 @@ vmprefix_initialize (void)
   vmprefix_initialize_threads ();
 
 #ifndef JITTER_DISPATCH_SWITCH
-  /* Validate thread sizes, to make sure they are all non-negative.  This only
-     needs to be done once. */
-  vmprefix_validate_thread_sizes_once ();
+  /* Validate threads, to make sure the generated code was not compiled with
+     incorrect options.  This only needs to be done once. */
+  vmprefix_validate_threads_once ();
 #endif // ifndef JITTER_DISPATCH_SWITCH
 
   /* Initialize the object pointed by vmprefix_vm (see the comment above as to
@@ -228,7 +268,7 @@ vmprefix_initialize (void)
 #ifndef JITTER_DISPATCH_SWITCH
       the_vmprefix_vm.threads = (jitter_thread *)vmprefix_threads;
       the_vmprefix_vm.thread_sizes = (long *) vmprefix_thread_sizes;
-      the_vmprefix_vm.thread_sizes_validated = vmprefix_thread_sizes_validated;
+      the_vmprefix_vm.threads_validated = vmprefix_threads_validated;
 #endif // #ifndef JITTER_DISPATCH_SWITCH
 
       the_vmprefix_vm.specialized_instruction_residual_arities
