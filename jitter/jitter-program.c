@@ -658,7 +658,7 @@ jitter_resolve_labels_in_unspecialized_program (struct jitter_program *pr)
               jitter_int label_instruction_index
                 = jitter_get_label_instruction_index (pr, label);
               if (label_instruction_index == -1)
-                jitter_fatal ("undefined label %li", label);
+                jitter_fatal ("undefined label %li", (long) label);
 
               /* Notice that this assignment invalidates p->label . */
               p->label_as_index = label_instruction_index;
