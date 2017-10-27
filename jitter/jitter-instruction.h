@@ -69,7 +69,7 @@ enum jitter_parameter_type
 
     jitter_parameter_type_register_id,
     jitter_parameter_type_literal,
-    jitter_parameter_type_label_as_instruction_index
+    jitter_parameter_type_label
   };
 
 /* An instruction literal. */
@@ -120,9 +120,10 @@ struct jitter_parameter
   };
 
   /* Pointer to a malloc-allocated string holding the label symbolic name, or
-     NULL.  This is non-null only if the type is
-     jitter_parameter_type_label_as_instruction_index , and is only actually
-     used for making copies of an existing parameter. */
+     NULL.  This is non-null only if the type is jitter_parameter_type_label ,
+     and is only actually used for making copies from another string: in
+     other words, when label_name is a non-NULL pointer the pointed memory
+     is not shared and should be destroyed along with this struct. */
   char *label_name;
 };
 

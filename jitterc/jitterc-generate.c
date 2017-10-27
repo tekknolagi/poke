@@ -704,7 +704,7 @@ jitterc_emit_specializer_recognizers
           break;
         case jitterc_instruction_argument_kind_label:
         case jitterc_instruction_argument_kind_fast_label:
-          EMIT("(* ps)->type == jitter_parameter_type_label_as_instruction_index");
+          EMIT("(* ps)->type == jitter_parameter_type_label");
           if (! sarg->residual)
             jitter_fatal ("non-residual label: this should not happen");
           break;

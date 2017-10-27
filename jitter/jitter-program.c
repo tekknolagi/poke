@@ -217,7 +217,7 @@ jitter_append_uninitialized_paremater
              != jitter_meta_instruction_parameter_kind_register_or_literal_fixnum_or_literal_label)
         jitter_fatal ("appending immediate argument not admitted by instruction");
       break;
-    case jitter_parameter_type_label_as_instruction_index:
+    case jitter_parameter_type_label:
       if (   expected_kind
              != jitter_meta_instruction_parameter_kind_literal_label
           && expected_kind
@@ -314,8 +314,8 @@ jitter_append_symbolic_label_parameter (struct jitter_program *p,
 {
   struct jitter_parameter * const pa
     = jitter_append_uninitialized_paremater
-         (p, jitter_parameter_type_label_as_instruction_index, NULL);
-  pa->type = jitter_parameter_type_label_as_instruction_index;
+         (p, jitter_parameter_type_label, NULL);
+  pa->type = jitter_parameter_type_label;
   pa->label_name = jitter_xmalloc (strlen (label_name) + 1);
   strcpy (pa->label_name, label_name);
 }
@@ -406,7 +406,7 @@ jitter_jump_targets (const struct jitter_program *p)
       for (j = 0; j < arity; j ++)
         {
           const struct jitter_parameter *p = ps [j];
-          if (p->type == jitter_parameter_type_label_as_instruction_index)
+          if (p->type == jitter_parameter_type_label)
             {
               const long target = p->label_as_index;
               if (target < 0 || target >= instruction_no)
@@ -503,7 +503,7 @@ jitter_print_program_possibly_with_slow_registers_only
                 printer (out, p->literal.jitter_literal_unsigned);
                 break;
               }
-            case jitter_parameter_type_label_as_instruction_index:
+            case jitter_parameter_type_label:
               fprintf (out, "$L%li", (long) p->label_as_index);
               break;
             default:
@@ -559,7 +559,7 @@ jitter_backpatch_labels_in_unspecialized_program (struct jitter_program *pr)
       for (j = 0; j < arity; j ++)
         {
           struct jitter_parameter *p = ps [j];
-          if (p->type == jitter_parameter_type_label_as_instruction_index)
+          if (p->type == jitter_parameter_type_label)
             {
               const char *label_name = p->label_name;
               if (! jitter_string_hash_table_has (& pr->label_to_index,
