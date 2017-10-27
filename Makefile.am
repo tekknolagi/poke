@@ -1145,7 +1145,7 @@ endif # JITTER_CAN_REBUILD_MAN_PAGES
 # would depend on executable programs, but such dependency is better not
 # expressed in a Makefile, as explained in the help2man documentation).
 mans:
-	$(MAKE) all && \
+	$(MAKE) $(bin_PROGRAMS) $(bin_SCRIPTS) && \
           $(MAKE) $(dist_man1_MANS)
 
 
