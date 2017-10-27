@@ -2318,7 +2318,7 @@ jitterc_emit_interpreter_main_function
   EMIT("  /* This is the dispatching switch.  At the beginning of the first VM\n");
   EMIT("     VM instruction and at the end of each other, control jumps here. */\n");
   EMIT(" jitter_dispatching_switch_label:\n");
-  EMIT("  switch ((enum vmprefix_specialized_instruction_opcode) ip->fixnum)\n");
+  EMIT("  switch (ip->fixnum)\n");
   EMIT("    {\n");
   EMIT("#endif // #ifdef JITTER_DISPATCH_SWITCH\n");
   EMIT("\n");
