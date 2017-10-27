@@ -660,7 +660,7 @@ jitter_resolve_labels_in_unspecialized_program (struct jitter_program *pr)
               if (label_instruction_index == -1)
                 jitter_fatal ("undefined label %li", label);
 
-              /* Notice that this assignemnt invalidates p->label . */
+              /* Notice that this assignment invalidates p->label . */
               p->label_as_index = label_instruction_index;
             }
         }
