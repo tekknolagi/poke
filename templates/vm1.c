@@ -139,7 +139,7 @@ vmprefix_threads_validated = false;
 /* Omit vmprefix_validate_thread_sizes_once for switch-dispatching, as threads
    don't exist at all in that case.*/
 #ifndef JITTER_DISPATCH_SWITCH
-/* Check that VM instruction sizes are all non-negative, and that no threads
+/* Check that VM instruction sizes are all non-negative, and that no thread
    starts before the end of the previous one.  Even one violation of such
    conditions is a symptom that the code has not been compiled with
    -fno-reorder-blocks , which would have disastrous effects with replication.
