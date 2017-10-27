@@ -51,7 +51,9 @@ jitter_initialize_program (struct jitter_program *p)
   p->next_expected_parameter_type = NULL; /* An intentionally invalid value. */
 
   jitter_dynamic_buffer_initialize (& p->instructions);
-  jitter_hash_initialize (& p->label_to_index);
+  p->next_unused_opaque_label = 0;
+  jitter_hash_initialize (& p->label_name_to_opaque_label);
+  jitter_dynamic_buffer_initialize (& p->opaque_label_to_instruction_index);
   p->jump_targets = NULL;
   p->instruction_index_to_specialized_instruction_offset = NULL;
 
@@ -67,8 +69,6 @@ jitter_initialize_program (struct jitter_program *p)
 static void
 jitter_finalize_program (struct jitter_program *p)
 {
-  jitter_string_hash_finalize (& p->label_to_index, NULL);
-
   struct jitter_dynamic_buffer * const is = & p->instructions;
   while (jitter_dynamic_buffer_size (is) != 0)
     {
@@ -78,6 +78,9 @@ jitter_finalize_program (struct jitter_program *p)
       jitter_destroy_instruction (i);
     }
   jitter_dynamic_buffer_finalize (is);
+
+  jitter_string_hash_finalize (& p->label_name_to_opaque_label, NULL);
+  jitter_dynamic_buffer_finalize (& p->opaque_label_to_instruction_index);
 
   if (p->jump_targets != NULL)
     free (p->jump_targets);
@@ -114,28 +117,102 @@ jitter_program_instruction_no (const struct jitter_program *p)
          / sizeof (struct jitter_instruction*);
 }
 
+
+
+
+/* Label handing.
+ * ************************************************************************** */
+
+jitter_opaque_label
+jitter_fresh_label (struct jitter_program *p)
+{
+  /* Allocate an identifier. */
+  jitter_opaque_label res = p->next_unused_opaque_label ++;
+
+  /* Associate the label to an invalid instruction index. */
+  jitter_int invalid_instruction_index = -1;
+  jitter_dynamic_buffer_push (& p->opaque_label_to_instruction_index,
+                              & invalid_instruction_index,
+                              sizeof (invalid_instruction_index));
+
+  /* Return the identifier. */
+  return res;
+}
+
+jitter_opaque_label
+jitter_symbolic_label (struct jitter_program *p, const char *symbolic_name)
+{
+  /* If the name is already known, return its label. */
+  if (jitter_string_hash_table_has (& p->label_name_to_opaque_label,
+                                    symbolic_name))
+    return jitter_string_hash_table_get (& p->label_name_to_opaque_label,
+                                         symbolic_name).fixnum;
+
+  /* The name is new.  Allocate a new label, bind it to a copy of the name
+     (copies are handled by the hash table routines), and return the label. */
+  jitter_opaque_label res = jitter_fresh_label (p);
+  union jitter_word datum = {.fixnum = res};
+  jitter_string_hash_table_add (& p->label_name_to_opaque_label,
+                                symbolic_name,
+                                datum);
+  return res;
+}
+
+/* Return the unspecialized instruction index for the given label in the pointed
+   program, or -1 if the label is not associated to any instruction.
+   Unspecified behavior if the label is out of bounds. */
+static jitter_int
+jitter_get_label_instruction_index (struct jitter_program *p,
+                                    jitter_opaque_label label)
+{
+  jitter_int *array
+    = jitter_dynamic_buffer_to_pointer (& p->opaque_label_to_instruction_index);
+
+  return array [label];
+}
+
+/* Associate the given label in the pointed program to the given unspecialized
+   instruction index.  Fail fatally if the label was already associated to an
+   index.  Unspecified behavior if the label is out of bounds. */
+static void
+jitter_set_label_instruction_index (struct jitter_program *p,
+                                    jitter_opaque_label label,
+                                    jitter_int instruction_index)
+{
+  jitter_int *array
+    = jitter_dynamic_buffer_to_pointer (& p->opaque_label_to_instruction_index);
+  jitter_int previous_index = array [label];
+  if (previous_index != -1)
+    jitter_fatal ("label %li appended twice", (long) label);
+
+  array [label] = instruction_index;
+}
+
+
 
 
 /* Program construction API.
  * ************************************************************************** */
 
 void
-jitter_append_symbolic_label (struct jitter_program *p,
-                              const char *label_name)
+jitter_append_label (struct jitter_program *p, jitter_opaque_label label)
 {
   if (p->stage != jitter_program_stage_unspecialized)
-    jitter_fatal ("appending symbolic label in non non-unspecialized program");
+    jitter_fatal ("appending label in non non-unspecialized program");
   if (p->expected_parameter_no != 0)
-    jitter_fatal ("appending symbolic label %s with previous instruction "
-                  "incomplete", label_name);
-  if (jitter_string_hash_table_has (& p->label_to_index, label_name))
-    jitter_fatal ("symbolic label %s appended twice", label_name);
+    jitter_fatal ("appending label %li with previous instruction "
+                  "incomplete", (long) label);
 
-  /* We have seen a new label: bind it to the next instruction index into the
-     hash table to remember it later for backpatching. */
   jitter_int instruction_index = jitter_program_instruction_no (p);
-  union jitter_word w = {.fixnum = instruction_index};
-  jitter_string_hash_table_add (& p->label_to_index, label_name, w);
+  jitter_set_label_instruction_index (p, label, instruction_index);
+}
+
+jitter_opaque_label
+jitter_append_symbolic_label (struct jitter_program *p, const char *label_name)
+{
+  jitter_opaque_label res = jitter_symbolic_label (p, label_name);
+  jitter_append_label (p, res);
+  return res;
 }
 
 /* Close the current instruction which must have all of its parameters already
@@ -308,16 +385,23 @@ jitter_append_register_parameter
     p->slow_register_per_class_no = slow_register_no;
 }
 
-void
+jitter_opaque_label
 jitter_append_symbolic_label_parameter (struct jitter_program *p,
                                         const char *label_name)
+{
+  jitter_opaque_label res = jitter_symbolic_label (p, label_name);
+  jitter_append_label_parameter (p, res);
+  return res;
+}
+void
+jitter_append_label_parameter (struct jitter_program *p,
+                               jitter_opaque_label label)
 {
   struct jitter_parameter * const pa
     = jitter_append_uninitialized_paremater
          (p, jitter_parameter_type_label, NULL);
   pa->type = jitter_parameter_type_label;
-  pa->label_name = jitter_xmalloc (strlen (label_name) + 1);
-  strcpy (pa->label_name, label_name);
+  pa->label = label;
 }
 
 void
@@ -534,19 +618,25 @@ jitter_print_program (FILE *out, const struct jitter_program *p)
 
 
 
-/* Label backpatching.
+/* Label resolution.
  * ************************************************************************** */
 
 void
-jitter_backpatch_labels_in_unspecialized_program (struct jitter_program *pr)
+jitter_resolve_labels_in_unspecialized_program (struct jitter_program *pr)
 {
   if (pr->stage != jitter_program_stage_unspecialized)
-    jitter_fatal ("backpatching unspecialized labels in non-unspecialized program");
+    jitter_fatal ("resolving unspecialized labels in non-unspecialized program");
 
   const int instruction_no = jitter_program_instruction_no (pr);
   struct jitter_instruction **ins
     = jitter_dynamic_buffer_to_pointer (& pr->instructions);
 
+  /* Scan instructions sequentially, and for each of them scan parameters
+     sequentially, replacing opaque labels with instruction indices.  This
+     relies of parameters *not* being shared: each label parameter must be
+     touched exactly once. */
+
+  /* For every instruction... */
   int i;
   for (i = 0; i < instruction_no; i ++)
     {
@@ -554,20 +644,24 @@ jitter_backpatch_labels_in_unspecialized_program (struct jitter_program *pr)
       const struct jitter_meta_instruction * mi = in->meta_instruction;
       struct jitter_parameter **ps = in->parameters;
 
+      /* ...For every instruction parameter... */
       const int arity = mi->parameter_no;
       int j;
       for (j = 0; j < arity; j ++)
         {
           struct jitter_parameter *p = ps [j];
+          /* ...If the parameter is a label... */
           if (p->type == jitter_parameter_type_label)
             {
-              const char *label_name = p->label_name;
-              if (! jitter_string_hash_table_has (& pr->label_to_index,
-                                                  label_name))
-                jitter_fatal ("undefined label %s", label_name);
-              p->label_as_index
-                = jitter_string_hash_table_get (& pr->label_to_index,
-                                                label_name).ufixnum;
+              /* Replace the label with its instruction index. */
+              jitter_opaque_label label = p->label;
+              jitter_int label_instruction_index
+                = jitter_get_label_instruction_index (pr, label);
+              if (label_instruction_index == -1)
+                jitter_fatal ("undefined label %li", label);
+
+              /* Notice that this assignemnt invalidates p->label . */
+              p->label_as_index = label_instruction_index;
             }
         }
     }

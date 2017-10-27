@@ -192,9 +192,11 @@ structured_translate_expression (struct structuredvm_program *vmp,
   switch (e->case_)
     {
     case structured_expression_case_literal:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, push);
-      structuredvm_append_signed_literal_parameter (vmp, e->literal);
-      break;
+      {
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, push);
+        structuredvm_append_signed_literal_parameter (vmp, e->literal);
+        break;
+      }
     case structured_expression_case_variable:
       {
         structured_register_index idx
@@ -204,10 +206,12 @@ structured_translate_expression (struct structuredvm_program *vmp,
         break;
       }
     case structured_expression_case_primitive:
-      structured_translate_primitive (vmp, e->primitive, e->primitive_operand_0,
-                                      e->primitive_operand_1,
-                                      env);
-      break;
+      {
+        structured_translate_primitive (vmp, e->primitive,
+                                        e->primitive_operand_0,
+                                        e->primitive_operand_1, env);
+        break;
+      }
     default:
       jitter_fatal ("invalid expression case");
     }
@@ -220,19 +224,12 @@ structured_translate_statement (struct structuredvm_program *vmp,
                                 struct structured_statement *s,
                                 struct structured_static_environment *env)
 {
-  /* FIXME: using textual labels like this is certainly correct, but barbaric.
-     Even worse the static variable makes the generator non-reentrant when there
-     would be no reason.  I have to provide a convenient API to generate fresh
-     labels from a Jittery program. */
-  char label_0 [100], label_1 [100];
-  static long n = 0;
-  sprintf (label_0, "L%li", n ++);
-  sprintf (label_1, "L%li", n ++);
-
   switch (s->case_)
     {
     case structured_statement_case_skip:
-      break;
+      {
+        break;
+      }
     case structured_statement_case_assignment:
       {
         structured_register_index idx
@@ -243,48 +240,66 @@ structured_translate_statement (struct structuredvm_program *vmp,
         break;
       }
     case structured_statement_case_print:
-      structured_translate_expression (vmp, s->print_expression, env);
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, print);
-      break;
+      {
+        structured_translate_expression (vmp, s->print_expression, env);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, print);
+        break;
+      }
     case structured_statement_case_sequence:
-      structured_translate_statement (vmp, s->sequence_statement_0, env);
-      structured_translate_statement (vmp, s->sequence_statement_1, env);
-      break;
+      {
+        structured_translate_statement (vmp, s->sequence_statement_0, env);
+        structured_translate_statement (vmp, s->sequence_statement_1, env);
+        break;
+      }
     case structured_statement_case_if_then_else:
-      structured_translate_expression (vmp, s->if_then_else_condition, env);
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
-      structuredvm_append_symbolic_label_parameter (vmp, label_0);
-      structured_translate_statement (vmp, s->if_then_else_then_branch, env);
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, b);
-      structuredvm_append_symbolic_label_parameter (vmp, label_1);
-      structuredvm_append_symbolic_label (vmp, label_0);
-      structured_translate_statement (vmp, s->if_then_else_else_branch, env);
-      structuredvm_append_symbolic_label (vmp, label_1);
-      break;
+      {
+        jitter_opaque_label before_else = jitter_fresh_label (vmp);
+        jitter_opaque_label after_else = jitter_fresh_label (vmp);
+        structured_translate_expression (vmp, s->if_then_else_condition, env);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
+        structuredvm_append_label_parameter (vmp, before_else);
+        structured_translate_statement (vmp, s->if_then_else_then_branch, env);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, b);
+        structuredvm_append_label_parameter (vmp, after_else);
+        structuredvm_append_label (vmp, before_else);
+        structured_translate_statement (vmp, s->if_then_else_else_branch, env);
+        structuredvm_append_label (vmp, after_else);
+        break;
+      }
     case structured_statement_case_if_then:
-      structured_translate_expression (vmp, s->if_then_condition, env);
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
-      structuredvm_append_symbolic_label_parameter (vmp, label_0);
-      structured_translate_statement (vmp, s->if_then_then_branch, env);
-      structuredvm_append_symbolic_label (vmp, label_0);
-      break;
+      {
+        jitter_opaque_label after_then = jitter_fresh_label (vmp);
+        structured_translate_expression (vmp, s->if_then_condition, env);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
+        structuredvm_append_label_parameter (vmp, after_then);
+        structured_translate_statement (vmp, s->if_then_then_branch, env);
+        structuredvm_append_label (vmp, after_then);
+        break;
+      }
     case structured_statement_case_while_do:
-      structuredvm_append_symbolic_label (vmp, label_0);
-      structured_translate_expression (vmp, s->while_do_guard, env);
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
-      structuredvm_append_symbolic_label_parameter (vmp, label_1);
-      structured_translate_statement (vmp, s->while_do_body, env);
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, b);
-      structuredvm_append_symbolic_label_parameter (vmp, label_0);
-      structuredvm_append_symbolic_label (vmp, label_1);
-      break;
+      {
+        jitter_opaque_label before_guard = jitter_fresh_label (vmp);
+        jitter_opaque_label after_loop = jitter_fresh_label (vmp);
+        structuredvm_append_label (vmp, before_guard);
+        structured_translate_expression (vmp, s->while_do_guard, env);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
+        structuredvm_append_label_parameter (vmp, after_loop);
+        structured_translate_statement (vmp, s->while_do_body, env);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, b);
+        structuredvm_append_label_parameter (vmp, before_guard);
+        structuredvm_append_label (vmp, after_loop);
+        break;
+      }
     case structured_statement_case_repeat_until:
-      structuredvm_append_symbolic_label (vmp, label_0);
-      structured_translate_statement (vmp, s->repeat_until_body, env);
-      structured_translate_expression (vmp, s->repeat_until_guard, env);
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
-      structuredvm_append_symbolic_label_parameter (vmp, label_0);
-      break;
+      {
+        jitter_opaque_label before_body = jitter_fresh_label (vmp);
+        structuredvm_append_label (vmp, before_body);
+        structured_translate_statement (vmp, s->repeat_until_body, env);
+        structured_translate_expression (vmp, s->repeat_until_guard, env);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
+        structuredvm_append_label_parameter (vmp, before_body);
+        break;
+      }
     default:
       jitter_fatal ("invalid statement case");
     }

@@ -133,8 +133,8 @@ jitter_specialize_program (struct jitter_program *p)
   if (p->native_code != NULL)
     jitter_fatal ("specializing program with native code already defined");
 
-  /* Backpatch label arguments in unspecialized instruction parameters. */
-  jitter_backpatch_labels_in_unspecialized_program (p);
+  /* Resolve label arguments in unspecialized instruction parameters. */
+  jitter_resolve_labels_in_unspecialized_program (p);
   /* Now label arguments refer unspecialized instruction indices. */
 
   /* Compute jump targets. */

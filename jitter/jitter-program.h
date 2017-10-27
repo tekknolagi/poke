@@ -80,15 +80,29 @@ struct jitter_program
      rewriting easier. */
   struct jitter_dynamic_buffer instructions;
 
-  /* A map from a symbolic label to the index of the instruction right after it.
-     The datum is handled as a pointer by the hash API, but here it should just
-     be cast to and from an jitter_int.  It is safe to build this while
-     instructions are still being appended to a program, since each instruction
-     is rewritten right after it's closed, and rewriting doesn't end until no
-     more rewritings are possible.  Labels, on the other hand, are not rewritten
-     and instruction rewriting do not happen across labels.
-     For these reasons whenever a label is appended its index is final. */
-  struct jitter_hash_table label_to_index;
+  /* The opaque label to be generated as fresh at the next request. */
+  jitter_opaque_label next_unused_opaque_label;
+
+  /* A map associating symbolic label names to opaque labels.  There can be
+     opaque labels without any symbolic names, but every symbolic name in use
+     must always be associated to an opaque label.  The datum is handled as a
+     pointer by the hash API, but here it should just be cast to and from an
+     jitter_opaque_label .  Symbolic label names are copied into the map
+     whenever a binding is added, and do not share memory with user data
+     structures. */
+  struct jitter_hash_table label_name_to_opaque_label;
+
+  /* A dynamic array containing jitter_int elements.  Each array index
+     represents an opaque label, and its associated array element the
+     unspecialized instruction index where that label leads, or -1 if the
+     label is unresolved.  It is not an error to have unresolved labels,
+     even late after label resolution, as long as such labels are never
+     used in instruction parameters.
+     Rewriting poses no particular problem with respect to this mapping:
+     once a label is assigned an instruction index, the *following*
+     instructions may be rewritten, but not the previous one, maintaining
+     the existing mapping valid. */
+  struct jitter_dynamic_buffer opaque_label_to_instruction_index;
 
   /* A pointer to the instruction currently being initialized within
      instructions. */
@@ -175,15 +189,47 @@ jitter_destroy_program (struct jitter_program *p);
 
 
 
+/* Label handing.
+ * ************************************************************************** */
+
+/* Return a fresh label for the pointed program, without an associated symbolic
+   name.  The caller may later use the label in an instruction argument or
+   associate it to a program point. */
+jitter_opaque_label
+jitter_fresh_label (struct jitter_program *p)
+  __attribute__ ((nonnull (1)));
+
+/* Return a label for the pointed program, associated to the given symbolic
+   name.  If the symbolic name is new for the program, associate the label
+   to an internally-allocated copy of it; if the symbolic name is already
+   known, return the label already associated to it. */
+jitter_opaque_label
+jitter_symbolic_label (struct jitter_program *p, const char *symbolic_name)
+  __attribute__ ((nonnull (1)));
+
+
+
+
 /* Program construction API.
  * ************************************************************************** */
 
-/* Update the given program, adding a new label with the given name before the
-   instruction which is coming next.  When this function is called the previous
-   instruction, if any, must have been completed. */
+/* Update the given program, adding the given label before the instruction which
+   is coming next.
+   When this function is called the previous instruction, if any, must have been
+   completed. */
 void
+jitter_append_label (struct jitter_program *p,
+                     jitter_opaque_label label)
+  __attribute__ ((nonnull (1)));
+
+/* Update the given program, adding a label with the given name before the
+   instruction which is coming next, and return the label.
+   When this function is called the previous instruction, if any, must have been
+   completed. */
+jitter_opaque_label
 jitter_append_symbolic_label (struct jitter_program *p,
-                              const char *label_name);
+                              const char *label_name)
+  __attribute__ ((nonnull (1, 2)));
 
 /* Update the given program, beginning a new instruction with the given name, to
    be looked up in the meta-instruction hash table; the instruction parameters,
@@ -220,20 +266,29 @@ jitter_append_meta_instruction (struct jitter_program *p,
    convenient way of adding a register parameter. */
 void
 jitter_append_literal_parameter (struct jitter_program *p,
-                                 union jitter_literal immediate);
+                                 union jitter_literal immediate)
+  __attribute__((nonnull (1)));
 void
 jitter_append_signed_literal_parameter (struct jitter_program *p,
-                                        jitter_int immediate);
+                                        jitter_int immediate)
+  __attribute__((nonnull (1)));
 void
 jitter_append_unsigned_literal_parameter (struct jitter_program *p,
-                                          jitter_uint immediate);
+                                          jitter_uint immediate)
+  __attribute__((nonnull (1)));
 void
 jitter_append_register_parameter (struct jitter_program *p,
                                   const struct jitter_register_class *c,
-                                  jitter_register_index register_index);
-void
+                                  jitter_register_index register_index)
+  __attribute__((nonnull (1, 2)));
+jitter_opaque_label
 jitter_append_symbolic_label_parameter (struct jitter_program *p,
-                                        const char *label_name);
+                                        const char *label_name)
+  __attribute__((nonnull (1, 2)));
+void
+jitter_append_label_parameter (struct jitter_program *p,
+                               jitter_opaque_label label)
+  __attribute__((nonnull (1)));
 
 
 
@@ -279,15 +334,16 @@ jitter_jump_targets (const struct jitter_program *p)
 
 
 
-/* Label backpatching in unspecialized programs.
+/* Label resolution in unspecialized programs.
  * ************************************************************************** */
 
-/* Backpatch label arguments in unspecialized instruction parameters.  After
-   this is done instruction parameters refer labels as unspecialized instruction
-   indices.  Fail fatally if any referred label is still undefined, or if the
-   program is not unspecialized. */
+/* Resolve label arguments in unspecialized instruction parameters, replacing
+   opaque labels with unspecialized instruction indices.  After this is done
+   instruction parameters refer labels as unspecialized instruction indices.
+   Fail fatally if any referred label is still undefined, or if the program is
+   not unspecialized. */
 void
-jitter_backpatch_labels_in_unspecialized_program (struct jitter_program *p)
+jitter_resolve_labels_in_unspecialized_program (struct jitter_program *p)
   __attribute__ ((nonnull (1)));
 
 #endif // #ifndef JITTER_PROGRAM_H_

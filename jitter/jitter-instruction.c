@@ -117,9 +117,8 @@ jitter_make_instruction_parameter (void)
   /* Try and prevent distraction mistakes by making the type field invalid. */
   res->type = jitter_parameter_type_uninitialized;
 
-  /* Initialize the label_name field, which is critical with respect to
-     allocation. */
-  res->label_name = NULL;
+  /* Also make the label invalid. */
+  res->label = -1;
 
   return res;
 }
@@ -130,20 +129,12 @@ jitter_clone_instruction_parameter (const struct jitter_program *program,
 {
   struct jitter_parameter *res = jitter_make_instruction_parameter ();
   memcpy (res, original, sizeof (struct jitter_parameter));
-  if (res->label_name != NULL)
-    {
-      res->label_name = jitter_xmalloc (sizeof (res->label_name) + 1);
-      strcpy (res->label_name, original->label_name);
-    }
   return res;
 }
 
 void
 jitter_destroy_instruction_parameter (struct jitter_parameter *p)
 {
-  if (p->label_name != NULL)
-    free (p->label_name);
-
   free (p);
 }
 

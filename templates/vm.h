@@ -408,6 +408,8 @@ vmprefix_vm_configuration;
   jitter_append_instruction_name
 #define vmprefix_append_meta_instruction \
   jitter_append_meta_instruction
+#define vmprefix_append_label \
+  jitter_append_label
 #define vmprefix_append_symbolic_label \
   jitter_append_symbolic_label
 #define vmprefix_append_register_parameter \
@@ -418,6 +420,8 @@ vmprefix_vm_configuration;
   jitter_append_signed_literal_parameter
 #define vmprefix_append_unsigned_literal_parameter \
   jitter_append_unsigned_literal_parameter
+#define vmprefix_append_label_parameter \
+  jitter_append_label_parameter
 #define vmprefix_append_symbolic_label_parameter \
   jitter_append_symbolic_label_parameter
 #define vmprefix_print_program \

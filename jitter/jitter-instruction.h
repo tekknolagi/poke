@@ -54,6 +54,25 @@ struct jitter_register_class
 };
 
 
+/* Labels.
+ * ************************************************************************** */
+
+/* Labels are held internally as opaque identifiers, resolved to instruction
+   indices late, right before a program is specialized.  The facility for
+   handling a consistent mapping from symbolic to opaque labels is provided for
+   convenience, but labels are used in an opaque form and, in particular, are
+   stored as opaque within instruction parameters.
+
+   Opaque labels are only valid within a single VM program.  Different programs
+   may use the same opaque label identifiers, each referring to its own program
+   points.
+
+   Labels must be allocated only with the functions provided in jitter-program.h
+   , for a specific program. */
+typedef jitter_int jitter_opaque_label;
+
+
+
 
 
 /* Instruction description.
@@ -106,21 +125,14 @@ struct jitter_parameter
     /* The parameter, as an immediate literal. */
     union jitter_literal literal;
 
-    /* The parameter, as an 0-based unspecialized instruction index.  Symbolic
-       labels are replaced with indices only by
-       jitter_backpatch_labels_in_unspecialized_program , after an unspecialized
-       program has been completely built.  It is not possible in general to do
-       this earlier even in the case of backward branches, because of
-       rewriting. */
+    /* The parameter as a label. */
+    jitter_opaque_label label;
+
+    /* The parameter, as an 0-based unspecialized instruction index.  Opaque
+       labels are all replaced with unspecialized instruction indices by
+       jitter_resolve_labels_in_unspecialized_program . */
     jitter_label_as_index label_as_index;
   };
-
-  /* Pointer to a malloc-allocated string holding the label symbolic name, or
-     NULL.  This is non-null only if the type is jitter_parameter_type_label ,
-     and is only actually used for making copies from another string: in
-     other words, when label_name is a non-NULL pointer the pointed memory
-     is not shared and should be destroyed along with this struct. */
-  char *label_name;
 };
 
 /* Forward declaration.  The actual definition of struct jitter_program is in
