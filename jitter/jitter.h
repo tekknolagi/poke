@@ -148,6 +148,36 @@ union jitter_word
 
 
 
+/* The long long type or some approximation of it.
+ * ************************************************************************** */
+
+/* Jitter uses integer types as wide as pointers in most cases, but in a few
+   circumstances, particularly for textual I/O, it is convenient to use the
+   widest integer type available. */
+
+/* Provide some replacement for long long if it's not available.  In either
+   case define:
+   - the type jitter_long_long , defined as either long long or long ;
+   - the format string JITTER_PRIll (not including the "%" prefix, and just
+     for signed types printed in radix 10), expanding to either "lli" or "li";
+   - the macro jitter_strtoll , expanding to either strtoll or strtol . */
+#ifdef HAVE_LONG_LONG_INT
+  /* We have a real long long type.  Define the type and macros above as trivial
+     wrappers. */
+  typedef long long jitter_long_long;
+# define JITTER_PRIll "lli"
+# define jitter_strtoll strtoll
+#else
+  /* The type long long is not available in this configuration.  Use long in its
+     place. */
+  typedef long jitter_long_long;
+# define JITTER_PRIll "li"
+# define jitter_strtoll strtol
+#endif // #ifdef HAVE_LONG_LONG_INT
+
+
+
+
 /* Word size in bits and bytes and its binary logarithm.
  * ************************************************************************** */
 

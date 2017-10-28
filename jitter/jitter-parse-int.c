@@ -22,18 +22,19 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <jitter/jitter.h>
 #include "jitter-parse-int.h"
 
 
 int
 jitter_string_to_long_long_inconvenient_radix (const char *s,
-                                               long long *result_pointer,
+                                               jitter_long_long *result_pointer,
                                                unsigned radix)
 {
   assert (s != NULL);
   assert (result_pointer != NULL);
   char *end;
-  long long res = strtoll (s, & end, 10);
+  jitter_long_long res = jitter_strtoll (s, & end, 10);
   if (s [0] == '\0' || end [0] != '\0')
     return -1;
 
@@ -43,31 +44,31 @@ jitter_string_to_long_long_inconvenient_radix (const char *s,
 
 int
 jitter_string_to_long_long_inconvenient (const char *s,
-                                         long long *result_pointer)
+                                         jitter_long_long *result_pointer)
 {
   return jitter_string_to_long_long_inconvenient_radix (s, result_pointer, 10);
 }
 
-long long
+jitter_long_long
 jitter_string_to_long_long_unsafe_radix (const char *s, unsigned radix)
 {
-  long long res;
+  jitter_long_long res;
   int conversion_result
     = jitter_string_to_long_long_inconvenient_radix (s, &res, radix);
   assert (conversion_result == 0);
   return res;
 }
 
-long long
+jitter_long_long
 jitter_string_to_long_long_unsafe (const char *s)
 {
   return jitter_string_to_long_long_unsafe_radix (s, 10);
 }
 
-long long
+jitter_long_long
 jitter_string_to_natural_radix (const char *s, unsigned radix)
 {
-  long long res;
+  jitter_long_long res;
   int conversion_result
     = jitter_string_to_long_long_inconvenient_radix (s, &res, radix);
   if (conversion_result != 0 || res < 0)
@@ -76,7 +77,7 @@ jitter_string_to_natural_radix (const char *s, unsigned radix)
   return res;
 }
 
-long long
+jitter_long_long
 jitter_string_to_natural (const char *s)
 {
   return jitter_string_to_natural_radix (s, 10);
