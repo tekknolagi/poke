@@ -424,6 +424,10 @@ vmprefix_vm_configuration;
   jitter_append_label_parameter
 #define vmprefix_append_symbolic_label_parameter \
   jitter_append_symbolic_label_parameter
+#define vmprefix_opaque_label \
+  jitter_opaque_label
+#define vmprefix_fresh_label \
+  jitter_fresh_label
 #define vmprefix_print_program \
   jitter_print_program
 #define vmprefix_print_program_possibly_with_slow_registers_only \
