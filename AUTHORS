@@ -22,9 +22,8 @@ Those files are distributed under the GNU General Public License
 version 3 or later, like this package.
 
 Other files from the GNU Autoconf, Automake, Gnulib and Libtool are not
-maintained in the Jitter repository, but are automatically copied into
-source tarballs.  They are all distributed under licenses compatible
-with Jitter's.
+maintained in the Jitter repository but are automatically copied into source
+tarballs.  They are all distributed under licenses compatible with Jitter's.
 
 
 Authors
