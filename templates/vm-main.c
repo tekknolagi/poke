@@ -142,12 +142,13 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case 't':
       {
-        long long limit;
+        jitter_long_long limit;
         if (jitter_string_to_long_long_inconvenient (arg, & limit) != 0)
           argp_error (state, "--time-limit: invalid integer %s", arg);
 #ifdef HAVE_ALARM
         if (limit < 0)
-          argp_error (state, "--time-limit: negative time %lli", limit);
+          argp_error (state, "--time-limit: negative time %" JITTER_PRIll,
+                      limit);
         else if (limit > UINT_MAX)
           argp_error (state, "--time-limit: integer %s out of range", arg);
         else if (limit > 0)
@@ -159,12 +160,13 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case 'c':
       {
-        long long limit;
+        jitter_long_long limit;
         if (jitter_string_to_long_long_inconvenient (arg, & limit) != 0)
           argp_error (state, "--cpu-time-limit: invalid integer %s", arg);
 #ifdef HAVE_SETRLIMIT
         if (limit < 0)
-          argp_error (state, "--cpu-time-limit: negative time %lli", limit);
+          argp_error (state, "--cpu-time-limit: negative time %" JITTER_PRIll,
+                      limit);
         else if (limit > 0)
           cl->cpu_time_limit = limit;
 #else

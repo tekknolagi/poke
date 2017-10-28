@@ -254,7 +254,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case 'n':
       {
-        long long conversion;
+        jitter_long_long conversion;
         if (jitter_string_to_long_long_inconvenient (arg, &conversion) != 0)
           argp_error (state,
                       "the maximum nonresidual number must be an integer.");
