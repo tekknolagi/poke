@@ -253,8 +253,8 @@ structured_translate_statement (struct structuredvm_program *vmp,
       }
     case structured_statement_case_if_then_else:
       {
-        structuredvm_opaque_label before_else = structuredvm_fresh_label (vmp);
-        structuredvm_opaque_label after_else = structuredvm_fresh_label (vmp);
+        structuredvm_label before_else = structuredvm_fresh_label (vmp);
+        structuredvm_label after_else = structuredvm_fresh_label (vmp);
         structured_translate_expression (vmp, s->if_then_else_condition, env);
         STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
         structuredvm_append_label_parameter (vmp, before_else);
@@ -268,7 +268,7 @@ structured_translate_statement (struct structuredvm_program *vmp,
       }
     case structured_statement_case_if_then:
       {
-        structuredvm_opaque_label after_then = structuredvm_fresh_label (vmp);
+        structuredvm_label after_then = structuredvm_fresh_label (vmp);
         structured_translate_expression (vmp, s->if_then_condition, env);
         STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
         structuredvm_append_label_parameter (vmp, after_then);
@@ -278,8 +278,8 @@ structured_translate_statement (struct structuredvm_program *vmp,
       }
     case structured_statement_case_while_do:
       {
-        structuredvm_opaque_label before_guard = structuredvm_fresh_label (vmp);
-        structuredvm_opaque_label after_loop = structuredvm_fresh_label (vmp);
+        structuredvm_label before_guard = structuredvm_fresh_label (vmp);
+        structuredvm_label after_loop = structuredvm_fresh_label (vmp);
         structuredvm_append_label (vmp, before_guard);
         structured_translate_expression (vmp, s->while_do_guard, env);
         STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
@@ -292,7 +292,7 @@ structured_translate_statement (struct structuredvm_program *vmp,
       }
     case structured_statement_case_repeat_until:
       {
-        structuredvm_opaque_label before_body = structuredvm_fresh_label (vmp);
+        structuredvm_label before_body = structuredvm_fresh_label (vmp);
         structuredvm_append_label (vmp, before_body);
         structured_translate_statement (vmp, s->repeat_until_body, env);
         structured_translate_expression (vmp, s->repeat_until_guard, env);

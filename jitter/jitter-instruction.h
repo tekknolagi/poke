@@ -54,7 +54,7 @@ struct jitter_register_class
 };
 
 
-/* Labels.
+/* VM labels as opaque identifiers.
  * ************************************************************************** */
 
 /* Labels are held internally as opaque identifiers, resolved to instruction
@@ -69,7 +69,7 @@ struct jitter_register_class
 
    Labels must be allocated only with the functions provided in jitter-program.h
    , for a specific program. */
-typedef jitter_int jitter_opaque_label;
+typedef jitter_int jitter_label;
 
 
 
@@ -125,8 +125,8 @@ struct jitter_parameter
     /* The parameter, as an immediate literal. */
     union jitter_literal literal;
 
-    /* The parameter as a label. */
-    jitter_opaque_label label;
+    /* The parameter as an opaque label identifier. */
+    jitter_label label;
 
     /* The parameter, as an 0-based unspecialized instruction index.  Opaque
        labels are all replaced with unspecialized instruction indices by

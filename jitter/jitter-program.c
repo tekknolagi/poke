@@ -123,11 +123,11 @@ jitter_program_instruction_no (const struct jitter_program *p)
 /* Label handing.
  * ************************************************************************** */
 
-jitter_opaque_label
+jitter_label
 jitter_fresh_label (struct jitter_program *p)
 {
   /* Allocate an identifier. */
-  jitter_opaque_label res = p->next_unused_opaque_label ++;
+  jitter_label res = p->next_unused_opaque_label ++;
 
   /* Associate the label to an invalid instruction index. */
   jitter_int invalid_instruction_index = -1;
@@ -139,7 +139,7 @@ jitter_fresh_label (struct jitter_program *p)
   return res;
 }
 
-jitter_opaque_label
+jitter_label
 jitter_symbolic_label (struct jitter_program *p, const char *symbolic_name)
 {
   /* If the name is already known, return its label. */
@@ -150,7 +150,7 @@ jitter_symbolic_label (struct jitter_program *p, const char *symbolic_name)
 
   /* The name is new.  Allocate a new label, bind it to a copy of the name
      (copies are handled by the hash table routines), and return the label. */
-  jitter_opaque_label res = jitter_fresh_label (p);
+  jitter_label res = jitter_fresh_label (p);
   union jitter_word datum = {.fixnum = res};
   jitter_string_hash_table_add (& p->label_name_to_opaque_label,
                                 symbolic_name,
@@ -163,7 +163,7 @@ jitter_symbolic_label (struct jitter_program *p, const char *symbolic_name)
    Unspecified behavior if the label is out of bounds. */
 static jitter_int
 jitter_get_label_instruction_index (struct jitter_program *p,
-                                    jitter_opaque_label label)
+                                    jitter_label label)
 {
   jitter_int *array
     = jitter_dynamic_buffer_to_pointer (& p->opaque_label_to_instruction_index);
@@ -176,7 +176,7 @@ jitter_get_label_instruction_index (struct jitter_program *p,
    index.  Unspecified behavior if the label is out of bounds. */
 static void
 jitter_set_label_instruction_index (struct jitter_program *p,
-                                    jitter_opaque_label label,
+                                    jitter_label label,
                                     jitter_int instruction_index)
 {
   jitter_int *array
@@ -195,7 +195,7 @@ jitter_set_label_instruction_index (struct jitter_program *p,
  * ************************************************************************** */
 
 void
-jitter_append_label (struct jitter_program *p, jitter_opaque_label label)
+jitter_append_label (struct jitter_program *p, jitter_label label)
 {
   if (p->stage != jitter_program_stage_unspecialized)
     jitter_fatal ("appending label in non non-unspecialized program");
@@ -207,10 +207,10 @@ jitter_append_label (struct jitter_program *p, jitter_opaque_label label)
   jitter_set_label_instruction_index (p, label, instruction_index);
 }
 
-jitter_opaque_label
+jitter_label
 jitter_append_symbolic_label (struct jitter_program *p, const char *label_name)
 {
-  jitter_opaque_label res = jitter_symbolic_label (p, label_name);
+  jitter_label res = jitter_symbolic_label (p, label_name);
   jitter_append_label (p, res);
   return res;
 }
@@ -385,17 +385,17 @@ jitter_append_register_parameter
     p->slow_register_per_class_no = slow_register_no;
 }
 
-jitter_opaque_label
+jitter_label
 jitter_append_symbolic_label_parameter (struct jitter_program *p,
                                         const char *label_name)
 {
-  jitter_opaque_label res = jitter_symbolic_label (p, label_name);
+  jitter_label res = jitter_symbolic_label (p, label_name);
   jitter_append_label_parameter (p, res);
   return res;
 }
 void
 jitter_append_label_parameter (struct jitter_program *p,
-                               jitter_opaque_label label)
+                               jitter_label label)
 {
   struct jitter_parameter * const pa
     = jitter_append_uninitialized_paremater
@@ -654,7 +654,7 @@ jitter_resolve_labels_in_unspecialized_program (struct jitter_program *pr)
           if (p->type == jitter_parameter_type_label)
             {
               /* Replace the label with its instruction index. */
-              jitter_opaque_label label = p->label;
+              jitter_label label = p->label;
               jitter_int label_instruction_index
                 = jitter_get_label_instruction_index (pr, label);
               if (label_instruction_index == -1)
