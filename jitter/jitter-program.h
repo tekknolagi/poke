@@ -81,13 +81,13 @@ struct jitter_program
   struct jitter_dynamic_buffer instructions;
 
   /* The opaque label to be generated as fresh at the next request. */
-  jitter_opaque_label next_unused_opaque_label;
+  jitter_label next_unused_opaque_label;
 
   /* A map associating symbolic label names to opaque labels.  There can be
      opaque labels without any symbolic names, but every symbolic name in use
      must always be associated to an opaque label.  The datum is handled as a
      pointer by the hash API, but here it should just be cast to and from an
-     jitter_opaque_label .  Symbolic label names are copied into the map
+     jitter_label .  Symbolic label names are copied into the map
      whenever a binding is added, and do not share memory with user data
      structures. */
   struct jitter_hash_table label_name_to_opaque_label;
@@ -195,7 +195,7 @@ jitter_destroy_program (struct jitter_program *p);
 /* Return a fresh label for the pointed program, without an associated symbolic
    name.  The caller may later use the label in an instruction argument or
    associate it to a program point. */
-jitter_opaque_label
+jitter_label
 jitter_fresh_label (struct jitter_program *p)
   __attribute__ ((nonnull (1)));
 
@@ -203,7 +203,7 @@ jitter_fresh_label (struct jitter_program *p)
    name.  If the symbolic name is new for the program, associate the label
    to an internally-allocated copy of it; if the symbolic name is already
    known, return the label already associated to it. */
-jitter_opaque_label
+jitter_label
 jitter_symbolic_label (struct jitter_program *p, const char *symbolic_name)
   __attribute__ ((nonnull (1)));
 
@@ -219,14 +219,14 @@ jitter_symbolic_label (struct jitter_program *p, const char *symbolic_name)
    completed. */
 void
 jitter_append_label (struct jitter_program *p,
-                     jitter_opaque_label label)
+                     jitter_label label)
   __attribute__ ((nonnull (1)));
 
 /* Update the given program, adding a label with the given name before the
    instruction which is coming next, and return the label.
    When this function is called the previous instruction, if any, must have been
    completed. */
-jitter_opaque_label
+jitter_label
 jitter_append_symbolic_label (struct jitter_program *p,
                               const char *label_name)
   __attribute__ ((nonnull (1, 2)));
@@ -281,13 +281,13 @@ jitter_append_register_parameter (struct jitter_program *p,
                                   const struct jitter_register_class *c,
                                   jitter_register_index register_index)
   __attribute__((nonnull (1, 2)));
-jitter_opaque_label
+jitter_label
 jitter_append_symbolic_label_parameter (struct jitter_program *p,
                                         const char *label_name)
   __attribute__((nonnull (1, 2)));
 void
 jitter_append_label_parameter (struct jitter_program *p,
-                               jitter_opaque_label label)
+                               jitter_label label)
   __attribute__((nonnull (1)));
 
 
