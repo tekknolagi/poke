@@ -427,7 +427,7 @@ jitter_append_meta_instruction (struct jitter_program *p,
                               sizeof (struct jitter_meta_instruction *));
 
   /* If this instruction has zero parameters then we're already done with it, and
-     we can close it immediately.  Othersise set parameter pointers to the frist
+     we can close it immediately.  Otherwise set parameter pointers to the frist
      parameter to be appended. */
   if ((p->expected_parameter_no = mi->parameter_no) == 0)
     jitter_close_current_instruction (p);
