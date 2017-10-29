@@ -49,7 +49,7 @@
    function.  These are useful to convert to a specified base, in the case of
    signed and unsigned literals.  The lvalues will be either
    $$.fixnum or $$.ufixnum , and the functions to
-   call will be strtoll or strtoull . */
+   call will be jitter_strtoll or jitter_strtoull . */
 #define JITTER_SET_BINARY(lvalue, function)           \
   do                                                  \
     {                                                 \
@@ -243,21 +243,21 @@ after_one_argument :
 
 int_expression :
   SIGNED_BINARY_LITERAL       { JITTER_SET_BINARY($$.fixnum,
-                                                  strtoll); }
+                                                  jitter_strtoll); }
 | SIGNED_OCTAL_LITERAL        { JITTER_SET_OCTAL($$.fixnum,
-                                                 strtoll); }
+                                                 jitter_strtoll); }
 | SIGNED_DECIMAL_LITERAL      { JITTER_SET_DECIMAL($$.fixnum,
-                                                   strtoll); }
+                                                   jitter_strtoll); }
 | SIGNED_HEXADECIMAL_LITERAL  { JITTER_SET_HEXADECIMAL($$.fixnum,
-                                                       strtoll); }
+                                                       jitter_strtoll); }
 | UNSIGNED_BINARY_LITERAL     { JITTER_SET_BINARY($$.ufixnum,
-                                                  strtoull); }
+                                                  jitter_strtoull); }
 | UNSIGNED_OCTAL_LITERAL      { JITTER_SET_OCTAL($$.ufixnum,
-                                                 strtoull); }
+                                                 jitter_strtoull); }
 | UNSIGNED_DECIMAL_LITERAL    { JITTER_SET_DECIMAL($$.ufixnum,
-                                                   strtoull); }
+                                                   jitter_strtoull); }
 | UNSIGNED_HEXADECIMAL_LITERAL{ JITTER_SET_HEXADECIMAL($$.ufixnum,
-                                                       strtoull); }
+                                                       jitter_strtoull); }
 | BYTESPERWORD                { $$.ufixnum = SIZEOF_VOID_P; }
 | LGBYTESPERWORD              { $$.ufixnum = JITTER_LG_BYTES_PER_WORD; }
 | BITSPERWORD                 { $$.ufixnum = SIZEOF_VOID_P * CHAR_BIT; }
