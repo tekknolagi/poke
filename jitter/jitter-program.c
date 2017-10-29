@@ -382,6 +382,14 @@ jitter_append_unsigned_literal_parameter (struct jitter_program *p,
 }
 
 void
+jitter_append_pointer_literal_parameter (struct jitter_program *p,
+                                         void *immediate)
+{
+  union jitter_word immediate_union = {.pointer = immediate};
+  jitter_append_literal_parameter (p, immediate_union);
+}
+
+void
 jitter_append_register_parameter
    (struct jitter_program *p,
     const struct jitter_register_class *register_class,

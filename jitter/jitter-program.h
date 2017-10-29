@@ -273,7 +273,8 @@ jitter_append_meta_instruction (struct jitter_program *p,
 /* Update the given program, adding one more parameter (left-to-right) to the
    unspecialized instruction currently being described.  Fail fatally if there
    are no instructions yet, or the last added instruction is already
-   complete.
+   complete.  If appending a symbolic-label argument, return its opaque
+   label identifier.
    Notice that the macro [VMPREFIX]_APPEND_REGISTER_PARAMETER provides a more
    convenient way of adding a register parameter. */
 void
@@ -287,6 +288,10 @@ jitter_append_signed_literal_parameter (struct jitter_program *p,
 void
 jitter_append_unsigned_literal_parameter (struct jitter_program *p,
                                           jitter_uint immediate)
+  __attribute__((nonnull (1)));
+void
+jitter_append_pointer_literal_parameter (struct jitter_program *p,
+                                         void *immediate)
   __attribute__((nonnull (1)));
 void
 jitter_append_register_parameter (struct jitter_program *p,
