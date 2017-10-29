@@ -224,7 +224,7 @@ jitterc_parse_file (const char *input_file_name);
 %token VM END CODE /*END_CODE*/ STRING
 %token SET NTOS_STACK TOS_STACK
 %token EARLY_HEADER_C LATE_HEADER_C
-%token PRINTER_C
+%token PRINTER_C REWRITER_C
 %token EARLY_C LATE_C INITIALIZATION_C FINALIZATION_C
 %token STATE_EARLY_C
 %token STATE_BACKING_STRUCT_C STATE_RUNTIME_STRUCT_C
@@ -305,6 +305,8 @@ c_section:
     { JITTERC_APPEND_CODE(vm->late_header_c_code, & $2); }
 | PRINTER_C code END /*PRINTER_C*/
     { JITTERC_APPEND_CODE(vm->printer_c_code, & $2); }
+| REWRITER_C code END /*REWRITER_C*/
+    { JITTERC_APPEND_CODE(vm->rewriter_c_code, & $2); }
 | EARLY_C code END /*EARLY_C*/
     { JITTERC_APPEND_CODE(vm->early_c_code, & $2); }
 | LATE_C code END /*LATE_C*/

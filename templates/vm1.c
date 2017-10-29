@@ -37,6 +37,7 @@
 #include <jitter/jitter-hash.h>
 #include <jitter/jitter-instruction.h>
 #include <jitter/jitter-program.h>
+#include <jitter/jitter-rewrite.h>
 #include <jitter/jitter-parser.h>
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-patch-in.h>
@@ -310,7 +311,7 @@ vmprefix_initialize (void)
       the_vmprefix_vm.register_class_character_to_register_class
         = vmprefix_register_class_character_to_register_class;
       the_vmprefix_vm.specialize_instruction = vmprefix_specialize_instruction;
-      the_vmprefix_vm.rewrite_instruction = vmprefix_rewrite_instruction;
+      the_vmprefix_vm.rewrite_once = vmprefix_rewrite_once;
 
       vm_struct_initialized = true;
     }

@@ -96,6 +96,7 @@ jitterc_make_vm (void)
   res->early_header_c_code = jitter_clone_string ("");
   res->late_header_c_code = jitter_clone_string ("");
   res->printer_c_code = jitter_clone_string ("");
+  res->rewriter_c_code = jitter_clone_string ("");
   res->early_c_code = jitter_clone_string ("");
   res->before_main_c_code = jitter_clone_string ("");
   res->initialization_c_code = jitter_clone_string ("");

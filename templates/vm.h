@@ -504,13 +504,31 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
 /* Instruction rewriter.
  * ************************************************************************** */
 
-/* Rewrite the instruction with the given index in the given program, if the
-   instruction has a rewriting; do nothing otherwise, and fail fatally if the
-   program is not unspecialized.  The index is assumed to be within bounds, but
-   this condition is not checked.
-   The implementation of this function is machine-generated. */
-void
-vmprefix_rewrite_instruction (struct jitter_program *p, int instruction_index);
+/* Scan rewrite rules in order and apply the first one that matches, if any, in
+   the pointed program, knowing that the instructions candidate for rewriting
+   are the last rewritable_instruction_no currently in the program.  Return true
+   iff any rule fired.
+
+   The implementation of this function is machine-generated, but the user can
+   add her own code in the rewriter-c block, which ends up at the beginning of
+   this function body.  The formal argument seen from the body are named,
+   respectively:
+   * jitter_program_p ;
+   * jitter_rewritable_instruction_no .
+   Rationale: the arguments are named differently in the body in order to keep
+   the namespace conventions and, more importantly, to encourage the user to
+   read this comment.
+
+   The user must *not* append labels to the VM programs during rewriting: that
+   would break it.  The user is responsible for destroying any instruction she
+   removes, including their arguments.  The user can assume that
+   jitter_rewritable_instruction_no is strictly greater than zero. */
+// FIXME: shall the user use the instruction-popping functions?  Decide and give
+// suggestions.  FIXME: what about keeping rewritable_instruction_no accurate?
+// Decide and give suggestions.
+bool
+vmprefix_rewrite_once (struct jitter_program *p,
+                       size_t rewritable_instruction_no);
 
 
 
