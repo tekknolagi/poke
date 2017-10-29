@@ -158,21 +158,27 @@ union jitter_word
 /* Provide some replacement for long long if it's not available.  In either
    case define:
    - the type jitter_long_long , defined as either long long or long ;
-   - the format string JITTER_PRIll (not including the "%" prefix, and just
-     for signed types printed in radix 10), expanding to either "lli" or "li";
-   - the macro jitter_strtoll , expanding to either strtoll or strtol . */
+   - the format strings JITTER_PRIill and JITTER_PRIull (not including the "%"
+     prefix, for signed and unsigned types, printed only in radix 10), expanding
+     to either "lli" and "llu" or "li" and "lu";
+   - the macros jitter_strtoll and jitter_strtoull, expanding to either strtoll and
+     strtoull or strtol and strtoul . */
 #ifdef HAVE_LONG_LONG_INT
   /* We have a real long long type.  Define the type and macros above as trivial
      wrappers. */
   typedef long long jitter_long_long;
-# define JITTER_PRIll "lli"
+# define JITTER_PRIill "lli"
+# define JITTER_PRIull "llu"
 # define jitter_strtoll strtoll
+# define jitter_strtoull strtoull
 #else
   /* The type long long is not available in this configuration.  Use long in its
      place. */
   typedef long jitter_long_long;
-# define JITTER_PRIll "li"
+# define JITTER_PRIill "li"
+# define JITTER_PRIull "lu"
 # define jitter_strtoll strtol
+# define jitter_strtoull strtuol
 #endif // #ifdef HAVE_LONG_LONG_INT
 
 
