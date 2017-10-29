@@ -196,16 +196,27 @@ jitterc_mkdir (const char *pathname)
 /* Emit user-specified code.  FIXME: use this everywhere and find some way of
    handling #line directives out of user code. */
 static void
+jitterc_emit_user_c_code_to_stream (const struct jitterc_vm *vm,
+                                    FILE *f,
+                                    const char *code,
+                                    char *description)
+{
+  EMIT("/* User-specified code, %s part: beginning. */\n", description);
+  EMIT("%s", code);
+  EMIT("\n/* User-specified code, %s part: end */\n", description);
+  EMIT("\n");
+}
+
+/* Emit user-specified code.  FIXME: use this everywhere and find some way of
+   handling #line directives out of user code. */
+static void
 jitterc_emit_user_c_code (const struct jitterc_vm *vm,
                           const char *file_basename,
                           const char *code,
                           char *description)
 {
   FILE *f = jitterc_fopen_a_basename (vm, file_basename);
-  EMIT("/* User-specified code, %s part: beginning. */\n", description);
-  EMIT("%s", code);
-  EMIT("\n/* User-specified code, %s part: end */\n", description);
-  EMIT("\n");
+  jitterc_emit_user_c_code_to_stream (vm, f, code, description);
   jitterc_fclose (f);
 }
 
