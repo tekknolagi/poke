@@ -103,7 +103,7 @@ jitter_rewrite (struct jitter_program *p);
    pointer refers the only instance of the instruction, and is not a copy.  Fail
    fatally if no instructions exist or if the last one is not complete, or if the
    program is not unspecialized. */
-const struct jitter_instruction*
+struct jitter_instruction*
 jitter_last_instruction (struct jitter_program *p);
 
 /* Return a pointer pointing within an array of pointers to instructions,
@@ -115,7 +115,7 @@ jitter_last_instruction (struct jitter_program *p);
    the result will be an array of N pointers to the last instructions. */
 /* Fail fatally if no instructions exist or if the last one is not complete, or
    if the program is not unspecialized.  [FIXME: possibly change this] */
-const struct jitter_instruction**
+struct jitter_instruction**
 jitter_last_instructions (struct jitter_program *p, size_t how_many);
 
 /* Pop the last instruction off the pointed program, which must be complete, and
@@ -133,10 +133,28 @@ jitter_last_instructions (struct jitter_program *p, size_t how_many);
    jitter_append_*_parameter functions, which may in their turn trigger rewrites
    -- or by jitter_append_instruction, which also triggers rewrites.
 
+   Notice that rewrites are applied eagerly, as soon as each appended
+   instruction is complete and until no more rewrites are possible.  For this
+   reason simply removing instructions from the end of a program never triggers
+   new rewrites, and therefore the caller of this function can assume that after
+   the function returns every program instruction before the last one which was
+   removed remain unchanged.
+
    It is the user's responsiblity to ensure that her rewrite rules don't loop
    forever. */
 struct jitter_instruction*
 jitter_pop_instruction (struct jitter_program *p);
+
+/* Pop the last how_many instructions from the given program, and destroy them.
+   Undefined behavior if the program has less than how_many rewritable
+   instructions.  The last instruction must be complete.
+
+   Notice, again, that destroying the last how_many instructions of a program
+   can never trigger a rewrite: see the jitter_pop_instruction comment for a
+   justification. */
+void
+jitter_destroy_last_instructions (struct jitter_program *p,
+                                  size_t how_many);
 
 
 #endif // #ifndef JITTER_REWRITE_H_

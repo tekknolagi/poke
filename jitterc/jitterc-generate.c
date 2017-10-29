@@ -746,7 +746,7 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
 {
   FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
 
-  EMIT("bool\n");
+  EMIT("void\n");
   EMIT("vmprefix_rewrite_once (struct jitter_program *jitter_program_p,\n");
   EMIT("                       size_t jitter_rewritable_instruction_no)\n");
   EMIT("{\n");
@@ -779,7 +779,6 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
   EMIT("    //  /* The other instructions have no rewritings. */;\n");
   EMIT("    //}\n");
   EMIT("\n");
-  EMIT("  return false;\n");
   EMIT("}\n");
 
   EMIT("\n\n");

@@ -506,8 +506,7 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
 
 /* Scan rewrite rules in order and apply the first one that matches, if any, in
    the pointed program, knowing that the instructions candidate for rewriting
-   are the last rewritable_instruction_no currently in the program.  Return true
-   iff any rule fired.
+   are the last rewritable_instruction_no currently in the program.
 
    The implementation of this function is machine-generated, but the user can
    add her own code in the rewriter-c block, which ends up at the beginning of
@@ -526,7 +525,7 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
 // FIXME: shall the user use the instruction-popping functions?  Decide and give
 // suggestions.  FIXME: what about keeping rewritable_instruction_no accurate?
 // Decide and give suggestions.
-bool
+void
 vmprefix_rewrite_once (struct jitter_program *p,
                        size_t rewritable_instruction_no);
 
