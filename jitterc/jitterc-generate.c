@@ -751,8 +751,6 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
   EMIT("                       size_t jitter_rewritable_instruction_no)\n");
   EMIT("{\n");
 
-  EMIT("fprintf (stderr, \"* %%s\\n\", __func__);\n");
-
   /* Add user-specified code for the rewriter. */
   jitterc_emit_user_c_code_to_stream (vm, f, vm->rewriter_c_code, "rewriter");
   EMIT("\n");
