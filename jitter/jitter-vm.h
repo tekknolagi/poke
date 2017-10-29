@@ -130,7 +130,7 @@ struct jitter_vm
                                  const struct jitter_instruction *ins);
 
   /* Rewrite an instruction.  See the comment in the vm.h template. */
-  bool (*rewrite_once) (struct jitter_program *p,
+  void (*rewrite_once) (struct jitter_program *p,
                         size_t rewritable_instruction_no);
 };
 
