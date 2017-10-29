@@ -33,6 +33,9 @@
 /* This functionality is used internally by the rewriter, and not intended for
    the user. */
 
+/* FIXME: verify that this comment is still all correct after I actually
+   implement the system.  I suspect my ideas have evolved already since the time
+   I wrote it. */
 /* Instruction rewriting entails replacing one unspecialized instruction with a
    sequence of zero or more equivalent unspecified instructions; each
    instruction in the replacement will be specializable, while the original
@@ -74,6 +77,28 @@
    of the replacement before and part of the replacement after a label. */
 
 
+
+
+/* Rewriter entry point.
+ * ************************************************************************** */
+
+/* Perform rewriting on the last part of the pointed program, until no more
+   changes are possible.
+
+   This is called every time an instruction is appended, either by the user
+   or by the rewriter itself.  */
+void
+jitter_rewrite (struct jitter_program *p);
+
+
+
+
+/* Rewriter internal functions.
+ * ************************************************************************** */
+
+/* These functions are used internally for the implementation of
+   jitter_rewrite. */
+
 /* Return a pointer to the last instruction in the given program; the returned
    pointer refers the only instance of the instruction, and is not a copy.  Fail
    fatally if no instructions exist or if the last one is not complete, or if the
@@ -81,22 +106,37 @@
 const struct jitter_instruction*
 jitter_last_instruction (struct jitter_program *p);
 
+/* Return a pointer pointing within an array of pointers to instructions,
+   how_many elements from the last one.  The pointed memory may be invalidated
+   by any instruction modification, so this is only meant for *reading* the last
+   few instructions in order to check whether a rewrite rule applies.
+   The intended way of using this is for checking whether a rule applying
+   to N instruction can fire: it will be called with how_many = N, and
+   the result will be an array of N pointers to the last instructions. */
+/* Fail fatally if no instructions exist or if the last one is not complete, or
+   if the program is not unspecialized.  [FIXME: possibly change this] */
+const struct jitter_instruction**
+jitter_last_instructions (struct jitter_program *p, size_t how_many);
 
 /* Pop the last instruction off the pointed program, which must be complete, and
    return a pointer to it; fail fatally if the instruction is not complete or
-   does not exist, or if the program is unspecialized.  This removes the
-   instruction pointer from the dynamic buffer in the program, but does not
-   deallocate it: in fact the result of this function is the pointer to the
-   still-valid instruction, allocated according to the conventions in
-   jitter-instruction.h .  It is the caller's responsibility to release memory
-   after usage, normally by a call to jitter_destroy_instruction .
-   The intended use case for this is fisrt checking whether a replacement should
-   occour, and then if so calling jitter_pop_instruction once; the result pointer
-   will be used to determine which instructions to append as a replacement, by
-   the usual jitter_append_instruction_name / jitter_append_*_parameter functions,
-   which may in their turn trigger other replacements.  For this reason no "push"
-   function is needed. */
+   does not exist, or if the program is unspecialized.  This removes the pointer
+   to the instruction from the dynamic buffer in the program, but does not
+   deallocate the instruction: in fact the result of this function is the
+   pointer to the still-valid instruction, allocated according to the
+   conventions in jitter-instruction.h .  It is the caller's responsibility to
+   release memory after usage, normally by a call to jitter_destroy_instruction
+   .  The intended use case for this is fisrt checking whether a replacement
+   should occour, and then if so calling jitter_pop_instruction once; the result
+   pointer will be used to determine which instructions to append as a
+   replacement, by the usual jitter_append_instruction_name /
+   jitter_append_*_parameter functions, which may in their turn trigger rewrites
+   -- or by jitter_append_instruction, which also triggers rewrites.
+
+   It is the user's responsiblity to ensure that her rewrite rules don't loop
+   forever. */
 struct jitter_instruction*
 jitter_pop_instruction (struct jitter_program *p);
+
 
 #endif // #ifndef JITTER_REWRITE_H_

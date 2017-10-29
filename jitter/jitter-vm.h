@@ -129,9 +129,9 @@ struct jitter_vm
   int (*specialize_instruction) (struct jitter_program *p,
                                  const struct jitter_instruction *ins);
 
-  /* Rewrite an instruction.  See the comment in [FIXME: currently in vm.h , but
-     I should move it].*/
-  void (*rewrite_instruction) (struct jitter_program *p, int instruction_index);
+  /* Rewrite an instruction.  See the comment in the vm.h template. */
+  bool (*rewrite_once) (struct jitter_program *p,
+                        size_t rewritable_instruction_no);
 };
 
 #endif // #ifndef JITTER_VM_H_

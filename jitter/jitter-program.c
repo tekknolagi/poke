@@ -46,6 +46,7 @@ jitter_initialize_program (struct jitter_program *p)
   p->stage = jitter_program_stage_unspecialized;
 
   p->expected_parameter_no = 0;
+  p->rewritable_instruction_no = 0;
   p->current_instruction = NULL;
   p->next_uninitialized_parameter = NULL; /* An intentionally invalid value. */
   p->next_expected_parameter_type = NULL; /* An intentionally invalid value. */
@@ -205,6 +206,9 @@ jitter_append_label (struct jitter_program *p, jitter_label label)
 
   jitter_int instruction_index = jitter_program_instruction_no (p);
   jitter_set_label_instruction_index (p, label, instruction_index);
+
+  /* We added a label.  Everything before it can no longer be rewritten. */
+  p->rewritable_instruction_no = 0;
 }
 
 jitter_label
@@ -228,12 +232,17 @@ jitter_close_current_instruction (struct jitter_program *p)
   if (p->expected_parameter_no != 0)
     jitter_fatal ("closing an instruction still expecting parameters");
 
-  const int instruction_no = jitter_program_instruction_no (p);
   p->next_uninitialized_parameter = NULL;
   p->next_expected_parameter_type = NULL;
 
-  /* Rewrite the instruction we have just added. */
-  p->vm->rewrite_instruction (p, instruction_no - 1);
+  /* The instruction we just added is a candidate for rewriting, along with any
+     previous ones. */
+  p->rewritable_instruction_no ++;
+
+  /* Rewrite the last part of the program, using the instruction we have just
+     closed; that instruction, along with some others preceding it, might very
+     well change or disappear after rewriting is done. */
+  jitter_rewrite (p);
 }
 
 /* Add a parameter of the given parameter type (which is a
@@ -246,10 +255,12 @@ jitter_close_current_instruction (struct jitter_program *p)
    Fail fatally if the program is not unspecialized
    or its last instruction is complete, or if the kind or register class is
    wrong.  Return a pointer to the parameter data structure, to be filled in by
-   the caller.
+   the caller.  In any case, do *not* close the instruction, even if the appended
+   parameter was the last; doing that would interfere badly with rewriting, which
+   has to see every parameter correctly initialized.
    This is used by jitter_append_literal_parameter ,
    jitter_append_register_parameter and
-   jitter_append_symbolic_label_parameter . */
+   jitter_append_label_parameter . */
 static struct jitter_parameter *
 jitter_append_uninitialized_paremater
    (struct jitter_program *p,
@@ -312,10 +323,9 @@ jitter_append_uninitialized_paremater
   struct jitter_parameter *res = p->next_uninitialized_parameter;
 
   /* Advance pointers in the program past this parameter, starting a new
-     instruction if needed. */
-  if ((-- p->expected_parameter_no) == 0)
-    jitter_close_current_instruction (p);
-  else
+     instruction if needed -- but don't close the current instruction: see the
+     comment before this function. */
+  if ((-- p->expected_parameter_no) != 0)
     {
       const struct jitter_instruction *in = p->current_instruction;
       const struct jitter_meta_instruction *min = in->meta_instruction;
@@ -329,6 +339,15 @@ jitter_append_uninitialized_paremater
   return res;
 }
 
+/* Close the current instruction if the last appended parameter was the last
+   one.  See the comment before as to why this is not done there. */
+static void
+jitter_close_instruction_when_no_more_parameters (struct jitter_program *p)
+{
+  if (p->expected_parameter_no == 0)
+    jitter_close_current_instruction (p);
+}
+
 void
 jitter_append_literal_parameter (struct jitter_program *p,
                                  union jitter_literal immediate)
@@ -339,6 +358,7 @@ jitter_append_literal_parameter (struct jitter_program *p,
 
   pa->type = jitter_parameter_type_literal;
   pa->literal = immediate;
+  jitter_close_instruction_when_no_more_parameters (p);
 }
 
 /* This is just a convenience wrapper around jitter_append_literal_parameter
@@ -373,6 +393,7 @@ jitter_append_register_parameter
   pa->type = jitter_parameter_type_register_id;
   pa->register_index = register_index;
   pa->register_class = register_class;
+  jitter_close_instruction_when_no_more_parameters (p);
 
   /* If this register is slow and its slow index is the highest up to this
      point, record it: it will be needed to know how many slow registers to
@@ -402,6 +423,7 @@ jitter_append_label_parameter (struct jitter_program *p,
          (p, jitter_parameter_type_label, NULL);
   pa->type = jitter_parameter_type_label;
   pa->label = label;
+  jitter_close_instruction_when_no_more_parameters (p);
 }
 
 void
@@ -447,6 +469,31 @@ jitter_append_instruction_name (struct jitter_program *p,
                                       instruction_name);
   jitter_append_meta_instruction (p, mi);
 }
+
+void
+jitter_append_instruction (struct jitter_program *p,
+                           const struct jitter_instruction *ip)
+{
+  if (p->stage != jitter_program_stage_unspecialized)
+    jitter_fatal ("jitter_append_instruction: non non-unspecialized program");
+  if (p->expected_parameter_no != 0)
+    jitter_fatal ("jitter_append_instruction: previous instruction incomplete");
+  fprintf (stderr, "Pushing instruction at %p (%s)\n", ip,
+           ip->meta_instruction->name);
+
+  /* Add the provided instruction.  There is no need to touch the fields about
+     expected parameters, since the previous instruction was already closed. */
+  jitter_dynamic_buffer_push (& p->instructions,
+                              & ip,
+                              sizeof (struct jitter_instruction*));
+
+  /* Close the new instruction.  This increments the number of rewritable
+     instructions and triggers rewriting.  Notice that the instruction that was
+     just added, along with some others preceding it, might very well change or
+     disappear after rewriting is done. */
+  jitter_close_current_instruction (p);
+}
+
 
 
 

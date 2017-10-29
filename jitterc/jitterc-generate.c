@@ -746,14 +746,22 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
 {
   FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
 
-  EMIT("void\n");
-  EMIT("vmprefix_rewrite_instruction (struct jitter_program *p, int instruction_index)\n");
+  EMIT("bool\n");
+  EMIT("vmprefix_rewrite_once (struct jitter_program *jitter_program_p,\n");
+  EMIT("                       size_t jitter_rewritable_instruction_no)\n");
   EMIT("{\n");
-  EMIT("  struct jitter_instruction **instructions\n");
-  EMIT("    = jitter_dynamic_buffer_to_pointer (& p->instructions);\n");
-  EMIT("  struct jitter_instruction *ins = instructions [instruction_index];\n");
-  EMIT("  switch (ins->meta_instruction->id)\n");
-  EMIT("    {\n");
+
+  EMIT("fprintf (stderr, \"* %%s\\n\", __func__);\n");
+
+  /* Add user-specified code for the rewriter. */
+  jitterc_emit_user_c_code_to_stream (vm, f, vm->rewriter_c_code, "rewriter");
+  EMIT("\n");
+
+  EMIT("  //struct jitter_instruction **instructions\n");
+  EMIT("  //  = jitter_dynamic_buffer_to_pointer (& p->instructions);\n");
+  EMIT("  //struct jitter_instruction *ins = instructions [instruction_index];\n");
+  EMIT("  //switch (ins->meta_instruction->id)\n");
+  EMIT("  //  {\n");
   int i; char *comma __attribute__ ((unused));
   FOR_LIST(i, comma, vm->instructions)
     {
@@ -762,16 +770,18 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
           gl_list_get_at (vm->instructions, i);
       if (ins->rewriting == jitterc_rewriting_none)
         continue;
-      EMIT("    case vmprefix_meta_instruction_id_%s:\n", ins->mangled_name);
-      EMIT("      {\n");
-      EMIT("        /*fprintf (stderr, \"Pretending to rewrite the %%ith instruction at %%p (%s, id %i)...\\n\",\n", ins->name, i);
-      EMIT("                 instruction_index, ins);*/\n");
-      EMIT("        break;\n");
-      EMIT("      }\n");
+      EMIT("    //case vmprefix_meta_instruction_id_%s:\n", ins->mangled_name);
+      EMIT("    //  {\n");
+      EMIT("    //    /*fprintf (stderr, \"Pretending to rewrite the %%ith instruction at %%p (%s, id %i)...\\n\",\n", ins->name, i);
+      EMIT("    //             instruction_index, ins);*/\n");
+      EMIT("    //    break;\n");
+      EMIT("    //  }\n");
     }
-  EMIT("    default:\n");
-  EMIT("      /* The other instructions have no rewritings. */;\n");
-  EMIT("    }\n");
+  EMIT("    //default:\n");
+  EMIT("    //  /* The other instructions have no rewritings. */;\n");
+  EMIT("    //}\n");
+  EMIT("\n");
+  EMIT("  return false;\n");
   EMIT("}\n");
 
   EMIT("\n\n");

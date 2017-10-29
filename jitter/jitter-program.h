@@ -121,6 +121,11 @@ struct jitter_program
      incomplete, including right after initialization, the field is zero. */
   int expected_parameter_no;
 
+  /* How many complete instructions at the end of the program are candidate for
+     rewriting.  This starts at zero, and gets reset every time a label is
+     added. */
+  size_t rewritable_instruction_no;
+
   /* A pointer to a malloced array of booleans, having the same size as the
      number of instructions in the program.  Each element of the array is true
      if and only if the corresponding program instruction is a jump target.
@@ -230,6 +235,13 @@ jitter_label
 jitter_append_symbolic_label (struct jitter_program *p,
                               const char *label_name)
   __attribute__ ((nonnull (1, 2)));
+
+/* Append the pointed instruction (without cloning it) to the pointed program.
+   When this function is called the previous instruction, if any, must have been
+   completed. */
+void
+jitter_append_instruction (struct jitter_program *p,
+                           const struct jitter_instruction *ip);
 
 /* Update the given program, beginning a new instruction with the given name, to
    be looked up in the meta-instruction hash table; the instruction parameters,

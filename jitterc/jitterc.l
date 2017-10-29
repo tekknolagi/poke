@@ -190,6 +190,7 @@ CODECONTENTLINEMIDDLE3 end{LINEWHITESPACE}?[^\ \t\n\r\f#][^\n\r\f]*
 "early-header-c"          { return EARLY_HEADER_C; }
 "late-header-c"           { return LATE_HEADER_C; }
 "printer-c"               { return PRINTER_C; }
+"rewriter-c"              { return REWRITER_C; }
 "early-c"                 { return EARLY_C; }
 "late-c"                  { return LATE_C; }
 "initialization-c"        { return INITIALIZATION_C; }
