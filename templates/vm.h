@@ -420,6 +420,8 @@ vmprefix_vm_configuration;
   jitter_append_signed_literal_parameter
 #define vmprefix_append_unsigned_literal_parameter \
   jitter_append_unsigned_literal_parameter
+#define vmprefix_append_pointer_literal_parameter \
+  jitter_append_pointer_literal_parameter
 #define vmprefix_append_label_parameter \
   jitter_append_label_parameter
 #define vmprefix_append_symbolic_label_parameter \
