@@ -278,7 +278,7 @@ jitter_append_meta_instruction (struct jitter_program *p,
    convenient way of adding a register parameter. */
 void
 jitter_append_literal_parameter (struct jitter_program *p,
-                                 union jitter_literal immediate)
+                                 union jitter_word immediate)
   __attribute__((nonnull (1)));
 void
 jitter_append_signed_literal_parameter (struct jitter_program *p,

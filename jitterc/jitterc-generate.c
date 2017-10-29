@@ -703,7 +703,7 @@ jitterc_emit_specializer_recognizers
           EMIT("(* ps)->type == jitter_parameter_type_literal");
           if (! sarg->residual)
             // FIXME: this will need generatilzation with more literal types.
-            EMIT(" && (* ps)->literal.jitter_literal_signed == %li",
+            EMIT(" && (* ps)->literal.fixnum == %li",
                  (long) sarg->nonresidual_literal->value.fixnum);
           break;
         case jitterc_instruction_argument_kind_register:
@@ -906,7 +906,7 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
                    sarg->unspecialized->register_class_character, j);
               break;
             case jitterc_instruction_argument_kind_literal:
-              EMIT("      jitter_add_specialized_instruction_literal (p, ins->parameters[%i]->literal.jitter_literal_unsigned);\n", j);
+              EMIT("      jitter_add_specialized_instruction_literal (p, ins->parameters[%i]->literal.ufixnum);\n", j);
               break;
             case jitterc_instruction_argument_kind_label:
             case jitterc_instruction_argument_kind_fast_label:

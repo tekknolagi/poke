@@ -91,13 +91,6 @@ enum jitter_parameter_type
     jitter_parameter_type_label
   };
 
-/* An instruction literal. */
-union jitter_literal
-{
-  jitter_int jitter_literal_signed;
-  jitter_uint jitter_literal_unsigned;
-};
-
 /* The parameter of an unspecialized instruction.  Every instance of this struct
    is malloc-allocated, and its only pointer is within the parameter field of
    struct jitter_instruction , also always malloc-allocated and referred by
@@ -123,7 +116,7 @@ struct jitter_parameter
     };
 
     /* The parameter, as an immediate literal. */
-    union jitter_literal literal;
+    union jitter_word literal;
 
     /* The parameter as an opaque label identifier. */
     jitter_label label;

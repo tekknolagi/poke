@@ -350,7 +350,7 @@ jitter_close_instruction_when_no_more_parameters (struct jitter_program *p)
 
 void
 jitter_append_literal_parameter (struct jitter_program *p,
-                                 union jitter_literal immediate)
+                                 union jitter_word immediate)
 {
   struct jitter_parameter * const pa
     = jitter_append_uninitialized_paremater (p, jitter_parameter_type_literal,
@@ -367,7 +367,7 @@ void
 jitter_append_signed_literal_parameter (struct jitter_program *p,
                                         jitter_int immediate)
 {
-  union jitter_literal immediate_union = {.jitter_literal_signed = immediate};
+  union jitter_word immediate_union = {.fixnum = immediate};
   jitter_append_literal_parameter (p, immediate_union);
 }
 
@@ -377,7 +377,7 @@ void
 jitter_append_unsigned_literal_parameter (struct jitter_program *p,
                                           jitter_uint immediate)
 {
-  union jitter_literal immediate_union = {.jitter_literal_unsigned = immediate};
+  union jitter_word immediate_union = {.ufixnum = immediate};
   jitter_append_literal_parameter (p, immediate_union);
 }
 
@@ -631,7 +631,7 @@ jitter_print_program_possibly_with_slow_registers_only
               {
                 const jitter_literal_parameter_printer printer
                   = mi->parameter_types [j].literal_printer;
-                printer (out, p->literal.jitter_literal_unsigned);
+                printer (out, p->literal.ufixnum);
                 break;
               }
             case jitter_parameter_type_label:

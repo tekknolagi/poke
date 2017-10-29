@@ -48,7 +48,7 @@
    jitter_literal, converting jitter_get_text (jitter_scanner) using the given
    function.  These are useful to convert to a specified base, in the case of
    signed and unsigned literals.  The lvalues will be either
-   $$.jitter_literal_signed or $$.jitter_literal_unsigned , and the functions to
+   $$.fixnum or $$.ufixnum , and the functions to
    call will be strtoll or strtoull . */
 #define JITTER_SET_BINARY(lvalue, function)           \
   do                                                  \
@@ -86,7 +86,7 @@
 /* Expand to an assignment of the given field of the given result as an
    operation involving the given infix operator, and the fields with the same
    names as the field of the result of the two given operands.  This is intended
-   for uses such as JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, +, $3)
+   for uses such as JITTER_SET_OPERATION(fixnum, $$, $1, +, $3)
    . */
 #define JITTER_SET_OPERATION(field, result, operand1, operator, operand2)  \
   do                                                                       \
@@ -184,7 +184,7 @@
 }
 
 %union {
-  union jitter_literal literal;
+  union jitter_word literal;
 }
 
 %token INSTRUCTION_NAME REGISTER LABEL_LITERAL LABEL COMMA
@@ -242,46 +242,46 @@ after_one_argument :
 ;
 
 int_expression :
-  SIGNED_BINARY_LITERAL       { JITTER_SET_BINARY($$.jitter_literal_signed,
+  SIGNED_BINARY_LITERAL       { JITTER_SET_BINARY($$.fixnum,
                                                   strtoll); }
-| SIGNED_OCTAL_LITERAL        { JITTER_SET_OCTAL($$.jitter_literal_signed,
+| SIGNED_OCTAL_LITERAL        { JITTER_SET_OCTAL($$.fixnum,
                                                  strtoll); }
-| SIGNED_DECIMAL_LITERAL      { JITTER_SET_DECIMAL($$.jitter_literal_signed,
+| SIGNED_DECIMAL_LITERAL      { JITTER_SET_DECIMAL($$.fixnum,
                                                    strtoll); }
-| SIGNED_HEXADECIMAL_LITERAL  { JITTER_SET_HEXADECIMAL($$.jitter_literal_signed,
+| SIGNED_HEXADECIMAL_LITERAL  { JITTER_SET_HEXADECIMAL($$.fixnum,
                                                        strtoll); }
-| UNSIGNED_BINARY_LITERAL     { JITTER_SET_BINARY($$.jitter_literal_unsigned,
+| UNSIGNED_BINARY_LITERAL     { JITTER_SET_BINARY($$.ufixnum,
                                                   strtoull); }
-| UNSIGNED_OCTAL_LITERAL      { JITTER_SET_OCTAL($$.jitter_literal_unsigned,
+| UNSIGNED_OCTAL_LITERAL      { JITTER_SET_OCTAL($$.ufixnum,
                                                  strtoull); }
-| UNSIGNED_DECIMAL_LITERAL    { JITTER_SET_DECIMAL($$.jitter_literal_unsigned,
+| UNSIGNED_DECIMAL_LITERAL    { JITTER_SET_DECIMAL($$.ufixnum,
                                                    strtoull); }
-| UNSIGNED_HEXADECIMAL_LITERAL{ JITTER_SET_HEXADECIMAL($$.jitter_literal_unsigned,
+| UNSIGNED_HEXADECIMAL_LITERAL{ JITTER_SET_HEXADECIMAL($$.ufixnum,
                                                        strtoull); }
-| BYTESPERWORD                { $$.jitter_literal_unsigned = SIZEOF_VOID_P; }
-| LGBYTESPERWORD              { $$.jitter_literal_unsigned = JITTER_LG_BYTES_PER_WORD; }
-| BITSPERWORD                 { $$.jitter_literal_unsigned = SIZEOF_VOID_P * CHAR_BIT; }
+| BYTESPERWORD                { $$.ufixnum = SIZEOF_VOID_P; }
+| LGBYTESPERWORD              { $$.ufixnum = JITTER_LG_BYTES_PER_WORD; }
+| BITSPERWORD                 { $$.ufixnum = SIZEOF_VOID_P * CHAR_BIT; }
 | OPEN_PARENS int_expression CLOSE_PARENS { $$ = $2; }
 | int_expression PLUS int_expression
-     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, +, $3); }
+     { JITTER_SET_OPERATION(fixnum, $$, $1, +, $3); }
 | int_expression MINUS int_expression
-     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, -, $3); }
+     { JITTER_SET_OPERATION(fixnum, $$, $1, -, $3); }
 | int_expression TIMES int_expression
-     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, *, $3); }
+     { JITTER_SET_OPERATION(fixnum, $$, $1, *, $3); }
 | int_expression DIV int_expression
-     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, /, $3); }
+     { JITTER_SET_OPERATION(fixnum, $$, $1, /, $3); }
 | int_expression MOD int_expression
-     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, %, $3); }
+     { JITTER_SET_OPERATION(fixnum, $$, $1, %, $3); }
 | int_expression UNSIGNED_PLUS int_expression
-     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, +, $3); }
+     { JITTER_SET_OPERATION(fixnum, $$, $1, +, $3); }
 | int_expression UNSIGNED_MINUS int_expression
-     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, -, $3); }
+     { JITTER_SET_OPERATION(fixnum, $$, $1, -, $3); }
 | int_expression UNSIGNED_TIMES int_expression
-     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, *, $3); }
+     { JITTER_SET_OPERATION(fixnum, $$, $1, *, $3); }
 | int_expression UNSIGNED_DIV int_expression
-     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, /, $3); }
+     { JITTER_SET_OPERATION(fixnum, $$, $1, /, $3); }
 | int_expression UNSIGNED_MOD int_expression
-     { JITTER_SET_OPERATION(jitter_literal_signed, $$, $1, %, $3); }
+     { JITTER_SET_OPERATION(fixnum, $$, $1, %, $3); }
 ;
 
 argument :
