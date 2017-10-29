@@ -178,7 +178,7 @@ union jitter_word
 # define JITTER_PRIill "li"
 # define JITTER_PRIull "lu"
 # define jitter_strtoll strtol
-# define jitter_strtoull strtuol
+# define jitter_strtoull strtoul
 #endif // #ifdef HAVE_LONG_LONG_INT
 
 
