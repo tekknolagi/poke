@@ -67,8 +67,6 @@ jitter_pop_instruction (struct jitter_program *p)
 void
 jitter_rewrite (struct jitter_program *p)
 {
-  static int index = 0;
-  fprintf (stderr, "jitter_rewrite (%i): begin\n", ++ index);
   /* Keep calling jitter_rewrite_once until there is nothing more to change. */
   do
     {
@@ -76,5 +74,4 @@ jitter_rewrite (struct jitter_program *p)
     }
   while (   p->rewritable_instruction_no > 0
          && p->vm->rewrite_once (p, p->rewritable_instruction_no));
-  fprintf (stderr, "jitter_rewrite (%i): end\n", index);
 }
