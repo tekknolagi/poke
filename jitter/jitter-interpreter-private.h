@@ -372,7 +372,7 @@
    (empty) inline asm statements with dependencies on a dummy variable, in order
    to force GCC not to move statements across labels when the generated code
    ordering is critical, particularly at the beginning of VM instructions. */
-#define JITTER_SEQUENCE_POINT \
+#define JITTER_SEQUENCE_POINT_ACTUAL \
   do \
     { \
       asm volatile (JITTER_ASM_COMMENT_UNIQUE("foo %[jitter_anywhere]") \
@@ -383,6 +383,15 @@
     } \
   while (false)
 
+/* FIXME: this is disabled.  Sequence points seem to not matter with GCC 6, 7
+   and 8, and make the generated code worse.  The code still deserves to be kept
+   around for the time being. */
+#define JITTER_SEQUENCE_POINT             \
+  do                                      \
+    {                                     \
+       /*JITTER_SEQUENCE_POINT_ACTUAL;*/  \
+    }                                     \
+  while (false)
 
 
 
