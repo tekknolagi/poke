@@ -478,6 +478,12 @@ jitter_append_instruction_name (struct jitter_program *p,
   jitter_append_meta_instruction (p, mi);
 }
 
+
+
+
+/* Lower-level program-construction API.
+ * ************************************************************************** */
+
 void
 jitter_append_instruction (struct jitter_program *p,
                            const struct jitter_instruction *ip)
@@ -504,6 +510,9 @@ jitter_append_instruction (struct jitter_program *p,
 
 
 
+
+/* Jump target computation on unspecialized programs.
+ * ************************************************************************** */
 
 bool*
 jitter_jump_targets (const struct jitter_program *p)
