@@ -313,7 +313,8 @@ jitter_append_label_parameter (struct jitter_program *p,
    completed. */
 void
 jitter_append_instruction (struct jitter_program *p,
-                           const struct jitter_instruction *ip);
+                           const struct jitter_instruction *ip)
+  __attribute__ ((nonnull (1, 2)));
 
 
 
