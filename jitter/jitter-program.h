@@ -236,13 +236,6 @@ jitter_append_symbolic_label (struct jitter_program *p,
                               const char *label_name)
   __attribute__ ((nonnull (1, 2)));
 
-/* Append the pointed instruction (without cloning it) to the pointed program.
-   When this function is called the previous instruction, if any, must have been
-   completed. */
-void
-jitter_append_instruction (struct jitter_program *p,
-                           const struct jitter_instruction *ip);
-
 /* Update the given program, beginning a new instruction with the given name, to
    be looked up in the meta-instruction hash table; the instruction parameters,
    if any, have to be supplied with calls to vmprefix_append_*_parameter .  When
@@ -306,6 +299,21 @@ void
 jitter_append_label_parameter (struct jitter_program *p,
                                jitter_label label)
   __attribute__((nonnull (1)));
+
+
+
+
+/* Lower-level program-construction API.
+ * ************************************************************************** */
+
+/* This is used internally for rewriting. */
+
+/* Append the pointed instruction (without cloning it) to the pointed program.
+   When this function is called the previous instruction, if any, must have been
+   completed. */
+void
+jitter_append_instruction (struct jitter_program *p,
+                           const struct jitter_instruction *ip);
 
 
 
