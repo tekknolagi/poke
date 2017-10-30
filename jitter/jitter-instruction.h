@@ -148,6 +148,17 @@ jitter_clone_instruction_parameter (const struct jitter_program *program,
                                     const struct jitter_parameter *original)
   __attribute__ ((returns_nonnull, nonnull (1, 2)));
 
+/* Copy the parameter pointed by from over the parameter pointed by to, without
+   destroying *from .
+
+   Rationale: this is convenient for the implementation of
+   jitter_append_parameter_copy , used in instruction rewriting. */
+void
+jitter_copy_instruction_parameter (struct jitter_parameter *to,
+                                   const struct jitter_parameter *from)
+  __attribute__ ((nonnull (1, 2)));
+
+
 /* Free the given instruction parameter, which must be completely initialized
    and allocated according to the conventions above. */
 void

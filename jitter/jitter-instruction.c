@@ -128,8 +128,18 @@ jitter_clone_instruction_parameter (const struct jitter_program *program,
                                     const struct jitter_parameter *original)
 {
   struct jitter_parameter *res = jitter_make_instruction_parameter ();
-  memcpy (res, original, sizeof (struct jitter_parameter));
+  jitter_copy_instruction_parameter (res, original);
   return res;
+}
+
+void
+jitter_copy_instruction_parameter (struct jitter_parameter *to,
+                                   const struct jitter_parameter *from)
+{
+  /* The parameter data structure doesn't contain any pointer to data allocated
+     with malloc that we have to manage explicitly, so this is a straightforward
+     copy. */
+  memcpy (to, from, sizeof (struct jitter_parameter));
 }
 
 void

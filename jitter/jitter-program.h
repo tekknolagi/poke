@@ -316,6 +316,20 @@ jitter_append_instruction (struct jitter_program *p,
                            const struct jitter_instruction *ip)
   __attribute__ ((nonnull (1, 2)));
 
+/* Append a copy of the given parameter, without destroying it, to the current
+   instruction of the pointed program.
+
+   Rationale: making a copy is more convenient in the current implementation
+   than replacing an existing data structure, as the structure is pre-allocated.
+   The fact that this function is called in machine-generated code makes
+   convenience only a secondary consideration.  Moreover rewrite rules may copy
+   the same parameter more than once from an instruction to be rewritten into a
+   template. */
+void
+jitter_append_parameter_copy (struct jitter_program *p,
+                              const struct jitter_parameter *pp)
+  __attribute__ ((nonnull (1, 2)));
+
 
 
 
