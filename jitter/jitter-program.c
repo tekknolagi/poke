@@ -245,24 +245,11 @@ jitter_close_current_instruction (struct jitter_program *p)
   jitter_rewrite (p);
 }
 
-/* Add a parameter of the given parameter type (which is a
-   jitter_parameter_type, therefore an "actual" type and *not* a
-   jitter_meta_instruction_parameter type, expressing the set of "formal"
-   accepted types) to the last instruction of the given unspecialized program,
-   which must be incomplete.  A register class is also given to check that it
-   matches with the expected parameter, in case of a register-type parameter; it
-   is ignored otherwise.
-   Fail fatally if the program is not unspecialized
-   or its last instruction is complete, or if the kind or register class is
-   wrong.  Return a pointer to the parameter data structure, to be filled in by
-   the caller.  In any case, do *not* close the instruction, even if the appended
-   parameter was the last; doing that would interfere badly with rewriting, which
-   has to see every parameter correctly initialized.
-   This is used by jitter_append_literal_parameter ,
-   jitter_append_register_parameter and
-   jitter_append_label_parameter . */
-static struct jitter_parameter *
-jitter_append_uninitialized_paremater
+/* Check that the pointed program's last instruction is incomplete, and that the next
+   parameter it expects is compatible with the given actual type and, in case it's a
+   register, register class.  Fail fatally if that's not the case. */
+static void
+jitter_check_paremater_compatibility
    (struct jitter_program *p,
     enum jitter_parameter_type actual_type,
     const struct jitter_register_class *register_class)
@@ -317,6 +304,51 @@ jitter_append_uninitialized_paremater
     default:
       jitter_fatal ("jitter_append_uninitialized_paremater: invalid actual argument type");
     }
+}
+
+/* Make the current instruction, which must be incomplete, have the next
+   expected parameter as its own and start a new instruction if that parameter
+   was the last, but *don't* close the old instruction.  Don't make checks. */
+static void
+jitter_advance_past_next_parameter (struct jitter_program *p)
+{
+  if ((-- p->expected_parameter_no) != 0)
+    {
+      const struct jitter_instruction *in = p->current_instruction;
+      const struct jitter_meta_instruction *min = in->meta_instruction;
+
+      /* There are other parameters expected in the current instruction after
+         the one we have just added.  Point to the next one. */
+      p->next_uninitialized_parameter
+        = in->parameters [min->parameter_no - p->expected_parameter_no];
+      p->next_expected_parameter_type ++;
+    }
+}
+
+/* Add a parameter of the given parameter type (which is a
+   jitter_parameter_type, therefore an "actual" type and *not* a
+   jitter_meta_instruction_parameter type, expressing the set of "formal"
+   accepted types) to the last instruction of the given unspecialized program,
+   which must be incomplete.  A register class is also given to check that it
+   matches with the expected parameter, in case of a register-type parameter; it
+   is ignored otherwise.
+   Fail fatally if the program is not unspecialized
+   or its last instruction is complete, or if the kind or register class is
+   wrong.  Return a pointer to the parameter data structure, to be filled in by
+   the caller.  In any case, do *not* close the instruction, even if the appended
+   parameter was the last; doing that would interfere badly with rewriting, which
+   has to see every parameter correctly initialized.
+   This is used by jitter_append_literal_parameter ,
+   jitter_append_register_parameter and
+   jitter_append_label_parameter . */
+static struct jitter_parameter *
+jitter_append_uninitialized_paremater
+   (struct jitter_program *p,
+    enum jitter_parameter_type actual_type,
+    const struct jitter_register_class *register_class)
+{
+  /* Check that the parameter is compatbile; fail fatally if it isn't. */
+  jitter_check_paremater_compatibility (p, actual_type, register_class);
 
   /* Keep a pointer to the next uninitialized program to be returned; it will no
      longer be the next at the end of this function. */
@@ -325,16 +357,7 @@ jitter_append_uninitialized_paremater
   /* Advance pointers in the program past this parameter, starting a new
      instruction if needed -- but don't close the current instruction: see the
      comment before this function. */
-  if ((-- p->expected_parameter_no) != 0)
-    {
-      const struct jitter_instruction *in = p->current_instruction;
-      const struct jitter_meta_instruction *min = in->meta_instruction;
-      /* There are other parameters expected in the current instruction after
-         the one we have just added.  Point to the next one. */
-      p->next_uninitialized_parameter
-        = in->parameters [min->parameter_no - p->expected_parameter_no];
-      p->next_expected_parameter_type ++;
-    }
+  jitter_advance_past_next_parameter (p);
 
   return res;
 }
