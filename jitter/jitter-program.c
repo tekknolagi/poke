@@ -531,6 +531,25 @@ jitter_append_instruction (struct jitter_program *p,
   jitter_close_current_instruction (p);
 }
 
+void
+jitter_append_parameter_copy (struct jitter_program *p,
+                              const struct jitter_parameter *pp)
+{
+  /* Check that the parameter is compatbile with what we are expecting; fail
+     fatally if it isn't. */
+  jitter_check_paremater_compatibility (p, pp->type, pp->register_class);
+
+  /* The next parameter is pre-allocated.  Copy the pointed one into it. */
+  jitter_copy_instruction_parameter (p->next_uninitialized_parameter, pp);
+
+  /* Advance pointers in the program past this parameter, starting a new
+     instruction if needed.  This however doesn't close the instruction... */
+  jitter_advance_past_next_parameter (p);
+
+  /* ...So do it if needed. */
+  jitter_close_instruction_when_no_more_parameters (p);
+}
+
 
 
 
