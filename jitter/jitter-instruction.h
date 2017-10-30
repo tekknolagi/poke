@@ -158,12 +158,28 @@ jitter_copy_instruction_parameter (struct jitter_parameter *to,
                                    const struct jitter_parameter *from)
   __attribute__ ((nonnull (1, 2)));
 
-
 /* Free the given instruction parameter, which must be completely initialized
    and allocated according to the conventions above. */
 void
 jitter_destroy_instruction_parameter (struct jitter_parameter *p)
   __attribute__ ((nonnull (1)));
+
+
+
+
+/* Parameter comparison.
+ * ************************************************************************** */
+
+/* Compare the two pointed parameters, and return a negative number if the
+   first one is "less" then the second, zero if they are equal, and a positive
+   number if the first is "greater".
+   The exact comparison details are not specified except that comparison works
+   by structure and not by address, and that this function implements a strict
+   order relation (irreflexive, transitive, asymmetric). */
+int
+jitter_compare_instruction_parameters (const struct jitter_parameter *a,
+                                       const struct jitter_parameter *b)
+  __attribute__ ((nonnull (1, 2)));
 
 
 

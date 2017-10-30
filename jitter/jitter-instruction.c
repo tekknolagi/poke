@@ -149,6 +149,22 @@ jitter_destroy_instruction_parameter (struct jitter_parameter *p)
 }
 
 
+
+
+/* Parameter comparison.
+ * ************************************************************************** */
+
+int
+jitter_compare_instruction_parameters (const struct jitter_parameter *a,
+                                       const struct jitter_parameter *b)
+{
+  /* Parameters don't point to heap-allocated data as part of their values, so
+     we can simply compare their memory contents lexicographically. */
+  return memcmp (a, b, sizeof (struct jitter_parameter));
+}
+
+
+
 /* VM instruction parameter printing.
  * ************************************************************************** */
 
