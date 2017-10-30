@@ -179,7 +179,7 @@ jitter_destroy_instruction_parameter (struct jitter_parameter *p)
 int
 jitter_compare_instruction_parameters (const struct jitter_parameter *a,
                                        const struct jitter_parameter *b)
-  __attribute__ ((nonnull (1, 2)));
+  __attribute__ ((pure, nonnull (1, 2)));
 
 
 
