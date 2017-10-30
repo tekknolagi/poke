@@ -135,4 +135,12 @@ jitter_rewrite (struct jitter_program *p)
            index,
            (int) jitter_program_instruction_no (p),
            (int) p->rewritable_instruction_no);
+
+  /* If the last instruction we have in the program (post-rewriting, since it
+     might have been changed) is a caller, then everything up it its point can
+     no longer be rewritten: the return address right after the call is an
+     implicit label. */
+  if (   jitter_program_instruction_no (p) > 0
+      && jitter_last_instruction (p)->meta_instruction->caller)
+    p->rewritable_instruction_no = 0;
 }
