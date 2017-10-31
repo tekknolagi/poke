@@ -341,7 +341,7 @@ jitter_check_cc_option ()
   # otherwise set jitter_result from the cached value.
   if test "x$jitter_cached_value" = "x"; then
     AC_MSG_CHECKING([if $CC supports the option $jitter_compiler_option])
-    if "$CC" \
+    if $CC \
          -c -o test.o \
          "$jitter_compiler_option" \
          "$srcdir/build-aux/trivial-source.c" \
