@@ -887,6 +887,7 @@ for dispatch_model in $jitter_enabled_dispatch_models; do
   JITTER_FLAGS_CFLAGS=""
   jitter_check_cc_options JITTER_FLAGS_CFLAGS -O2 -fomit-frame-pointer
   jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-reorder-blocks
+  jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-reorder-blocks-and-partition
   jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-crossjumping
   jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-thread-jumps
   jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-tree-tail-merge
