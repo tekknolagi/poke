@@ -338,7 +338,7 @@
   do                                                                  \
     {                                                                 \
       asm ("" : : : "memory"); /* FIXME: do I still need this? */     \
-      JITTER_PATCH_IN_PLACEHOLDER_GOTO(                               \
+      JITTER_PATCH_IN_PLACEHOLDER_GOTO_(                              \
          JITTER_PATCH_IN_SIZE_FAST_BRANCH_UNCONDITIONAL,              \
          JITTER_PATCH_IN_CASE_FAST_BRANCH_UNCONDITIONAL,              \
          residual_index,                                              \

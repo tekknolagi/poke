@@ -2113,10 +2113,28 @@ jitterc_emit_interpreter_ordinary_specialized_instructions
   EMIT("  /* End of the ordinary specialized instructions. */\n\n");
 }
 
+/* Emit the patch-in header, before the main interpreter. */
+static void
+jitterc_emit_patch_in_header (FILE *f, const struct jitterc_vm *vm)
+{
+  /* Generate the patch-in header.  The generated code expands to a toplevel asm
+     statement. */
+  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
+  EMIT("  /* Generate the single patch-in header for this interpreter as a\n");
+  EMIT("     global asm statement.  This expands into a global definition in\n");
+  EMIT("     assembly in a separate subsection, and relies on toplevel C\n");
+  EMIT("     definitions not being reordered: vmprefix_interpret_or_initialize\n");
+  EMIT("     will add to the same global. */\n");
+  EMIT("  JITTER_PATCH_IN_HEADER(vmprefix);\n");
+  EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
+  EMIT("\n");
+}
+
 static void
 jitterc_emit_interpreter_main_function
    (FILE *f, const struct jitterc_vm *vm)
 {
+  /* Generate the actual interpreter main function. */
   EMIT("static void\n");
   EMIT("vmprefix_interpret_or_initialize (bool initialize,\n");
   EMIT("                                  struct jitter_program const *p,\n");
@@ -2200,12 +2218,6 @@ jitterc_emit_interpreter_main_function
   EMIT("      goto jitter_possibly_restore_registers_and_return;\n");
   EMIT("    }\n");
   EMIT("\n\n");
-
-  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
-  EMIT("  /* Generate the single patch-in header for this interpreter, containing the\n");
-  EMIT("     global definition in a separate subsection. */\n");
-  EMIT("  JITTER_PATCH_IN_HEADER(vmprefix);\n");
-  EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
 
   EMIT("  /* Here is the actual *interpreter* initialization, to be run before\n");
   EMIT("     actually running the code. */\n\n");
@@ -2457,12 +2469,6 @@ jitterc_emit_interpreter_main_function
   EMIT("  // fprintf (stderr, \"Freeing jitter_slow_registers...\\n\"); fflush (stderr);\n");
   EMIT("  free (jitter_slow_registers);\n\n");
 
-  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
-  EMIT("  /* Close the patch-in global definition for this interpreter.  This defines a\n");
-  EMIT("     new global in the patch-in subsection, holding the descriptor number. */\n");
-  EMIT("  JITTER_PATCH_IN_FOOTER(vmprefix);\n");
-  EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
-
   /* Insert C code from the user.  This is supposed to come in right after
      interpretation ends. */
   EMIT("  /* Finalization C code from the user */\n");
@@ -2479,6 +2485,22 @@ jitterc_emit_interpreter_main_function
   EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("    return;\n");
   EMIT("}\n");
+  EMIT("\n");
+}
+
+/* Emit the patch-in footer, after the main interpreter. */
+static void
+jitterc_emit_patch_in_footer (FILE *f, const struct jitterc_vm *vm)
+{
+  /* Generate the patch-in footer.  The generated code expands to a toplevel asm
+     statement. */
+  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
+  EMIT("  /* Close the patch-in global definition for this interpreter.  This defines a\n");
+  EMIT("     new global in the patch-in subsection, holding the descriptor number.\n");
+  EMIT("     This is a global asm statement.  See the comment before the\n");
+  EMIT("     JITTER_PATCH_IN_HEADER call above. */\n");
+  EMIT("  JITTER_PATCH_IN_FOOTER(vmprefix);\n");
+  EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
 }
 
 /* FIXME: move to a template.  This might need a forward declarartion for the
@@ -2626,8 +2648,14 @@ jitterc_emit_interpreter (const struct jitterc_vm *vm)
      which are the actual entry points into this compilation unit. */
   jitterc_emit_interpreter_wrappers (f, vm);
 
+  /* Emit the patch-in header.  This must come before the main function. */
+  jitterc_emit_patch_in_header (f, vm);
+
   /* Emit the main interpreter/initialization function. */
   jitterc_emit_interpreter_main_function (f, vm);
+
+  /* Emit the patch-in footer.  This must come after the main function. */
+  jitterc_emit_patch_in_footer (f, vm);
 
   jitterc_fclose (f);
 }

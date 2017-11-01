@@ -75,6 +75,15 @@
   JITTER_CONCATENATE_TWO(JITTER_PATCH_IN_DESCRIPTORS_NAME(prefix), \
                          _end)
 
+/* Expand to the name of the global descriptor vector as a string literal. */
+#define JITTER_PATCH_IN_DESCRIPTORS_NAME_AS_STRING(prefix)    \
+  JITTER_STRINGIFY(JITTER_PATCH_IN_DESCRIPTORS_NAME(prefix))
+
+/* Expand to the end label for the global descriptor vector as a string
+   literal. */
+#define JITTER_PATCH_IN_DESCRIPTORS_NAME_END_AS_STRING(prefix)    \
+  JITTER_STRINGIFY(JITTER_PATCH_IN_DESCRIPTORS_NAME_END(prefix))
+
 /* The name of the global, defined in assembly, holding the number of patch-in
    descriptors. */
 #define JITTER_PATCH_IN_DESCRIPTOR_NO_NAME(prefix) \
@@ -93,14 +102,11 @@
 /* Fast-branch descriptor data structures: C API.
  * ************************************************************************** */
 
-// FIXME: comment
-
 /* These structures are accessed from C, but their only definition is in assembly
    code; see the page right below this one. */
 
 /* The descriptor for a specific patch-in.  Instances of this are defined in
    assembly, but are meant to be accessed from C as part of a global array.
-
    It is convenient that every field be word-sized.  Reordering fields requires
    changes in the assembly code below. */
 struct jitter_patch_in_descriptor
@@ -183,73 +189,136 @@ struct jitter_patch_in_descriptor
 /* Every macro whose name starts with JITTER_ASM_ expands to a literal string,
    meant to be emitted as part of the generated assembly code. */
 
-// FIXME: add comments.
+/* Expand to a literal string defining the given identifier as a global in
+   assembly. */
+#define JITTER_ASM_DEFINE(name)                      \
+  ".globl " JITTER_STRINGIFY(name) "\n\t"            \
+  ".type  " JITTER_STRINGIFY(name) ", STT_OBJECT\n"  \
+  JITTER_STRINGIFY(name) ":\n\t"
 
-#define JITTER_ASM_FAST_LABEL_PLACEHOLDER_SUBSECTION  \
-  "10"
-
-#define JITTER_ASM_PUSH_SUBSECTION  \
-  "\n.data " JITTER_ASM_FAST_LABEL_PLACEHOLDER_SUBSECTION "\n"
-  // "\n.pushsection .rodata, " JITTER_ASM_FAST_LABEL_PLACEHOLDER_SUBSECTION "\n"
-
-#define JITTER_ASM_POP_SUBSECTION  \
-  "\n.text 0\n\t"
-  // ".popsection\n\t"
-
-/* Emit a string literal for inclusion in inline assembly, skipping the given
-   number of bytes (a constant assembly expression not referring variables) in
-   the current section.  The fill byte is JITTER_ASM_PATCH_IN_FILL_BYTE . */
-#define JITTER_ASM_SKIP_BYTES(size)                                           \
-  JITTER_ASM_COMMENT_PREFIX "Skip " JITTER_STRINGIFY(size) "B, but use a "    \
-    "conditional to avoid a warning if " JITTER_STRINGIFY(size) " is zero.\n" \
-  ".ifgt (" JITTER_STRINGIFY(size) ")\n"                                      \
-  "  .skip " JITTER_STRINGIFY(size) ", " JITTER_ASM_PATCH_IN_FILL_BYTE "\n"   \
+/* Expand to a string literal for inclusion in inline assembly, skipping the
+   given number of bytes (a constant assembly expression not referring
+   variables) in the current section.  The fill byte is
+   JITTER_ASM_PATCH_IN_FILL_BYTE . */
+#define JITTER_ASM_SKIP_BYTES(size)                                          \
+  JITTER_ASM_COMMENT_UNIQUE("Skip " JITTER_STRINGIFY(size) "B, but use a "   \
+                            "conditional to avoid a warning if "             \
+                            JITTER_STRINGIFY(size) " is zero")               \
+  ".ifgt (" JITTER_STRINGIFY(size) ")\n"                                     \
+  "  .skip " JITTER_STRINGIFY(size) ", " JITTER_ASM_PATCH_IN_FILL_BYTE "\n"  \
   ".endif\n"
 
-#define JITTER_PATCH_IN_DESCRIPTORS_NAME_AS_STRING(prefix)    \
-  JITTER_STRINGIFY(JITTER_PATCH_IN_DESCRIPTORS_NAME(prefix))
-
-#define JITTER_PATCH_IN_DESCRIPTORS_NAME_END_AS_STRING(prefix)    \
-  JITTER_STRINGIFY(JITTER_PATCH_IN_DESCRIPTORS_NAME_END(prefix))
-
-#define JITTER_PATCH_IN_DESCRIPTOR_SIZE_IN_BYTES_AS_STRING        \
+/* Expand to a string literal containing a constant assembly expression
+   whose result evaluates to the size of one patch-in descriptor in bytes. */
+#define JITTER_ASM_PATCH_IN_DESCRIPTOR_SIZE_IN_BYTES_AS_STRING    \
   "(" JITTER_STRINGIFY(JITTER_PATCH_IN_DESCRIPTOR_SIZE_IN_WORDS)  \
       "*" JITTER_STRINGIFY(SIZEOF_VOID_P) ")"
-
-#define JITTER_ASM_DEFINE(name)                                       \
-  ".globl " JITTER_STRINGIFY(name) "\n\t"                             \
-  ".type  " JITTER_STRINGIFY(name) ", STT_OBJECT\n"                   \
-  JITTER_STRINGIFY(name) ":\n\t"
 
 
 
 
-/* Patch-in macros.
+/* Patch-in descriptor macros.
  * ************************************************************************** */
 
-// FIXME: add comments.
+/* Patch-in descriptors are stored in a read-only global array, generated in its
+   own assembly subsection.  Each patch-in descriptor contains information about
+   a patch-in placeholder.
+   This is delicate, since each patch-in placeholder is contained in compiled C
+   code; some patch-in placeholders may even be duplicated or optimized away by
+   GCC.
 
+   The solution is using assembler subsections: the same inline asm code
+   expanding to a patch-in placeholder temporarily enters the descriptor
+   subsection, adds an element to the descriptor array referring the label
+   for the current placeholder plus other information such as the specialized
+   instruction opcode, then exits the subsection and goes back to .text .
+
+   The descriptor array is defined, of course within its subsection, from a
+   "header" in top-level inline assembly, which *must* come before the
+   interpreter function containing patch-in placeholders.  The interpreter
+   function relies on the no_reorder attribute which prevents it from being
+   moved with respect to top-level inline asm.  Similarly, a top-level inline
+   asm "footer" closes the global array definition, and defined a further global
+   storing the array size.
+
+   Interestingly no assembly *instructions* are required for this: the generated
+   inline assembly contains only data, which is machine-independent.  The
+   subsection mechanism, however, relies on ELF.  Support for other binary
+   formats is almost certainly possible, but not prioritary.  Modern GNU systems
+   use ELF. */
+
+/* Expand to the literal string to be used in a top-level inline asm statement
+   as a patch-in descriptor header.  The generated "code", which contains no
+   machine instructions, switches to the appropriate subsection, opens the
+   definition, and goes back to .text . */
 #define JITTER_ASM_PATCH_IN_HEADER(prefix)                       \
-  JITTER_ASM_PUSH_SUBSECTION                                     \
+  JITTER_ASM_ENTER_PATCH_IN_DESCRIPTOR_SUBSECTION                \
     JITTER_ASM_DEFINE(JITTER_PATCH_IN_DESCRIPTORS_NAME(prefix))  \
-  JITTER_ASM_POP_SUBSECTION
+  JITTER_ASM_EXIT_PATCH_IN_DESCRIPTOR_SUBSECTION
 
-#define JITTER_PATCH_IN_HEADER(prefix)               \
-  asm volatile (JITTER_ASM_PATCH_IN_HEADER(prefix))
+/* Expand to the literal string to be used in a top-level inline asm statement
+   as a patch-in descriptor footer.  The generated "code", which contains no
+   machine instructions, switches to the appropriate subsection, closes the
+   array definition, defines another global holding the array sizein bytes, and
+   goes back to .text . */
+#define JITTER_ASM_PATCH_IN_FOOTER(prefix)                                \
+  JITTER_ASM_ENTER_PATCH_IN_DESCRIPTOR_SUBSECTION                         \
+    JITTER_PATCH_IN_DESCRIPTORS_NAME_END_AS_STRING(prefix) ":\n"          \
+    JITTER_ASM_DEFINE(JITTER_PATCH_IN_DESCRIPTOR_NO_NAME(prefix))         \
+    JITTER_ASM_WORD " "                                                   \
+      "(("  JITTER_PATCH_IN_DESCRIPTORS_NAME_END_AS_STRING(prefix)        \
+            " - "                                                         \
+            JITTER_PATCH_IN_DESCRIPTORS_NAME_AS_STRING(prefix) ")"        \
+      " / " JITTER_ASM_PATCH_IN_DESCRIPTOR_SIZE_IN_BYTES_AS_STRING ")\n"  \
+  JITTER_ASM_EXIT_PATCH_IN_DESCRIPTOR_SUBSECTION
 
-#define JITTER_ASM_PATCH_IN_FOOTER(prefix)                            \
-  JITTER_ASM_PUSH_SUBSECTION                                          \
-    JITTER_PATCH_IN_DESCRIPTORS_NAME_END_AS_STRING(prefix) ":\n"      \
-    JITTER_ASM_DEFINE(JITTER_PATCH_IN_DESCRIPTOR_NO_NAME(prefix))     \
-    JITTER_ASM_WORD " "                                               \
-      "(("  JITTER_PATCH_IN_DESCRIPTORS_NAME_END_AS_STRING(prefix)    \
-            " - "                                                     \
-            JITTER_PATCH_IN_DESCRIPTORS_NAME_AS_STRING(prefix) ")"    \
-      " / " JITTER_PATCH_IN_DESCRIPTOR_SIZE_IN_BYTES_AS_STRING ")\n"  \
-  JITTER_ASM_POP_SUBSECTION
+/* Expand to a C top-level inline asm statement containing the patch-in
+   header. */
+#define JITTER_PATCH_IN_HEADER(prefix)      \
+  asm (JITTER_ASM_PATCH_IN_HEADER(prefix))
 
-#define JITTER_PATCH_IN_FOOTER(prefix)               \
-  asm volatile (JITTER_ASM_PATCH_IN_FOOTER(prefix))
+/* Expand to a C top-level inline asm statement containing the patch-in
+   footer. */
+#define JITTER_PATCH_IN_FOOTER(prefix)      \
+  asm (JITTER_ASM_PATCH_IN_FOOTER(prefix))
+
+
+
+
+/* Patch-in descriptor macros for ELF systems.
+ * ************************************************************************** */
+
+/* Macros to enter and exit the patch-in descriptor subsection.  Right now this
+   is only implemented for ELF systems, but other systems might be possible to
+   support.
+   By default configure disables no-threading on non-ELF systems, so this should
+   not fail unless the user asks for it. */
+#ifdef JITTER_HOST_OS_IS_ELF
+# define JITTER_ASM_ENTER_PATCH_IN_DESCRIPTOR_SUBSECTION  \
+    JITTER_ASM_ENTER_PATCH_IN_DESCRIPTOR_SUBSECTION_ELF
+# define JITTER_ASM_EXIT_PATCH_IN_DESCRIPTOR_SUBSECTION  \
+    JITTER_ASM_EXIT_PATCH_IN_DESCRIPTOR_SUBSECTION_ELF
+#else
+# error "patch-ins currently rely on ELF"
+#endif // #ifdef JITTER_HOST_OS_IS_ELF
+
+/* Expand to a string literal containing the .rodata subsection number
+   containing the patch-in descriptors. */
+#define JITTER_ASM_FAST_LABEL_PLACEHOLDER_SUBSECTION_ELF  \
+  "10"
+
+/* Solution relying on ELF: */
+#define JITTER_ASM_ENTER_PATCH_IN_DESCRIPTOR_SUBSECTION_ELF  \
+  "\n.pushsection .rodata, "                                 \
+     JITTER_ASM_FAST_LABEL_PLACEHOLDER_SUBSECTION_ELF "\n\t"
+#define JITTER_ASM_EXIT_PATCH_IN_DESCRIPTOR_SUBSECTION_ELF  \
+  "\n.popsection\n\t"
+
+
+
+
+/* Patch-in placeholder macros.
+ * ************************************************************************** */
 
 /* Expand to a string literal meant to be used as the the assembly template for
    a patch-in, referring the named input argument
@@ -277,7 +346,7 @@ struct jitter_patch_in_descriptor
   JITTER_ASM_COMMENT_UNIQUE("Patch-in " JITTER_STRINGIFY(case))       \
   "\n1:\n\t"                                                          \
   JITTER_ASM_SKIP_BYTES(size_in_bytes) "\n"                           \
-  JITTER_ASM_PUSH_SUBSECTION "\t"                                     \
+  JITTER_ASM_ENTER_PATCH_IN_DESCRIPTOR_SUBSECTION                     \
     JITTER_ASM_WORD " "                                               \
       JITTER_STRINGIFY(JITTER_SPECIALIZED_INSTRUCTION_OPCODE) "\n\t"  \
     JITTER_ASM_WORD " (1b - %l[jitter_vm_instruction_beginning])\n\t" \
@@ -287,7 +356,7 @@ struct jitter_patch_in_descriptor
     JITTER_ASM_WORD " " JITTER_STRINGIFY(arg1) "\n\t"                 \
     JITTER_ASM_WORD " " JITTER_STRINGIFY(arg2) "\n\t"                 \
     JITTER_ASM_WORD " " JITTER_STRINGIFY(arg3) "\n"                   \
-  JITTER_ASM_POP_SUBSECTION                                           \
+  JITTER_ASM_EXIT_PATCH_IN_DESCRIPTOR_SUBSECTION
 
 /* Expand to the (named) input argument jitter_vm_instruction_beginning for
    an inline asm template generated by JITTER_ASM_PATCH_IN_PLACEHOLDER.
@@ -310,8 +379,8 @@ struct jitter_patch_in_descriptor
    Notice how the (only) input argument is the label for the beginning of the
    current VM instruction, obtained by the prefix && operator: see the comment
    before JITTER_ASM_PATCH_IN_PLACEHOLDER . */
-#define JITTER_PATCH_IN_PLACEHOLDER_GOTO(size_in_bytes, case,        \
-                                         arg0, arg1, arg2, arg3)     \
+#define JITTER_PATCH_IN_PLACEHOLDER_GOTO_(size_in_bytes, case,       \
+                                          arg0, arg1, arg2, arg3)    \
   asm goto (JITTER_ASM_PATCH_IN_PLACEHOLDER(size_in_bytes, case,     \
                                             arg0, arg1, arg2, arg3)  \
             : /* outputs */                                          \
