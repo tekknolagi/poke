@@ -178,8 +178,8 @@ jitterc_make_literal (enum jitterc_literal_type type,
    bitmasks. */
 enum jitterc_instruction_argument_mode
   {
-    /* Uninitialized.  This is only used during parsing, and never occurs in a
-       successfully parsed program. */
+    /* Uninitialized.  This is only used during parsing, and never occurs as
+       part of an instruction specification after successful parsing. */
     jitterc_instruction_argument_mode_unspecified = 0,
 
     /* An input argument. */
@@ -198,8 +198,8 @@ enum jitterc_instruction_argument_mode
    a disjunction of some of them; the values can be used as bitmasks. */
 enum jitterc_instruction_argument_kind
   {
-    /* Uninitialized.  This is only used during parsing, and never occurs in a
-       successfully parsed program. */
+    /* Uninitialized.  This is only used during parsing, and never occurs as
+       part of an instruction specification after successful parsing. */
     jitterc_instruction_argument_kind_unspecified = 0,
 
     /* The argument is a register index; either fast or slow registers are
@@ -679,6 +679,9 @@ struct jitterc_vm
 
   /* A list of struct jitterc_instruction pointers. */
   gl_list_t instructions;
+
+  /* A list of struct struct jitterc_rule pointers. */
+  gl_list_t rewrite_rules;
 
   /* A list of struct jitterc_specialized_instruction pointers. */
   gl_list_t specialized_instructions;

@@ -253,6 +253,12 @@ Right now the mode only provides font-locking support.
          font-lock-preprocessor-face
          t)
 
+      ;; Highlight placeholders in rewrite rules.
+      ("\\<\\$[^ \t\n]+\\>"
+       0 ;;font-lock-variable-name-face
+         font-lock-preprocessor-face
+         t)
+
       ;; Highlight Jitter statement-like macros in C code.
       ("\\<JITTER_\\(?:BRANCH_FAST\\|BRANCH\\|EXIT\\)\\>"
        0 font-lock-builtin-face t)
@@ -303,7 +309,9 @@ Right now the mode only provides font-locking support.
 
       ;; Experimental rule-only keywords, to merge with the rule before; some of these should
       ;; only be font-locked this way when they appear in the right context, if feasible.
-      ("\\<\\(rewrite\\|rule\\|turn\\|into\\|and\\|or\\|not\\|equals\\|when\\|has-property\\|is-literal\\|is-register\\|is-label\\|is-fast-label\\|is\\|precedes\\)\\>"
+      ;;("\\<\\(rewrite\\|rule\\|turn\\|into\\|and\\|or\\|not\\|equals\\|when\\|has-property\\|is-literal\\|is-register\\|is-label\\|is-fast-label\\|is\\|precedes\\)\\>"
+      ;; (0 font-lock-keyword-face nil))
+      ("\\<\\(rewrite\\|rule\\|into\\|when\\)\\>"
        (0 font-lock-keyword-face nil))
 
       ;; Experimental patterns, to merge with the rule before.

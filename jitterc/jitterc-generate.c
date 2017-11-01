@@ -37,6 +37,7 @@
 #include "jitterc-generate.h"
 #include "jitterc-utility.h"
 #include "jitterc-vm.h"
+#include "jitterc-rewrite.h"
 #include "jitterc-mangle.h"
 
 #include <jitter/jitter-fatal.h>
@@ -558,6 +559,19 @@ jitterc_emit_specialized_instruction_fast_label_bitmasks (const struct jitterc_v
 
 
 
+/* Code generation utility.
+ * ************************************************************************** */
+
+/* Emit a #line directive on the Jitter VM specification source file. */
+static void
+jitterc_emit_hash_line (FILE *f, const struct jitterc_vm *vm, int line_no)
+{
+  EMIT("#line %i \"%s\"\n", line_no, vm->source_file_name);
+}
+
+
+
+
 /* More complex code generation.
  * ************************************************************************** */
 
@@ -640,6 +654,332 @@ jitterc_emit_specialized_instruction_callees
 {
   jitterc_emit_specialized_instruction_callers_or_callees (vm, false);
 }
+
+
+
+
+/* Rewriter generation.
+ * ************************************************************************** */
+
+/* Emit code for the pointed template expression to the pointed stream for the
+   pointed VM; the generated C code evaluates to a literal if
+   evaluate_to_literal is true, otherwise it evaluates to an instruction
+   argument.  This is to be used both in rules bodies for instantiating template
+   expression and within a condition for evaluating a rule guard -- but the
+   output is not a condition. */
+static void
+jitterc_emit_rewrite_rule_template_expression
+   (FILE *f,
+    const struct jitterc_vm *vm,
+    const struct jitterc_template_expression *te,
+    bool evaluate_to_literal)
+{
+  /* Generate a #line directive for the template expression, indepdendently from
+     its shape. */
+  jitterc_emit_hash_line(f, vm, te->line_no);
+
+  /* Generate different code according to the AST case. */
+  switch (te->case_)
+    {
+    case jitterc_instruction_argument_expression_case_boolean_constant:
+      if (! evaluate_to_literal)
+        jitter_fatal ("template expression: unexpected boolean constant");
+      EMIT("      %s\n", te->constant.fixnum ? "true" : "false");
+      break;
+
+    case jitterc_instruction_argument_expression_case_fixnum_constant:
+      if (! evaluate_to_literal)
+        jitter_fatal ("template expression: unexpected fixnum constant");
+      EMIT("      %"JITTER_PRIi"\n", te->constant.fixnum);
+      break;
+
+    case jitterc_instruction_argument_expression_case_placeholder:
+      if (evaluate_to_literal)
+        EMIT("      JITTER_RULE_LITERAL_FIELD(JITTER_PLACEHOLDER_NAME(%s))\n",
+             te->placeholder);
+      else
+        EMIT("      JITTER_PLACEHOLDER_NAME(%s)\n", te->placeholder);
+      break;
+
+    case jitterc_instruction_argument_expression_case_operation:
+      {
+        int i; char *comma;
+        EMIT("#warning: operators (here \"%s\") not really implemented yet\n",
+             te->operator_name);
+        EMIT("      JITTER_RULE_EXPRESSION_%s(\n", te->operator_name);
+        FOR_LIST(i, comma, te->operand_expressions)
+          {
+            const struct jitterc_template_expression *oe
+              = gl_list_get_at (te->operand_expressions, i);
+            bool literal_expected = true; // FIXME: compute it for real.
+            jitterc_emit_rewrite_rule_template_expression (f, vm, oe,
+                                                           literal_expected);
+            EMIT("                                %s\n", comma);
+          }
+        EMIT("                               )\n");
+        break;
+      }
+
+    default:
+      jitter_fatal ("impossible template expression case");
+    }
+}
+
+/* Emit a condition matching the argument_idx-th argument of the
+   instruction_idx-th instruction (both 0-based) of the candidate instructions,
+   to the pointed stream for the pointed VM.
+   The generated code assumes that the opcode have already been matched, so the
+   arity is correct. */
+static void
+jitterc_emit_rewrite_rule_argument_condition
+   (FILE *f,
+    const struct jitterc_vm *vm,
+    int instruction_idx,
+    int argument_idx,
+    const struct jitterc_argument_pattern *ap)
+{
+  /* Generate a #line directive for the argument pattern, indepdendently from
+     its shape. */
+  jitterc_emit_hash_line(f, vm, ap->line_no);
+
+  /* If the argument pattern specifies a literal, check that it matches.  This
+     is a good check to make first, as it will fail frequently.  This check also
+     currently includes a check on the kind (required literal), subsumed by the
+     kind checks below; anyway GCC should have no problem merging them into one
+     conditional, since there are no side effects in between.  */
+  if (ap->has_literal)
+    EMIT("    JITTER_RULE_CONDITION_MATCH_LITERAL_ARGUMENT(%i, %i, %"
+         JITTER_PRIi ")\n",
+         instruction_idx, argument_idx, ap->literal.fixnum);
+
+  /* If a kind bitmask is specified, check it. */
+  if (ap->kind != jitterc_instruction_argument_kind_unspecified)
+    {
+      /* A kind is a bitmask, and we accept any one match with a bit.  This
+         means that the alternatives are in logical or.  Using C's infix || is
+         more convenient here than our non-variadic prefix macros. */
+      EMIT("    JITTER_RULE_CONDITION(false\n");
+      if (ap->kind & jitterc_instruction_argument_kind_register)
+        EMIT("                          || JITTER_RULE_ARGUMENT_IS_A_REGISTER(%i, %i)\n",
+             instruction_idx, argument_idx);
+      if (ap->kind & jitterc_instruction_argument_kind_literal)
+        EMIT("                          || JITTER_RULE_ARGUMENT_IS_A_LITERAL(%i, %i)\n",
+             instruction_idx, argument_idx);
+      if (ap->kind & jitterc_instruction_argument_kind_label)
+        EMIT("                          || JITTER_RULE_ARGUMENT_IS_A_LABEL(%i, %i)\n",
+             instruction_idx, argument_idx);
+      /* Close the logical or. */
+      EMIT("                         )\n");
+    }
+
+  /* Match against a placeholder (destructively), if a placeholder name is
+     given. */
+  if (ap->placeholder_or_NULL != NULL)
+    EMIT("    JITTER_RULE_CONDITION_MATCH_PLACEHOLDER(%i, %i, %s)\n",
+         instruction_idx, argument_idx, ap->placeholder_or_NULL);
+}
+
+/* Generate content for the condition section of the pointed rewrite rule for
+   the pointed VM to the pointed stream. */
+static void
+jitterc_emit_rewrite_rule_condition (FILE *f, const struct jitterc_vm *vm,
+                                     const struct jitterc_rule *rule)
+{
+  int i, j; char *comma __attribute__ ((unused));
+
+  /* Check that the opcode of every candidate instruction matches its
+     pattern. */
+  EMIT("    /* Check opcodes first: they are likely not to match, and in */\n");
+  EMIT("    /* that case we want to fail as early as possible. */\n");
+  FOR_LIST(i, comma, rule->in_instruction_patterns)
+    {
+      const struct jitterc_instruction_pattern *ip
+        = gl_list_get_at (rule->in_instruction_patterns, i);
+      char *opcode = ip->instruction_name;
+      char *mangled_opcode = jitterc_mangle (opcode);
+      jitterc_emit_hash_line(f, vm, ip->line_no);
+      EMIT("    JITTER_RULE_CONDITION_MATCH_OPCODE(%i, %s)\n",
+           i, mangled_opcode);
+      free (mangled_opcode);
+    }
+
+  /* Then check instruction arguments against the template, binding placeholders
+     in the process. */
+  EMIT("    /* Check arguments, binding placeholders.  We don't have to worry */\n");
+  EMIT("    /* about arity, since the opcodes match if we're here. */\n");
+  FOR_LIST(i, comma, rule->in_instruction_patterns)
+    {
+      const struct jitterc_instruction_pattern *ip
+        = gl_list_get_at (rule->in_instruction_patterns, i);
+      FOR_LIST(j, comma, ip->argument_patterns)
+        {
+          const struct jitterc_argument_pattern *ap
+            = gl_list_get_at (ip->argument_patterns, j);
+          jitterc_emit_rewrite_rule_argument_condition (f, vm, i, j, ap);
+        }
+    }
+
+  /* Emit the guard at the end, as it may use any placeholder.  If that succeeds
+     as well the condition is satisfied. */
+  EMIT("    /* Rule guard. */\n");
+  EMIT("    JITTER_RULE_CONDITION(\n");
+  jitterc_emit_rewrite_rule_template_expression (f, vm, rule->guard, true);
+  EMIT("                         )\n");
+}
+
+/* Generate code for the pointed instruction template for the pointed VM to the
+   pointed stream.  This is to be used within the body section of rules. */
+void
+jitterc_emit_rewrite_rule_instruction_template
+   (FILE *f,
+    const struct jitterc_vm *vm,
+    const struct jitterc_instruction_template *it)
+{
+  /* Emit a #line directive for the instruction template. */
+  jitterc_emit_hash_line(f, vm, it->line_no);
+
+  /* Emit code to add the opcode. */
+  EMIT("    fprintf (stderr, \"rewrite: adding instruction %s\\n\");\n",
+       it->instruction_name);
+  char *mangled_opcode = jitterc_mangle (it->instruction_name);
+  EMIT("    JITTER_RULE_APPEND_INSTRUCTION_(%s);\n", mangled_opcode);
+  free (mangled_opcode);
+
+  /* Emit code to add the instantiation of every argument template. */
+  int i; char *comma __attribute__ ((unused));
+  FOR_LIST(i, comma, it->argument_expressions)
+    {
+      const struct jitterc_template_expression *ae
+        = gl_list_get_at (it->argument_expressions, i);
+      EMIT("    fprintf (stderr, \"instantiating the %i-th argument of %s\\n\");\n",
+           i, it->instruction_name);
+
+      // FIXME: make a rewriting-specific macro instead of using
+      // jitter_append_parameter_copy ?
+      EMIT("    jitter_append_parameter_copy (jitter_program_p,\n");
+      jitterc_emit_rewrite_rule_template_expression (f, vm, ae, false);
+      EMIT("                                 );\n");
+    }
+}
+
+/* Generate code for the pointed rewrite rule for the pointed VM to the pointed
+   stream. */
+static void
+jitterc_emit_rewrite_rule (FILE *f, const struct jitterc_vm *vm,
+                           const struct jitterc_rule *rule)
+{
+  int i; char *comma __attribute__ ((unused));
+
+  EMIT("/* Rewrite rule \"%s\" */\n", rule->name);
+  int head_size = gl_list_size (rule->in_instruction_patterns);
+
+  /* Open the rule section. */
+  jitterc_emit_hash_line(f, vm, rule->line_no);
+  EMIT("JITTER_RULE_BEGIN(%i)\n", head_size);
+
+  /* Emit the placeholder declaration section. */
+  EMIT("  JITTER_RULE_BEGIN_PLACEHOLDER_DECLARATIONS\n");
+  FOR_LIST(i, comma, rule->placeholders)
+    {
+      const char *placeholder = gl_list_get_at (rule->placeholders, i);
+      EMIT("    JITTER_RULE_DECLARE_PLACEHOLDER_(%s);\n",
+           placeholder);
+    }
+  EMIT("  JITTER_RULE_END_PLACEHOLDER_DECLARATIONS\n");
+
+  /* Emit the placeholder declaration section. */
+  EMIT("  JITTER_RULE_BEGIN_CONDITIONS\n");
+  jitterc_emit_rewrite_rule_condition (f, vm, rule);
+  EMIT("  JITTER_RULE_END_CONDITIONS\n");
+
+  /* Emit the placeholder cloning section. */
+  EMIT("  JITTER_RULE_BEGIN_PLACEHOLDER_CLONING\n");
+  FOR_LIST(i, comma, rule->placeholders)
+    {
+      const char *placeholder = gl_list_get_at (rule->placeholders, i);
+      EMIT("    JITTER_RULE_CLONE_PLACEHOLDER_(%s);\n",
+           placeholder);
+    }
+  EMIT("  JITTER_RULE_END_PLACEHOLDER_CLONING\n");
+
+  /* Emit the rule body, by compiling instruction templates one after the
+     other. */
+  EMIT("  JITTER_RULE_BEGIN_BODY\n");
+  EMIT("    fprintf (stderr, \"* The rule %s fires...\\n\");\n",
+       rule->name);
+  FOR_LIST(i, comma, rule->out_instruction_templates)
+    {
+      const struct jitterc_instruction_template *it
+        = gl_list_get_at (rule->out_instruction_templates, i);
+      jitterc_emit_rewrite_rule_instruction_template (f, vm, it);
+    }
+  EMIT("    fprintf (stderr, \"  ...End of the rule %s\\n\");\n",
+       rule->name);
+  EMIT("  JITTER_RULE_END_BODY\n");
+
+  /* Emit the placeholder destruction section. */
+  EMIT("  JITTER_RULE_BEGIN_PLACEHOLDER_DESTRUCTION\n");
+  FOR_LIST(i, comma, rule->placeholders)
+    {
+      const char *placeholder = gl_list_get_at (rule->placeholders, i);
+      EMIT("    JITTER_RULE_DESTROY_PLACEHOLDER_(%s);\n",
+           placeholder);
+    }
+  EMIT("  JITTER_RULE_END_PLACEHOLDER_DESTRUCTION\n");
+
+  /* Close the rule section, and we're done. */
+  EMIT("JITTER_RULE_END\n");
+  EMIT("\n");
+}
+
+static void
+jitterc_emit_rewriter (const struct jitterc_vm *vm)
+{
+  FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
+
+  EMIT("void\n");
+  EMIT("vmprefix_rewrite_once (struct jitter_program *jitter_program_p,\n");
+  EMIT("                       size_t jitter_rewritable_instruction_no)\n");
+  EMIT("{\n");
+
+  EMIT("  /* A pointer to the first instruction which is potentially a candidate for\n");
+  EMIT("     rewriting, with any rule.  Making this a constant pointer to constant data\n");
+  EMIT("     should help GCC to share condition computations across rules; this is rule\n");
+  EMIT("     correct, as rule conditions don't in fact change instructions.  Only if a\n");
+  EMIT("     rule matches some memory changes are made, and in that case we exit this\n");
+  EMIT("     function after the rule block ends. */\n");
+  EMIT("  const struct jitter_instruction * const * const\n");
+  EMIT("     jitter_all_rewritable_instructions __attribute__ ((unused))\n");
+  EMIT("       = ((const struct jitter_instruction * const * const)\n");
+  EMIT("          jitter_last_instructions\n");
+  EMIT("             (jitter_program_p,\n");
+  EMIT("              jitter_program_p->rewritable_instruction_no));\n");
+  EMIT("\n");
+
+  /* Add user-specified code for the rewriter. */
+  jitterc_emit_user_c_code_to_stream (vm, f, vm->rewriter_c_code, "rewriter");
+  EMIT("\n");
+
+  /* Generate code for the rules. */
+  int i; char *comma __attribute__ ((unused));
+  FOR_LIST(i, comma, vm->rewrite_rules)
+    {
+      const struct jitterc_rule *rule
+        = ((const struct jitterc_rule*)
+           gl_list_get_at (vm->rewrite_rules, i));
+      EMIT("fprintf (stderr, \"Trying rule %i of %i, \\\"%s\\\" (line %i)\\n\");\n",
+           i + 1, (int) gl_list_size (vm->rewrite_rules),
+           rule->name,
+           rule->line_no);
+      jitterc_emit_rewrite_rule (f, vm, rule);
+    }
+  EMIT("fprintf (stderr, \"No more rules to try\\n\");\n");
+
+  EMIT("}\n");
+  EMIT("\n\n");
+  jitterc_fclose (f);
+}
+
 
 
 
@@ -739,49 +1079,6 @@ jitterc_emit_specializer_recognizers
            gl_list_get_at (tree->children, i));
       jitterc_emit_specializer_recognizers (f, vm, sarg_and_child->child);
     }
-}
-
-static void
-jitterc_emit_rewriter (const struct jitterc_vm *vm)
-{
-  FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
-
-  EMIT("void\n");
-  EMIT("vmprefix_rewrite_once (struct jitter_program *jitter_program_p,\n");
-  EMIT("                       size_t jitter_rewritable_instruction_no)\n");
-  EMIT("{\n");
-
-  /* Add user-specified code for the rewriter. */
-  jitterc_emit_user_c_code_to_stream (vm, f, vm->rewriter_c_code, "rewriter");
-  EMIT("\n");
-
-  EMIT("  //struct jitter_instruction **instructions\n");
-  EMIT("  //  = jitter_dynamic_buffer_to_pointer (& p->instructions);\n");
-  EMIT("  //struct jitter_instruction *ins = instructions [instruction_index];\n");
-  EMIT("  //switch (ins->meta_instruction->id)\n");
-  EMIT("  //  {\n");
-  int i; char *comma __attribute__ ((unused));
-  FOR_LIST(i, comma, vm->instructions)
-    {
-      const struct jitterc_instruction *ins
-        = (const struct jitterc_instruction*)
-          gl_list_get_at (vm->instructions, i);
-      EMIT("    //case vmprefix_meta_instruction_id_%s:\n", ins->mangled_name);
-      EMIT("    //  {\n");
-      EMIT("    //    /*fprintf (stderr, \"Pretending to rewrite the %%ith instruction at %%p (%s, id %i)...\\n\",\n", ins->name, i);
-      EMIT("    //             instruction_index, ins);*/\n");
-      EMIT("    //    break;\n");
-      EMIT("    //  }\n");
-    }
-  EMIT("    //default:\n");
-  EMIT("    //  /* The other instructions have no rewritings. */;\n");
-  EMIT("    //}\n");
-  EMIT("\n");
-  EMIT("}\n");
-
-  EMIT("\n\n");
-
-  jitterc_fclose (f);
 }
 
 static void

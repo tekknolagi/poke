@@ -278,6 +278,7 @@ bin_jitter_SOURCES = \
   jitterc/jitterc-main.c \
   jitterc/jitterc-utility.c jitterc/jitterc-utility.h \
   jitterc/jitterc-mangle.c jitterc/jitterc-mangle.h \
+  jitterc/jitterc-rewrite.c jitterc/jitterc-rewrite.h \
   jitterc/jitterc-vm.c jitterc/jitterc-vm.h \
   jitterc/jitterc-parser.c jitterc/jitterc-parser.h \
   jitterc/jitterc-scanner.c jitterc/jitterc-scanner.h

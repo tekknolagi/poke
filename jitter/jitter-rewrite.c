@@ -104,37 +104,24 @@ jitter_destroy_last_instructions (struct jitter_program *p,
 void
 jitter_rewrite (struct jitter_program *p)
 {
-  // FIXME: this loop is probably not needed.  The rewrite rule itself will call
-  // jitter_rewrite by indirect recursion when needed.
-  /* static int the_index = 0; */
-  /* int index = ++ the_index; */
-  /* fprintf (stderr, "jitter_rewrite (%i): begin\n", index); */
-  /* /\* Keep calling jitter_rewrite_once until there is nothing more to change. *\/ */
-  /* int round = 0; */
-  /* do */
-  /*   { */
-  /*     if (++ round > 1) */
-  /*       fprintf (stderr, "  jitter_rewrite (%i): round %i\n", index, round); */
-  /*     /\* Nothing. *\/ */
-  /*   } */
-  /* while (   p->rewritable_instruction_no > 0 */
-  /*        && p->vm->rewrite_once (p, p->rewritable_instruction_no)); */
-  /* fprintf (stderr, "jitter_rewrite (%i): end\n", index); */
-
-  static int the_index = 0;
-  int index = ++ the_index;
-  fprintf (stderr, "Before rewrite %i:   there are %i instructions, %i rewritable...\n",
-           index,
-           (int) jitter_program_instruction_no (p),
-           (int) p->rewritable_instruction_no);
-
+  //  static int the_index = 0;
   if (p->rewritable_instruction_no > 0)
-    p->vm->rewrite_once (p, p->rewritable_instruction_no);
+    {
+      /* int index = ++ the_index; */
+      /* fprintf (stderr, "Before rewrite %i:   %i total instructions, " */
+      /*          "%i rewritable; the last one is %s\n", */
+      /*          index, */
+      /*          (int) jitter_program_instruction_no (p), */
+      /*          (int) p->rewritable_instruction_no, */
+      /*          jitter_last_instruction (p)->meta_instruction->name); */
 
-  fprintf (stderr, "...after rewrite %i: there are %i instructions, %i rewritable.\n",
-           index,
-           (int) jitter_program_instruction_no (p),
-           (int) p->rewritable_instruction_no);
+      p->vm->rewrite_once (p, p->rewritable_instruction_no);
+
+      /* fprintf (stderr, "...after rewrite %i: %i total instructions, %i rewritable.\n", */
+      /*          index, */
+      /*          (int) jitter_program_instruction_no (p), */
+      /*          (int) p->rewritable_instruction_no); */
+    }
 
   /* If the last instruction we have in the program (post-rewriting, since it
      might have been changed) is a caller, then everything up it its point can
@@ -143,4 +130,6 @@ jitter_rewrite (struct jitter_program *p)
   if (   jitter_program_instruction_no (p) > 0
       && jitter_last_instruction (p)->meta_instruction->caller)
     p->rewritable_instruction_no = 0;
+  /* FIXME: this statement above could be at the beginning.  Actually, all of
+     this should be merged with the machine-generated function. */
 }

@@ -223,7 +223,7 @@ CODECONTENTLINEMIDDLE3 end{LINEWHITESPACE}?[^\ \t\n\r\f#][^\n\r\f]*
 "non-relocatable"         { return NON_RELOCATABLE; }
 "rule"                    { return RULE; }
 "when"                    { return WHEN; }
-"$"{UNSIGNEDFIXNUM}       { return RULE_PLACEHOLDER; }
+"$"{IDENTIFIER}           { return RULE_PLACEHOLDER; }
 "true"                    { return TRUE; }
 "false"                   { return FALSE; }
 "rewrite"                 { return REWRITE; }
