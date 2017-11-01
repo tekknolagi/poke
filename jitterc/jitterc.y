@@ -37,6 +37,7 @@
 
 #include "jitterc-vm.h"
 #include "jitterc-mangle.h"
+#include "jitterc-rewrite.h"
 #include "jitterc-utility.h"
 #include "jitterc-parser.h"
 #include "jitterc-scanner.h"
@@ -219,6 +220,23 @@ jitterc_parse_file (const char *input_file_name);
   jitter_int fixnum;
   bool boolean;
   struct jitterc_code_block code_block;
+
+  struct jitterc_argument_pattern *argument_pattern;
+  struct jitterc_template_expression *template_expression;
+  struct jitterc_instruction_pattern *instruction_pattern;
+  struct jitterc_instruction_template *instruction_template;
+
+  /* List elements are pointers to struct jitterc_argument_pattern . */
+  gl_list_t argument_patterns;
+
+  /* List elements are pointers to struct jitterc_template_expression . */
+  gl_list_t template_expressions;
+
+  /* List elements are pointers to struct jitterc_instruction_pattern . */
+  gl_list_t instruction_patterns;
+
+  /* List elements are pointers to struct jitterc_instruction_template . */
+  gl_list_t instruction_templates;
 }
 
 %token VM END CODE /*END_CODE*/ STRING
@@ -238,7 +256,8 @@ jitterc_parse_file (const char *input_file_name);
 %token FIXNUM BITSPERWORD BYTESPERWORD LGBYTESPERWORD
 
 %type <string_list> identifiers;
-%type <string> identifier string;
+%type <string> identifier placeholder string;
+%type <string> optional_identifier optional_placeholder; /* either a heap-allocated string or NULL */
 %type <character> register_letter;
 %type <code_block> code;
 %type <mode> modes mode_character modes_rest;
@@ -246,6 +265,17 @@ jitterc_parse_file (const char *input_file_name);
 %type <fixnum> literal;
 %type <boolean> literals; /* This is true iff there is at least one literal. */
 %type <string> optional_printer_name; /* NULL if there is no printer. */
+%type <argument_pattern> rule_argument_pattern
+%type <argument_patterns> rule_argument_patterns_zero_or_more
+                          rule_argument_patterns_one_or_more
+%type <instruction_pattern> rule_instruction_pattern
+%type <instruction_patterns> rule_instruction_patterns_zero_or_more
+                             rule_instruction_patterns_one_or_more
+%type <template_expression> rule_guard rule_expression rule_operation;
+%type <template_expressions> rule_expressions_zero_or_more
+                             rule_expressions_one_or_more;
+%type <instruction_template> rule_instruction_template
+%type <instruction_templates> rule_instruction_templates_zero_or_more
 
 %%
 
@@ -346,96 +376,171 @@ identifiers: /* FIXME: no need for %type here.  I can use side effects like else
 ;
 
 rule_section:
-  RULE identifier
+  RULE optional_identifier
   rule_guard
-  REWRITE rule_pattern INTO rule_template_instructions_zero_or_more
+  REWRITE rule_instruction_patterns_zero_or_more
+  INTO rule_instruction_templates_zero_or_more
   END
+  { struct jitterc_rule *rule
+      = jitterc_make_rule ($5,
+                           $7,
+                           $3,
+                           ($2 != NULL
+                              ? $2
+                              : jitter_clone_string ("unnamed")),
+                           JITTERC_LINENO);
+    jitterc_add_rule (vm, rule); }
 ;
+
+optional_identifier:
+  /* nothing */  { $$ = NULL; }
+| identifier     { $$ = $1; }
 
 rule_guard:
   /* nothing */
-| WHEN rule_condition
+  { $$ = jitterc_make_template_expression_boolean (true, JITTERC_LINENO); }
+| WHEN rule_expression
+  { $$ = $2; }
 ;
 
-rule_expression:
-  STRING
-| literal
-| RULE_PLACEHOLDER
-| identifier
-| OPEN_PAREN rule_expression CLOSE_PAREN
-| rule_function_call
+rule_instruction_pattern:
+  identifier rule_argument_patterns_zero_or_more
+  { $$ = jitterc_make_instruction_pattern ($1, $2, JITTERC_LINENO); }
 ;
 
-rule_function_call:
-  identifier OPEN_PAREN rule_expressions_zero_or_more CLOSE_PAREN
+rule_instruction_patterns_zero_or_more:
+  /* nothing */
+  { $$ = jitterc_make_empty_list (); }
+| rule_instruction_patterns_one_or_more
+  { $$ = $1; }
+;
+
+rule_instruction_patterns_one_or_more:
+  rule_instruction_pattern
+  { $$ = jitterc_make_empty_list ();
+    gl_list_add_last ($$, $1); }
+| rule_instruction_pattern SEMICOLON rule_instruction_patterns_one_or_more
+  { $$ = $3;
+    gl_list_add_first ($$, $1); }
+;
+
+rule_argument_pattern:
+  bare_argument optional_placeholder
+  {
+    union jitter_word irrelevant;
+    $$ = jitterc_make_argument_pattern ($1.kind,
+                                        false,
+                                        irrelevant,
+                                        $2,
+                                        JITTERC_LINENO);
+  }
+| literal optional_placeholder
+  {
+    union jitter_word literal = { .fixnum = $1 };
+    enum jitterc_instruction_argument_kind literal_kind
+      = jitterc_instruction_argument_kind_literal;
+    $$ = jitterc_make_argument_pattern (literal_kind,
+                                        true,
+                                        literal,
+                                        $2,
+                                        JITTERC_LINENO);
+  }
+| placeholder
+  {
+    union jitter_word irrelevant;
+    enum jitterc_instruction_argument_kind any_kind
+      = jitterc_instruction_argument_kind_unspecified;
+    $$ = jitterc_make_argument_pattern (any_kind,
+                                        false,
+                                        irrelevant,
+                                        $1,
+                                        JITTERC_LINENO);
+  }
+;
+
+placeholder:
+  RULE_PLACEHOLDER  { /* Strip away the prefix. */
+                      $$ = jitter_clone_string (JITTERC_TEXT + 1); }
+;
+
+optional_placeholder:
+  /* nothing */  { $$ = NULL; }
+| placeholder    { $$ = $1; }
+;
+
+rule_argument_patterns_zero_or_more:
+  /* nothing */
+  { $$ = jitterc_make_empty_list (); }
+| rule_argument_patterns_one_or_more
+  { $$ = $1; }
+;
+
+rule_argument_patterns_one_or_more:
+  rule_argument_pattern
+  { $$ = jitterc_make_empty_list ();
+    gl_list_add_last ($$, $1); }
+| rule_argument_pattern COMMA rule_argument_patterns_one_or_more
+  { $$ = $3;
+    gl_list_add_first ($$, $1); }
 ;
 
 rule_expressions_zero_or_more:
   /* nothing */
+  { $$ = jitterc_make_empty_list (); }
 | rule_expression
+  { $$ = jitterc_make_empty_list ();
+    gl_list_add_last ($$, $1); }
 | rule_expression COMMA rule_expressions_one_or_more
+  { $$ = $3;
+    gl_list_add_first ($$, $1); }
 ;
 
 rule_expressions_one_or_more:
   rule_expression
+  { $$ = jitterc_make_empty_list ();
+    gl_list_add_last ($$, $1); }
 | rule_expression COMMA rule_expressions_one_or_more
+  { $$ = $3;
+    gl_list_add_first ($$, $1); }
 ;
 
-rule_condition:
+rule_expression:
   TRUE
+  { $$ = jitterc_make_template_expression_boolean (true, JITTERC_LINENO); }
 | FALSE
-| OPEN_PAREN rule_condition CLOSE_PAREN
-| rule_predicate_call
+  { $$ = jitterc_make_template_expression_boolean (false, JITTERC_LINENO); }
+| literal
+  { union jitter_word w = { .fixnum = $1 };
+    $$ = jitterc_make_template_expression_fixnum (w, JITTERC_LINENO); }
+| placeholder
+  { $$ = jitterc_make_template_expression_placeholder ($1, JITTERC_LINENO); }
+| OPEN_PAREN rule_expression CLOSE_PAREN
+  { $$ = $2; }
+| rule_operation
+  { $$ = $1; }
 ;
 
-rule_predicate_call:
+rule_operation:
   identifier OPEN_PAREN rule_expressions_zero_or_more CLOSE_PAREN
+  { $$ = jitterc_make_template_expression_operation ($1, $3, JITTERC_LINENO); }
 ;
 
-rule_template_instructions_zero_or_more:
+rule_instruction_templates_zero_or_more:
   /* nothing */
-| rule_template_instruction
+  { $$ = jitterc_make_empty_list (); }
+| rule_instruction_template
+  { $$ = jitterc_make_empty_list ();
+    gl_list_add_last ($$, $1); }
   /* FIXME: I would like to remove the SEMICOLON token or make it optional,
      but I have to pay attention to parsing conflicts. */
-| rule_template_instruction SEMICOLON rule_template_instructions_zero_or_more
+| rule_instruction_template SEMICOLON rule_instruction_templates_zero_or_more
+  { $$ = $3;
+    gl_list_add_last ($$, $1); }
 ;
 
-rule_template_instruction:
-  identifier rule_template_instruction_arguments_zero_or_more
-| RULE_PLACEHOLDER rule_template_instruction_arguments_zero_or_more
-;
-
-rule_template_instruction_arguments_zero_or_more:
-  /* nothing */
-| rule_template_instruction_arguments_one_or_more
-;
-
-rule_template_instruction_arguments_one_or_more:
-  rule_template_instruction_argument
-| rule_template_instruction_argument COMMA rule_template_instruction_arguments_one_or_more
-;
-
-rule_template_instruction_argument:
-  RULE_PLACEHOLDER
-| literal
-;
-
-rule_pattern:
-  identifier rule_pattern_arguments_zero_or_more
-;
-
-rule_pattern_argument:
-  modes bare_argument literals
-;
-
-rule_pattern_arguments_zero_or_more:
-  /* nothing */
-| rule_pattern_arguments_one_or_more
-;
-
-rule_pattern_arguments_one_or_more:
-  rule_pattern_argument
-| rule_pattern_argument COMMA rule_pattern_arguments_one_or_more
+rule_instruction_template:
+  identifier rule_expressions_zero_or_more
+  { $$ = jitterc_make_instruction_template ($1, $2, JITTERC_LINENO); }
 ;
 
 register_class_section:

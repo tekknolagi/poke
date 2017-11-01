@@ -157,4 +157,484 @@ jitter_destroy_last_instructions (struct jitter_program *p,
                                   size_t how_many);
 
 
+
+
+/* Rewriting macros for rule compilation: introduction.
+ * ************************************************************************** */
+
+/* The macros in the following sections provide a facility for executing rewrite
+   rules at runtime (not at generation time) from machine-generated C, expressed
+   in a structured, abstract way.  The expanded C code is meant to be fast in
+   the more common case, which is to say when rules do *not* fire.
+
+   Each rewrite rule is translated into a C conditional with a complex condition
+   made of clauses all in logical and, having side effects on local variables,
+   which eventually evaluates to true if the rule fires.  In that case some head
+   instruction arguments are cloned heap-to-heap into templates, head
+   instruction destroyed, and new instructions appended in their place, using
+   the cloned placeholder to instantiate the rule template; after the new
+   instructions are appended the cloned templates are destroyed, and the
+   rewriting function returns.  When a rule does not match, instead, evaluation
+   falls thru to the conditional for the next rule.
+
+   The rewriting process is inherently recursive: appending an instruction, be
+   it from the user C code or from another rewrite, may in its turn trigger a
+   rewrite.  This recursion is indirect and spans compilation units, which can
+   make it difficult for the C compiler to optimize away; however recursive
+   calls are at least in tail position when there are no templates to destroy.
+
+   Notice that macro-level rule "sections" don't match the statement nesting of
+   C-level blocks: in particular the rule conditional body is opened by
+   JITTER_RULE_END_CONDITIONS and closed by
+   JITTER_RULE_END_PLACEHOLDER_DESTRUCTION .  Macro-level sections are nested in
+   a rigid, fixed way, to keep the generated code legible.  Their C
+   implementation is focused on exploiting C's statement evaluation in an
+   appropriate way (in particular, there are complex side-effects within an if
+   conditional) and that C variables have the intended scope.
+   Some sections may be empty, but their opening and closing is mandatory for
+   every rule, in the required order.
+
+   An example of the rewrite rule changing
+       pop $a; push $a
+   into
+       copy-to-r $a
+   translated into C:
+
+   JITTER_RULE_BEGIN(2)
+     JITTER_RULE_BEGIN_PLACEHOLDER_DECLARATIONS
+       JITTER_RULE_DECLARE_PLACEHOLDER_(a);
+     JITTER_RULE_END_PLACEHOLDER_DECLARATIONS
+     JITTER_RULE_BEGIN_CONDITIONS
+       JITTER_RULE_CONDITION_MATCH_OPCODE(0, pop)
+       JITTER_RULE_CONDITION_MATCH_OPCODE(1, push)
+       JITTER_RULE_CONDITION_MATCH_PLACEHOLDER(0, 0, a)
+       JITTER_RULE_CONDITION_MATCH_PLACEHOLDER(1, 0, a)
+     JITTER_RULE_END_CONDITIONS
+     JITTER_RULE_BEGIN_PLACEHOLDER_CLONING
+       JITTER_RULE_CLONE_PLACEHOLDER_(a);
+     JITTER_RULE_END_PLACEHOLDER_CLONING
+     JITTER_RULE_BEGIN_BODY
+       JITTER_RULE_APPEND_INSTRUCTION_(copy_mto_mr);
+       JITTER_RULE_APPEND_PLACEHOLDER_(a);
+     JITTER_RULE_END_BODY
+     JITTER_RULE_BEGIN_PLACEHOLDER_DESTRUCTION
+       JITTER_RULE_DESTROY_PLACEHOLDER_(a);
+     JITTER_RULE_END_PLACEHOLDER_DESTRUCTION
+   JITTER_RULE_END  */
+
+
+
+
+/* Rewriting macros for rule compilation: sections.
+ * ************************************************************************** */
+
+/* Open a rule section, for a rule whose head matches the given number of VM
+   instructions.  This must be followed by a call to
+   JITTER_RULE_BEGIN_PLACEHOLDER_DECLARATIONS . */
+#define JITTER_RULE_BEGIN(_jitter_head_instruction_no)                         \
+  { /* Begin the rule block.  */                                               \
+    /* Set the head size as a variable, so that we don't have to pass */       \
+    /* _jitter_head_instruction_no to multiple macros. */                      \
+    const int jitter_head_instruction_no = (_jitter_head_instruction_no);      \
+    /* A pointer to the first instruction which is potentially a */            \
+    /* candidate for rewriting, with the current rule.  This might not */      \
+    /* even point to a valid instruction: we have to check how many */         \
+    /* rewritable instructions there are before using it. */                   \
+    const struct jitter_instruction * const * const                            \
+       jitter_candidate_instructions __attribute__ ((unused))                  \
+         = (jitter_all_rewritable_instructions                                 \
+            + jitter_rewritable_instruction_no - jitter_head_instruction_no);  \
+    /* This will contain placeholder variable declarations, and then */        \
+    /* the rule conditional. */
+
+/* Close a rule section. */
+#define JITTER_RULE_END          \
+  } /* Close the rule block. */
+
+/* Open the placeholder declaration section.  This must come right after the
+   JITTER_RULE_BEGIN call. */
+#define JITTER_RULE_BEGIN_PLACEHOLDER_DECLARATIONS                            \
+  /* Nothing, not even a "{": we need the coming variable declarations to */  \
+  /* be visible in the following code, up until placeholder destruction. */
+
+/* Close the placeholder declaration section. */
+#define JITTER_RULE_END_PLACEHOLDER_DECLARATIONS  \
+  /* Nothing, not even a "}".  See above. */
+
+/* Begin the rule condition section.  This must come right after placeholder
+   declarations.  The condition sections may contain any number of conditions,
+   which must *all* evaluate to true for the rule to fire. */
+#define JITTER_RULE_BEGIN_CONDITIONS                        \
+  if (   (jitter_rewritable_instruction_no                  \
+            >= (jitter_head_instruction_no))                \
+      /* Here will come the other conditions, all in && */
+      /* with one another. */
+
+/* Close the rule condition section. */
+#define JITTER_RULE_END_CONDITIONS                                          \
+     ) /* Close the if condition */                                         \
+    { /* Begin the rule conditional body, executed when the rule fires. */  \
+      /* The rule conditional body is distinct from the rule body! */
+
+/* Open the block holding placeholder cloning calls.  This block must occur
+   after rule conditions and before the rule body. */
+#define JITTER_RULE_BEGIN_PLACEHOLDER_CLONING  \
+  { /* Open the placeholder cloning block. */
+
+/* Close the block holding placeholder cloning calls. */
+#define JITTER_RULE_END_PLACEHOLDER_CLONING     \
+  } /* Close the placeholder cloning block. */
+
+/* Open the block holding placeholder destructions calls.  This block must occur
+   after the rule body. */
+#define JITTER_RULE_BEGIN_PLACEHOLDER_DESTRUCTION      \
+    { /* Open the placeholder destruction block... */
+
+/* Close the block holding placeholder destructions calls. */
+#define JITTER_RULE_END_PLACEHOLDER_DESTRUCTION                  \
+    } /* ...Close the placeholder destruction block. */          \
+    /* One rewrite rule fired, and if we have appended new */    \
+    /* instructions they have been rewritten as well.  Done. */  \
+    return; /*goto jitter_rewrite_again_label;*/                 \
+  } /* Close the rule conditional body. */
+
+/* Open the rule body section.  This must come after placeholder cloning. */
+#define JITTER_RULE_BEGIN_BODY                                               \
+  { /* Open the rule body block, which occurs within the rule */             \
+    /* conditional body. */                                                  \
+    /* Destroy the instructions matching the rule head.  We have already */  \
+    /* copied the arguments we need for rewriting. */                        \
+    jitter_destroy_last_instructions (jitter_program_p,                      \
+                                      jitter_head_instruction_no);           \
+    /* From here on it's incorrect to use head instructions or non-cloned */ \
+    /* placeholders. */
+
+/* Close the rule body section. */
+#define JITTER_RULE_END_BODY                                             \
+  } /* Close the rule body block, but not the rule conditional body. */  \
+    /* That will be closed later, after placeholders are destroyed. */
+
+
+
+
+/* Rewriting macros for rule compilation: placeholders.
+ * ************************************************************************** */
+
+/* The name of a placeholder variable as a C identifier. */
+#define JITTER_PLACEHOLDER_NAME(_jitter_suffix)                \
+  JITTER_CONCATENATE_TWO(jitter_placeholder_, _jitter_suffix)
+
+/* Expand to a pointer variable declaration for the given placeholder, also
+   initializing the pointer to NULL so that it matches any instruction argument.
+   It is sensible to declare the variable to point to const data: this will
+   allow GCC to share checks on arguments across different rule conditions;
+   arguments are in fact not modified, until one rule matches -- and then
+   the other rules become irrelevent.  Not do..while(false)-protected. */
+#define JITTER_RULE_DECLARE_PLACEHOLDER_(_jitter_placeholder_name)  \
+  const struct jitter_parameter *                                   \
+     JITTER_PLACEHOLDER_NAME(_jitter_placeholder_name)              \
+       = NULL
+
+/* Replace the pointer variable for the given placeholder, which must be
+   non-NULL, with a pointer to a freshly cloned argument.  This way the
+   placeholder will be usable from the rule body to fill the rule template,
+   after the matching head instructions are destroyed.  Not
+   do..while(false)-protected. */
+#define JITTER_RULE_CLONE_PLACEHOLDER_(_jitter_placeholder_name)  \
+  JITTER_PLACEHOLDER_NAME(_jitter_placeholder_name)               \
+    = jitter_clone_instruction_parameter                          \
+         (JITTER_PLACEHOLDER_NAME(_jitter_placeholder_name))
+
+/* Destroy the instruction parameter pointed by the local placeholder variable
+   for the named placeholder.  The pointer must be non-NULL.  Not
+   do..while(false)-protected. */
+#define JITTER_RULE_DESTROY_PLACEHOLDER_(_jitter_placeholder_name)  \
+  jitter_destroy_instruction_parameter                              \
+     ((struct jitter_parameter *)                                   \
+      JITTER_PLACEHOLDER_NAME(_jitter_placeholder_name));
+
+
+
+
+/* Rewriting macros for rule compilation: instruction/argument access.
+ * ************************************************************************** */
+
+/* Expand to a struct jitter_instruction * r-value evaluating to the
+   _jitter_instruction_idx-th (0-based) candidate instruction.
+   This is useful for referring to the first, second, and so on, instrction
+   among the ones matching the head of a rule. */
+#define JITTER_RULE_INSTRUCTION(_jitter_instruction_idx)     \
+  (jitter_candidate_instructions [_jitter_instruction_idx])
+
+/* Expand to a struct jitter_parameter * r-value evaluating to the
+   _jitter_argument_idx-th (0-based) argument of the
+   _jitter_instruction_idx-th (0-based) candidate instruction.
+   This is useful for referring to a given argument of a given instruction
+   among the ones matching the head of a rule. */
+#define JITTER_RULE_INSTRUCTION_ARGUMENT(_jitter_instruction_idx,  \
+                                         _jitter_argument_idx)     \
+  (JITTER_RULE_INSTRUCTION(_jitter_instruction_idx)                \
+     ->parameters [_jitter_argument_idx])
+
+/* Expand to an r-value of type enum jitter_parameter_type evaluating to the
+   actual type of the given argument. */
+#define JITTER_RULE_ARGUMENT_TYPE(_jitter_instruction_idx,    \
+                                  _jitter_argument_idx)       \
+  (JITTER_RULE_INSTRUCTION_ARGUMENT(_jitter_instruction_idx,  \
+                                    _jitter_argument_idx)     \
+      ->type)
+
+
+
+
+/* Rewriting macros for rule compilation: macros for argument field extraction.
+ * ************************************************************************** */
+
+/* Given an r-value evaluating to a pointer to a (possibly const) struct
+   jitter_parameter , expand to an r-value which evaluates to its content as
+   literal.  The argument type is not checked. */
+#define JITTER_RULE_LITERAL_FIELD(_jitter_argument_expression)  \
+  ((_jitter_argument_expression)->literal)
+
+/* Given an r-value evaluating to a pointer to a (possibly const) struct
+   jitter_parameter , expand to an r-value which evaluates to its register-index
+   content.  The argument type is not checked. */
+#define JITTER_RULE_REGISTER_INDEX_FIELD(_jitter_argument_expression)  \
+  ((_jitter_argument_expression)->register_index)
+
+
+
+
+/* Rewriting macros for rule compilation: macros for condition evaluation.
+ * ************************************************************************** */
+
+/* Expand to a boolean r-value, evaluating to true iff the given actual
+   argument is a register. */
+#define JITTER_RULE_ARGUMENT_IS_A_REGISTER(_jitter_instruction_idx,  \
+                                           _jitter_argument_idx)     \
+  (JITTER_RULE_ARGUMENT_TYPE(_jitter_instruction_idx,                \
+                              _jitter_argument_idx)                  \
+   == jitter_parameter_type_register_id)
+
+/* Expand to a boolean r-value, evaluating to true iff the given actual
+   argument is a literal. */
+#define JITTER_RULE_ARGUMENT_IS_A_LITERAL(_jitter_instruction_idx,  \
+                                          _jitter_argument_idx)     \
+  (JITTER_RULE_ARGUMENT_TYPE(_jitter_instruction_idx,               \
+                             _jitter_argument_idx)                  \
+   == jitter_parameter_type_literal)
+
+/* Expand to a boolean r-value, evaluating to true iff the given actual
+   argument is a label -- there is no distinction here between fast
+   and slow labels. */
+#define JITTER_RULE_ARGUMENT_IS_A_LABEL(_jitter_instruction_idx,  \
+                                        _jitter_argument_idx)     \
+  (JITTER_RULE_ARGUMENT_TYPE(_jitter_instruction_idx,             \
+                             _jitter_argument_idx)                \
+   == jitter_parameter_type_label)
+
+
+
+
+/* Rewriting macros for rule compilation: conditions.
+ * ************************************************************************** */
+
+/* Expand to a condition, to be &&'ed to the previous conditions in the rule
+   conditional.  A condition expression may have side effects, and its result
+   must be non-zero if evaluation of the following conditions is to continue;
+   when a condition expression evaluates to zero the following conditions are
+   not evaluated, and the current rule does not fire.
+   A condition must not have side effects visible out of the current rule
+   block, since any following condition may fail.  Setting placeholders is
+   allowed because placeholder variables are just pointers local to the block,
+   and don't refer to newly allocated memory during the condition evaluation.
+   Only if the condition eventually evaluates to a non-zero value
+   placeholders are cloned, and head instructions are destroyed: at that point
+   the rule is known to fire, and its effects will be visible. */
+#define JITTER_RULE_CONDITION(_jitter_condition_expression)  \
+      && (_jitter_condition_expression)
+
+/* Expand to a condition on the opcode of the _jitter_instruction_idx-th
+   instruction (0-based, from the first head candidate).  Conditions like these
+   should always be the first ones in a rule conditional: after they have all
+   matched we can safely access instruction arguments knowing that the arities
+   will be what we are expecting from their respective instructions.
+   The opcode is given with the same conventions as the second argument of
+   VMPREFIX_APPEND_INSTRUCTION . */
+#define JITTER_RULE_CONDITION_MATCH_OPCODE(_jitter_instruction_idx,        \
+                                           _jitter_mangled_opcode_suffix)  \
+  JITTER_RULE_CONDITION(                                                   \
+     (JITTER_RULE_INSTRUCTION(_jitter_instruction_idx)                     \
+         ->meta_instruction->id)                                           \
+      == JITTER_CONCATENATE_THREE(JITTER_VM_PREFIX_LOWER_CASE,             \
+                                  _meta_instruction_id_,                   \
+                                  _jitter_mangled_opcode_suffix))
+
+/* Match the _jitter_argument_idx-th (0-based) argument of the
+   _jitter_instruction_idx-th (0-based) instruction with the given
+   placeholder.
+   - if the placeholder is NULL, set it to the argument pointer and evaluate to
+     true;
+   - if the placeholder is already set, check if it's equal to the given
+     parameter (this will occur in non-linear patterns): if so evaluate to true,
+     otherwise evaluate to false.
+     In either case the parameter is not cloned: the placeholder at this
+     point may only hold a pointer to an *existing* heap-allocated datum. */
+#define JITTER_RULE_CONDITION_MATCH_PLACEHOLDER(_jitter_instruction_idx,   \
+                                                _jitter_argument_idx,      \
+                                                _jitter_placeholder_name)  \
+  JITTER_RULE_CONDITION(                                                   \
+     ((JITTER_PLACEHOLDER_NAME(_jitter_placeholder_name) == NULL)          \
+      ? ((JITTER_PLACEHOLDER_NAME(_jitter_placeholder_name)                \
+            = JITTER_RULE_INSTRUCTION_ARGUMENT(_jitter_instruction_idx,    \
+                                               _jitter_argument_idx))      \
+         /* Without ", true" GCC would complain about ? : having a */      \
+         /* pointer and and integer on different branches. */              \
+         , true)                                                           \
+      : jitter_instruction_parameters_equal                                \
+           (JITTER_PLACEHOLDER_NAME(_jitter_placeholder_name),             \
+            JITTER_RULE_INSTRUCTION_ARGUMENT(_jitter_instruction_idx,      \
+                                             _jitter_argument_idx))))
+
+/* Expand to a rule condition like above, evaluating to true iff the mentioned
+   instruction argument is a literal with the given value.  Do not check the
+   register class, as each instruction register argument can have only one, and
+   that has been already checked statically.  No side effects. */
+#define JITTER_RULE_CONDITION_MATCH_REGISTER_ARGUMENT(_jitter_instruction_idx, \
+                                                      _jitter_argument_idx,    \
+                                                      _jitter_register_index)  \
+  JITTER_RULE_CONDITION(                                                       \
+        JITTER_RULE_ARGUMENT_IS_A_REGISTER(_jitter_instruction_idx,            \
+                                           _jitter_argument_idx)               \
+     && (JITTER_RULE_INSTRUCTION_ARGUMENT(_jitter_instruction_idx,             \
+                                          _jitter_argument_idx)                \
+           ->register_index                                                    \
+         == (_jitter_argument_value)))
+
+/* Expand to a rule condition like above, evaluating to true iff the mentioned
+   instruction argument is a register with the given index.  No side effects. */
+#define JITTER_RULE_CONDITION_MATCH_LITERAL_ARGUMENT(_jitter_instruction_idx, \
+                                                     _jitter_argument_idx,    \
+                                                     _jitter_argument_value)  \
+  JITTER_RULE_CONDITION(                                                      \
+        JITTER_RULE_ARGUMENT_IS_A_LITERAL(_jitter_instruction_idx,            \
+                                          _jitter_argument_idx)               \
+     && (JITTER_RULE_LITERAL_FIELD(                                           \
+            JITTER_RULE_INSTRUCTION_ARGUMENT(_jitter_instruction_idx,         \
+                                             _jitter_argument_idx))           \
+               .fixnum                                                        \
+         == (_jitter_argument_value)))
+
+/* Expand to the predicate JITTER_RULE_ARGUMENT_IS_A_REGISTER within a
+   condition.  Like in the case of JITTER_RULE_ARGUMENT_IS_A_REGISTER there is
+   no need to supply a register class; see its comment. */
+#define JITTER_RULE_CONDITION_ARGUMENT_IS_A_REGISTER(_jitter_instruction_idx,  \
+                                                     _jitter_argument_idx)     \
+  JITTER_RULE_CONDITION(                                                       \
+     JITTER_RULE_ARGUMENT_IS_A_REGISTER(_jitter_instruction_idx,               \
+                                        _jitter_argument_idx))
+
+/* Expand to the predicate JITTER_RULE_ARGUMENT_IS_A_LITERAL within a
+   condition. */
+#define JITTER_RULE_CONDITION_ARGUMENT_IS_A_LITERAL(_jitter_instruction_idx,  \
+                                                    _jitter_argument_idx)     \
+  JITTER_RULE_CONDITION(                                                      \
+     JITTER_RULE_ARGUMENT_IS_A_LITERAL(_jitter_instruction_idx,               \
+                                       _jitter_argument_idx))
+
+/* Expand to the predicate JITTER_RULE_ARGUMENT_IS_A_LABEL within a
+   condition.  There is no distinction between fast and slow labels. */
+#define JITTER_RULE_CONDITION_ARGUMENT_IS_A_LABEL(_jitter_instruction_idx,  \
+                                                  _jitter_argument_idx)     \
+  JITTER_RULE_CONDITION(                                                    \
+     JITTER_RULE_ARGUMENT_IS_A_LABEL(_jitter_instruction_idx,               \
+                                     _jitter_argument_idx))
+
+
+
+
+/* Rewriting macros for rule compilation: template expressions.
+ * ************************************************************************** */
+
+/* Template expressions expand to C r-values, having access to constants and
+   placeholders but not to the original instructions, which except for the case
+   of the rule guard have already been destroyed.
+   The expansion has no side effects except in the case of errors, which should
+   never happen if typechecking has passed.
+   The C type of the expansion depends on the context, and is checked
+   statically. */
+
+/* Expand to a template expression evaluating to the boolean constants true and
+   false. */
+#define JITTER_RULE_EXPRESSION_TRUE  \
+  true
+#define JITTER_RULE_EXPRESSION_FALSE  \
+  false
+
+/* Expand to a template expression evaluating to an integer expression
+   containing the given constant. */
+#define JITTER_RULE_EXPRESSION_INTEGER(_jitter_literal1)  \
+  (_jitter_literal1)
+
+/* Expand to a template expression evaluating to a boolean expression combining
+   the given operands with the appropriate connective. */
+#define JITTER_RULE_EXPRESSION_LOGICAL_AND(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) && (_jitter_e2))
+#define JITTER_RULE_EXPRESSION_LOGICAL_OR(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) || (_jitter_e2))
+#define JITTER_RULE_EXPRESSION_LOGICAL_NOT(_jitter_e1)  \
+  (! (_jitter_e1))
+
+/* Expand to a template expression evaluating to an arithmetic expression
+   combining the given operands with the appropriate operation. */
+#define JITTER_RULE_EXPRESSION_PLUS(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) + (_jitter_e2))
+#define JITTER_RULE_EXPRESSION_MINUS(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) - (_jitter_e2))
+#define JITTER_RULE_EXPRESSION_TIMES(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) * (_jitter_e2))
+#define JITTER_RULE_EXPRESSION_DIVIDED(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) / (_jitter_e2))
+#define JITTER_RULE_EXPRESSION_REMAINDER(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) % (_jitter_e2))
+
+/* Expand to a template boolean expression comparing the given arithmetic
+   operands with the appropriate. */
+#define JITTER_RULE_EXPRESSION_EQUAL(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) == (_jitter_e2))
+#define JITTER_RULE_EXPRESSION_NOTEQUAL(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) != (_jitter_e2))
+#define JITTER_RULE_EXPRESSION_LESS(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) < (_jitter_e2))
+#define JITTER_RULE_EXPRESSION_LESSEQUAL(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) <= (_jitter_e2))
+#define JITTER_RULE_EXPRESSION_GREATER(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) > (_jitter_e2))
+#define JITTER_RULE_EXPRESSION_GREATEREQUAL(_jitter_e1, _jitter_e2)  \
+  ((_jitter_e1) >= (_jitter_e2))
+
+
+
+
+/* Rewriting macros for rule compilation: body.
+ * ************************************************************************** */
+
+/* Append the instruction opcode whose mangled suffix (see the comment for
+   VMPREFIX_APPEND_INSTRUCTION ) is given; the arguments, if any, need to be
+   added explicitly after calling this macro.  Not
+   do..while(false)-protected. */
+#define JITTER_RULE_APPEND_INSTRUCTION_(_jitter_mangled_suffix)        \
+  JITTER_CONCATENATE_TWO(JITTER_VM_PREFIX_UPPER_CASE,                  \
+                         _APPEND_INSTRUCTION)(jitter_program_p,        \
+                                              _jitter_mangled_suffix)
+
+/* Append a copy of the parameter pointed by the named placeholder variable,
+   which must be non-NULL, to the current instruction.  Not
+   do..while(false)-protected. */
+#define JITTER_RULE_APPEND_PLACEHOLDER_(_jitter_placeholder_name)  \
+  jitter_append_parameter_copy (jitter_program_p,                  \
+                                JITTER_PLACEHOLDER_NAME(           \
+                                   _jitter_placeholder_name));
+
+
 #endif // #ifndef JITTER_REWRITE_H_

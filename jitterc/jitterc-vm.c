@@ -155,6 +155,9 @@ jitterc_make_vm (void)
   res->specialized_instructions = jitterc_make_empty_list ();
   res->specialized_instruction_forest = jitterc_make_empty_list ();
 
+  /* There are no rewrite rules yet. */
+  res->rewrite_rules = jitterc_make_empty_list ();
+
   /* There are no stacks yet. */
   res->stacks = jitterc_make_empty_list ();
 
