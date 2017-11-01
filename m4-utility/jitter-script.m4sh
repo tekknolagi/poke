@@ -29,3 +29,24 @@
 
 # Initialize M4sh.
 AS_INIT
+
+
+# Include other M4 macro definitions.
+################################################################
+
+# Here we include general-purpose M4 macro definitions from the Autoconf
+# definition file for Jitter, ignoring the Autoconf definitions themselves.
+#
+# This is easier than the more intuitive alternative of having the Autoconf
+# macros include a library of definitions: having dependencies between an
+# installed Autoconf macro file and a generic M4sugar file, also installed, is
+# messy.
+
+# Redefine AC_DEFUN to expand to nothing.  This way we can simply include the
+# file containing AC_DEFUN definitions, and use everything else.
+# Line comments starting with "#" will remain in the expansion, but that is
+# harmless.
+m4_define([AC_DEFUN], [])
+
+# Include.
+m4_include([../autoconf/jitter.m4])
