@@ -225,6 +225,31 @@ label :
           jitter_append_symbolic_label (parser_arg->program, label + 1); }
 ;
 
+/* FIXME: this is the right solution.  I will replace the previous part of the
+   grammar with this after lifting the limitation preventing a program from ending
+   with a label. */
+
+/* program : */
+/*   /\* nothing *\/ */
+/* | program instruction_or_label */
+/* ; */
+
+/* instruction_or_label : */
+/*   instruction */
+/* | label */
+/* ; */
+
+/* instruction : */
+/*   instruction_name arguments */
+/* ; */
+
+/* label : */
+/*   LABEL { char *label = jitter_get_text (jitter_scanner); */
+/*           label [strlen (label) - 1] = '\0';  /\* Remove the trailing colon. *\/ */
+/*           /\* Add one to skip the prefix. *\/ */
+/*           jitter_append_symbolic_label (parser_arg->program, label + 1); } */
+/* ; */
+
 instruction_name :
   INSTRUCTION_NAME { char *name = jitter_get_text (jitter_scanner);
                      jitter_append_instruction_name (parser_arg->program,
