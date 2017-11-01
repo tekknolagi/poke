@@ -555,6 +555,34 @@ AM_CONDITIONAL([JITTER_HAS_ASSEMBLY],
                [test "x$jitter_has_host_assembly" = "xyes"])
 
 
+# Binary format.
+################################################################
+
+# Determine whether the host OS uses the ELF binary format.
+
+# This is crude but probably sufficient for the currently supported
+# configurations.  This check should guess correctly in the case of modern GNU
+# systems, all using ELF, and conservatively assume that ELF is not used in most
+# other cases.
+AC_MSG_CHECKING([if the host OS uses the ELF binary format])
+AS_CASE([$host_os],
+        [*aout*|*coff*],
+          [jitter_host_os_is_elf=no],
+        [gnu*|linux-gnu*|*elf*],
+          [jitter_host_os_is_elf=yes],
+        [*uclibc*],
+          [jitter_host_os_is_elf=yes],
+          [jitter_host_os_is_elf=no])
+AC_MSG_RESULT([$jitter_host_os_is_elf])
+
+# Define a C feature macro telling whether we can rely on the binary format
+# being ELF.
+if test "x$jitter_host_os_is_elf" = "xyes"; then
+  AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_ELF], [1],
+                     [Define to 1 iff the host OS uses the ELF format])
+fi
+
+
 # M4sh machinery.
 ################################################################
 
@@ -620,7 +648,7 @@ AM_CONDITIONAL([JITTER_CAN_REBUILD_MAN_PAGES],
                [test "x$jitter_can_rebuild_man_pages" = "xyes"])
 
 
-# Other configuration options.
+# Valgrind support.
 ################################################################
 
 # We optionally support valgrind in the test suite.  First use a configure
@@ -662,6 +690,10 @@ else
   AC_MSG_RESULT([yes, defined by configure option as $jitter_with_valgrind])
   AC_SUBST([JITTER_VALGRIND], [$jitter_with_valgrind])
 fi
+
+
+# Test suite support.
+################################################################
 
 # Decide whether we can run the test suite...
 AC_MSG_CHECKING([if we can run the test suite])
@@ -705,6 +737,10 @@ if    test "x$JITTER_CAN_RUN_TESTSUITE" = "xyes" \
    && test "x$JITTER_VALGRIND" = "x"; then
   AC_MSG_WARN([the test suite will skip Valgrind test cases])
 fi
+
+
+# Dispatching models to be enabled.
+################################################################
 
 # Check whether each dispatching model is available and enabled, in order of
 # increasing preference.  The last found to be enabled is also considered the
@@ -787,7 +823,9 @@ AM_CONDITIONAL([JITTER_ENABLE_DISPATCH_MINIMAL_THREADING],
 # Is no-threading enabled?  If so define a CPP macro.  Also define a
 # substitution and an Automake conditional.
 AC_MSG_CHECKING([if no-threading dispatch is enabled])
-if test "x$GCC" = "xyes" && test "x$jitter_has_host_assembly" = "xyes"; then
+if    test "x$GCC" = "xyes" \
+   && test "x$jitter_has_host_assembly" = "xyes" \
+   && test "x$jitter_host_os_is_elf" = "xyes"; then
   default=yes
 else
   default=no
@@ -795,8 +833,8 @@ fi
 AC_ARG_ENABLE([dispatch-no-threading],
               AS_HELP_STRING([--enable-dispatch-no-threading],
               [enable no-threading dispatch: default yes if and
-only if GCC or a compiler claiming to be GCC is used and the
-host architecture has assembly support]),
+only if GCC or a compiler claiming to be GCC is used, the host
+architecture has assembly support, and the binary format is ELF]),
               jitter_enable_dispatch_no_threading="$enableval",
               jitter_enable_dispatch_no_threading="$default")
 if test "x$jitter_enable_dispatch_no_threading" = "xyes"; then
