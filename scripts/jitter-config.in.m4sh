@@ -251,9 +251,9 @@ jitter_for_dispatch([a_dispatch],
 [         a_dispatch)
               case "$flagname" in
 jitter_for_flag([a_flag],
-[                 a_flag) new="@JITTER_[]jitter_tocpp(a_dispatch)[_]jitter_tocpp(a_flag)@";;])
+[                 a_flag) new="@JITTER_[]jitter_tocpp(a_dispatch)[_]jitter_tocpp(a_flag)@";;])dnl jitter_for_flag
                   *) fail_semantic "impossible: flag $flagname for a_dispatch";;
-              esac;;])
+              esac;;])dnl jitter_for_dispatch
         *)
             fail_semantic "this should never happen: model $model";;
     esac
