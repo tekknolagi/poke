@@ -461,7 +461,7 @@ instruction_section:
     if (ins->hotness == jitterc_hotness_unspecified)
       ins->hotness = jitterc_hotness_hot;
     if (ins->relocatability == jitterc_relocatability_unspecified)
-      ins->relocatability = jitterc_relocatability_relocatable; // FIXME: consider this more carefully.
+      ins->relocatability = jitterc_relocatability_relocatable;
     if (ins->callerness == jitterc_callerness_unspecified)
       ins->callerness = jitterc_callerness_non_caller;
     if (ins->calleeness == jitterc_calleeness_unspecified)
