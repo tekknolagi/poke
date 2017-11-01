@@ -108,6 +108,11 @@ struct jitter_vm
   struct jitter_meta_instruction *meta_instructions;
   size_t meta_instruction_no;
 
+  /* Specific meta-instruction pointers for implicit instructions.
+     VM-independent program specialization relies on those, so they have to be
+     accessible to the Jitter library, out of generated code*/
+  const struct jitter_meta_instruction *exitvm_meta_instruction;
+
   /* The longest unspecialized/meta instruction name length, not mangled,
      without counting the final '\0' character.  Special specialized
      instruction, having no unspecialized counterparts, are ignored here. */

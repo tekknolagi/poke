@@ -264,7 +264,15 @@ vmprefix_initialize (void)
       vmprefix_initialize_vm_configuration (& the_vmprefix_vm.configuration);
       //vmprefix_print_vm_configuration (stdout, & the_vmprefix_vm.configuration);
 
-/* Threads or pointers to native code blocks of course don't exist with
+      /* Initialize meta-instruction pointers for implicit instructions.
+         VM-independent program specialization relies on those, so they have to
+         be accessible to the Jitter library, out of generated code.  Since
+         meta-instructions are sorted alphabetically in the array, the index
+         is not fixed. */
+      the_vmprefix_vm.exitvm_meta_instruction
+        = (vmprefix_meta_instructions + vmprefix_meta_instruction_id_exitvm);
+
+      /* Threads or pointers to native code blocks of course don't exist with
    switch-dispatching. */
 #ifndef JITTER_DISPATCH_SWITCH
       the_vmprefix_vm.threads = (jitter_thread *)vmprefix_threads;
