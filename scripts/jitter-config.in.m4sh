@@ -247,38 +247,13 @@ append_to_output ()
         model="$dispatch"
     fi
     case "$model" in
-        switch)
-            case "$flagname" in
-                cflags) new="@JITTER_SWITCH_CFLAGS@";;
-                cppflags) new="@JITTER_SWITCH_CPPFLAGS@";;
-                ldadd) new="@JITTER_SWITCH_LDADD@";;
-                ldflags) new="@JITTER_SWITCH_LDFLAGS@";;
-                *) fail_semantic "impossible: $flagname for $model";;
-            esac;;
-        direct-threading)
-            case "$flagname" in
-                cflags) new="@JITTER_DIRECT_THREADING_CFLAGS@";;
-                cppflags) new="@JITTER_DIRECT_THREADING_CPPFLAGS@";;
-                ldadd) new="@JITTER_DIRECT_THREADING_LDADD@";;
-                ldflags) new="@JITTER_DIRECT_THREADING_LDFLAGS@";;
-                *) fail_semantic "impossible: $flagname for $model";;
-            esac;;
-        minimal-threading)
-            case "$flagname" in
-                cflags) new="@JITTER_MINIMAL_THREADING_CFLAGS@";;
-                cppflags) new="@JITTER_MINIMAL_THREADING_CPPFLAGS@";;
-                ldadd) new="@JITTER_MINIMAL_THREADING_LDADD@";;
-                ldflags) new="@JITTER_MINIMAL_THREADING_LDFLAGS@";;
-                *) fail_semantic "impossible: $flagname for $model";;
-            esac;;
-        no-threading)
-            case "$flagname" in
-                cflags) new="@JITTER_NO_THREADING_CFLAGS@";;
-                cppflags) new="@JITTER_NO_THREADING_CPPFLAGS@";;
-                ldadd) new="@JITTER_NO_THREADING_LDADD@";;
-                ldflags) new="@JITTER_NO_THREADING_LDFLAGS@";;
-                *) fail_semantic "impossible: $flagname for $model";;
-            esac;;
+jitter_for_dispatch([a_dispatch],
+[         a_dispatch)
+              case "$flagname" in
+jitter_for_flag([a_flag],
+[                 a_flag) new="@JITTER_[]jitter_tocpp(a_dispatch)[_]jitter_tocpp(a_flag)@";;])
+                  *) fail_semantic "impossible: flag $flagname for a_dispatch";;
+              esac;;])
         *)
             fail_semantic "this should never happen: model $model";;
     esac
