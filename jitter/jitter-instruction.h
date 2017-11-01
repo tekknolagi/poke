@@ -181,6 +181,13 @@ jitter_compare_instruction_parameters (const struct jitter_parameter *a,
                                        const struct jitter_parameter *b)
   __attribute__ ((pure, nonnull (1, 2)));
 
+/* Return true iff the two pointed instruction parameters are structurally
+   equal. */
+bool
+jitter_instruction_parameters_equal (const struct jitter_parameter *a,
+                                     const struct jitter_parameter *b)
+  __attribute__ ((pure, nonnull (1, 2)));
+
 
 
 

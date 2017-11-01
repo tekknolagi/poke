@@ -163,6 +163,14 @@ jitter_compare_instruction_parameters (const struct jitter_parameter *a,
   return memcmp (a, b, sizeof (struct jitter_parameter));
 }
 
+bool
+jitter_instruction_parameters_equal (const struct jitter_parameter *a,
+                                     const struct jitter_parameter *b)
+{
+  return jitter_compare_instruction_parameters (a, b) == 0;
+}
+
+
 
 
 /* VM instruction parameter printing.
