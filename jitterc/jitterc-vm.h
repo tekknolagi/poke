@@ -776,6 +776,18 @@ jitterc_vm_last_argument (struct jitterc_vm *vm)
 
 
 
+/* Data structure analysis.
+ * ************************************************************************** */
+
+/* Compute analyses on a VM having all of its unspecialized instructions
+   already.  This currently computes the maximum instruction name length.
+   Other properties will be easy to add here. */
+void
+jitterc_analyze_vm (struct jitterc_vm *vm) __attribute__ ((nonnull (1)));
+
+
+
+
 /* Data structure sorting.
  * ************************************************************************** */
 

@@ -67,7 +67,47 @@ jitterc_make_literal (enum jitterc_literal_type type,
   return res;
 }
 
+
 
+
+/* Implicit instructions.
+ * ************************************************************************** */
+
+/* Add a new VM instruction described by the arguments to the given VM,
+   and return it. */
+static struct jitterc_instruction *
+jitterc_add_implicit_instruction (struct jitterc_vm *vm,
+                                  const char *name,
+                                  const char *c_code)
+{
+  struct jitterc_instruction *res;
+  jitterc_vm_append_instruction (vm, res = jitterc_make_instruction ());
+  res->name = jitter_clone_string (name);
+  res->mangled_name = jitterc_mangle (res->name);
+  res->rewriting = jitterc_rewriting_none;
+  res->hotness = jitterc_hotness_cold;
+  res->relocatability = jitterc_relocatability_relocatable;
+  res->callerness = jitterc_callerness_non_caller;
+  res->calleeness = jitterc_calleeness_non_callee;
+  res->has_fast_labels = false;
+  res->code = jitter_clone_string (c_code);
+
+  return res;
+}
+
+/* Add all the implicitly-defined instructions to the given VM.  This is called
+   at VM initialization. */
+static void
+jitterc_add_implicit_instructions (struct jitterc_vm *vm)
+{
+  jitterc_add_implicit_instruction (vm, "exitvm", "JITTER_EXIT();");
+}
+
+
+
+
+/* VM initialization.
+ * ************************************************************************** */
 
 struct jitterc_vm*
 jitterc_make_vm (void)
@@ -124,9 +164,8 @@ jitterc_make_vm (void)
      specialized instruction, and set to the higher value of the two. */
   res->max_residual_arity = 0;
 
-  /* We have seen no unspecialized instructions yet, so their maximum name
-     length is zero. */
-  res->max_instruction_name_length = 0;
+  /* Add the implicit instructions. */
+  jitterc_add_implicit_instructions (res);
 
   return res;
 }
@@ -844,6 +883,34 @@ jitterc_sort_vm (struct jitterc_vm *vm)
     gl_list_set_at (vm->instructions, i, array [i]);
   free (array);
 }
+
+
+
+/* Data structure analysis.
+ * ************************************************************************** */
+
+void
+jitterc_analyze_vm (struct jitterc_vm *vm)
+{
+  /* The initial maximum name length is zero. */
+  vm->max_instruction_name_length = 0;
+
+  /* For every instruction... */
+  size_t instruction_no = gl_list_size (vm->instructions);
+  int i;
+  for (i = 0; i < instruction_no; i ++)
+    {
+      /* If the instruction name is longer than the current maximum, update the
+         maximum. */
+      struct jitterc_instruction *ins
+        = ((struct jitterc_instruction *)
+           gl_list_get_at (vm->instructions, i));
+      size_t name_length = strlen (ins->name);
+      if (vm->max_instruction_name_length < name_length)
+        vm->max_instruction_name_length = name_length;
+    }
+}
+
 
 
 

@@ -472,12 +472,7 @@ instruction_section:
     if (   ins->callerness == jitterc_callerness_caller
         && ins->relocatability == jitterc_relocatability_non_relocatable)
       JITTERC_PARSE_ERROR("non-relocatable instructions cannot (currently) be callers");
-    ins->code = $8.code;
-    /* Update the maximum name length, if this instruction has the longest
-       name up to this point. */
-    size_t name_length = strlen (ins->name);
-    if (vm->max_instruction_name_length < name_length)
-      vm->max_instruction_name_length = name_length;  }
+    ins->code = $8.code; }
 ;
 
 arguments:
@@ -721,6 +716,10 @@ jitterc_parse_file_star_with_name (FILE *input_file, const char *file_name)
 
   /* Sort the VM instructions; this will also find duplicate instructions. */
   jitterc_sort_vm (res);
+
+  /* Now that we have all the unspecialized instructions we can analyze the
+     VM. */
+  jitterc_analyze_vm (res);
 
   return res;
 }
