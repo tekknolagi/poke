@@ -204,18 +204,18 @@
 
 %%
 
-instructions :
+program :
   /* nothing */
-| instructions instruction
+| program instruction_or_label
+;
+
+instruction_or_label :
+  instruction
+| label
 ;
 
 instruction :
-  labels instruction_name arguments
-;
-
-labels :
-  /* nothing */
-| labels label
+  instruction_name arguments
 ;
 
 label :
@@ -224,31 +224,6 @@ label :
           /* Add one to skip the prefix. */
           jitter_append_symbolic_label (parser_arg->program, label + 1); }
 ;
-
-/* FIXME: this is the right solution.  I will replace the previous part of the
-   grammar with this after lifting the limitation preventing a program from ending
-   with a label. */
-
-/* program : */
-/*   /\* nothing *\/ */
-/* | program instruction_or_label */
-/* ; */
-
-/* instruction_or_label : */
-/*   instruction */
-/* | label */
-/* ; */
-
-/* instruction : */
-/*   instruction_name arguments */
-/* ; */
-
-/* label : */
-/*   LABEL { char *label = jitter_get_text (jitter_scanner); */
-/*           label [strlen (label) - 1] = '\0';  /\* Remove the trailing colon. *\/ */
-/*           /\* Add one to skip the prefix. *\/ */
-/*           jitter_append_symbolic_label (parser_arg->program, label + 1); } */
-/* ; */
 
 instruction_name :
   INSTRUCTION_NAME { char *name = jitter_get_text (jitter_scanner);

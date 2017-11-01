@@ -123,6 +123,17 @@ jitter_backpatch_labels_in_specialized_program (struct jitter_program *p)
     }
 }
 
+/* Add implicit instructions at the end of an unspecialized program. */
+static void
+jitter_add_program_epilog (struct jitter_program *p)
+{
+  /* Add a final exitvm instruction.  This is needed anyway, and it is also good
+     to have each label, including one at the very end of the program,
+     associated to an actual unspecialized instruction; this simplifies
+     things. */
+  jitter_append_meta_instruction (p, p->vm->exitvm_meta_instruction);
+}
+
 void
 jitter_specialize_program (struct jitter_program *p)
 {
@@ -132,6 +143,10 @@ jitter_specialize_program (struct jitter_program *p)
     jitter_fatal ("specializing program with last instruction incomplete");
   if (p->native_code != NULL)
     jitter_fatal ("specializing program with native code already defined");
+
+  /* Add epilog instructions.  This way we can be sure that the program
+     ends with an exitvm instruction. */
+  jitter_add_program_epilog (p);
 
   /* Resolve label arguments in unspecialized instruction parameters. */
   jitter_resolve_labels_in_unspecialized_program (p);
@@ -214,16 +229,7 @@ jitter_specialize_program (struct jitter_program *p)
 
   /* Notice that p->instruction_index_to_specialized_instruction_offset is
      accessed only when needed to patch labels, and it's harmless to leave its
-     content undefined in places where no labels are involved.  In particular,
-     we are about to add one specialized instruction (EXITVM) with no
-     corresponding instruction at the end; since it has no label arguments (in
-     fact no arguments at all) everything is fine.  This serves to make the VM
-     exit cleanly, in case the last specialized instruction is reached.
-     In this case we do not go thru vmprefix_specialize_instruction as that
-     function cannot generate specialized instructions with no unspecialized
-     counterpart, but we can do the same job ourselves. */
-  jitter_add_specialized_instruction_opcode
-     (p, jitter_specialized_instruction_opcode_EXITVM);
+     content undefined in places where no labels are involved. */
 
   /* Now that p->instruction_index_to_specialized_instruction_offset is filled
      we have enough information to resolve label literals. */
