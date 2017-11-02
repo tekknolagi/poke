@@ -314,12 +314,6 @@ structured_translate_program (struct structuredvm_program *vmp,
   struct structured_static_environment env;
   structured_static_environment_initialize (& env);
   structured_translate_statement (vmp, p->main_statement, & env);
-
-  /* Because of a temporary Jitter limitation/bug, an unspecialized program can
-     not end in a label.  It is harmless to unconditionally add one nop
-     instruction at the end, just to prevent that situation. */
-  STRUCTUREDVM_APPEND_INSTRUCTION(vmp, nop);
-
   structured_static_environment_finalize (& env);
 }
 
