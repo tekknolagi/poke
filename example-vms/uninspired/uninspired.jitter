@@ -610,7 +610,7 @@ instruction mov (?Rnl 0 1, !R)
 end
 
 # instruction swap (?!R, ?!R)
-#   commutative
+# #  commutative
 #   code
 #     union jitter_word arg0_copy = JITTER_ARG0;
 #     JITTER_ARG0 = JITTER_ARG1;
@@ -624,22 +624,22 @@ end
 
 instruction add (?Rn 1 -1, ?Rn 1 -1, !R)
 #  commutative
-  two-operands
+#  two-operands
   code
     JITTER_ARGN2 = JITTER_ARGN0 + JITTER_ARGN1;
   end
 end
 
 instruction sub (?Rn 0, ?Rn 1, !R)
-  two-operands
+#  two-operands
   code
     JITTER_ARGN2 = JITTER_ARGN0 - JITTER_ARGN1;
   end
 end
 
 instruction mul (?Rn 2, ?Rn 2, !R)
-#  two-operands
-  commutative
+##  two-operands
+#  commutative
   code
     JITTER_ARGN2 = JITTER_ARGN0 * JITTER_ARGN1;
   end
@@ -647,7 +647,7 @@ end
 
 instruction div (?Rn, ?Rn 2, !R)
   non-relocatable # FIXME: this should only be non-relocatable on some architectures.
-  two-operands
+#  two-operands
   code
     JITTER_ARGN2 = JITTER_ARGN0 / JITTER_ARGN1;
   end
@@ -655,7 +655,7 @@ end
 
 instruction mod (?Rn, ?Rn 2, !R)
   non-relocatable # FIXME: this should only be non-relocatable on some architectures.
-  two-operands
+#  two-operands
   code
     JITTER_ARGN2 = JITTER_ARGN0 % JITTER_ARGN1;
   end
@@ -667,7 +667,7 @@ end
 
 # instruction and (?Rn 1, ?Rn 1, !R)
 # # commutative
-#   two-operands
+# #  two-operands
 #   code
 #     JITTER_ARGN2 = JITTER_ARGN0 & JITTER_ARGN1;
 #   end
@@ -675,7 +675,7 @@ end
 
 # instruction or (?Rn, ?Rn, !R)
 # # commutative
-#   two-operands
+# #  two-operands
 #   code
 #     JITTER_ARGN2 = JITTER_ARGN0 | JITTER_ARGN1;
 #   end
@@ -683,7 +683,7 @@ end
 
 # instruction xor (?Rn, ?Rn, !R)
 # # commutative
-#   two-operands
+# #  two-operands
 #   code
 #     JITTER_ARGN2 = JITTER_ARGN0 ^ JITTER_ARGN1;
 #   end
@@ -696,21 +696,21 @@ end
 # end
 
 # instruction lshift (?Rn, ?Rn, !R)
-#   two-operands
+# #  two-operands
 #   code
 #     JITTER_ARGN2 = JITTER_ARGN0 << JITTER_ARGN1;
 #   end
 # end
 
 # instruction rshifta (?Rn, ?Rn, !R)
-#   two-operands
+# #  two-operands
 #   code
 #     JITTER_ARGN2 = JITTER_ARGN0 >> JITTER_ARGN1;
 #   end
 # end
 
 # instruction rshiftl (?Rn, ?Rn, !R)
-#   two-operands
+# #  two-operands
 #   code
 #     JITTER_ARGU2 = JITTER_ARGU0 >> JITTER_ARGN1;
 #   end
@@ -721,14 +721,14 @@ end
 #################################################################
 
 instruction loadwithbyteoffset (?R, ?Rn 0 BYTESPERWORD, !R)
-  two-operands # FIXME: not necessarily a good idea, but I want to test rewriting.
+#  two-operands # FIXME: not necessarily a good idea, but I want to test rewriting.
   code
     JITTER_ARGN2 = * (jitter_int*)((char*)JITTER_ARGP0 + JITTER_ARGN1);
   end
 end
 
 instruction loadwithwordoffset (?R, ?Rn 0 1 2, !R)
-  two-operands # FIXME: not necessarily a good idea, but I want to test rewriting.
+#  two-operands # FIXME: not necessarily a good idea, but I want to test rewriting.
   code
     JITTER_ARGN2 = * ((jitter_int*)JITTER_ARGP0 + JITTER_ARGN1);
   end
@@ -752,7 +752,7 @@ end
 
 # instruction eq (?Rn 0, ?Rn 0, !R)
 # #  commutative
-#   two-operands
+# #  two-operands
 #   code
 #     JITTER_ARGN2 = ((JITTER_ARGN0 == JITTER_ARGN1) ? 1 : 0);
 #   end
@@ -766,28 +766,28 @@ end
 # end
 
 # instruction lt (?Rn 0, ?Rn 0, !R)
-#   two-operands
+# #  two-operands
 #   code
 #     JITTER_ARGN2 = ((JITTER_ARGN0 < JITTER_ARGN1) ? 1 : 0);
 #   end
 # end
 
 # instruction gt (?Rn 0, ?Rn 0, !R)
-#   two-operands
+# #  two-operands
 #   code
 #     JITTER_ARGN2 = ((JITTER_ARGN0 > JITTER_ARGN1) ? 1 : 0);
 #   end
 # end
 
 # instruction le (?Rn 0, ?Rn 0, !R)
-#   two-operands
+# #  two-operands
 #   code
 #     JITTER_ARGN2 = ((JITTER_ARGN0 <= JITTER_ARGN1) ? 1 : 0);
 #   end
 # end
 
 # instruction ge (?Rn 0, ?Rn 0, !R)
-#   two-operands
+# #  two-operands
 #   code
 #     JITTER_ARGN2 = ((JITTER_ARGN0 >= JITTER_ARGN1) ? 1 : 0);
 #   end

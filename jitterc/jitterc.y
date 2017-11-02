@@ -456,8 +456,6 @@ instruction_section:
     ins->name = $3;
     ins->mangled_name = jitterc_mangle (ins->name);
     /* The arguments have already been added one by one by the argument rule. */
-    if (ins->rewriting == jitterc_rewriting_unspecified)
-      ins->rewriting = jitterc_rewriting_none;
     if (ins->hotness == jitterc_hotness_unspecified)
       ins->hotness = jitterc_hotness_hot;
     if (ins->relocatability == jitterc_relocatability_unspecified)
@@ -595,7 +593,6 @@ bare_argument:
 
 properties:
   /* nothing */
-| rewriting properties
 | hotness properties
 | relocatability properties
 | callingness properties
@@ -604,11 +601,6 @@ properties:
 hotness:
   HOT   { JITTERC_SET_PROPERTY(hotness, hot); }
 | COLD  { JITTERC_SET_PROPERTY(hotness, cold); }
-;
-
-rewriting:
-  COMMUTATIVE  { JITTERC_SET_PROPERTY(rewriting, commutative); }
-| TWO_OPERANDS { JITTERC_SET_PROPERTY(rewriting, three_to_two_operands); }
 ;
 
 relocatability:

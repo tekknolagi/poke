@@ -261,28 +261,6 @@ struct jitterc_instruction_argument*
 jitterc_make_instruction_argument (void)
   __attribute__ ((returns_nonnull));
 
-/* Some instructions have a rewriting rule associated, changing them into some
-   normalized form and possibly inserting other instructions.  Rewritings are
-   run after each instruction is added to an unspecialized programs. */
-enum jitterc_rewriting
-  {
-    /* The default rewriting rule, used at parsing time when (or before) a
-       commutativity value is specified.  The default is jitterc_rewriting_none
-       . */
-    jitterc_rewriting_unspecified,
-
-    /* No rewriting. */
-    jitterc_rewriting_none,
-
-    /* The VM instruction is commutative.  FIXME: this will need to change into
-       a few different cases. */
-    jitterc_rewriting_commutative,
-
-    /* Move the last input argument into the output argument if they are not
-       already equal. */
-    jitterc_rewriting_three_to_two_operands,
-};
-
 /* The hotness of a VM instruction.  Labels for hot VM instructions are given
    the "hot" GCC attribute, and cold instructions the "cold" attribute.  Since
    we disable reordering the only effect will be that hot instructions will be
@@ -376,9 +354,6 @@ struct jitterc_instruction
 
   /* A list of struct jitterc_instruction_argument pointers. */
   gl_list_t arguments;
-
-  /* The instruction rewriting. */
-  enum jitterc_rewriting rewriting;
 
   /* Hot specialized instructions are given the "hot" GCC label attribute; for
      unspecialized instructions this is just a default value, which

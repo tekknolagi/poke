@@ -766,8 +766,6 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
       const struct jitterc_instruction *ins
         = (const struct jitterc_instruction*)
           gl_list_get_at (vm->instructions, i);
-      if (ins->rewriting == jitterc_rewriting_none)
-        continue;
       EMIT("    //case vmprefix_meta_instruction_id_%s:\n", ins->mangled_name);
       EMIT("    //  {\n");
       EMIT("    //    /*fprintf (stderr, \"Pretending to rewrite the %%ith instruction at %%p (%s, id %i)...\\n\",\n", ins->name, i);
