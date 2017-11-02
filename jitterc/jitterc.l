@@ -215,8 +215,6 @@ CODECONTENTLINEMIDDLE3 end{LINEWHITESPACE}?[^\ \t\n\r\f#][^\n\r\f]*
 "BITSPERWORD"             { return BITSPERWORD; }
 "BYTESPERWORD"            { return BYTESPERWORD; }
 "LGBYTESPERWORD"          { return LGBYTESPERWORD; }
-"commutative"             { return COMMUTATIVE; }
-"two-operands"            { return TWO_OPERANDS; }
 "hot"                     { return HOT; }
 "cold"                    { return COLD; }
 "caller"                  { return CALLER; }

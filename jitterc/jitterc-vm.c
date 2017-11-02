@@ -84,7 +84,6 @@ jitterc_add_implicit_instruction (struct jitterc_vm *vm,
   jitterc_vm_append_instruction (vm, res = jitterc_make_instruction ());
   res->name = jitter_clone_string (name);
   res->mangled_name = jitterc_mangle (res->name);
-  res->rewriting = jitterc_rewriting_none;
   res->hotness = jitterc_hotness_cold;
   res->relocatability = jitterc_relocatability_relocatable;
   res->callerness = jitterc_callerness_non_caller;
@@ -559,7 +558,6 @@ jitterc_make_instruction (void)
     = xmalloc (sizeof (struct jitterc_instruction));
   res->name = NULL;
   res->mangled_name = NULL;
-  res->rewriting = jitterc_rewriting_unspecified;
   res->hotness = jitterc_hotness_unspecified;
   res->relocatability = jitterc_relocatability_unspecified;
   res->has_fast_labels = false;
