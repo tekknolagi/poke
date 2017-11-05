@@ -55,4 +55,22 @@ jitterc_empty_list (gl_list_t list)
   __attribute__ ((nonnull (1)));
 
 
+
+
+/* Unique-string-list utility functions, based on Gnulib lists.
+ * ************************************************************************** */
+
+/* Return true iff the given list of strings contains at least one element
+   structurally equal to the pointed string.  Linear worst-case complexity. */
+bool
+jitterc_list_has_string (gl_list_t list, const char *string)
+  __attribute__ ((pure, nonnull (1, 2)));
+
+/* Add the pointed string to the given unsorted list of strings if not already
+   present.  The string is not cloned so the list, if modified, shares structure
+   with the argument.  Linear worst-case complexity. */
+void
+jitterc_list_add_string_unique (gl_list_t list, const char *string)
+  __attribute__ ((nonnull (1, 2)));
+
 #endif // #ifndef JITTERC_UTILITY_H_
