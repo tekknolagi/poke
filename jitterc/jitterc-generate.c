@@ -2444,7 +2444,8 @@ jitterc_emit_interpreter_main_function
      switch-dispatching is enabled. */
   EMIT("#ifdef JITTER_DISPATCH_SWITCH\n");
   EMIT("  default:\n");
-  EMIT("    jitter_fatal (\"invalid opcode for VM specialized instruction\");\n");
+  EMIT("    jitter_fatal (\"invalid opcode %%li for VM specialized instruction\",\n");
+  EMIT("                  (long) ip->fixnum);\n");
   EMIT("  } /* switch */\n");
   EMIT("#endif // #ifdef JITTER_DISPATCH_SWITCH\n");
   EMIT("\n");
