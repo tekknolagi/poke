@@ -69,3 +69,30 @@ jitterc_empty_list (gl_list_t list)
   for (i = size - 1; i >= 0; i --)
     gl_list_remove_at (list, i);
 }
+
+
+
+
+/* Unique-string-list utility functions, based on Gnulib lists.
+ * ************************************************************************** */
+
+bool
+jitterc_list_has_string (gl_list_t list, const char *a_string)
+{
+  /* Scan the list, and return as soon as we find the first matching element. */
+  size_t length = gl_list_size (list);
+  int i;
+  for (i = 0; i < length; i ++)
+    if (! strcmp ((char *) gl_list_get_at (list, i), a_string))
+      return true;
+
+  /* We didn't find a matching element. */
+  return false;
+}
+
+void
+jitterc_list_add_string_unique (gl_list_t list, const char *a_string)
+{
+  if (! jitterc_list_has_string (list, a_string))
+    gl_list_add_last (list, a_string);
+}
