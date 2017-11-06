@@ -2565,6 +2565,34 @@ jitterc_emit_interpreter_wrappers
   EMIT("\n");
 }
 
+/* Emit definitions for JITTER_VM_PREFIX_LOWER_CASE and
+   JITTER_VM_PREFIX_UPPER_CASE .  These should not go to public headers, but
+   they are convenient to have in more than one generated C file. */
+static void
+jitterc_emit_vm_name_macros (FILE *f, const struct jitterc_vm *vm)
+{
+  /* Generate private macro definitions in the JITTER_ namespace, not exported
+     to the user via headers.  These are useful to compose VM-specific
+     identifiers via CPP token concatenation, in a way which is unobstrusive to
+     the user.  */
+  EMIT("/* These two macros are convenient for making VM-specific identifiers\n");
+  EMIT("   using VM-independent macros from a public header, without polluting\n");
+  EMIT("   the global namespace. */\n");
+  EMIT("#define JITTER_VM_PREFIX_LOWER_CASE %s\n", vm->lower_case_prefix);
+  EMIT("#define JITTER_VM_PREFIX_UPPER_CASE %s\n", vm->upper_case_prefix);
+  EMIT("\n");
+}
+
+/* Do the job of jitterc_emit_vm_name_macros for the non-interpreter generated C
+   file. */
+static void
+jitterc_emit_vm_name_macros_vm1 (const struct jitterc_vm *vm)
+{
+  FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
+  jitterc_emit_vm_name_macros (f, vm);
+  jitterc_fclose (f);
+}
+
 static void
 jitterc_emit_interpreter (const struct jitterc_vm *vm)
 {
@@ -2617,16 +2645,7 @@ jitterc_emit_interpreter (const struct jitterc_vm *vm)
   EMIT("#include <jitter/jitter-fast-branch.h>\n\n");
   EMIT("#define JITTER_FAST_BRANCH_PREFIX vmprefix_\n\n");
 
-  /* Generate private macro definitions in the JITTER_ namespace, not exported
-     to the user via headers.  These are useful to compose VM-specific
-     identifiers via CPP token concatenation, in a way which is unobstrusive to
-     the user.  */
-  EMIT("/* These two macros are convenient for making VM-specific identifiers\n");
-  EMIT("   using VM-independent macros from a public header, without polluting\n");
-  EMIT("   the global namespace. */\n");
-  EMIT("#define JITTER_VM_PREFIX_LOWER_CASE %s\n", vm->lower_case_prefix);
-  EMIT("#define JITTER_VM_PREFIX_UPPER_CASE %s\n", vm->upper_case_prefix);
-  EMIT("\n");
+  jitterc_emit_vm_name_macros (f, vm);
 
   /* Emit register-access macros. */
   jitterc_emit_interpreter_register_access_macros (f, vm);
@@ -2925,6 +2944,7 @@ jitterc_generate (struct jitterc_vm *vm,
   jitterc_emit_late_header_c (vm);
   jitterc_emit_header_closing (vm);
   /* From this point on the generated code goes to non-header C files. */
+  jitterc_emit_vm_name_macros_vm1 (vm);
   jitterc_emit_printer_c (vm);
   jitterc_emit_meta_instructions (vm);
   jitterc_emit_register_classes (vm);
