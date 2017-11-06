@@ -124,8 +124,7 @@ jitter_make_instruction_parameter (void)
 }
 
 struct jitter_parameter*
-jitter_clone_instruction_parameter (const struct jitter_program *program,
-                                    const struct jitter_parameter *original)
+jitter_clone_instruction_parameter (const struct jitter_parameter *original)
 {
   struct jitter_parameter *res = jitter_make_instruction_parameter ();
   jitter_copy_instruction_parameter (res, original);
