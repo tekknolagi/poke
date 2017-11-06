@@ -302,7 +302,9 @@ jitter_check_paremater_compatibility
         jitter_fatal ("appending label argument not admitted by instruction");
       break;
     default:
-      jitter_fatal ("jitter_append_uninitialized_paremater: invalid actual argument type");
+      jitter_fatal ("jitter_append_uninitialized_paremater: "
+                    "invalid actual argument type %lu",
+                    (unsigned long) actual_type);
     }
 }
 
