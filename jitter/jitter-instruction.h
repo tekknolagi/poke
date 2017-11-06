@@ -138,15 +138,13 @@ struct jitter_parameter *
 jitter_make_instruction_parameter (void)
   __attribute__ ((returns_nonnull));
 
-/* Given a program and an already initialized unspecialized instruction
-   parameter belonging to it, return a pointer to a fresh clone of the parameter
-   for the same program.  The clone is malloc-allocated following the struct
-   jitter_parameter conventions and shares no structure with the original.
-   This is useful for rewriting. */
+/* Given an already initialized unspecialized instruction parameter return a
+   pointer to a fresh clone of the parameter for the same program.  The clone is
+   malloc-allocated following the struct jitter_parameter conventions and shares
+   no structure with the original.  This is useful for rewriting. */
 struct jitter_parameter*
-jitter_clone_instruction_parameter (const struct jitter_program *program,
-                                    const struct jitter_parameter *original)
-  __attribute__ ((returns_nonnull, nonnull (1, 2)));
+jitter_clone_instruction_parameter (const struct jitter_parameter *original)
+  __attribute__ ((returns_nonnull, nonnull (1)));
 
 /* Copy the parameter pointed by from over the parameter pointed by to, without
    destroying *from .
