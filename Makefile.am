@@ -436,6 +436,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-instruction.h \
   jitter/jitter-machine-common.h \
   jitter/jitter-program.h \
+  jitter/jitter-rewrite.h \
   jitter/jitter-specialize.h \
   jitter/jitter-disassemble.h \
   jitter/jitter-interpreter-private.h \
