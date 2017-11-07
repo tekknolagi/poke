@@ -535,7 +535,7 @@ rule_instruction_templates_zero_or_more:
      but I have to pay attention to parsing conflicts. */
 | rule_instruction_template SEMICOLON rule_instruction_templates_zero_or_more
   { $$ = $3;
-    gl_list_add_last ($$, $1); }
+    gl_list_add_first ($$, $1); }
 ;
 
 rule_instruction_template:
