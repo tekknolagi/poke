@@ -114,6 +114,12 @@ jitter_make_instruction_parameter (void)
   struct jitter_parameter *res
     = jitter_xmalloc (sizeof (struct jitter_parameter));
 
+  /* Initialize the whole memory to a fixed pattern, before setting fields.
+     This may be important, since we compare parameters with memcmp and
+     therefore the memory content must be entirely deterministic, including
+     any unused part of the union. */
+  memset (res, 0, sizeof (struct jitter_parameter));
+
   /* Try and prevent distraction mistakes by making the type field invalid. */
   res->type = jitter_parameter_type_uninitialized;
 
