@@ -332,53 +332,6 @@ main (int argc, char **argv)
   else
     vm = jitterc_parse_file (cl.input_file);
 
-  /*
-  gl_list_t instructions = vm->instructions;
-  size_t instruction_no = gl_list_size (instructions);
-  int i;
-  for (i = 0; i < instruction_no; i ++)
-    {
-      struct jitterc_instruction *ins
-        = (struct jitterc_instruction *) gl_list_get_at (instructions, i);
-      size_t arg_no = gl_list_size (ins->arguments);
-      printf ("- Instruction %3i.%20s (", i, ins->name);
-      int j;
-      for (j = 0; j < arg_no; j ++)
-        {
-          struct jitterc_instruction_argument *arg
-            = (struct jitterc_instruction_argument *)
-              gl_list_get_at (ins->arguments, j);
-          if (arg->mode & jitterc_instruction_argument_mode_in)
-            printf ("?");
-          if (arg->mode & jitterc_instruction_argument_mode_out)
-            printf ("!");
-          if (arg->kind & jitterc_instruction_argument_kind_register)
-            printf ("r");
-          if (arg->kind & jitterc_instruction_argument_kind_literal)
-            printf ("n");
-          if (arg->kind & jitterc_instruction_argument_kind_label)
-            printf ("l");
-
-          printf (" [");
-          int h;
-          size_t literal_no = gl_list_size (arg->literals);
-          for (h = 0; h < literal_no; h ++)
-            {
-              struct jitterc_literal *lit
-                = (struct jitterc_literal *)
-                  gl_list_get_at (arg->literals, h);
-              assert (lit->type == jitterc_literal_type_fixnum);
-              printf ("%li", (long)lit->value.fixnum);
-              if (h < literal_no - 1)
-                printf (", ");
-            }
-          printf ("]");
-          if (j < arg_no - 1)
-            printf (", ");
-        }
-      printf (")\n");
-    }
-  */
   jitterc_specialize (vm,
                       cl.max_fast_register_no_per_class,
                       cl.max_nonresidual_literal_no,
