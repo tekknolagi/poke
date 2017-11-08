@@ -664,6 +664,9 @@ struct jitterc_vm
   /* Residualize registers: slow registers exist iff this is true. */
   bool use_slow_registers;
 
+  /* Generate #line directives iff this is true. */
+  bool generate_line;
+
   /* These are strings, always malloc-allocated and always non-NULL.  They are
      copied verbatim into the generated C code, in the appropriate places. */
   char *early_header_c_code, *late_header_c_code,

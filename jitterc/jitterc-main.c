@@ -60,6 +60,7 @@
 struct jitterc_command_line
 {
   bool verbose, count_specialized_instructions_and_exit;
+  bool generate_line;
   bool generate_frontend;
   char *input_file;
   char *flag_directory;
@@ -80,14 +81,15 @@ enum jitterc_negative_option
     jitterc_negative_option_no_count_specialized_instructions = -1,
     jitterc_negative_option_no_frontend = -2,
     jitterc_negative_option_no_verbose = -3,
-    jitterc_negative_option_slow_registers = -4
+    jitterc_negative_option_slow_registers = -4,
+    jitterc_negative_option_generate_line = -5
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum jitterc_negative_option . */
 enum jitterc_long_only_option
   {
-    jitterc_long_only_option_dump_version = -5
+    jitterc_long_only_option_dump_version = -6
   };
 
 /* Command-line option specification. */
@@ -137,10 +139,16 @@ static struct argp_option jitterc_option_specification[] =
    {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 40},
    {"verbose", 'v', NULL, 0,
     "Show progress information at run time" },
+   {"no-line", 'l', NULL, 0,
+    "Don't generate #line directives referring the .jitter file.  This is "
+    "useful for locating errors in the VM specification such as fogotten "
+    "braces, and for debugging Jitter itself"},
    /* Debugging negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 41},
    {"no-verbose", jitterc_negative_option_no_frontend, NULL, 0,
     "Don't show progress information (default)"},
+   {"line", jitterc_negative_option_generate_line, NULL, 0,
+    "Generate #line directives (default)"},
 
    /* Debugging/scripting options. */
    {NULL, '\0', NULL, OPTION_DOC, "Debugging and scripting options:", 50},
@@ -207,6 +215,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       cl->verbose = false;
       cl->count_specialized_instructions_and_exit = false;
       cl->generate_frontend = false;
+      cl->generate_line = true;
       cl->input_file = NULL;
       cl->flag_directory = JITTERC_DEFAULT_FLAG_DIRECTORY;
       cl->template_directory = JITTERC_DEFAULT_TEMPLATE_DIRECTORY;
@@ -232,6 +241,12 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case 'f':
       cl->generate_frontend = true;
+      break;
+    case 'l': /* The default is true. */
+      cl->generate_line = false;
+      break;
+    case jitterc_negative_option_generate_line:
+      cl->generate_line = true;
       break;
     case jitterc_negative_option_no_frontend:
       cl->generate_frontend = false;
@@ -313,6 +328,7 @@ main (int argc, char **argv)
             "output_directory = %s\n"
             "generate_frontend = %s\n"
             "verbose = %s\n"
+            "generate_line = %s\n"
             "max_fast_register_no_per_class = %i\n"
             "max_nonresidual_literal_no = %i\n"
             "use_slow_registers = %s\n"
@@ -321,6 +337,7 @@ main (int argc, char **argv)
             cl.output_directory,
             cl.generate_frontend ? "yes" : "no",
             cl.verbose ? "yes" : "no",
+            cl.generate_line ? "yes" : "no",
             (int) cl.max_fast_register_no_per_class,
             (int) cl.max_nonresidual_literal_no,
             cl.slow_registers ? "yes" : "no",
@@ -328,9 +345,9 @@ main (int argc, char **argv)
 
   struct jitterc_vm *vm;
   if (! strcmp (cl.input_file, "-"))
-    vm = jitterc_parse_file_star (stdin);
+    vm = jitterc_parse_file_star (stdin, cl.generate_line);
   else
-    vm = jitterc_parse_file (cl.input_file);
+    vm = jitterc_parse_file (cl.input_file, cl.generate_line);
 
   jitterc_specialize (vm,
                       cl.max_fast_register_no_per_class,
