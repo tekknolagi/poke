@@ -562,11 +562,13 @@ jitterc_emit_specialized_instruction_fast_label_bitmasks (const struct jitterc_v
 /* Code generation utility.
  * ************************************************************************** */
 
-/* Emit a #line directive on the Jitter VM specification source file. */
+/* Emit a #line directive referring the Jitter VM specification source file,
+   unless #line-generation was disabled. */
 static void
 jitterc_emit_hash_line (FILE *f, const struct jitterc_vm *vm, int line_no)
 {
-  EMIT("#line %i \"%s\"\n", line_no, vm->source_file_name);
+  if (vm->generate_line)                                                   \
+    EMIT("#line %i \"%s\"\n", line_no, vm->source_file_name);
 }
 
 
@@ -839,7 +841,7 @@ jitterc_emit_rewrite_rule_instruction_template
   jitterc_emit_hash_line(f, vm, it->line_no);
 
   /* Emit code to add the opcode. */
-  EMIT("    fprintf (stderr, \"rewrite: adding instruction %s\\n\");\n",
+  EMIT("    fprintf (stderr, \"    rewrite: adding instruction %s\\n\");\n",
        it->instruction_name);
   char *mangled_opcode = jitterc_mangle (it->instruction_name);
   EMIT("    JITTER_RULE_APPEND_INSTRUCTION_(%s);\n", mangled_opcode);
@@ -851,7 +853,7 @@ jitterc_emit_rewrite_rule_instruction_template
     {
       const struct jitterc_template_expression *ae
         = gl_list_get_at (it->argument_expressions, i);
-      EMIT("    fprintf (stderr, \"instantiating the %i-th argument of %s\\n\");\n",
+      EMIT("    fprintf (stderr, \"    instantiating the %i-th argument of %s\\n\");\n",
            i, it->instruction_name);
 
       // FIXME: make a rewriting-specific macro instead of using
@@ -967,6 +969,7 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
       const struct jitterc_rule *rule
         = ((const struct jitterc_rule*)
            gl_list_get_at (vm->rewrite_rules, i));
+      EMIT("asm volatile (\"\\n# checking %s\");\n", rule->name);
       EMIT("fprintf (stderr, \"Trying rule %i of %i, \\\"%s\\\" (line %i)\\n\");\n",
            i + 1, (int) gl_list_size (vm->rewrite_rules),
            rule->name,

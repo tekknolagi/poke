@@ -82,10 +82,10 @@ jitterc_error (YYLTYPE *locp, struct jitterc_vm *vm,
 #define JITTERC_TEXT_COPY \
   (jitter_clone_string (JITTERC_TEXT))
 
-/* Assign the given lvalue with a string concatenation of its current
-   value and the new string from the code block, preceded by a #line CPP
-   directive.  free both strings (but not the pointed struct, which
-   normally comes from internal Bison data structures). */
+/* Assign the given lvalue with a string concatenation of its current value and
+   the new string from the code block, preceded by a #line CPP directive unless
+   #line-generation was disabled.  Free both strings (but not the pointed
+   struct, which normally comes from internal Bison data structures). */
 #define JITTERC_APPEND_CODE(lvalue, code_block_pointerq)                        \
   do                                                                            \
     {                                                                           \
@@ -93,9 +93,12 @@ jitterc_error (YYLTYPE *locp, struct jitterc_vm *vm,
        int line_number = code_block_pointer->line_number;                       \
        char *new_code = code_block_pointer->code;                               \
        char *line_line = xmalloc (strlen (vm->source_file_name) + 100);         \
-       sprintf (line_line, "#line %i \"%s\"\n",                                 \
-                line_number,                                                    \
-                vm->source_file_name);                                          \
+       if (vm->generate_line)                                                   \
+         sprintf (line_line, "#line %i \"%s\"\n",                               \
+                  line_number,                                                  \
+                  vm->source_file_name);                                        \
+       else                                                                     \
+         line_line [0] = '\0';                                                  \
        size_t line_line_length = strlen (line_line);                            \
        size_t lvalue_length = strlen (lvalue);                                  \
        char *concatenation                                                      \
@@ -203,11 +206,17 @@ struct jitterc_code_block
 void
 jitterc_scan_error (void *jitterc_scanner) __attribute__ ((noreturn));
 
+/* Return a pointer to a fresh VM data structure parsed from the pointed stream,
+   or fail fatally.  Don't generate #line directives iff generate_line is false.
+   Rationale: unfortunately some C code generation already happens in the
+   parser, so generate_line must be supplied early. */
 struct jitterc_vm *
-jitterc_parse_file_star (FILE *input_file);
+jitterc_parse_file_star (FILE *input_file, bool generate_line);
 
+/* Like jitterc_parse_file_star, but parsing from a file whose pathname is
+   given. */
 struct jitterc_vm *
-jitterc_parse_file (const char *input_file_name);
+jitterc_parse_file (const char *input_file_name, bool generate_line);
 }
 
 %union
@@ -796,7 +805,8 @@ jitterc_scan_error (void *jitterc_scanner)
 }
 
 static struct jitterc_vm *
-jitterc_parse_file_star_with_name (FILE *input_file, const char *file_name)
+jitterc_parse_file_star_with_name (FILE *input_file, const char *file_name,
+                                   bool generate_line)
 {
   yyscan_t scanner;
   jitterc_lex_init (&scanner);
@@ -804,6 +814,11 @@ jitterc_parse_file_star_with_name (FILE *input_file, const char *file_name)
 
   struct jitterc_vm *res = jitterc_make_vm ();
   res->source_file_name = jitter_clone_string (file_name);
+
+  /* Set res->generate_line now, before the parsing phase actually starts.  This
+     way the code generated at parsing time will be affected. */
+  res->generate_line = generate_line;
+
   /* FIXME: if I ever make parsing errors non-fatal, call jitterc_lex_destroy before
      returning, and finalize the program -- which might be incomplete! */
   if (jitterc_parse (res, scanner))
@@ -822,13 +837,14 @@ jitterc_parse_file_star_with_name (FILE *input_file, const char *file_name)
 }
 
 struct jitterc_vm *
-jitterc_parse_file_star (FILE *input_file)
+jitterc_parse_file_star (FILE *input_file, bool generate_line)
 {
-  return jitterc_parse_file_star_with_name (input_file, "<stdin>");
+  return jitterc_parse_file_star_with_name (input_file, "<stdin>",
+                                            generate_line);
 }
 
 struct jitterc_vm *
-jitterc_parse_file (const char *input_file_name)
+jitterc_parse_file (const char *input_file_name, bool generate_line)
 {
   FILE *f;
   if ((f = fopen (input_file_name, "r")) == NULL)
@@ -837,7 +853,7 @@ jitterc_parse_file (const char *input_file_name)
   /* FIXME: if I ever make parse errors non-fatal, I'll need to close the file
      before returning. */
   struct jitterc_vm *res
-    = jitterc_parse_file_star_with_name (f, input_file_name);
+    = jitterc_parse_file_star_with_name (f, input_file_name, generate_line);
   fclose (f);
   return res;
 }

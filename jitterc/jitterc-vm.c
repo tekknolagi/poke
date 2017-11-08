@@ -125,6 +125,7 @@ jitterc_make_vm (void)
   res->lower_case_prefix = "vm";
   res->upper_case_prefix = "VM";
   res->name = NULL;
+  res->generate_line = true;
   res->register_classes = jitterc_make_empty_list ();
 
   res->wrapped_functions = jitterc_make_empty_list ();
