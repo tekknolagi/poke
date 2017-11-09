@@ -179,6 +179,92 @@ jitterc_check_placeholders_in_templates (gl_list_t placeholders,
 
 
 
+/* Template expression operators.
+ * ************************************************************************** */
+
+/* A few type arrays for to be used internally for operator in-types,
+   referred in the definition of jitterc_expression_operators below. */
+static const enum jitterc_expression_type
+jitterc_expression_types_fixnum_fixnum []
+  = { jitterc_expression_type_fixnum, jitterc_expression_type_fixnum };
+static const enum jitterc_expression_type
+jitterc_expression_types_boolean_boolean []
+  = { jitterc_expression_type_boolean, jitterc_expression_type_boolean };
+static const enum jitterc_expression_type
+jitterc_expression_types_boolean []
+  = { jitterc_expression_type_boolean };
+
+const struct jitterc_expression_operator
+jitterc_expression_operators []
+  = {
+      {
+        "plus", 2, jitterc_expression_types_fixnum_fixnum,
+        jitterc_expression_type_fixnum
+      },
+      {
+        "minus", 2, jitterc_expression_types_fixnum_fixnum,
+        jitterc_expression_type_fixnum
+      },
+      {
+        "times", 2, jitterc_expression_types_fixnum_fixnum,
+        jitterc_expression_type_fixnum
+      },
+      {
+        "divided", 2, jitterc_expression_types_fixnum_fixnum,
+        jitterc_expression_type_fixnum
+      },
+      {
+        "remainder", 2, jitterc_expression_types_fixnum_fixnum,
+        jitterc_expression_type_fixnum
+      },
+      {
+        "equal", 2, jitterc_expression_types_fixnum_fixnum,
+        jitterc_expression_type_boolean
+      },
+      {
+        "notequal", 2, jitterc_expression_types_fixnum_fixnum,
+        jitterc_expression_type_boolean
+      },
+      {
+        "less", 2, jitterc_expression_types_fixnum_fixnum,
+        jitterc_expression_type_boolean
+      },
+      {
+        "lessorequal", 2, jitterc_expression_types_fixnum_fixnum,
+        jitterc_expression_type_boolean
+      },
+      {
+        "greater", 2, jitterc_expression_types_fixnum_fixnum,
+        jitterc_expression_type_boolean
+      },
+      {
+        "greaterorequal", 2, jitterc_expression_types_fixnum_fixnum,
+        jitterc_expression_type_boolean
+      },
+      {
+        "logicaland", 2, jitterc_expression_types_boolean_boolean,
+        jitterc_expression_type_boolean
+      },
+      {
+        "logicalor", 2, jitterc_expression_types_boolean_boolean,
+        jitterc_expression_type_boolean
+      },
+      {
+        "logicalnot", 1, jitterc_expression_types_boolean,
+        jitterc_expression_type_boolean
+      },
+    };
+
+/* How many operators there are.  The size is expressed in array elements, not
+   in chars. */
+const size_t
+jitterc_expression_operator_no
+  = (sizeof (jitterc_expression_operators)
+     / sizeof (struct jitterc_expression_operator));
+
+
+
+
 /* Rewrite AST-construction API.
  * ************************************************************************** */
 

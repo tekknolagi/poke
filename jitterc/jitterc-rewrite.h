@@ -347,6 +347,12 @@ enum jitterc_expression_type
     jitterc_expression_type_register_base = 4,
   };
 
+
+
+
+/* Template expression operators.
+ * ************************************************************************** */
+
 /* A template expression operator has a name, a (fixed) input arity, an array of
    input types and and output type.  Output arity is always one.  Operators are
    all statically allocated. */
@@ -366,14 +372,13 @@ struct jitterc_expression_operator
   enum jitterc_expression_type out_type;
 };
 
-// FIXME: this is a test, obviously.
-static const enum jitterc_expression_type
-fixnum_fixnum []
-= {jitterc_expression_type_fixnum, jitterc_expression_type_fixnum};
-static const struct jitterc_expression_operator
-plus = {"plus", 2,
-        fixnum_fixnum,
-        jitterc_expression_type_fixnum};
+/* An array containing every template expression operator in existence. */
+extern const struct jitterc_expression_operator
+jitterc_expression_operators [];
+
+/* How many operators there are. */
+extern const size_t
+jitterc_expression_operator_no;
 
 
 
