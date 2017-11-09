@@ -741,6 +741,7 @@ EXTRA_DIST += \
   example-vms/uninspired/examples/counter-x86_64.s \
   example-vms/uninspired/examples/counter.pir \
   example-vms/uninspired/examples/counter.py \
+  example-vms/uninspired/examples/counter.scm \
   example-vms/uninspired/examples/counter-iterator.py \
   example-vms/uninspired/examples/bubble-sort.vm \
   example-vms/uninspired/examples/bubble-sort-random.vm \
