@@ -707,8 +707,8 @@ jitterc_emit_rewrite_rule_template_expression
       {
         int i; char *comma;
         EMIT("#warning: operators (here \"%s\") not really implemented yet\n",
-             te->operator_name);
-        EMIT("      JITTER_RULE_EXPRESSION_%s(\n", te->operator_name);
+             te->operator->name);
+        EMIT("      JITTER_RULE_EXPRESSION_%s(\n", te->operator->name);
         FOR_LIST(i, comma, te->operand_expressions)
           {
             const struct jitterc_template_expression *oe
