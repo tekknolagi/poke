@@ -841,7 +841,7 @@ jitterc_emit_rewrite_rule_instruction_template
   jitterc_emit_hash_line(f, vm, it->line_no);
 
   /* Emit code to add the opcode. */
-  EMIT("    fprintf (stderr, \"    rewrite: adding instruction %s\\n\");\n",
+  EMIT("    //fprintf (stderr, \"    rewrite: adding instruction %s\\n\");\n",
        it->instruction_name);
   char *mangled_opcode = jitterc_mangle (it->instruction_name);
   EMIT("    JITTER_RULE_APPEND_INSTRUCTION_(%s);\n", mangled_opcode);
@@ -853,7 +853,7 @@ jitterc_emit_rewrite_rule_instruction_template
     {
       const struct jitterc_template_expression *ae
         = gl_list_get_at (it->argument_expressions, i);
-      EMIT("    fprintf (stderr, \"    instantiating the %i-th argument of %s\\n\");\n",
+      EMIT("    //fprintf (stderr, \"    instantiating the %i-th argument of %s\\n\");\n",
            i, it->instruction_name);
 
       // FIXME: make a rewriting-specific macro instead of using
@@ -907,7 +907,7 @@ jitterc_emit_rewrite_rule (FILE *f, const struct jitterc_vm *vm,
   /* Emit the rule body, by compiling instruction templates one after the
      other. */
   EMIT("  JITTER_RULE_BEGIN_BODY\n");
-  EMIT("    fprintf (stderr, \"* The rule %s fires...\\n\");\n",
+  EMIT("    //fprintf (stderr, \"* The rule %s fires...\\n\");\n",
        rule->name);
   FOR_LIST(i, comma, rule->out_instruction_templates)
     {
@@ -915,7 +915,7 @@ jitterc_emit_rewrite_rule (FILE *f, const struct jitterc_vm *vm,
         = gl_list_get_at (rule->out_instruction_templates, i);
       jitterc_emit_rewrite_rule_instruction_template (f, vm, it);
     }
-  EMIT("    fprintf (stderr, \"  ...End of the rule %s\\n\");\n",
+  EMIT("    //fprintf (stderr, \"  ...End of the rule %s\\n\");\n",
        rule->name);
   EMIT("  JITTER_RULE_END_BODY\n");
 
@@ -959,14 +959,14 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
       const struct jitterc_rule *rule
         = ((const struct jitterc_rule*)
            gl_list_get_at (vm->rewrite_rules, i));
-      EMIT("asm volatile (\"\\n# checking %s\");\n", rule->name);
-      EMIT("fprintf (stderr, \"Trying rule %i of %i, \\\"%s\\\" (line %i)\\n\");\n",
+      EMIT("//asm volatile (\"\\n# checking %s\");\n", rule->name);
+      EMIT("//fprintf (stderr, \"Trying rule %i of %i, \\\"%s\\\" (line %i)\\n\");\n",
            i + 1, (int) gl_list_size (vm->rewrite_rules),
            rule->name,
            rule->line_no);
       jitterc_emit_rewrite_rule (f, vm, rule);
     }
-  EMIT("fprintf (stderr, \"No more rules to try\\n\");\n");
+  EMIT("//fprintf (stderr, \"No more rules to try\\n\");\n");
 
   EMIT("}\n");
   EMIT("\n\n");
