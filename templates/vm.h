@@ -66,6 +66,12 @@ vmprefix_initialize (void);
 void
 vmprefix_finalize (void);
 
+
+
+
+/* State data structure initialization and finalization.
+ * ************************************************************************** */
+
 /* The machine state is separated into the backing and the more compact runtime
    data structures, to be allocated in registers as far as possible.  These are
    just a forward-declarations: the actual definitions are machine-generated. */
@@ -92,6 +98,8 @@ void
 vmprefix_state_finalize (struct vmprefix_state *state)
   __attribute__ ((nonnull (1)));
 
+
+
 
 /* Program initialization.
  * ************************************************************************** */
