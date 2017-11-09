@@ -427,7 +427,7 @@ jitterc_make_template_expression_placeholder (char *placeholder,
 }
 
 struct jitterc_template_expression*
-jitterc_make_template_expression_operation (char *operator_name,
+jitterc_make_template_expression_operation (const char *operator_name,
                                             gl_list_t operand_expressions,
                                             int line_no)
 {
@@ -435,7 +435,7 @@ jitterc_make_template_expression_operation (char *operator_name,
     = jitterc_make_template_expression
          (jitterc_instruction_argument_expression_case_operation, line_no);
 
-  res->operator_name = operator_name;
+  res->operator = jitterc_lookup_expression_operator (operator_name);
   res->operand_expressions = operand_expressions;
 
   return res;

@@ -199,8 +199,8 @@ struct jitterc_template_expression
     /* An operation. */
     struct
     {
-      /* The operator name as a malloc-allocated non-shared C string. */
-      char *operator_name;
+      /* A pointer to the operator data structure. */
+      const struct jitterc_expression_operator *operator;
 
       /* The actual arguments for the operand above.  Each element is
          a pointer to another struct jitterc_template_expression . */
@@ -293,9 +293,10 @@ jitterc_make_template_expression_placeholder (char *placeholder,
 
 /* Return a pointer to a new template operation expression, with the case
    and all the case-dependent union fields initialized.  Argument types match
-   struct field types. */
+   struct field types except for operator_name, which is a textual operator
+   name to be looked up in jitterc_expression_operators. */
 struct jitterc_template_expression*
-jitterc_make_template_expression_operation (char *operator_name,
+jitterc_make_template_expression_operation (const char *operator_name,
                                             gl_list_t operand_expressions,
                                             int line_no)
   __attribute__ ((returns_nonnull, nonnull (1)));
