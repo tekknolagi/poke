@@ -91,13 +91,15 @@ structured_help (void)
   printf (JITTER_DISPATCH_NAME_STRING " dispatching model.\n");
 
   structured_help_section ("Debugging options");
-  printf ("      --disassemble          print hardware machine instructions\n");
-  printf ("      --dry-run              do not actually run the program\n");
-  printf ("      --print                print VM instructions\n");
+  printf ("      --disassemble                print hardware machine instructions\n");
+  printf ("      --dry-run                    do not actually run the program\n");
+  printf ("      --print                      print VM instructions\n");
+  printf ("      --no-optimization-rewriting  disable optimization rewriting\n");
+  printf ("      --optimization-rewriting     enable optimization rewriting (default)\n");
 
   structured_help_section ("Common GNU-style options");
-  printf ("      --help                 give this help list and exit\n");
-  printf ("      --version              print program version and exit\n");
+  printf ("      --help                       give this help list and exit\n");
+  printf ("      --version                    print program version and exit\n");
 
   printf ("\n");
   printf ("An \"--\" argument terminates option processing.\n");
@@ -143,6 +145,9 @@ struct structured_command_line
   /* True iff we should not actually run the VM program. */
   bool dry_run;
 
+  /* True iff we should enable optimization rewriting. */
+  bool optimization_rewriting;
+
   /* Pathname of the program source to be loaded. */
   char *program_path;
 };
@@ -155,6 +160,7 @@ structured_initialize_command_line (struct structured_command_line *cl)
   cl->print = false;
   cl->disassemble = false;
   cl->dry_run = false;
+  cl->optimization_rewriting = true;
   cl->program_path = NULL;
 }
 
@@ -200,6 +206,10 @@ structured_parse_command_line (struct structured_command_line *cl,
         structured_version ();
       else if (handle_options && ! strcmp (arg, "--disassemble"))
         cl->disassemble = true;
+      else if (handle_options && ! strcmp (arg, "--optimization-rewriting"))
+        cl->optimization_rewriting = true;
+      else if (handle_options && ! strcmp (arg, "--no-optimization-rewriting"))
+        cl->optimization_rewriting = false;
       else if (handle_options && ! strcmp (arg, "--print"))
         cl->print = true;
       else if (handle_options && ! strcmp (arg, "--dry-run"))
@@ -227,15 +237,20 @@ structured_parse_command_line (struct structured_command_line *cl,
 static void
 structured_work (const struct structured_command_line *cl)
 {
-  /* Initialize the structured-VM subsystem. */
-  structuredvm_initialize ();
-
   /* Parse a structured-language program into an AST. */
   struct structured_program *p;
   if (! strcmp (cl->program_path, "-"))
     p = structured_parse_file_star (stdin);
   else
     p = structured_parse_file (cl->program_path);
+
+  /* Initialize the structured-VM subsystem. */
+  structuredvm_initialize ();
+
+  /* Disable optimization rewriting, if the user asked to do so on the command
+     line. */
+  if (! cl->optimization_rewriting)
+    structuredvm_disable_optimization_rewriting ();
 
   /* Translate the AST program into a jittery program. */
   struct structuredvm_program *vmp = structured_make_vm_program (p);

@@ -72,6 +72,7 @@ struct vmprefix_main_command_line
   bool debug;
   bool progress_on_stderr;
   bool print_program, disassemble_program, run_program, slow_registers_only;
+  bool optimization_rewriting;
   char *input_file;
   char *objdump_name;
   char *objdump_options; /* Use default options when NULL. */
@@ -101,14 +102,15 @@ enum vmprefix_vm_negative_option
     vmprefix_vm_negative_option_no_dry_run = -4,
     vmprefix_vm_negative_option_no_print_program = -5,
     vmprefix_vm_negative_option_no_progress_on_stderr = -6,
-    vmprefix_vm_negative_option_no_slow_registers_only = -7
+    vmprefix_vm_negative_option_no_slow_registers_only = -7,
+    vmprefix_vm_negative_option_optimization_rewriting = -8
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum vmprefix_vm_negative_option . */
 enum vmprefix_vm_long_only_option
   {
-    vmprefix_vm_long_only_option_dump_jitter_version = -8
+    vmprefix_vm_long_only_option_dump_jitter_version = -9
   };
 
 /* Update our option state with the information from a single command-line
@@ -129,6 +131,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       cl->disassemble_program = false;
       cl->run_program = true;
       cl->slow_registers_only = false;
+      cl->optimization_rewriting = true;
       cl->input_file = NULL;
       cl->objdump_name = JITTER_OBJDUMP;
       cl->objdump_name_overridden = false;
@@ -233,6 +236,13 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case vmprefix_vm_negative_option_no_slow_registers_only:
       cl->slow_registers_only = false;
       break;
+    case 'r':
+      cl->optimization_rewriting = false; /* The default is true. */
+      break;
+    case vmprefix_vm_negative_option_optimization_rewriting:
+      cl->optimization_rewriting = true;
+      break;
+
     case ARGP_KEY_ARG:
       cl->input_file = arg;
       break;
@@ -323,6 +333,9 @@ static struct argp_option vmprefix_main_option_specification[] =
     "Print the Jitter version only, without any surrounding text; this "
     "is convenient for scripts" },
    {"dump-version", '\0', NULL, OPTION_ALIAS },
+   {"no-optimization-rewriting", 'r', NULL, 0,
+    "Disable optimization rewriting (this is mostly useful for debugging "
+    "rewrite rules and for measuring the speedup they introduce)" },
    /* Debugging, testing and benchmarking negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 31},
    {"no-progress-on-stderr", vmprefix_vm_negative_option_no_progress_on_stderr,
@@ -331,6 +344,8 @@ static struct argp_option vmprefix_main_option_specification[] =
     NULL, 0, "Disable debugging (default)"},
    {"no-slow-registers-only", vmprefix_vm_negative_option_no_slow_registers_only,
     NULL, 0, "Use fast registers when possible (default)"},
+   {"optimization-rewriting", vmprefix_vm_negative_option_optimization_rewriting,
+    NULL, 0, "Enable optimization rewriting (default)"},
 
    /* Test suite options. */
    {NULL, '\0', NULL, OPTION_DOC, "Options mostly useful for test suites:", 40},
@@ -434,6 +449,15 @@ main (int argc, char **argv)
   if (cl.debug)
     fprintf (progress, "Initializing...\n");
   vmprefix_initialize ();
+
+  /* Disable optimization rewriting if the user asked to do so on the command
+     line. */
+  if (! cl.optimization_rewriting)
+    {
+      if (cl.debug)
+        fprintf (progress, "Disabling optimization rewriting...\n");
+      vmprefix_disable_optimization_rewriting ();
+    }
 
   /* Print the VM configuration if in debugging mode. */
   if (cl.debug)

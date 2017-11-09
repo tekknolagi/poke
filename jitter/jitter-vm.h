@@ -29,6 +29,8 @@
 #include <jitter/jitter-patch-in.h>
 
 
+
+
 /* VM-specific attributes.
  * ************************************************************************** */
 
@@ -134,8 +136,38 @@ struct jitter_vm
   int (*specialize_instruction) (struct jitter_program *p,
                                  const struct jitter_instruction *ins);
 
-  /* Rewrite an instruction.  See the comment in the vm.h template. */
+  /* Rewrite an instruction.  This points to the actual non-nop function
+     vmprefix_rewrite declared in templates/vm.h , but is not directly called.
+     The rewrite field below is used from the outside, and rewrite may either be
+     equal to this field when rewriting is enabled, or point to
+     jitter_dont_rewrite when rewriting is disabled. */
+  void (*actually_rewrite) (struct jitter_program *p);
+
+  /* Rewrite an instruction or do nothing.  See the comment for
+     actually_rewrite, above. */
   void (*rewrite) (struct jitter_program *p);
 };
+
+
+
+
+/* VM rewriting: enabling and disabling.
+ * ************************************************************************** */
+
+/* A function doing nothing, usable as a value for the rewrite field of struct
+   jitter_vm , defined above. */
+void
+jitter_dont_rewrite (struct jitter_program *p);
+
+/* Enable optimization rewriting rules for the given VM.  Optimization rewriting
+   is enabled by default. */
+void
+jitter_vm_enable_optimization_rewriting (struct jitter_vm *vm);
+
+/* Disable optimization rewriting rules for the given VM.  This is mostly useful
+   for debugging and benchmarking. */
+void
+jitter_vm_disable_optimization_rewriting (struct jitter_vm *vm);
+
 
 #endif // #ifndef JITTER_VM_H_
