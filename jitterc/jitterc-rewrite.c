@@ -25,6 +25,7 @@
 /* Include standard headers. */
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 /* We use Gnulib lists and (here arbitrarily: Jitter's version would work just
    as well) xmalloc and friends. */
@@ -261,6 +262,24 @@ const size_t
 jitterc_expression_operator_no
   = (sizeof (jitterc_expression_operators)
      / sizeof (struct jitterc_expression_operator));
+
+const struct jitterc_expression_operator*
+jitterc_lookup_expression_operator (const char *name)
+{
+  /* Search sequentially in the array until a name matches.  This may be
+     optimizable, but right now it's not at all clear that using an associative
+     structure is worth the trouble. */
+  int i;
+  for (i = 0; i < jitterc_expression_operator_no; i ++)
+    {
+      const struct jitterc_expression_operator *res
+        = jitterc_expression_operators + i;
+      if (! strcmp (res->name, name))
+        return res;
+    }
+
+  jitter_fatal ("unknown template expression operator %s", name);
+}
 
 
 

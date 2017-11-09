@@ -380,6 +380,12 @@ jitterc_expression_operators [];
 extern const size_t
 jitterc_expression_operator_no;
 
+/* Return a pointer-to-constant to the template expression operator with the
+   given name, or fail fatally. */
+const struct jitterc_expression_operator*
+jitterc_lookup_expression_operator (const char *name)
+  __attribute__ ((returns_nonnull, nonnull (1)));
+
 
 
 
