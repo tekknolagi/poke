@@ -164,7 +164,7 @@ jitter_destroy_last_instructions (struct jitter_program *p,
    vmprefix_rewrite .  This macro is used in the machine-generated definition of
    vmprefix_rewrite .  It may expand to a sequence of statements and
    declarations of variables to be visible to the entire function, so it is not
-   do..while(false)-protectedx. */
+   do..while(false)-protected. */
 #define JITTTER_REWRITE_FUNCTION_PROLOG_                                      \
   /* How many instructions are rewritable in the current program.  This */    \
   /* value will be used a lot in the function, and it's better to cache */    \
