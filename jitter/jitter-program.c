@@ -235,14 +235,23 @@ jitter_close_current_instruction (struct jitter_program *p)
   p->next_uninitialized_parameter = NULL;
   p->next_expected_parameter_type = NULL;
 
-  /* The instruction we just added is a candidate for rewriting, along with any
-     previous ones. */
-  p->rewritable_instruction_no ++;
+  /* If the instruction we just closed is a caller... */
+  if (p->current_instruction->meta_instruction->caller)
+    /* ...Then it's followed by an implicit label for the return address; in
+       that case it's not rewritable and the next rewritable instruction
+       sequence starts *after* it.  No rewriting is possible at this point. */
+    p->rewritable_instruction_no = 0;
+  else
+    {
+      /* The instruction we just added is a candidate for rewriting, along with
+         the previous ones which were candidate already. */
+      p->rewritable_instruction_no ++;
 
-  /* Rewrite the last part of the program, using the instruction we have just
-     closed; that instruction, along with some others preceding it, might very
-     well change or disappear after rewriting is done. */
-  jitter_rewrite (p);
+      /* Rewrite the last part of the program, using the instruction we have
+         just closed; that instruction, along with some others preceding it,
+         might very well change or disappear after rewriting is done. */
+      p->vm->rewrite (p);
+    }
 }
 
 /* Check that the pointed program's last instruction is incomplete, and that the next
@@ -406,6 +415,8 @@ jitter_append_unsigned_literal_parameter (struct jitter_program *p,
   jitter_append_literal_parameter (p, immediate_union);
 }
 
+/* This is just a convenience wrapper around jitter_append_literal_parameter
+   . */
 void
 jitter_append_pointer_literal_parameter (struct jitter_program *p,
                                          void *immediate)

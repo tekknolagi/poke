@@ -940,22 +940,12 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
   FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
 
   EMIT("void\n");
-  EMIT("vmprefix_rewrite_once (struct jitter_program *jitter_program_p,\n");
-  EMIT("                       size_t jitter_rewritable_instruction_no)\n");
+  EMIT("vmprefix_rewrite (struct jitter_program *jitter_program_p)\n");
   EMIT("{\n");
 
-  EMIT("  /* A pointer to the first instruction which is potentially a candidate for\n");
-  EMIT("     rewriting, with any rule.  Making this a constant pointer to constant data\n");
-  EMIT("     should help GCC to share condition computations across rules; this is rule\n");
-  EMIT("     correct, as rule conditions don't in fact change instructions.  Only if a\n");
-  EMIT("     rule matches some memory changes are made, and in that case we exit this\n");
-  EMIT("     function after the rule block ends. */\n");
-  EMIT("  const struct jitter_instruction * const * const\n");
-  EMIT("     jitter_all_rewritable_instructions __attribute__ ((unused))\n");
-  EMIT("       = ((const struct jitter_instruction * const * const)\n");
-  EMIT("          jitter_last_instructions\n");
-  EMIT("             (jitter_program_p,\n");
-  EMIT("              jitter_program_p->rewritable_instruction_no));\n");
+  /* Add the common prolog, defining variables to be visible to the entire
+     function body. */
+  EMIT("  JITTTER_REWRITE_FUNCTION_PROLOG_;\n");
   EMIT("\n");
 
   /* Add user-specified code for the rewriter. */

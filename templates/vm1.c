@@ -319,7 +319,7 @@ vmprefix_initialize (void)
       the_vmprefix_vm.register_class_character_to_register_class
         = vmprefix_register_class_character_to_register_class;
       the_vmprefix_vm.specialize_instruction = vmprefix_specialize_instruction;
-      the_vmprefix_vm.rewrite_once = vmprefix_rewrite_once;
+      the_vmprefix_vm.rewrite = vmprefix_rewrite;
 
       vm_struct_initialized = true;
     }
