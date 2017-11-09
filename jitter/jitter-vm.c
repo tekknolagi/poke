@@ -49,3 +49,27 @@ jitter_print_vm_configuration (FILE *f,
 
 #undef PRINT
 }
+
+
+
+
+/* VM rewriting: enabling and disabling.
+ * ************************************************************************** */
+
+void
+jitter_dont_rewrite (struct jitter_program *p)
+{
+  /* Do nothing. */
+}
+
+void
+jitter_vm_enable_optimization_rewriting (struct jitter_vm *vm)
+{
+  vm->rewrite = vm->actually_rewrite;
+}
+
+void
+jitter_vm_disable_optimization_rewriting (struct jitter_vm *vm)
+{
+  vm->rewrite = jitter_dont_rewrite;
+}

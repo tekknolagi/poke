@@ -319,7 +319,10 @@ vmprefix_initialize (void)
       the_vmprefix_vm.register_class_character_to_register_class
         = vmprefix_register_class_character_to_register_class;
       the_vmprefix_vm.specialize_instruction = vmprefix_specialize_instruction;
-      the_vmprefix_vm.rewrite = vmprefix_rewrite;
+      the_vmprefix_vm.actually_rewrite = vmprefix_rewrite;
+
+      /* Rewriting is on by default. */
+      jitter_vm_enable_optimization_rewriting (& the_vmprefix_vm);
 
       vm_struct_initialized = true;
     }
@@ -336,6 +339,28 @@ vmprefix_finalize (void)
      contains no dynamically-allocated fields. */
   /* Threads need no finalization. */
   jitter_finalize_meta_instructions (& vmprefix_meta_instruction_hash);
+}
+
+
+
+
+/* Global VM settings.
+ * ************************************************************************** */
+
+void
+vmprefix_enable_optimization_rewriting (void)
+{
+  /* Do the obvious thing on the struct jitter_vm object, which the user
+     is not supposed to see. */
+  jitter_vm_enable_optimization_rewriting (& the_vmprefix_vm);
+}
+
+void
+vmprefix_disable_optimization_rewriting (void)
+{
+  /* Do the obvious thing on the struct jitter_vm object, which the user
+     is not supposed to see. */
+  jitter_vm_disable_optimization_rewriting (& the_vmprefix_vm);
 }
 
 

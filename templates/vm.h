@@ -73,6 +73,24 @@ vmprefix_finalize (void);
 
 
 
+/* Global VM settings.
+ * ************************************************************************** */
+
+/* Enable optimization rewriting for the vmprefix VM.  Optimization rewriting is
+   on by default, so this is only useful to call after
+   vmprefix_disable_optimization_rewriting . */
+void
+vmprefix_enable_optimization_rewriting (void);
+
+/* Disable optimization rewriting for the vmprefix VM.  Optimization rewriting is
+   on by default and almost always desired, but this may be useful for debugging
+   or benchmarking. */
+void
+vmprefix_disable_optimization_rewriting (void);
+
+
+
+
 /* State data structure initialization and finalization.
  * ************************************************************************** */
 
