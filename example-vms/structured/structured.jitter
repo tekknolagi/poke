@@ -271,6 +271,7 @@ rule less-not--greaterorequal rewrite less; logicalnot into greaterorequal end
 rule lessorequal-not--greater rewrite lessorequal; logicalnot into greater end
 rule greater-not--lessorequal rewrite greater; logicalnot into lessorequal end
 rule greaterorequal-not--less rewrite greaterorequal; logicalnot into less end
+rule pop-push--copytor rewrite pop R $a; push R $a into copy-to-r $a end
 rule push-pop-- rewrite push R $a; pop R $a into end
 rule push-pop--rtor rewrite push R $a; pop R $b into r-to-r $a, $b end
 rule push-pop--setr rewrite push n $a; pop R $b into set-r $a, $b end
