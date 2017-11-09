@@ -255,73 +255,6 @@ end
 ## Rewriting.
 #################################################################
 
-rewriter-c
-  code
-
-
-/////////////////////////////////////////////////////////////
-
-  /*
-// rule equali0-to-not rewrite equali 0 into not end
-JITTER_RULE_BEGIN(1)
-  JITTER_RULE_BEGIN_PLACEHOLDER_DECLARATIONS
-  JITTER_RULE_END_PLACEHOLDER_DECLARATIONS
-  JITTER_RULE_BEGIN_CONDITIONS
-    JITTER_RULE_CONDITION_MATCH_OPCODE(0, equali)
-    JITTER_RULE_CONDITION_MATCH_LITERAL_ARGUMENT(0, 0, 0)
-  JITTER_RULE_END_CONDITIONS
-  JITTER_RULE_BEGIN_PLACEHOLDER_CLONING
-  JITTER_RULE_END_PLACEHOLDER_CLONING
-  JITTER_RULE_BEGIN_BODY
-    JITTER_RULE_APPEND_INSTRUCTION_(logicalnot);
-  JITTER_RULE_END_BODY
-  JITTER_RULE_BEGIN_PLACEHOLDER_DESTRUCTION
-  JITTER_RULE_END_PLACEHOLDER_DESTRUCTION
-JITTER_RULE_END
-
-// rule not-not->nothing rewrite when logicalnot logicalnot into end
-JITTER_RULE_BEGIN(2)
-  JITTER_RULE_BEGIN_PLACEHOLDER_DECLARATIONS
-  JITTER_RULE_END_PLACEHOLDER_DECLARATIONS
-  JITTER_RULE_BEGIN_CONDITIONS
-    JITTER_RULE_CONDITION_MATCH_OPCODE(0, logicalnot)
-    JITTER_RULE_CONDITION_MATCH_OPCODE(1, logicalnot)
-  JITTER_RULE_END_CONDITIONS
-  JITTER_RULE_BEGIN_PLACEHOLDER_CLONING
-  JITTER_RULE_END_PLACEHOLDER_CLONING
-  JITTER_RULE_BEGIN_BODY
-    fprintf (stderr, "Within the not-not->nothing body\n");
-  JITTER_RULE_END_BODY
-  JITTER_RULE_BEGIN_PLACEHOLDER_DESTRUCTION
-  JITTER_RULE_END_PLACEHOLDER_DESTRUCTION
-JITTER_RULE_END
-
-// rule rewrite pop $a; push $a into copy-to-r $a end
-JITTER_RULE_BEGIN(2)
-  JITTER_RULE_BEGIN_PLACEHOLDER_DECLARATIONS
-    JITTER_RULE_DECLARE_PLACEHOLDER_(a);
-  JITTER_RULE_END_PLACEHOLDER_DECLARATIONS
-  JITTER_RULE_BEGIN_CONDITIONS
-    JITTER_RULE_CONDITION_MATCH_OPCODE(0, pop)
-    JITTER_RULE_CONDITION_MATCH_PLACEHOLDER(0, 0, a)
-    JITTER_RULE_CONDITION_MATCH_OPCODE(1, push)
-    JITTER_RULE_CONDITION_MATCH_PLACEHOLDER(1, 0, a)
-  JITTER_RULE_END_CONDITIONS
-  JITTER_RULE_BEGIN_PLACEHOLDER_CLONING
-    JITTER_RULE_CLONE_PLACEHOLDER_(a);
-  JITTER_RULE_END_PLACEHOLDER_CLONING
-  JITTER_RULE_BEGIN_BODY
-    JITTER_RULE_APPEND_INSTRUCTION_(copy_mto_mr);
-    JITTER_RULE_APPEND_PLACEHOLDER_(a);
-  JITTER_RULE_END_BODY
-  JITTER_RULE_BEGIN_PLACEHOLDER_DESTRUCTION
-    JITTER_RULE_DESTROY_PLACEHOLDER_(a);
-  JITTER_RULE_END_PLACEHOLDER_DESTRUCTION
-JITTER_RULE_END
-  */
-  end
-end
-
 # rule
 # # pop-push-to-move
 #   rewrite
@@ -342,6 +275,7 @@ rule push-pop-- rewrite push R $a; pop R $a into end
 rule push-pop--rtor rewrite push R $a; pop R $b into r-to-r $a, $b end
 rule push-pop--setr rewrite push n $a; pop R $b into set-r $a, $b end
 rule push-plus--plusi rewrite push n $a; plus into plusi $a end
+rule push-minus--minusi rewrite push n $a; minus into minusi $a end
 # rule push-plusi--push rewrite push n $a; plusi n $b into push plus($a, $b) end
 
 rule push-equal--equali rewrite push n $a; equal into equali $a end
