@@ -58,11 +58,15 @@
 /* Initialization and finalization.
  * ************************************************************************** */
 
-// FIXME: comment.
+/* Initialize the runtime state for the vmprefix VM.  This needs to be called
+   before using VM programs or VM states in any way. */
 void
 vmprefix_initialize (void);
 
-// FIXME: comment.
+/* Finalize the runtime state, freeing some resources.  After calling this no
+   use of VM programs or states is allowed.  It is possible to re-initialize
+   after finalizing; these later re-initializations might be more efficient than
+   the first initialization. */
 void
 vmprefix_finalize (void);
 
