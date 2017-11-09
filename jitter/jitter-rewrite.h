@@ -82,13 +82,11 @@
 /* Rewriter entry point.
  * ************************************************************************** */
 
-/* Perform rewriting on the last part of the pointed program, until no more
-   changes are possible.
+/* The rewriter entry point is the machine-generated vmprefix_rewrite , called
+   at instruction closing thru the rewrite function pointer within struct
+   jitter_vm.
 
-   This is called every time an instruction is appended, either by the user
-   or by the rewriter itself.  */
-void
-jitter_rewrite (struct jitter_program *p);
+   See the comment for vmprefix_rewrite in the template header. */
 
 
 
@@ -97,7 +95,7 @@ jitter_rewrite (struct jitter_program *p);
  * ************************************************************************** */
 
 /* These functions are used internally for the implementation of
-   jitter_rewrite. */
+   vmprefix_rewrite. */
 
 /* Return a pointer to the last instruction in the given program; the returned
    pointer refers the only instance of the instruction, and is not a copy.  Fail
@@ -158,6 +156,38 @@ jitter_destroy_last_instructions (struct jitter_program *p,
 
 
 
+
+/* Fixed code for vmprefix_rewrite.
+ * ************************************************************************** */
+
+/* Expand to C declarations and statements to be emitted at the beginning of
+   vmprefix_rewrite .  This macro is used in the machine-generated definition of
+   vmprefix_rewrite .  It may expand to a sequence of statements and
+   declarations of variables to be visible to the entire function, so it is not
+   do..while(false)-protectedx. */
+#define JITTTER_REWRITE_FUNCTION_PROLOG_                                      \
+  /* How many instructions are rewritable in the current program.  This */    \
+  /* value will be used a lot in the function, and it's better to cache */    \
+  /* it in an automatic const variable rather than re-loading it from */      \
+  /* memory every time, in a context where GCC might not be able to infer */  \
+  /* that the value is, in fact, constant. */                                 \
+  const int jitter_rewritable_instruction_no =                                \
+    jitter_program_p->rewritable_instruction_no;                              \
+  /* A pointer to the first instruction which is potentially a candidate */   \
+  /* for rewriting, with any rule.  Making this a constant pointer to */      \
+  /* constant data should help GCC to share condition computations across */  \
+  /* rules; this is correct, as rule conditions don't in fact change */       \
+  /* instructions -- Only if a rule matches some memory changes are made, */  \
+  /* and in that case we exit this function after the rule section ends. */   \
+  const struct jitter_instruction * const * const                             \
+     jitter_all_rewritable_instructions __attribute__ ((unused))              \
+       = ((const struct jitter_instruction * const * const)                   \
+          jitter_last_instructions (jitter_program_p,                         \
+                                    jitter_rewritable_instruction_no))
+
+
+
+
 
 /* Rewriting macros for rule compilation: introduction.
  * ************************************************************************** */

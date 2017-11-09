@@ -506,17 +506,19 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
 /* Instruction rewriter.
  * ************************************************************************** */
 
-/* Scan rewrite rules in order and apply the first one that matches, if any, in
-   the pointed program, knowing that the instructions candidate for rewriting
-   are the last rewritable_instruction_no currently in the program.
+/* Try to apply each rewrite rule in order and run the first one that matches,
+   if any, on the pointed program.  When a rule fires the following ones are not
+   checked but if a rule, after removing the last few instructions, adds another
+   one, the addition will trigger another rewrite in its turn, and so on until
+   no more rewriting is possible.  The rewriting process is inherently
+   recursive.
 
    The implementation of this function is machine-generated, but the user can
-   add her own code in the rewriter-c block, which ends up at the beginning of
-   this function body.  The formal argument seen from the body are named,
-   respectively:
-   * jitter_program_p ;
-   * jitter_rewritable_instruction_no .
-   Rationale: the arguments are named differently in the body in order to keep
+   add her own code in the rewriter-c block, which ends up near the beginning of
+   this function body, right after JITTTER_REWRITE_FUNCTION_PROLOG_ .  The
+   formal argument seen from the body is named jitter_program_p .
+
+   Rationale: the argument is named differently in the body in order to keep
    the namespace conventions and, more importantly, to encourage the user to
    read this comment.
 
@@ -524,12 +526,8 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
    would break it.  The user is responsible for destroying any instruction she
    removes, including their arguments.  The user can assume that
    jitter_rewritable_instruction_no is strictly greater than zero. */
-// FIXME: shall the user use the instruction-popping functions?  Decide and give
-// suggestions.  FIXME: what about keeping rewritable_instruction_no accurate?
-// Decide and give suggestions.
 void
-vmprefix_rewrite_once (struct jitter_program *p,
-                       size_t rewritable_instruction_no);
+vmprefix_rewrite (struct jitter_program *p);
 
 
 

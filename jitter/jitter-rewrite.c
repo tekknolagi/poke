@@ -43,7 +43,10 @@ jitter_last_instructions (struct jitter_program *p, size_t how_many)
     jitter_fatal ("jitter_last_instruction: previous instruction incomplete");
   // FIXME: possibly too defensive?
   if (p->rewritable_instruction_no < how_many)
-    jitter_fatal ("getting more last instructions than we have as rewritable");
+    jitter_fatal ("getting more last instructions (%i) "
+                  "than we have as rewritable (%i)",
+                  (int)how_many,
+                  (int)p->rewritable_instruction_no);
 
   struct jitter_instruction **resp
     = ((struct jitter_instruction **)
@@ -99,37 +102,4 @@ jitter_destroy_last_instructions (struct jitter_program *p,
      which were held in separate malloc'ed buffers, has been freed already. */
   jitter_dynamic_buffer_pop (& p->instructions,
                              sizeof (struct jitter_instruction*) * how_many);
-}
-
-void
-jitter_rewrite (struct jitter_program *p)
-{
-  //  static int the_index = 0;
-  if (p->rewritable_instruction_no > 0)
-    {
-      /* int index = ++ the_index; */
-      /* fprintf (stderr, "Before rewrite %i:   %i total instructions, " */
-      /*          "%i rewritable; the last one is %s\n", */
-      /*          index, */
-      /*          (int) jitter_program_instruction_no (p), */
-      /*          (int) p->rewritable_instruction_no, */
-      /*          jitter_last_instruction (p)->meta_instruction->name); */
-
-      p->vm->rewrite_once (p, p->rewritable_instruction_no);
-
-      /* fprintf (stderr, "...after rewrite %i: %i total instructions, %i rewritable.\n", */
-      /*          index, */
-      /*          (int) jitter_program_instruction_no (p), */
-      /*          (int) p->rewritable_instruction_no); */
-    }
-
-  /* If the last instruction we have in the program (post-rewriting, since it
-     might have been changed) is a caller, then everything up it its point can
-     no longer be rewritten: the return address right after the call is an
-     implicit label. */
-  if (   jitter_program_instruction_no (p) > 0
-      && jitter_last_instruction (p)->meta_instruction->caller)
-    p->rewritable_instruction_no = 0;
-  /* FIXME: this statement above could be at the beginning.  Actually, all of
-     this should be merged with the machine-generated function. */
 }
