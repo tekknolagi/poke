@@ -34,9 +34,11 @@
 #include "jitterc-mangle.h"
 #include "jitterc-utility.h"
 #include "jitterc-vm.h"
+#include "jitterc-rewrite.h"
 
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-fatal.h>
+#include <jitter/jitter-hash.h>
 #include <jitter/jitter-string.h>
 
 
@@ -155,6 +157,11 @@ jitterc_make_vm (void)
   res->instructions = jitterc_make_empty_list ();
   res->specialized_instructions = jitterc_make_empty_list ();
   res->specialized_instruction_forest = jitterc_make_empty_list ();
+
+  /* The name_to_instruction hash table is empty.  It will be filled after
+     sorting, when all the instructions are in place.  This, like many other
+     data structures in jitterc, is never finalized. */
+  jitter_hash_initialize (& res->name_to_instruction);
 
   /* There are no rewrite rules yet. */
   res->rewrite_rules = jitterc_make_empty_list ();
@@ -848,7 +855,9 @@ jitterc_compare_vm_instructions (const void *ppa, const void *ppb)
   return strcmp (pa->name, pb->name);
 }
 
-void
+/* Alphabetically sort the instructions within the given VM, in place.  Fail
+   fatally if there are duplicates. */
+static void
 jitterc_sort_vm (struct jitterc_vm *vm)
 {
   /* Make sure that there are enough instructions for sorting to have an
@@ -886,7 +895,27 @@ jitterc_sort_vm (struct jitterc_vm *vm)
   free (array);
 }
 
+
 
+
+/* Building the name_to_instruction hash table.
+ * ************************************************************************** */
+
+static void
+jitterc_fill_name_to_instruction (struct jitterc_vm * vm)
+{
+  gl_list_t instructions = vm->instructions;
+  size_t instruction_no = gl_list_size (instructions);
+  int i;
+  for (i = 0; i < instruction_no; i ++)
+    {
+      const struct jitterc_instruction *ins
+        = gl_list_get_at (instructions, i);
+      union jitter_word w = { .pointer = (void *) ins };
+      jitter_string_hash_table_add (& vm->name_to_instruction, ins->name, w);
+    }
+}
+
 
 /* Data structure analysis.
  * ************************************************************************** */
@@ -894,6 +923,13 @@ jitterc_sort_vm (struct jitterc_vm *vm)
 void
 jitterc_analyze_vm (struct jitterc_vm *vm)
 {
+  /* First sort instructions by name.  This also fails in case of duplicate
+     instruction names, which we want to check for here. */
+  jitterc_sort_vm (vm);
+
+  /* Fill the name_to_instruction hash. */
+  jitterc_fill_name_to_instruction (vm);
+
   /* The initial maximum name length is zero. */
   vm->max_instruction_name_length = 0;
 
@@ -911,6 +947,10 @@ jitterc_analyze_vm (struct jitterc_vm *vm)
       if (vm->max_instruction_name_length < name_length)
         vm->max_instruction_name_length = name_length;
     }
+
+  /* Check rewrite rules for semantic problems.  This is only possible after
+     every instruction and every rule is in place. */
+  jitterc_check_rules (vm);
 }
 
 

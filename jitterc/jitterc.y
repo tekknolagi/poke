@@ -826,11 +826,8 @@ jitterc_parse_file_star_with_name (FILE *input_file, const char *file_name,
   jitterc_set_in (NULL, scanner);
   jitterc_lex_destroy (scanner);
 
-  /* Sort the VM instructions; this will also find duplicate instructions. */
-  jitterc_sort_vm (res);
-
-  /* Now that we have all the unspecialized instructions we can analyze the
-     VM. */
+  /* Now that we have all the unspecialized instructions and all the rules we
+     can analyze the VM. */
   jitterc_analyze_vm (res);
 
   return res;

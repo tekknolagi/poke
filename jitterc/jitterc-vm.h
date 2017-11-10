@@ -30,6 +30,7 @@
 #include <gl_list.h>
 
 #include <jitter/jitter.h>
+#include <jitter/jitter-hash.h>
 
 
 /* The data structures defined here are used at code generation time, not at VM
@@ -345,7 +346,8 @@ enum jitterc_calleeness
 /* A VM instruction specification as extracted from the text file. */
 struct jitterc_instruction
 {
-  // FIXME: make sure that the name is unique, from the parser.
+  /* The unmangled version of the name.  This is checked for uniqueness during
+     the analysis phase. */
   char *name;
 
   /* The mangled version of the name above, suitable to be used as part of a C
@@ -683,6 +685,11 @@ struct jitterc_vm
   /* A list of struct jitterc_instruction pointers. */
   gl_list_t instructions;
 
+  /* A string hash table mapping each unspecialized instruction name into an
+     instruction pointer.  The hash data point to the same elements contained
+     in the instructions field. */
+  struct jitter_hash_table name_to_instruction;
+
   /* A list of struct struct jitterc_rule pointers. */
   gl_list_t rewrite_rules;
 
@@ -761,22 +768,12 @@ jitterc_vm_last_argument (struct jitterc_vm *vm)
  * ************************************************************************** */
 
 /* Compute analyses on a VM having all of its unspecialized instructions
-   already.  This currently computes the maximum instruction name length.
-   Other properties will be easy to add here. */
+   already.  This currently sorts instructions by name in the list, builds
+   the vm->name_to_instruction hash table, computes the maximum instruction
+   name length and checks for rewrite-rule semantic violations.
+   Other properties will be easy to add here, if needed. */
 void
 jitterc_analyze_vm (struct jitterc_vm *vm) __attribute__ ((nonnull (1)));
-
-
-
-
-/* Data structure sorting.
- * ************************************************************************** */
-
-/* Alphabetically sort the instructions within the given VM, in place.  Fail
-   fatally if there are duplicates. */
-void
-jitterc_sort_vm (struct jitterc_vm *vm)
-  __attribute__ ((nonnull (1)));
 
 
 

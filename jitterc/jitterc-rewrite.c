@@ -37,6 +37,7 @@
    utilities. */
 #include <jitter/jitter.h>
 #include <jitter/jitter-fatal.h>
+#include <jitter/jitter-hash.h>
 #include "jitterc-rewrite.h"
 #include "jitterc-vm.h"
 #include "jitterc-utility.h"
@@ -52,7 +53,7 @@
 static void
 jitterc_add_placeholders_from_argument_pattern
    (gl_list_t placeholders,
-    struct jitterc_argument_pattern *ap)
+    const struct jitterc_argument_pattern *ap)
 {
   if (ap->placeholder_or_NULL != NULL)
     jitterc_list_add_string_unique (placeholders, ap->placeholder_or_NULL);
@@ -61,17 +62,17 @@ jitterc_add_placeholders_from_argument_pattern
 /* Add any placeholder occurring in the pointed pattern to the given unique
    string list. */
 static void
-jitterc_add_placeholders_from_pattern (gl_list_t placeholders,
-                                       struct jitterc_instruction_pattern *ip)
+jitterc_add_placeholders_from_pattern
+   (gl_list_t placeholders,
+    const struct jitterc_instruction_pattern *ip)
 {
   gl_list_t argument_patterns = ip->argument_patterns;
   size_t length = gl_list_size (argument_patterns);
   int i;
   for (i = 0; i < length; i ++)
     {
-      struct jitterc_argument_pattern *ap
-        = ((struct jitterc_argument_pattern *)
-           gl_list_get_at (argument_patterns, i));
+      const struct jitterc_argument_pattern *ap
+        = gl_list_get_at (argument_patterns, i);
       jitterc_add_placeholders_from_argument_pattern (placeholders, ap);
     }
 }
@@ -86,94 +87,9 @@ jitterc_add_placeholders_from_patterns (gl_list_t placeholders,
   int i;
   for (i = 0; i < length; i ++)
     {
-      struct jitterc_instruction_pattern *ip
-        = ((struct jitterc_instruction_pattern *)
-           gl_list_get_at (in_instruction_patterns, i));
+      const struct jitterc_instruction_pattern *ip
+        = gl_list_get_at (in_instruction_patterns, i);
       jitterc_add_placeholders_from_pattern (placeholders, ip);
-    }
-}
-
-
-
-
-/* Finding placeholder occurrences within rule templates and expressions.
- * ************************************************************************** */
-
-/* Fail fatally if any placeholder occurring in the pointed template expression
-   is not in the given list of strings.  This forward-declaration is needed
-   because of mutual recursion. */
-static void
-jitterc_check_placeholders_in_expression
-   (gl_list_t placeholders,
-    struct jitterc_template_expression *e);
-
-/* Fail fatally if any placeholder occurring in the given template expressions
-   is not in the given list of strings. */
-static void
-jitterc_check_placeholders_in_expressions (gl_list_t placeholders,
-                                           gl_list_t template_expressions)
-{
-  size_t length = gl_list_size (template_expressions);
-  int i;
-  for (i = 0; i < length; i ++)
-    {
-      struct jitterc_template_expression *te
-        = ((struct jitterc_template_expression *)
-           gl_list_get_at (template_expressions, i));
-      jitterc_check_placeholders_in_expression (placeholders, te);
-    }
-}
-
-static void
-jitterc_check_placeholders_in_expression (gl_list_t placeholders,
-                                          struct jitterc_template_expression *e)
-{
-  switch (e->case_)
-    {
-    case jitterc_instruction_argument_expression_case_boolean_constant:
-    case jitterc_instruction_argument_expression_case_fixnum_constant:
-      return;
-
-    case jitterc_instruction_argument_expression_case_placeholder:
-      if (! jitterc_list_has_string (placeholders, e->placeholder))
-        jitter_fatal ("???:%i: unbound placeholder %s", e->line_no,
-                      e->placeholder);
-      break;
-
-    case jitterc_instruction_argument_expression_case_operation:
-      jitterc_check_placeholders_in_expressions (placeholders,
-                                                 e->operand_expressions);
-      break;
-
-    default:
-      jitter_fatal ("invalid template expression case");
-    }
-}
-
-/* Fail fatally if any placeholder occurring in the pointed instruction template
-   is not in the given list of strings. */
-static void
-jitterc_check_placeholders_in_template (gl_list_t placeholders,
-                                        struct jitterc_instruction_template *it)
-{
-  jitterc_check_placeholders_in_expressions (placeholders,
-                                             it->argument_expressions);
-}
-
-/* Fail fatally if any placeholder occurring in the given instruction templates
-   is not in the given list of strings. */
-static void
-jitterc_check_placeholders_in_templates (gl_list_t placeholders,
-                                         gl_list_t out_instruction_templates)
-{
-  size_t length = gl_list_size (out_instruction_templates);
-  int i;
-  for (i = 0; i < length; i ++)
-    {
-      struct jitterc_instruction_template *it
-        = ((struct jitterc_instruction_template *)
-           gl_list_get_at (out_instruction_templates, i));
-      jitterc_check_placeholders_in_template (placeholders, it);
     }
 }
 
@@ -301,17 +217,14 @@ jitterc_make_rule (gl_list_t in_instruction_patterns,
   res->out_instruction_templates = out_instruction_templates;
   res->guard = guard;
 
-  /* Compute the list of all the occurring placeholders in the pattern part. */
+  /* Compute the list of all the occurring placeholders in the pattern part.
+     Those are all the placeholders in the rule, if the rule is well-written.
+     If there are some placeholders in the guard or in instruction templates
+     then it's a mistake, which will be discovered later in the semantic-check
+     phase.  */
   res->placeholders = jitterc_make_empty_list ();
   jitterc_add_placeholders_from_patterns (res->placeholders,
                                           in_instruction_patterns);
-
-  /* Check that every placeholder in the template and guard occurs in the
-     pattern.  Any placeholder not found in the pattern is incorrect. */
-  jitterc_check_placeholders_in_expression (res->placeholders,
-                                            guard);
-  jitterc_check_placeholders_in_templates (res->placeholders,
-                                           out_instruction_templates);
 
   res->name = name;
   res->line_no = line_no;
@@ -452,4 +365,229 @@ jitterc_add_rule (struct jitterc_vm *vm,
                   struct jitterc_rule *rule)
 {
   gl_list_add_last (vm->rewrite_rules, rule);
+}
+
+
+
+
+/* Fatal semantic errors.
+ * ************************************************************************** */
+
+/* Exit with a fatal message printable with a printf format string along with
+   its arguments, specifying a source line.
+   This relies on a struct jitterc_vm pointer named vm being in scope. */
+#define JITTERC_SEMANTIC_ERROR(_jitter_line_no, ...)              \
+  do                                                              \
+    {                                                             \
+      printf ("%s:%i: ", vm->source_file_name, _jitter_line_no);  \
+      printf (__VA_ARGS__);                                       \
+      printf ("\n");                                              \
+      exit (EXIT_FAILURE);                                        \
+    }                                                             \
+  while (false)
+
+
+
+
+/* Finding placeholder occurrences within rule templates and expressions.
+ * ************************************************************************** */
+
+/* Fail fatally if any placeholder occurring in the pointed template expression
+   is not in the given list of strings.  This forward-declaration is needed
+   because of mutual recursion. */
+static void
+jitterc_check_placeholders_in_expression
+   (const struct jitterc_vm *vm,
+    gl_list_t placeholders,
+    const struct jitterc_template_expression *e);
+
+/* Fail fatally if any placeholder occurring in the given template expressions
+   is not in the given list of strings. */
+static void
+jitterc_check_placeholders_in_expressions (const struct jitterc_vm *vm,
+                                           gl_list_t placeholders,
+                                           gl_list_t template_expressions)
+{
+  size_t length = gl_list_size (template_expressions);
+  int i;
+  for (i = 0; i < length; i ++)
+    {
+      const struct jitterc_template_expression *te
+        = gl_list_get_at (template_expressions, i);
+      jitterc_check_placeholders_in_expression (vm, placeholders, te);
+    }
+}
+
+static void
+jitterc_check_placeholders_in_expression
+   (const struct jitterc_vm *vm,
+    gl_list_t placeholders,
+    const struct jitterc_template_expression *e)
+{
+  switch (e->case_)
+    {
+    case jitterc_instruction_argument_expression_case_boolean_constant:
+    case jitterc_instruction_argument_expression_case_fixnum_constant:
+      return;
+
+    case jitterc_instruction_argument_expression_case_placeholder:
+      if (! jitterc_list_has_string (placeholders, e->placeholder))
+        JITTERC_SEMANTIC_ERROR(e->line_no, "unbound placeholder %s",
+                               e->placeholder);
+      break;
+
+    case jitterc_instruction_argument_expression_case_operation:
+      jitterc_check_placeholders_in_expressions (vm,
+                                                 placeholders,
+                                                 e->operand_expressions);
+      break;
+
+    default:
+      jitter_fatal ("invalid template expression case");
+    }
+}
+
+/* Fail fatally if any placeholder occurring in the pointed instruction template
+   is not in the given list of strings. */
+static void
+jitterc_check_placeholders_in_template
+   (const struct jitterc_vm *vm,
+    gl_list_t placeholders,
+    const struct jitterc_instruction_template *it)
+{
+  jitterc_check_placeholders_in_expressions (vm,
+                                             placeholders,
+                                             it->argument_expressions);
+}
+
+/* Fail fatally if any placeholder occurring in the given instruction templates
+   is not in the given list of strings. */
+static void
+jitterc_check_placeholders_in_templates (const struct jitterc_vm *vm,
+                                         gl_list_t placeholders,
+                                         gl_list_t out_instruction_templates)
+{
+  size_t length = gl_list_size (out_instruction_templates);
+  int i;
+  for (i = 0; i < length; i ++)
+    {
+      const struct jitterc_instruction_template *it
+        = gl_list_get_at (out_instruction_templates, i);
+      jitterc_check_placeholders_in_template (vm, placeholders, it);
+    }
+}
+
+/* Check that the pointed rule in the pointed VM doesn't use undefined
+   placeholders. */
+static void
+jitterc_check_rule_placeholders (const struct jitterc_vm *vm,
+                                 const struct jitterc_rule *rule)
+{
+  /* Check that every placeholder in the template and guard occurs in the
+     pattern.  Any placeholder not found in the pattern is incorrect. */
+  jitterc_check_placeholders_in_expression (vm,
+                                            rule->placeholders,
+                                            rule->guard);
+  jitterc_check_placeholders_in_templates (vm,
+                                           rule->placeholders,
+                                           rule->out_instruction_templates);
+}
+
+/* Check that the named instruction in the given VM exists and has the given
+   arity.  If not, fail reporting the given line number. */
+static void
+jitterc_check_instruction_existence_and_arity
+   (const struct jitterc_vm *vm,
+    const char *instruction_name,
+    const int provided_arity,
+    int line_no)
+{
+  /* Fail if the hash doesn't have the instruction name as key. */
+  if (! jitter_string_hash_table_has (& vm->name_to_instruction,
+                                      instruction_name))
+    JITTERC_SEMANTIC_ERROR(line_no, "unknown instruction %s", instruction_name);
+
+  /* Now we can safely lookup the hash. */
+  const struct jitterc_instruction *ins
+    = jitter_string_hash_table_get (& vm->name_to_instruction,
+                                    instruction_name).pointer_to_void;
+
+  /* Compare the given arity with what is expected. */
+  const int required_arity = gl_list_size (ins->arguments);
+  if (provided_arity != required_arity)
+    JITTERC_SEMANTIC_ERROR(line_no, "invalid arity for instruction %s: "
+                           "%i instead of %i", instruction_name,
+                           provided_arity, required_arity);
+}
+
+/* Check that the pointed rule of the pointed VM uses instructions correctly. */
+static void
+jitterc_check_instructions_in_rule (const struct jitterc_vm *vm,
+                                    const struct jitterc_rule *rule)
+{
+  size_t length;
+  int i;
+
+  /* For every instruction pattern... */
+  length = gl_list_size (rule->in_instruction_patterns);
+  for (i = 0; i < length; i ++)
+    {
+      const struct jitterc_instruction_pattern *ip
+        = gl_list_get_at (rule->in_instruction_patterns, i);
+
+      /* ...Check that the instruction actually exists and is used with the
+         correct arity. */
+      jitterc_check_instruction_existence_and_arity
+         (vm, ip->instruction_name,
+          gl_list_size (ip->argument_patterns),
+          ip->line_no);
+
+      // FIXME: check pattern arguments.
+    }
+
+  /* For every instruction template... */
+  length = gl_list_size (rule->out_instruction_templates);
+  for (i = 0; i < length; i ++)
+    {
+      const struct jitterc_instruction_template *tp
+        = gl_list_get_at (rule->out_instruction_templates, i);
+
+      /* ...Check that the instruction actually exists and is used with the
+         correct arity. */
+      jitterc_check_instruction_existence_and_arity
+         (vm, tp->instruction_name,
+          gl_list_size (tp->argument_expressions),
+          tp->line_no);
+
+      // FIXME: check template arguments.
+    }
+}
+
+
+
+/* Rule semantic checks.
+ * ************************************************************************** */
+
+/* Check that the pointed rule of the pointed VM doesn't violate semantic
+   constraints. */
+static void
+jitterc_check_rule (const struct jitterc_vm *vm,
+                    const struct jitterc_rule *rule)
+{
+  /* Check that the rule doesn't refer undefined placeholders. */
+  jitterc_check_rule_placeholders (vm, rule);
+
+  /* Check that the rule uses instructions correctly. */
+  jitterc_check_instructions_in_rule (vm, rule);
+}
+
+void
+jitterc_check_rules (const struct jitterc_vm *vm)
+{
+  /* Check every rule, one after the other. */
+  gl_list_t rules = vm->rewrite_rules;
+  size_t length = gl_list_size (rules);
+  int i;
+  for (i = 0; i < length; i ++)
+    jitterc_check_rule (vm, gl_list_get_at (rules, i));
 }

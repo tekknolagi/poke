@@ -423,4 +423,20 @@ jitterc_add_rule (struct jitterc_vm *vm,
                   struct jitterc_rule *rule)
   __attribute__ ((nonnull (1, 2)));
 
+
+
+
+/* Rule semantic checks.
+ * ************************************************************************** */
+
+/* Check that no rule in the given VM violates semantic constraints.  Do nothing
+   on success, fail with an error message on any problem.
+
+   This must be called after every instruction and and every rule has been
+   added, and after the vm->name_to_instruction hash is initialized. */
+void
+jitterc_check_rules (const struct jitterc_vm *vm)
+  __attribute__ ((nonnull (1)));
+
+
 #endif // #ifndef JITTERC_REWRITE_H_
