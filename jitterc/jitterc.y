@@ -386,17 +386,17 @@ identifiers: /* FIXME: no need for %type here.  I can use side effects like else
 
 rule_section:
   RULE optional_identifier
-  rule_guard
   REWRITE rule_instruction_patterns_zero_or_more
   INTO rule_instruction_templates_zero_or_more
+  rule_guard
   END
   { struct jitterc_rule *rule
-      = jitterc_make_rule ($5,
+      = jitterc_make_rule ($4,
+                           $6,
                            $7,
-                           $3,
                            ($2 != NULL
-                              ? $2
-                              : jitter_clone_string ("unnamed")),
+                            ? $2
+                            : jitter_clone_string ("unnamed")),
                            JITTERC_LINENO);
     jitterc_add_rule (vm, rule); }
 ;
