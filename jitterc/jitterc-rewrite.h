@@ -56,10 +56,13 @@
 
    A rewrite rule template is a list of instructions with template expressions
    in place of their arguments.  Template expressions may use constants and the
-   placeholders matched in the pattern part.
+   placeholders matched in the pattern part, connected with a fixed set of
+   statically-typed operators.  A template expression has a fully strict
+   evaluation semantics, with no side effects.  Its result can be a word-sized
+   integer, a boolean, or an actual parameter.
 
-   A guard is a template expression whose result is a boolean.  If, after
-   matching, the guard evaluates to false then the rule does not fire.
+   A guard is a template expression whose result is a boolean.  If after
+   matching the guard evaluates to false then the rule does not fire.
 
    We say that a rule matches when a substitution can be found for every
    instruction in the pattern, which means that the opcodes must match
@@ -72,8 +75,10 @@
 /* Rewrite rule AST definitions.
  * ************************************************************************** */
 
-/* A rewrite rule constains one or more instruction patterns, zero or more
-   instruction templates, and a guard. */
+/* A rewrite rule contains one or more instruction patterns, zero or more
+   instruction templates, and a guard.  The guard has the same structure (and
+   type) of a template expression, as it involves operations on constants and
+   placeholders.  */
 struct jitterc_rule
 {
   /* A list of one or more instruction patterns.  Each element has type struct
@@ -119,8 +124,9 @@ struct jitterc_instruction_pattern
   int line_no;
 };
 
-/* An instruction pattern contains an unspecialized opcode, followed by the
-   appropriate number of argument patterns. */
+/* An argument pattern contains a kind specification (a subset of the kinds
+   allowed for a parameter in that position in the instruction), possibly a
+   non-label literal, and possibly a placeholder name. */
 struct jitterc_argument_pattern
 {
   /* The accepted argument kind, which may be a disjunction of cases expressed
@@ -386,29 +392,6 @@ jitterc_expression_operator_no;
 const struct jitterc_expression_operator*
 jitterc_lookup_expression_operator (const char *name)
   __attribute__ ((returns_nonnull, nonnull (1)));
-
-
-
-
-/* Comments to move.
- * ************************************************************************** */
-
-/* An argument pattern contains kinds (a subset of the kinds allowed for a
-   parameter in that position in the instruction), possibly a non-label literal,
-   and possibly a placeholder name. */
-
-/* A template expression is an expression defined over constants, placeholders
-   (each required to occur at least one in the pattern) and a specific set of
-   predefined operators.
-   A template expression has a fully strict evaluation semantics, with no side
-   effects.  Its result is either a word-sized integer or an actual
-   parameter. */
-
-/* A guard is just a template expression whose result is a boolean. */
-
-/* A template is a sequence of zero or more instruction templates.  An
-   instruction template consists on an unspecialized instruction opcode
-   followed by the appropriate number of template expressions. */
 
 
 
