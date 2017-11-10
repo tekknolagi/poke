@@ -708,7 +708,14 @@ jitterc_emit_rewrite_rule_template_expression
         int i; char *comma;
         EMIT("#warning: operators (here \"%s\") not really implemented yet\n",
              te->operator->name);
-        EMIT("      JITTER_RULE_EXPRESSION_%s(\n", te->operator->name);
+        /* Convert the operator name to upper case, to emit it as part of a C
+           macro name. */
+        char operator_name_uppercase [1000];
+        for (i = 0; te->operator->name [i] != '\0'; i ++)
+          operator_name_uppercase [i] = toupper (te->operator->name [i]);
+        operator_name_uppercase [i] = '\0';
+
+        EMIT("      JITTER_RULE_EXPRESSION_%s(\n", operator_name_uppercase);
         FOR_LIST(i, comma, te->operand_expressions)
           {
             const struct jitterc_template_expression *oe
