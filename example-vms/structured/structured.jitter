@@ -286,9 +286,17 @@ rule equali-bf--bneqi rewrite equali n $a; bf $b into bneqi $a, $b end
 rule push-drop-- rewrite push $a; drop into end
 rule push-push--push-dup rewrite push $a; push $a into push $a; dup end
 
+# rule push-bf-- rewrite push N $a; bf $b into when notequal ($a, 0) end
 rule push-bf--b rewrite push 0; bf $a into b $a end
+# rule push-bt--b rewrite push N $a; bt $b into b $b when notequal ($a, 0) end
+rule push-bt-- rewrite push 0; bt $a into end
 
-# rule equali0-to-not when is_zero ($a) rewrite equali $a into not end
+rule plusi-minusi-- rewrite plusi $a; minusi $a into end
+rule minusi-plusi-- rewrite minusi $a; plusi $a into end
+rule plusi-- rewrite plusi 0 into end
+rule minusi-- rewrite minusi 0 into end
+
+# rule equali0-to-not rewrite equali $a into not when is_zero ($a) end
 
 ## Optimized instructions (scratch).
 #################################################################
@@ -317,13 +325,13 @@ instruction r-to-r (?R, !R)
   end
 end
 
-instruction plusi (?n -1 0 1 2 my_literal_printer)
+instruction plusi (?n -1 1 2 my_literal_printer)
   code
     JITTER_TOP_MAINSTACK() += JITTER_ARGN0;
   end
 end
 
-instruction minusi (?n 0 1 2 my_literal_printer)
+instruction minusi (?n 1 2 my_literal_printer)
   code
     JITTER_TOP_MAINSTACK() -= JITTER_ARGN0;
   end
