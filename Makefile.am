@@ -991,6 +991,37 @@ EXTRA_DIST += \
   example-vms/structured/ChangeLog
 
 
+# Jittery Lisp example.
+# ################################################################
+
+PROGRAMS_JITTERLISP = bin/jitterlisp
+
+# Every JitterLisp system will be a program, not built by default.
+EXTRA_PROGRAMS += $(PROGRAMS_JITTERLISP)
+
+# This variable will be useful later, when I compile different JitterLisp
+# programs, each with its own dispatching model and other configuration
+# parameters.  Right now there isn't even Jitter-generated code.
+SOURCES_FOR_JITTERLISP = \
+  example-vms/jitterlisp/jitterlisp-sexpression.c \
+  example-vms/jitterlisp/jitterlisp-sexpression.h \
+  example-vms/jitterlisp/jitterlisp-main.c
+
+# There is only one version for the best dispatching model, as of now.
+bin_jitterlisp_SOURCES = $(SOURCES_FOR_JITTERLISP)
+bin_jitterlisp_CPPFLAGS = \
+  $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/jitterlisp" $(JITTER_CPPFLAGS)
+bin_jitterlisp_CFLAGS = \
+  $(AM_CFLAGS) $(JITTER_CFLAGS)
+bin_jitterlisp_LDADD = \
+  $(AM_LDADD) $(JITTER_LDADD)
+bin_jitterlisp_LDFLAGS = \
+  $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
+
+# Examples for JitterLisp.  There is none yet.
+EXTRA_DIST +=
+
+
 # Brainfuck example VM.
 # ################################################################
 
