@@ -164,3 +164,27 @@ jitter_dynamic_buffer_to_const_pointer (const struct jitter_dynamic_buffer *db)
 {
   return jitter_dynamic_buffer_to_pointer (db);
 }
+
+
+
+
+/* Extraction.
+ * ************************************************************************** */
+
+void *
+jitter_dynamic_buffer_extract (struct jitter_dynamic_buffer *db)
+{
+  /* Return the pointed buffer, invalidating the pointer in *db out of
+     defensiveness, */
+  void *res = db->region;
+  db->region = NULL;
+  return res;
+}
+
+void *
+jitter_dynamic_buffer_extract_trimmed (struct jitter_dynamic_buffer *db)
+{
+  /* Extract without trimming, then realloc the result. */
+  void *untrimmed_res = jitter_dynamic_buffer_extract (db);
+  return jitter_xrealloc (untrimmed_res, db->used_size);
+}

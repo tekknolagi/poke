@@ -171,4 +171,29 @@ const void*
 jitter_dynamic_buffer_to_const_pointer (const struct jitter_dynamic_buffer *db)
   __attribute__ ((returns_nonnull, nonnull (1), pure));
 
+
+
+
+/* Extraction.
+ * ************************************************************************** */
+
+/* "Extracting" data from a dynamic buffer means returning the malloc-allocated
+   buffer contained in the dynamic buffer struct, thus making it invalid.  It is
+   *incorrect* to finalize a dynamic buffer after calling this, even if of course
+   the struct itself, if heap-allocated, should be freed. */
+
+/* Return the malloc-allocated data held in the pointed dynamic buffer, which is
+   then no longer usable.  It is the caller's responsibility to free the data.
+   Notice that the data will have size db->allocated_size , which may be larger
+   than db->used_size . */
+void *
+jitter_dynamic_buffer_extract (struct jitter_dynamic_buffer *db)
+  __attribute__ ((nonnull (1), returns_nonnull));
+
+/* Like jitter_dynamic_buffer_extract , but trim the returned buffer to
+   db->used_size using realloc. */
+void *
+jitter_dynamic_buffer_extract_trimmed (struct jitter_dynamic_buffer *db)
+  __attribute__ ((nonnull (1), returns_nonnull));
+
 #endif // #ifndef JITTER_DYNAMIC_BUFFER_H_
