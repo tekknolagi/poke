@@ -49,6 +49,58 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 
 
 
+/* Scratch: terminal sequences.
+ * ************************************************************************** */
+
+/* Define ANSI terminal escape sequences to print each object with attributes
+   depending on its tag. */
+
+#define ESC        "\033"
+#define NOATTR     ESC"[0m"
+#define BOLD       ESC"[1m"
+#define FAINT      ESC"[2m"
+#define ITALIC     ESC"[3m"
+#define UNDERLINE  ESC"[4m"
+#define REVERSE    ESC"[7m"
+#define CROSSOUT   ESC"[9m"
+
+#define BLACK        ESC"[0m"ESC"[30m"
+#define WHITE        ESC"[1m"ESC"[37m"
+#define BLUE         ESC"[0m"ESC"[34m"
+#define LIGHTBLUE    ESC"[1m"ESC"[34m"
+#define GREEN        ESC"[0m"ESC"[32m"
+#define LIGHTGREEN   ESC"[1m"ESC"[32m"
+#define CYAN         ESC"[0m"ESC"[36m"
+#define LIGHTCYAN    ESC"[1m"ESC"[36m"
+#define RED          ESC"[0m"ESC"[31m"
+#define LIGHTRED     ESC"[1m"ESC"[31m"
+#define MAGENTA      ESC"[0m"ESC"[35m"
+#define LIGHTMAGENTA ESC"[1m"ESC"[35m"
+#define BROWN        ESC"[0m"ESC"[33m"
+#define LIGHTGRAY    ESC"[0m"ESC"[37m"
+#define DARKGRAY     ESC"[1m"ESC"[30m"
+#define LIGHTBLUE    ESC"[1m"ESC"[34m"
+#define YELLOW       ESC"[1m"ESC"[33m"
+
+//#define NOTERMINAL
+
+#ifdef NOTERMINAL
+# define CONSATTR       ""
+# define CHARACTERATTR  ""
+# define FIXNUMATTR     ""
+# define SYMBOLATTR     ""
+# define UNIQUEATTR     ""
+#else
+# define CONSATTR       LIGHTRED
+# define CHARACTERATTR  BROWN UNDERLINE ITALIC
+# define FIXNUMATTR     LIGHTGREEN UNDERLINE
+# define SYMBOLATTR     YELLOW ITALIC
+# define UNIQUEATTR     LIGHTMAGENTA UNDERLINE ITALIC
+#endif // #ifdef NOTERMINAL
+
+
+
+
 /* Char-printing utility.
  * ************************************************************************** */
 
@@ -122,6 +174,7 @@ jitterlisp_print_char (jitterlisp_char_printer_function char_printer,
   char_printer (char_printer_state, c);
 }
 
+
 
 
 /* S-expression printer.
@@ -145,6 +198,7 @@ jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
          first separate it from the previous element, which must exist if we got
          here, with a space. */
       struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
+      jitterlisp_print_string (cp, cps, NOATTR);
       jitterlisp_print_char (cp, cps, ' ');
       jitterlisp_print (cp, cps, c->car);
 
@@ -157,7 +211,9 @@ jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
     {
       /* The innermost cdr of the spine is not (): this is an "improper
          list". */
+      jitterlisp_print_string (cp, cps, CONSATTR);
       jitterlisp_print_string (cp, cps, " . ");
+      jitterlisp_print_string (cp, cps, NOATTR);
       jitterlisp_print (cp, cps, o);
     }
 }
@@ -169,10 +225,13 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
   if (JITTERLISP_IS_FIXNUM(o))
     {
       jitter_int decoded = JITTERLISP_FIXNUM_DECODE(o);
+      jitterlisp_print_string (cp, cps, FIXNUMATTR);
       jitterlisp_print_long_long (cp, cps, decoded);
+      jitterlisp_print_string (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_UNIQUE(o))
     {
+      jitterlisp_print_string (cp, cps, UNIQUEATTR);
       jitter_uint index = JITTERLISP_UNIQUE_DECODE(o);
       if (index < JITTERLISP_UNIQUE_OBJECT_NO)
         jitterlisp_print_string (cp, cps,
@@ -183,9 +242,11 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
           jitterlisp_print_long_long (cp, cps, index);
           jitterlisp_print_char (cp, cps, '>');
         }
+      jitterlisp_print_string (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_CHARACTER(o))
     {
+      jitterlisp_print_string (cp, cps, CHARACTERATTR);
       jitter_int c = JITTERLISP_CHARACTER_DECODE(o);
       switch (c)
         {
@@ -198,24 +259,30 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
           jitterlisp_print_char (cp, cps, c);
           break;
         }
+      jitterlisp_print_string (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_SYMBOL(o))
     {
+      jitterlisp_print_string (cp, cps, SYMBOLATTR);
       struct jitterlisp_symbol *s = JITTERLISP_SYMBOL_DECODE(o);
       if (s->name_or_NULL != NULL)
         jitterlisp_print_string (cp, cps, s->name_or_NULL);
       else
         jitterlisp_print_string (cp, cps, "#<uninterned-symbol>");
+      jitterlisp_print_string (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_CONS(o))
     {
       struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
       jitterlisp_object car = c->car;
       jitterlisp_object cdr = c->cdr;
+      jitterlisp_print_string (cp, cps, CONSATTR);
       jitterlisp_print_char (cp, cps, '(');
       jitterlisp_print (cp, cps, car);
       jitterlisp_print_cdr (cp, cps, cdr);
+      jitterlisp_print_string (cp, cps, CONSATTR);
       jitterlisp_print_char (cp, cps, ')');
+      jitterlisp_print_string (cp, cps, NOATTR);
     }
   else
     jitterlisp_print_string (cp, cps, "#<invalid-or-unknown>");
