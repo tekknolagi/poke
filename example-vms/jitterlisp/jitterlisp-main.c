@@ -115,7 +115,7 @@ print (jitterlisp_object o)
                               JITTERLISP_TAG_BIT_NO);
   printf (") ");
   if (JITTERLISP_IS_FIXNUM(o))
-    printf ("is the fixnum %" JITTER_PRIi, JITTERLISP_FIXNUM_DECODE(o));
+    printf ("is a fixnum");
   else if (JITTERLISP_IS_UNIQUE(o))
     printf ("is a unique object");
   else if (JITTERLISP_IS_CHARACTER(o))
@@ -496,8 +496,8 @@ main (void)
 
   // int useless; jitterlisp_error_handler_register = & useless;
 
-  jitterlisp_object c = JITTERLISP_CHARACTER_ENCODE('a');
-  print (c);
+  jitterlisp_object ch = JITTERLISP_CHARACTER_ENCODE('a');
+  print (ch);
 
   //print (JITTERLISP_CHARACTER_ENCODE('a'));
   print (JITTERLISP_EMPTY_LIST);
@@ -571,12 +571,30 @@ main (void)
                                 JITTERLISP_FIXNUM_ENCODE(-1)));
   print (JITTERLISP_FIXNUM_PLUS(JITTERLISP_FIXNUM_ENCODE(-1),
                                 JITTERLISP_FIXNUM_ENCODE(0)));
-  print (JITTERLISP_FIXNUM_ENCODE(-1));
-  print (JITTERLISP_FIXNUM_ENCODE(-2));
-  print (JITTERLISP_FIXNUM_ENCODE(-3));
 
-  jitter_print_binary_padded (stdout, JITTERLISP_HIGH_BIT_MASK(5),
-                              JITTER_BITS_PER_WORD);
+  jitterlisp_object c
+    /*
+    = jitterlisp_cons(JITTERLISP_FIXNUM_ENCODE(1),
+                      JITTERLISP_EMPTY_LIST);
+    */
+    = jitterlisp_cons(JITTERLISP_EMPTY_LIST,
+                      JITTERLISP_FIXNUM_ENCODE(1));
+  asm volatile ("nop 0xaaaa");
+  jitterlisp_object q, q1, q2;
+  q = JITTERLISP_FALSE;
+  q1 = JITTERLISP_FIXNUM_ENCODE(3);
+  q2 = JITTERLISP_FIXNUM_ENCODE(-3);
+  //asm volatile ("": "+r" (q1));
+  asm volatile ("": "+r" (c));
+  asm volatile ("nop 0xbbbb");
+  q1 = JITTERLISP_CONS_DECODE(c)->car;
+  asm volatile ("": "+r" (q1));
+  q2 = JITTERLISP_CONS_DECODE(c)->cdr;
+  asm volatile ("": "+r" (q2));
+  asm volatile ("nop 0xcccc");
+  print (c);
+  print (q); print (q1); print (q2);
+
   printf ("\n\n");
   return 0;
 }
