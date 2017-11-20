@@ -110,6 +110,154 @@ typedef jitter_uint jitterlisp_object;
 
 
 
+/* S-expression representation: bitwise utility.
+ * ************************************************************************** */
+
+/* The words taken as arguments by the macros in this section and evaluated to
+   by their expansions are all unsigned, of size sizeof (jitter_uint). */
+
+
+/* Expand to an r-value evaluating to the most significant bit of the given
+   word, not shifted. */
+#define JITTERLISP_MOST_SIGNIFICANT_BIT(_jitterlisp_word)  \
+  (((jitter_uint) (_jitterlisp_word))                      \
+   & ((jitter_uint) 1) << (JITTER_BITS_PER_WORD - 1))
+
+/* Expand to an r-value evaluating to a bitmask matching the given number of
+   least significant bits in a word. */
+#define JITTERLISP_BIT_MASK(_jitterlisp_bit_no)      \
+  ((((jitter_uint) 1) << (_jitterlisp_bit_no)) - 1)
+
+/* Expand to an r-value evaluating to a bit mask with the given number of
+   consecutive 1 bits, the first one starting at the most significant position
+   in a word. */
+#define JITTERLISP_HIGH_BIT_MASK(_jitterlisp_bit_no)  \
+  (JITTERLISP_BIT_MASK(_jitterlisp_bit_no)            \
+   << (JITTER_BITS_PER_WORD - (_jitterlisp_bit_no)))
+
+/* Expand to an r-value evaluating to the given word with the given number
+   of its least significant bits set to zero.  No side effects. */
+#define JITTERLISP_WITH_BITS_MASKED_OFF(_jitterlisp_word,    \
+                                        _jitterlisp_bit_no)  \
+  (((jitter_uint) (_jitterlisp_word))                        \
+   & ~ JITTERLISP_BIT_MASK(_jitterlisp_bit_no))
+
+/* Expand to an r-value evaluating to the given word with the given number of
+   its least significant bits set to the given bits.  No side effects.  This
+   does not check that the given new bits fit in the given number of bits.  This
+   works by first masking off bits and then applying a bitwise or on the result.
+   It has the advantage of working independently from the original configuration
+   of the overwritten bits, but might not be the most efficient solution when
+   the original configuration is known; in particular these operation are more
+   difficult for GCC to optimize away by combining them with others. */
+#define JITTERLISP_WITH_BITS_MASKED_ON(_jitterlisp_word,                  \
+                                       _jitterlisp_new_bits,              \
+                                       _jitterlisp_bit_no)                \
+  (JITTERLISP_WITH_BITS_MASKED_OFF(_jitterlisp_word, _jitterlisp_bit_no)  \
+   | ((jitter_uint) (_jitterlisp_new_bits)))
+
+/* Expand to an r-value evaluating to the given word arithmetically
+   right-shifted by _jitterlisp_bit_no .
+
+   There are basically two separate implementations of this, one relying on >>
+   sign-extending on signed operands, like GCC does, and another generic but
+   slow solution.  Which implementation is used depends on a constant expression
+   checking the feature at compile time.  It might be desirable to move this
+   logic to configure.
+
+   Notice that the apparently simpler alternative of doing a signed division by
+   a power of two does not always compute the correct result with a negative
+   operand in two's complement: the rounding direction for signed division is
+   not what we need here. */
+#define JITTERLISP_WITH_BITS_ASHIFTED_OFF(_jitterlisp_word,         \
+                                           _jitterlisp_bit_no)      \
+  (JITTERLISP_SIGN_EXTENDING_RIGHT_SHIFT                            \
+   ? JITTERLISP_WITH_BITS_ASHIFTED_OFF_GCC(_jitterlisp_word,        \
+                                           _jitterlisp_bit_no)      \
+   : JITTERLISP_WITH_BITS_ASHIFTED_OFF_GENERIC(_jitterlisp_word,    \
+                                               _jitterlisp_bit_no))
+
+/* Expand to a constant expression, nonzero iff >> sign-extends (at least on an
+   argument of size jitter_int , which is what we care about here).
+   This is used in the implementation of JITTERLISP_WITH_BITS_ASHIFTED_OFF . */
+#define JITTERLISP_SIGN_EXTENDING_RIGHT_SHIFT                           \
+  /* We rely on one simple test.  Some ridiculous C compiler might */   \
+  /* in theory behave in different ways according to the arguments, */  \
+  /* but I don't feel pedantic enough to care about this. */            \
+  ((((jitter_int) -56) >> 3)                                            \
+   == ((jitter_int) -7))
+
+/* One of the two implementations for JITTERLISP_WITH_BITS_ASHIFTED_OFF .  This
+   definition is more efficient than the alternative but relies on >>
+   sign-extending on signed operands like GCC does; the C standards doesn't
+   define a behavior in this case. */
+#define JITTERLISP_WITH_BITS_ASHIFTED_OFF_GCC(_jitterlisp_word,    \
+                                              _jitterlisp_bit_no)  \
+  ((jitter_uint)                                                   \
+   (((jitter_int) (_jitterlisp_word))                              \
+    >> (_jitterlisp_bit_no)))
+
+/* One of the two implementations for JITTERLISP_WITH_BITS_ASHIFTED_OFF .  This
+   solution is not pretty and probably very inefficient, but doesn't rely on
+   arithmetic right shifts in its implementation. */
+#define JITTERLISP_WITH_BITS_ASHIFTED_OFF_GENERIC(_jitterlisp_word,    \
+                                                  _jitterlisp_bit_no)  \
+  (JITTERLISP_MOST_SIGNIFICANT_BIT(_jitterlisp_word)                   \
+   ? /* The word is negative: do a logic shift, then or a low bit */   \
+     /* mask to the result to set the least significant bits to 1. */  \
+     ((((jitter_uint) (_jitterlisp_word))                              \
+       >> (_jitterlisp_bit_no))                                        \
+      | JITTERLISP_HIGH_BIT_MASK(_jitterlisp_bit_no))                  \
+   : /* The word is non-negative: just do a logic shift. */            \
+     (((jitter_uint) (_jitterlisp_word))                               \
+      >> (_jitterlisp_bit_no)))
+
+/* Expand to an r-value evaluating to the given word modified by logically
+   right-shifting the value by the given number of bits.  No side effects. */
+#define JITTERLISP_WITH_BITS_LSHIFTED_OFF(_jitterlisp_word,     \
+                                          _jitterlisp_bit_no)   \
+  (((jitter_uint) (_jitterlisp_word)) >> (_jitterlisp_bit_no))
+
+/* Expand to an r-value evaluating to the given word modified by left-shifting
+   by the given number of bits and or-ing the given new bits to the result.  No
+   side effects.  No check is made to ensure that the new bits actually fit in
+   the least significant bit area which was filled with zeroes by shifting. */
+#define JITTERLISP_WITH_BITS_SHIFTED_ON(_jitterlisp_word,            \
+                                        _jitterlisp_new_bits,        \
+                                        _jitterlisp_new_bit_no)      \
+  ((((jitter_uint) (_jitterlisp_word)) << (_jitterlisp_new_bit_no))  \
+   | (_jitterlisp_new_bits))
+
+/* Expand to an r-value evaluating to the given word with the given new bits
+   added.
+   Rationale: by adding or removing known tag bits this way it is easy for GCC
+   to compile a memory accesse from a tagged base with a known offset into a
+   single base-plus-constant-offset load or store: the tag bits get combined
+   with the memory offset into a compile-time constant.
+   The same trick works for sums or subtractions among unshifted tagged fixnums,
+   where some intermediate tagging and untagging operations may be avoided by
+   merging them with others. */
+#define JITTERLISP_WITH_BITS_ADDED(_jitterlisp_word,  \
+                                   _jitterlisp_bits)  \
+  (((jitter_uint) (_jitterlisp_word))                 \
+   + ((jitter_uint) (_jitterlisp_bits)))
+
+/* Expand to an r-value evaluating to the given word with the given new bits
+   subtracted.
+   Rationale: see the comment for JITTERLISP_WITH_BITS_ADDED . */
+#define JITTERLISP_WITH_BITS_SUBTRACTED(_jitterlisp_word,  \
+                                        _jitterlisp_bits)  \
+  (((jitter_uint) (_jitterlisp_word))                      \
+   - ((jitter_uint) (_jitterlisp_bits)))
+
+
+// FIXME: check bits.
+
+// FIXME: extract bits.
+
+
+
+
 /* S-expression representation: encoding, decoding and tag checking.
  * ************************************************************************** */
 
@@ -136,10 +284,11 @@ typedef jitter_uint jitterlisp_object;
    by seeting all the tag bits to zero.  The object payload may or may not need
    to be shifted, according to its type.  No side effects.
 
-   Rationale: this is preferrable to JITTERLISP_WITH_TAG_SUBTRACTED when [FIXME:
-   explain]. */
+   Rationale: this is preferrable to JITTERLISP_WITH_TAG_SUBTRACTED when the tag
+   value is not known at compile time but we still need to zero it. */
 #define JITTERLISP_WITH_TAG_MASKED_OFF(_jitterlisp_tagged_object)  \
-  ((_jitterlisp_tagged_object) & ~ JITTERLISP_TAG_BIT_MASK)
+  JITTERLISP_WITH_BITS_MASKED_OFF(_jitterlisp_tagged_object,       \
+                                  JITTERLISP_TAG_BIT_NO)
 
 /* Expand to an r-value evaluating to the given object representation modified
    by seeting all the tag bits to zero via a subtraction of the tag; this assumes
@@ -152,36 +301,31 @@ typedef jitter_uint jitterlisp_object;
    with the offset; this saves one bitwise and instruction. */
 #define JITTERLISP_WITH_TAG_SUBTRACTED(_jitterlisp_tagged_object,  \
                                        _jitterlisp_tag)            \
-  ((_jitterlisp_tagged_object) - (_jitterlisp_tag))
+  JITTERLISP_WITH_BITS_SUBTRACTED(_jitterlisp_tagged_object,       \
+                                  _jitterlisp_tag)                 \
 
 /* Expand to an r-value evaluating to the given object representation modified
    by arithmetically shifting the value right, eliminating the tag bits.  No
-   side effects.
-   This doesn't simply use >> since the C Standard regards right-shifting of
-   signed quantities as undefined behavior, even if in that case GCC (like
-   probably most other compilers do as well) sign-extends, which is what we
-   need here.  But we can achieve the same effect in a portable way with a
-   division by a power-of-two constant, which should be compiled to an
-   arithmetic shift. */
+   side effects. */
 #define JITTERLISP_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_object)  \
-  ((jitter_uint)                                                     \
-   (((jitter_int) (_jitterlisp_tagged_object))                       \
-    / (1 << JITTERLISP_TAG_BIT_NO)))
+  JITTERLISP_WITH_BITS_ASHIFTED_OFF(_jitterlisp_tagged_object,       \
+                                    JITTERLISP_TAG_BIT_NO)
 
 /* Expand to an r-value evaluating to the given object representation modified
    by logically shifting the value right, eliminating the tag bits.  No
    side effects. */
-#define JITTERLISP_WITH_TAG_LSHIFTED_OFF(_jitterlisp_tagged_object)       \
-  (((jitter_uint) (_jitterlisp_tagged_object)) >> JITTERLISP_TAG_BIT_NO)
+#define JITTERLISP_WITH_TAG_LSHIFTED_OFF(_jitterlisp_tagged_object)  \
+  JITTERLISP_WITH_BITS_LSHIFTED_OFF(_jitterlisp_tagged_object,       \
+                                    JITTERLISP_TAG_BIT_NO)
 
 /* Expand to an r-value evaluating to the Lisp representation of the given
    object, which must have a type castable to jitter_uint, on which the given
    tag is attached by left-shiting and or-ing. */
 #define JITTERLISP_WITH_TAG_SHIFTED_ON(_jitterlisp_untagged_object,  \
                                        _jitterlisp_tag)              \
-  ((((jitter_uint) (_jitterlisp_untagged_object))                    \
-    << JITTERLISP_TAG_BIT_NO)                                        \
-   | (_jitterlisp_tag))
+  JITTERLISP_WITH_BITS_SHIFTED_ON(_jitterlisp_untagged_object,       \
+                                  _jitterlisp_tag,                   \
+                                  JITTERLISP_TAG_BIT_NO)
 
 /* Expand to an r-value evaluating to the Lisp representation of the given
    object, which must have a type castable to jitter_uint, on which the given
@@ -190,8 +334,8 @@ typedef jitter_uint jitterlisp_object;
    does *not* check that it's true. */
 #define JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_object,  \
                                   _jitterlisp_tag)              \
-  (((jitter_uint) (_jitterlisp_untagged_object))                \
-   + (_jitterlisp_tag))
+  JITTERLISP_WITH_BITS_ADDED(_jitterlisp_untagged_object,       \
+                             _jitterlisp_tag)                   \
 
 /* Expand to an r-value evaluating to the Lisp representation of the given
    object, which must have a type castable to jitter_uint, on which the given
@@ -199,13 +343,12 @@ typedef jitter_uint jitterlisp_object;
    overwriting the rightmost JITTERLISP_TAG_BIT_NO bits of the untagged
    representation but without losing any bit of the left.
 
-   Rationale: this is preferrable to JITTERLISP_WITH_TAG_ADDED when [FIXME:
-   explain]. */
+   Rationale: see the comment before JITTERLISP_WITH_TAG_MASKED_OFF. */
 #define JITTERLISP_WITH_TAG_MASKED_ON(_jitterlisp_untagged_object,  \
                                       _jitterlisp_tag)              \
-  ((((jitter_uint) (_jitterlisp_untagged_object))                   \
-    & ~ JITTERLISP_TAG_BIT_MASK)                                    \
-   | (_jitterlisp_tag))
+  JITTERLISP_WITH_BITS_MASKED_ON(_jitterlisp_untagged_object,       \
+                                 _jitterlisp_tag,                   \
+                                 JITTERLISP_TAG_BIT_NO)
 
 
 
@@ -226,12 +369,12 @@ typedef jitter_uint jitterlisp_object;
    they actually have. */
 
 // FIXME: comment.
-#define JITTERLISP_EXTENDED_TAG_BIT_NO(_jitterlisp_subtag_bit_no)  \
-  (JITTERLISP_TAG_BIT_NO + (_jitterlisp_subtag_bit_no))
-
-// FIXME: comment and move up.
 #define JITTERLISP_NON_TAG_BIT_NO                 \
   (JITTER_BITS_PER_WORD - JITTERLISP_TAG_BIT_NO)
+
+// FIXME: comment.
+#define JITTERLISP_EXTENDED_TAG_BIT_NO(_jitterlisp_subtag_bit_no)  \
+  (JITTERLISP_TAG_BIT_NO + (_jitterlisp_subtag_bit_no))
 
 // FIXME: comment.
 #define JITTERLISP_PAYLOAD_BIT_NO(_jitterlisp_subtag_bit_no)     \
@@ -378,10 +521,12 @@ typedef jitter_uint jitterlisp_object;
 # define JITTERLISP_FIXNUM_PLUS_OR_MINUS(_jitterlisp_infix,            \
                                          _jitterlisp_tagged_fixnum_a,  \
                                          _jitterlisp_tagged_fixnum_b)  \
+    /* Notice that the infix operation is on unsigned operands. */     \
     (JITTERLISP_WITH_TAG_MASKED_ON((_jitterlisp_tagged_fixnum_a)       \
                                    _jitterlisp_infix                   \
-                                   (JITTERLISP_WITH_TAG_MASKED_OFF(    \
-                                     _jitterlisp_tagged_fixnum_b)),    \
+                                   (JITTERLISP_WITH_TAG_SUBTRACTED(    \
+                                      _jitterlisp_tagged_fixnum_b,     \
+                                      JITTERLISP_FIXNUM_TAG)),         \
                                    JITTERLISP_FIXNUM_TAG))
 #endif // #if JITTERLISP_FIXNUM_TAG == 0
 

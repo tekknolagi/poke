@@ -27,9 +27,51 @@
 #include <unistd.h>
 
 #include <jitter/jitter.h>
+#include <jitter/jitter-fatal.h>
 #include <jitter/jitter-malloc.h>
 
 #include "jitterlisp-sexpression.h"
+
+
+/* Compiler sanity checks.
+ * ************************************************************************** */
+
+/* We currently rely on some behavior which is very common across C compilers
+   but not mandated by the C standard.  Some of this logic should probably be
+   moved to configure. */
+
+/* Did we already perform the sanity check?  We only need to do it once. */
+static bool
+jitterlisp_platform_sanity_check_performed = false;
+
+/* Perform compiler sanity checks on the C compiler and hardware and set
+   jitterlisp_compiler_sanity_check_performed to true.  Fail fatally if any
+   check fails. */
+static void
+jitterlisp_platform_sanity_check (void)
+{
+  /* These checks are all based on constant expressions, and a sensible C
+     compiler will not generate any conditional to be executed at run time. */
+
+  /* Check that the C implementation uses two's complement arithmetic. */
+  jitter_int signed_minus_one = (jitter_int) -1;
+  jitter_uint bitwise_negated_unsigned_zero = ~ (jitter_uint) 0;
+  if ((jitter_uint) signed_minus_one
+      != (jitter_uint) bitwise_negated_unsigned_zero)
+    jitter_fatal ("this machine doesn't seem to use two's complement");
+
+  /* Check that the C implementation sign-extends on signed >> operands. */
+  if (! JITTERLISP_SIGN_EXTENDING_RIGHT_SHIFT)
+    jitter_fatal ("this compiler doesn't sign-extend on signed >> .  "
+                  "You can comment out this fatal error and everything "
+                  "should still work, but performance will suffer.  "
+                  "Write me if you have constructive suggestions on how "
+                  "to improve this.");
+
+  /* We've checked everything, and we can proceed.  There's no need to do this
+     ever again. */
+  jitterlisp_platform_sanity_check_performed = true;
+}
 
 
 
@@ -40,7 +82,9 @@
 void
 jitterlisp_sexpression_initialize (void)
 {
-  /* Do nothing. */
+  /* Perform sanity checks, unless we've already done it before. */
+  if (! jitterlisp_platform_sanity_check_performed)
+    jitterlisp_platform_sanity_check ();
 }
 
 void

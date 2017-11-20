@@ -500,8 +500,6 @@ main (void)
   print (c);
 
   //print (JITTERLISP_CHARACTER_ENCODE('a'));
-  print (JITTERLISP_CHARACTER_ENCODE(' '));
-  print (JITTERLISP_TRUE);
   print (JITTERLISP_EMPTY_LIST);
   print (JITTERLISP_EOF);
 
@@ -561,6 +559,24 @@ main (void)
   printf ("ds: %s\n\n", ds);
   free (ds);
 
-  jitterlisp_finalize ();
+  print (JITTERLISP_CHARACTER_ENCODE('a'));
+  print (JITTERLISP_TRUE);
+  print (JITTERLISP_EMPTY_LIST);
+  print (jitterlisp_cons(jitterlisp_symbol ("foo"),
+                         jitterlisp_uninterned_symbol ()));//jitterlisp_symbol ("bar")));
+  print (jitterlisp_iota (JITTERLISP_FIXNUM_ENCODE(15)));
+  print (JITTERLISP_FIXNUM_MINUS(JITTERLISP_FIXNUM_ENCODE(10),
+                                 JITTERLISP_FIXNUM_ENCODE(-5)));
+  print (JITTERLISP_FIXNUM_PLUS(JITTERLISP_FIXNUM_ENCODE(0),
+                                JITTERLISP_FIXNUM_ENCODE(-1)));
+  print (JITTERLISP_FIXNUM_PLUS(JITTERLISP_FIXNUM_ENCODE(-1),
+                                JITTERLISP_FIXNUM_ENCODE(0)));
+  print (JITTERLISP_FIXNUM_ENCODE(-1));
+  print (JITTERLISP_FIXNUM_ENCODE(-2));
+  print (JITTERLISP_FIXNUM_ENCODE(-3));
+
+  jitter_print_binary_padded (stdout, JITTERLISP_HIGH_BIT_MASK(5),
+                              JITTER_BITS_PER_WORD);
+  printf ("\n\n");
   return 0;
 }
