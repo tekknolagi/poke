@@ -583,7 +583,7 @@ jitterlisp_prefix_sexpression (const char *prefix_symbol_name,
 /* The two mutually recursive functions below are a hand-translation of the
    following attributed grammar:
 
-   <sexp> ::= #eof           { $$ = eof; }
+   <sexp> ::= #<eof>         { $$ = eof; }
             | atom           { $$ = $1; }
             | prefix <sexp>  { if is_eof ($2)
                                  error ();
