@@ -31,36 +31,7 @@
 #include <jitter/jitter-cpp.h>
 #include <jitter/jitter-fatal.h>
 
-#ifdef JITTER_HAS_ASSEMBLY
-  /* We need architecture-specific register names. */
-# include <jitter/machine/jitter-machine.h>
-#endif // #ifdef JITTER_HAS_ASSEMBLY
-
-
-#include "jitterlisp-sexpression.h"
-
-
-/* Global register variable hack.
- * ************************************************************************** */
-
-/* Expand to a global variable declaration -- a global *register* variable
-   if we have machine support.  This doesn't currently run in a Jittery VM,
-   so it doesn't matter if we choose registers which are already reserved
-   for other purposes. */
-#ifdef JITTER_HAS_ASSEMBLY
-# define JITTERLISP_GLOBAL_REGISTER_VARIABLE_(_jitterlisp_type,            \
-                                              _jitterlisp_name,            \
-                                              _jitterlisp_register_index)  \
-  register _jitterlisp_type _jitterlisp_name                               \
-     asm (JITTER_STRINGIFY(                                                \
-            JITTER_CONCATENATE_TWO(JITTER_RESIDUAL_REGISTER_,              \
-                                   _jitterlisp_register_index)))
-#else
-# define JITTERLISP_GLOBAL_REGISTER_VARIABLE_(_jitterlisp_type,            \
-                                              _jitterlisp_name,            \
-                                              _jitterlisp_register_index)  \
-  _jitterlisp_type _jitterlisp_name
-#endif // #ifdef JITTER_HAS_ASSEMBLY
+#include "jitterlisp.h"
 
 
 
@@ -68,64 +39,12 @@
 /* Allocation (very tentative).
  * ************************************************************************** */
 
-#define JITTERLISP_LITTER_BYTE_NO (10 * 1024 * 1024)
-
-JITTERLISP_GLOBAL_REGISTER_VARIABLE_(char *, litter_allocator_pointer, 0);
-JITTERLISP_GLOBAL_REGISTER_VARIABLE_(char *, litter_allocator_limit, 1);
-
-__attribute__ ((unused))
-inline static char*
-jitterlisp_allocate_litter (size_t size)
-{
-  char *res = litter_allocator_pointer;
-  litter_allocator_pointer += sizeof (struct jitterlisp_cons);
-  if (__builtin_expect (litter_allocator_pointer > litter_allocator_limit,
-                        false))
-    jitter_fatal ("At this point I would call the GC, if there were one.\n");
-  return res;
-}
-
-__attribute__ ((unused))
-inline static char*
-jitterlisp_allocate_malloc (size_t size)
-{
-  char *res = malloc (size);
-  assert (res != NULL);
-  return res;
-}
-
-#if 0
-# define JITTER_ALLOCATE(_jitter_byte_no) jitterlisp_allocate_malloc(_jitter_byte_no)
-#else
-# define JITTER_ALLOCATE(_jitter_byte_no) jitterlisp_allocate_litter(_jitter_byte_no)
-#endif
-
 struct jitterlisp_cons*
 jitterlisp_make_unencoded_cons (jitterlisp_object a, jitterlisp_object b)
 {
-  struct jitterlisp_cons *res
-    = ((struct jitterlisp_cons *)
-       JITTER_ALLOCATE(sizeof (struct jitterlisp_cons)));
+  struct jitterlisp_cons *res = JITTERLISP_CONS_MAKE_UNINITIALIZED_UNENCODED();
   res->car = a;
   res->cdr = b;
-  return res;
-}
-
-struct jitterlisp_symbol*
-jitterlisp_make_unencoded_symbol (const char *name_or_NULL)
-{
-  struct jitterlisp_symbol *res
-    = ((struct jitterlisp_symbol *)
-       JITTER_ALLOCATE(sizeof (struct jitterlisp_symbol)));
-  if (name_or_NULL == NULL)
-    res->name_or_NULL = NULL;
-  else
-    {
-      // FIXME: intern for real.
-      res->name_or_NULL = malloc (strlen (name_or_NULL));
-      assert (res->name_or_NULL != NULL);
-      strcpy (res->name_or_NULL, name_or_NULL);
-    }
   return res;
 }
 
@@ -163,7 +82,8 @@ jitter_print_binary_recursive (FILE *stream, jitter_uint u, int digit_no)
 
 // FIXME: I might want to keep this around.
 /* Print the given number in binary to the pointed stream, using at least
-   digit_no binary digits (left-padding with zeroes). */
+   digit_no binary digits (left-padding with zeroes), and prepending a "0b"
+   prefix. */
 void
 jitter_print_binary_padded (FILE *stream, jitter_uint u, int digit_no)
 {
@@ -172,7 +92,8 @@ jitter_print_binary_padded (FILE *stream, jitter_uint u, int digit_no)
 }
 
 // FIXME: I might want to keep this around.
-/* Print the given number in binary to the pointed stream. */
+/* Print the given number in binary to the pointed stream, prepending a "0b"
+   prefix. */
 void
 jitter_print_binary (FILE *stream, jitter_uint u)
 {
@@ -185,7 +106,7 @@ jitter_print_binary (FILE *stream, jitter_uint u)
 /* Scratch.
  * ************************************************************************** */
 
-void
+static void
 print (jitterlisp_object o)
 {
 #define WIDTH "020"
@@ -217,9 +138,50 @@ print (jitterlisp_object o)
   printf ("  ");
   jitter_print_binary_padded (stdout, o, JITTER_BITS_PER_WORD);
   printf ("\n");
-  printf ("  "); jitterlisp_print (stdout, o); printf ("\n");
+  printf ("  "); jitterlisp_print_to_stream (stdout, o); printf ("\n");
 #undef WIDTH
 }
+
+__attribute__ ((noreturn, noinline, noclone, cold, unused))
+static void
+type_error (void)
+{
+  jitter_fatal ("type error");
+}
+
+#define type_error()                             \
+  do                                             \
+    {                                            \
+      /*goto * jitterlisp_error_handler_register;*/  \
+      type_error ();                             \
+    }                                            \
+  while (false)
+
+#define JITTERLISP_REQUIRE_TAG(_jitterlisp_object, _jitterlisp_tag)     \
+  do                                                                    \
+    {                                                                   \
+      if (__builtin_expect (! JITTERLISP_HAS_TAG((_jitterlisp_object),  \
+                                                 (_jitterlisp_tag)),    \
+                            false))                                     \
+        {                                                               \
+          type_error ();                                                \
+        }                                                               \
+    }                                                                   \
+  while (false)
+
+#define JITTERLISP_REQUIRE_TYPE(_jitterlisp_object, _jitterlisp_TYPE)    \
+  do                                                                     \
+    {                                                                    \
+      if (__builtin_expect (                                             \
+            ! JITTER_CONCATENATE_TWO(JITTERLISP_IS_, _jitterlisp_TYPE)(  \
+                 (_jitterlisp_object)),                                  \
+            false))                                                      \
+        {                                                                \
+          type_error ();                                                 \
+        }                                                                \
+    }                                                                    \
+  while (false)
+
 
 jitterlisp_object
 jitterlisp_fixnum_plus (jitterlisp_object a, jitterlisp_object b)
@@ -334,31 +296,62 @@ jitterlisp_plus_of_constants (void)
 jitterlisp_object
 jitterlisp_cons (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_CONS(a, b);
+  struct jitterlisp_cons *c = JITTERLISP_CONS_MAKE_UNINITIALIZED_UNENCODED();
+  c->car = a;
+  c->cdr = b;
+  return JITTERLISP_CONS_ENCODE(c);
 }
 
 jitterlisp_object
 jitterlisp_symbol (char *name)
 {
-  return JITTERLISP_SYMBOL_ENCODE(jitterlisp_make_unencoded_symbol (name));
+  return JITTERLISP_SYMBOL_ENCODE(jitterlisp_symbol_make_interned (name));
 }
 
 jitterlisp_object
 jitterlisp_uninterned_symbol (void)
 {
-  return JITTERLISP_SYMBOL_ENCODE(jitterlisp_make_unencoded_symbol (NULL));
+  return JITTERLISP_SYMBOL_ENCODE(jitterlisp_symbol_make_uninterned ());
 }
 
 jitterlisp_object
-jitterlisp_car (jitterlisp_object a)
+jitterlisp_car_unsafe (jitterlisp_object a)
 {
   return JITTERLISP_CONS_DECODE(a)->car;
 }
 
 jitterlisp_object
-jitterlisp_cdr (jitterlisp_object a)
+jitterlisp_cdr_unsafe (jitterlisp_object a)
 {
   return JITTERLISP_CONS_DECODE(a)->cdr;
+}
+
+jitterlisp_object
+jitterlisp_car (jitterlisp_object a)
+{
+  JITTERLISP_REQUIRE_TYPE(a, CONS);
+
+  return jitterlisp_car_unsafe (a);
+}
+
+jitterlisp_object
+jitterlisp_cdr (jitterlisp_object a)
+{
+  JITTERLISP_REQUIRE_TYPE(a, CONS);
+
+  return jitterlisp_cdr_unsafe (a);
+}
+
+jitterlisp_object
+jitterlisp_cadddr (jitterlisp_object a)
+{
+  return jitterlisp_car (jitterlisp_cdr (jitterlisp_cdr (jitterlisp_cdr (a))));
+}
+
+void
+jitterlisp_require_fixnum (jitterlisp_object a)
+{
+  JITTERLISP_REQUIRE_TYPE(a, FIXNUM);
 }
 
 jitterlisp_object
@@ -378,6 +371,115 @@ jitterlisp_iota (jitterlisp_object limit)
   return res;
 }
 
+jitter_uint
+jitterlisp_two_tags (jitterlisp_object a, jitterlisp_object b)
+{
+  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  return (tag_a << JITTERLISP_TAG_BIT_NO) | tag_b;
+}
+
+typedef
+jitterlisp_object (*jitterlisp_two_arity_operator) (jitterlisp_object,
+                                                    jitterlisp_object);
+typedef
+jitterlisp_object (*jitterlisp_one_arity_operator) (jitterlisp_object);
+
+jitter_uint
+jitterlisp_two_tag_dispatch_unary
+  (jitterlisp_object a, jitterlisp_one_arity_operator *functions)
+{
+  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
+  return functions [tag_a] (a);
+}
+
+jitter_uint
+jitterlisp_two_tag_dispatch_2d
+  (jitterlisp_object a, jitterlisp_object b,
+   jitterlisp_two_arity_operator **functions)
+{
+  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  return functions [tag_a] [tag_b] (a, b);
+}
+
+jitter_uint
+jitterlisp_two_tag_dispatch_2d_one_known_dimenstion
+  (jitterlisp_object a, jitterlisp_object b,
+   const jitterlisp_two_arity_operator functions[][JITTERLISP_TAG_BIT_NO])
+{
+  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  return functions [tag_a] [tag_b] (a, b);
+}
+
+jitter_uint
+jitterlisp_two_tag_dispatch_1d
+  (jitterlisp_object a, jitterlisp_object b,
+   const jitterlisp_two_arity_operator functions[])
+{
+  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  return functions [(tag_a << JITTERLISP_TAG_BIT_NO) | tag_b] (a, b);
+}
+
+jitter_uint
+jitterlisp_two_tag_dispatch_1d_alt
+  (jitterlisp_object a, jitterlisp_object b,
+   const jitterlisp_two_arity_operator functions[])
+{
+  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  return (* (functions + ((tag_a * JITTERLISP_TAG_NO) | tag_b))) (a, b);
+}
+
+jitter_uint
+jitterlisp_two_tag_dispatch_1d_alt2
+  (jitterlisp_object a, jitterlisp_object b,
+   const jitterlisp_two_arity_operator functions[])
+{
+  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  jitter_uint offset
+    = ((tag_a << JITTERLISP_TAG_BIT_NO
+        | tag_b)
+       << JITTERLISP_TAG_BIT_NO);
+  return ((* ((jitterlisp_two_arity_operator *)
+             ((char *) functions) + offset))
+          (a, b));
+}
+
+jitter_uint
+jitterlisp_factorial (jitterlisp_object a)
+{
+  JITTERLISP_REQUIRE_TYPE(a, FIXNUM);
+
+  jitter_int untagged_a = JITTERLISP_FIXNUM_DECODE (a);
+  jitter_int untagged_res = 1;
+  jitter_int i;
+  for (i = 2; i <= untagged_a; i ++)
+    untagged_res *= i;
+
+  return JITTERLISP_FIXNUM_ENCODE(untagged_res);
+}
+
+jitterlisp_object
+jitterlisp_last (jitterlisp_object a)
+{
+  jitterlisp_object candidate_last_cons = a;
+  do
+    {
+      JITTERLISP_REQUIRE_TYPE(candidate_last_cons, CONS);
+
+      jitterlisp_object cdr = JITTERLISP_CONS_DECODE(candidate_last_cons)->cdr;
+      if (JITTERLISP_IS_EMPTY_LIST(cdr))
+        return JITTERLISP_CONS_DECODE(candidate_last_cons)->car;
+      else
+        candidate_last_cons = cdr;
+    }
+  while (true);
+}
+
 
 
 
@@ -387,13 +489,17 @@ jitterlisp_iota (jitterlisp_object limit)
 int
 main (void)
 {
+  jitterlisp_initialize ();
+
   /* Initialize the litter-allocator.  I must not delete this while I'm
      testing. */
-  litter_allocator_pointer = malloc (JITTERLISP_LITTER_BYTE_NO);
-  litter_allocator_limit = litter_allocator_pointer + JITTERLISP_LITTER_BYTE_NO;
-  assert (litter_allocator_pointer != NULL);
 
-  print (JITTERLISP_CHARACTER_ENCODE('a'));
+  // int useless; jitterlisp_error_handler_register = & useless;
+
+  jitterlisp_object c = JITTERLISP_CHARACTER_ENCODE('a');
+  print (c);
+
+  //print (JITTERLISP_CHARACTER_ENCODE('a'));
   print (JITTERLISP_CHARACTER_ENCODE(' '));
   print (JITTERLISP_TRUE);
   print (JITTERLISP_EMPTY_LIST);
@@ -413,15 +519,44 @@ main (void)
   //print (jitterlisp_cons(fa, fb));
   print (jitterlisp_cons(fa, JITTERLISP_EMPTY_LIST));
   print (jitterlisp_cons(JITTERLISP_EMPTY_LIST, fa));
-  long list_length;
-  if (1)
-    list_length = 10;
-  else
-    list_length = JITTERLISP_LITTER_BYTE_NO / sizeof (struct jitterlisp_cons);
-  print (jitterlisp_iota(JITTERLISP_FIXNUM_ENCODE(list_length)));
+
+  {
+    int q;
+#define L 1024
+#define T (10000)
+    for (q = 0; q < T; q ++)
+      jitterlisp_iota (JITTERLISP_FIXNUM_ENCODE(L));
+  }
+
+  long list_length = 10;//10000000;
+  print (jitterlisp_iota (JITTERLISP_FIXNUM_ENCODE(list_length)));
   print (jitterlisp_symbol ("foo"));
   print (jitterlisp_uninterned_symbol ());
   print (jitterlisp_cons(jitterlisp_symbol ("bar"),
                          JITTERLISP_EMPTY_LIST));
+  print (jitterlisp_factorial(JITTERLISP_FIXNUM_ENCODE(10)));
+  printf ("\n\n");
+
+  const char *s __attribute__ ((unused));
+  const char *s_ __attribute__ ((unused));
+  s
+    = ("(define (fact n);; Foo!\n"
+       "\n" // An empty line, just to test.
+       "\r" // And even a '\r' character.
+       "  (if (= n 0) ;; here's another comment\n"
+       "    1\n"
+       "    (* n (fact (1- n)))))");
+  //char *s = "a b c d e f";
+  //char *s = ";;;abc\n 42";
+  s_ = "`(+ ,a 1)";
+  print (jitterlisp_read_from_string (s));
+  printf ("\n\n");
+  //print (jitterlisp_read_from_stream (stdin));
+  char *ds = jitterlisp_print_to_string (jitterlisp_read_from_string (s));
+  printf ("s:  %s\n\n", s);
+  printf ("ds: %s\n\n", ds);
+  free (ds);
+
+  jitterlisp_finalize ();
   return 0;
 }

@@ -27,6 +27,17 @@
 #include <jitter/jitter.h>
 
 
+/* About this file.
+ * ************************************************************************** */
+
+/* This header provides macro definitions for encoding and decoding
+   s-expressions, which is to say for converting from a C object to the tagged
+   Lisp representation of the same object, and vice-versa.
+
+   Allocation and memory handling is *not* covered here: see
+   jitterlisp-allocator.h . */
+
+
 
 
 /* Multiple-evaluation warning.
@@ -146,6 +157,11 @@ typedef jitter_uint jitterlisp_object;
 /* Expand to an r-value evaluating to the given object representation modified
    by arithmetically shifting the value right, eliminating the tag bits.  No
    side effects. */
+// FIXME: write in a comment, and check in configure, that here I depend
+// on signed right shift to be arithmetic.  According to the C standard
+// that is undefined behavior, even if GCC does arithmetic right shifts
+// on signed types, and so seems to do everybody else.
+// Shall I write a slower alternative implementation just to be pedantic?
 #define JITTERLISP_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_object)        \
   ((jitter_uint)                                                           \
    (((jitter_int) (_jitterlisp_tagged_object)) >> JITTERLISP_TAG_BIT_NO))
@@ -591,10 +607,15 @@ jitterlisp_unique_object_names [];
 /* S-expression representation: symbols.
  * ************************************************************************** */
 
-// FIXME: implement, comment.
+// FIXME: comment.
 
 #define JITTERLISP_SYMBOL_TAG  0b010 // FIXME: I've not really thought about what value is the b
 
+/* Symbols are handled in a special way allocation-wise: interned symbols are
+   allocated with malloc, and live until the memory subsystem is finalized.
+   Uninterned symbols, on the other hand, live on the garbage-collected heap.
+
+   Both symbol types are encoded pointers to the following struct. */
 struct jitterlisp_symbol
 {
   /* The symbol name as a malloc-allocated string, or NULL if the symbol is not
@@ -614,13 +635,6 @@ struct jitterlisp_symbol
   ((struct jitterlisp_symbol *)                                  \
    (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_symbol),  \
                                    JITTERLISP_SYMBOL_TAG)))
-
-/* FIXME: is this a good idea, or should this be provided somewhere else, so
-   that the user can use her own external allocator? */
-struct jitterlisp_symbol* // FIXME: do I want this return type?
-jitterlisp_make_unencoded_symbol (const char *name_or_NULL)
-  __attribute__ ((returns_nonnull,
-                  assume_aligned (sizeof (void *) * 2)));
 
 
 
@@ -652,29 +666,23 @@ struct jitterlisp_cons
                                    JITTERLISP_CONS_TAG)))
 
 
-/* FIXME: is this a good idea, or should this be provided somewhere else, so
-   that the user can use her own external allocator? */
-struct jitterlisp_cons* // FIXME: do I want this return type?
-jitterlisp_make_unencoded_cons (jitterlisp_object a, jitterlisp_object b)
-  __attribute__ ((returns_nonnull,
-                  assume_aligned (sizeof (void *) * 2)));
-
-// FIXME: this is tentative, not to say wrong.
-#define JITTERLISP_CONS(_jitterlisp_object_a, _jitterlisp_object_b)   \
-  JITTERLISP_CONS_ENCODE(                                             \
-     jitterlisp_make_unencoded_cons((_jitterlisp_object_a),           \
-                                    (_jitterlisp_object_b)))
-
-
 
 
-/* S-expression printing.
+/* Not for the user: s-expression initialization and finalization.
  * ************************************************************************** */
 
-/* Print the given JitterLisp object to the pointed stream.  No newline is
-   appended. */
+/* These functions are called by jitterlisp_initialize and jitterlisp_finalize
+   as needed.  They are not for the user to call directly. */
+
+/* Initialize the s-expression subsystem.  This must be called before using any
+   other function declared here. */
 void
-jitterlisp_print (FILE *f, jitterlisp_object o)
-  __attribute__ ((nonnull (1)));
+jitterlisp_sexpression_initialize (void);
+
+/* Finalize the s-expression subsystem and free resources.  After this is called
+   no other function declared here may be used again, until the subsystem is
+   re-initialized with jitterlisp_sexpression_initialize. */
+void
+jitterlisp_sexpression_finalize (void);
 
 #endif // #ifndef JITTERLISP_SEXPRESSION_H_

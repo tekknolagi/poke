@@ -994,7 +994,8 @@ EXTRA_DIST += \
 # Jittery Lisp example.
 # ################################################################
 
-PROGRAMS_JITTERLISP = bin/jitterlisp
+PROGRAMS_JITTERLISP = \
+  bin/jitterlisp
 
 # Every JitterLisp system will be a program, not built by default.
 EXTRA_PROGRAMS += $(PROGRAMS_JITTERLISP)
@@ -1005,18 +1006,39 @@ EXTRA_PROGRAMS += $(PROGRAMS_JITTERLISP)
 SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-sexpression.c \
   example-vms/jitterlisp/jitterlisp-sexpression.h \
+  example-vms/jitterlisp/jitterlisp-allocator.h \
+  example-vms/jitterlisp/jitterlisp-allocator.c \
+  example-vms/jitterlisp/jitterlisp-printer.h \
+  example-vms/jitterlisp/jitterlisp-printer.c \
+  example-vms/jitterlisp/jitterlisp-reader.h \
+  example-vms/jitterlisp/jitterlisp-reader.c \
+  example-vms/jitterlisp/jitterlisp.c \
+  example-vms/jitterlisp/jitterlisp.h \
+  example-vms/jitterlisp/jitterlisp-config.h \
   example-vms/jitterlisp/jitterlisp-main.c
 
 # There is only one version for the best dispatching model, as of now.
 bin_jitterlisp_SOURCES = $(SOURCES_FOR_JITTERLISP)
 bin_jitterlisp_CPPFLAGS = \
-  $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/jitterlisp" $(JITTER_CPPFLAGS)
+  $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/jitterlisp" $(JITTER_CPPFLAGS) \
+  -DJITTERLISP_LITTER=1
 bin_jitterlisp_CFLAGS = \
   $(AM_CFLAGS) $(JITTER_CFLAGS)
 bin_jitterlisp_LDADD = \
   $(AM_LDADD) $(JITTER_LDADD)
 bin_jitterlisp_LDFLAGS = \
   $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
+
+# Define the Boehm-GC version, if we can use the library.
+if JITTER_HAVE_BOEHM_GC
+  PROGRAMS_JITTERLISP += bin/jitterlisp-boehm
+  bin_jitterlisp_boehm_SOURCES = $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp_boehm_CPPFLAGS = -DJITTERLISP_BOEHM_GC=1 $(bin_jitterlisp_CPPFLAGS) \
+    -UJITTERLISP_LITTER
+  bin_jitterlisp_boehm_CFLAGS = $(bin_jitterlisp_CFLAGS)
+  bin_jitterlisp_boehm_LDADD = -lgc $(bin_jitterlisp_LDADD)
+  bin_jitterlisp_boehm_LDFLAGS = $(bin_jitterlisp_LDFLAGS)
+endif # JITTER_HAVE_BOEHM_GC
 
 # Examples for JitterLisp.  There is none yet.
 EXTRA_DIST +=

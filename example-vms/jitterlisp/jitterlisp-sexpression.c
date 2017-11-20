@@ -1,4 +1,4 @@
-/* Jittery Lisp: s-expression header.
+/* Jittery Lisp: s-expression implementation.
 
    Copyright (C) 2017 Luca Saiu
    Written by Luca Saiu
@@ -25,11 +25,29 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
 
 #include <jitter/jitter.h>
+#include <jitter/jitter-malloc.h>
 
 #include "jitterlisp-sexpression.h"
+
+
+
+
+/* S-expression initialization and finalization.
+ * ************************************************************************** */
+
+void
+jitterlisp_sexpression_initialize (void)
+{
+  /* Do nothing. */
+}
+
+void
+jitterlisp_sexpression_finalize (void)
+{
+  /* Do nothing. */
+}
 
 
 
@@ -47,78 +65,3 @@ jitterlisp_unique_object_names []
       "#<eof>",                  /* The unique object with index 3. */
       "#<nothing>",              /* The unique object with index 4. */
     };
-
-
-
-
-/* S-expression printing.
- * ************************************************************************** */
-
-// FIXME: explain the idea in a comment.
-static void
-jitterlisp_print_cdr (FILE *f, jitterlisp_object o)
-{
-  if (JITTERLISP_IS_EMPTY_LIST(o))
-    {
-      /* Print nothing. */
-    }
-  else if (JITTERLISP_IS_CONS(o))
-    {
-      struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
-      fprintf (f, " ");
-      jitterlisp_print (f, c->car);
-      jitterlisp_print_cdr (f, c->cdr);
-    }
-  else
-    {
-      fprintf (f, " . ");
-      jitterlisp_print (f, o);
-    }
-}
-
-void
-jitterlisp_print (FILE *f, jitterlisp_object o)
-{
-  if (JITTERLISP_IS_FIXNUM(o))
-    fprintf (f, "%" JITTER_PRIi, JITTERLISP_FIXNUM_DECODE(o));
-  else if (JITTERLISP_IS_UNIQUE(o))
-    {
-      jitter_uint index = JITTERLISP_UNIQUE_DECODE(o);
-      if (index < JITTERLISP_UNIQUE_OBJECT_NO)
-        fprintf (f, "%s", jitterlisp_unique_object_names [index]);
-      else
-        fprintf (f, "#<invalid-unique-object:%" JITTER_PRIu ">", index);
-    }
-  else if (JITTERLISP_IS_CHARACTER(o))
-    {
-      jitter_int c = JITTERLISP_CHARACTER_DECODE(o);
-      switch (c)
-        {
-        case ' ':  fprintf (f, "#\\space");       break;
-        case '\0': fprintf (f, "#\\zero");        break;
-        case '\r': fprintf (f, "#\\return");      break;
-        case '\n': fprintf (f, "#\\newline");     break;
-        default:   fprintf (f, "#\\%c", (int) c); break;
-        }
-    }
-  else if (JITTERLISP_IS_SYMBOL(o))
-    {
-      struct jitterlisp_symbol *s = JITTERLISP_SYMBOL_DECODE(o);
-      if (s->name_or_NULL != NULL)
-        fprintf (f, "%s", s->name_or_NULL);
-      else
-        fprintf (f, "#<uninterned-symbol:%p>", s);
-    }
-  else if (JITTERLISP_IS_CONS(o))
-    {
-      struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
-      jitterlisp_object car = c->car;
-      jitterlisp_object cdr = c->cdr;
-      fprintf (f, "(");
-      jitterlisp_print (f, car);
-      jitterlisp_print_cdr (f, cdr);
-      fprintf (f, ")");
-    }
-  else
-    fprintf (f, "#<invalid-or-unknown>");
-}
