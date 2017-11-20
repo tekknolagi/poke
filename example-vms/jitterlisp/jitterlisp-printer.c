@@ -85,19 +85,21 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 //#define NOTERMINAL
 
 #ifdef NOTERMINAL
-# define CONSATTR       ""
-# define CHARACTERATTR  ""
-# define FIXNUMATTR     ""
-# define SYMBOLATTR     ""
-# define UNIQUEATTR     ""
-# define ERRORATTR      ""
+# define CONSATTR             ""
+# define CHARACTERATTR        ""
+# define FIXNUMATTR           ""
+# define INTERNEDSYMBOLATTR   ""
+# define UNINTERNEDSYMBOLATTR ""
+# define UNIQUEATTR           ""
+# define ERRORATTR            ""
 #else
-# define CONSATTR       LIGHTRED
-# define CHARACTERATTR  BROWN UNDERLINE ITALIC
-# define FIXNUMATTR     LIGHTGREEN UNDERLINE
-# define SYMBOLATTR     YELLOW ITALIC
-# define UNIQUEATTR     LIGHTMAGENTA UNDERLINE ITALIC
-# define ERRORATTR      RED REVERSE
+# define CONSATTR             LIGHTRED
+# define CHARACTERATTR        BROWN UNDERLINE ITALIC
+# define FIXNUMATTR           LIGHTGREEN UNDERLINE
+# define INTERNEDSYMBOLATTR   YELLOW ITALIC
+# define UNINTERNEDSYMBOLATTR YELLOW ITALIC UNDERLINE
+# define UNIQUEATTR           LIGHTMAGENTA UNDERLINE ITALIC
+# define ERRORATTR            RED REVERSE
 #endif // #ifdef NOTERMINAL
 
 
@@ -267,12 +269,17 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
     }
   else if (JITTERLISP_IS_SYMBOL(o))
     {
-      jitterlisp_print_string (cp, cps, SYMBOLATTR);
       struct jitterlisp_symbol *s = JITTERLISP_SYMBOL_DECODE(o);
       if (s->name_or_NULL != NULL)
-        jitterlisp_print_string (cp, cps, s->name_or_NULL);
+        {
+          jitterlisp_print_string (cp, cps, INTERNEDSYMBOLATTR);
+          jitterlisp_print_string (cp, cps, s->name_or_NULL);
+        }
       else
-        jitterlisp_print_string (cp, cps, "#<uninterned-symbol>");
+        {
+          jitterlisp_print_string (cp, cps, UNINTERNEDSYMBOLATTR);
+          jitterlisp_print_string (cp, cps, "#<uninterned-symbol>");
+        }
       jitterlisp_print_string (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_CONS(o))
