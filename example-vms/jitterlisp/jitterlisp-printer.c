@@ -90,12 +90,14 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 # define FIXNUMATTR     ""
 # define SYMBOLATTR     ""
 # define UNIQUEATTR     ""
+# define ERRORATTR      ""
 #else
 # define CONSATTR       LIGHTRED
 # define CHARACTERATTR  BROWN UNDERLINE ITALIC
 # define FIXNUMATTR     LIGHTGREEN UNDERLINE
 # define SYMBOLATTR     YELLOW ITALIC
 # define UNIQUEATTR     LIGHTMAGENTA UNDERLINE ITALIC
+# define ERRORATTR      RED REVERSE
 #endif // #ifdef NOTERMINAL
 
 
@@ -238,6 +240,8 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
                                  jitterlisp_unique_object_names [index]);
       else
         {
+          jitterlisp_print_string (cp, cps, NOATTR);
+          jitterlisp_print_string (cp, cps, ERRORATTR);
           jitterlisp_print_string (cp, cps, "#<invalid-unique-object:");
           jitterlisp_print_long_long (cp, cps, index);
           jitterlisp_print_char (cp, cps, '>');
@@ -285,7 +289,11 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_string (cp, cps, NOATTR);
     }
   else
-    jitterlisp_print_string (cp, cps, "#<invalid-or-unknown>");
+    {
+      jitterlisp_print_string (cp, cps, ERRORATTR);
+      jitterlisp_print_string (cp, cps, "#<invalid-or-unknown>");
+      jitterlisp_print_string (cp, cps, NOATTR);
+    }
 }
 
 

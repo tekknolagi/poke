@@ -557,6 +557,8 @@ main (void)
   printf ("ds: %s\n\n", ds);
   free (ds);
 
+  print ((jitterlisp_object) "merda");
+
   jitterlisp_finalize ();
   return 0;
 }
