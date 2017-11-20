@@ -164,6 +164,12 @@ jitterlisp_allocate (size_t size_in_bytes)
   if (__builtin_expect (litter_allocator_pointer > litter_allocator_limit,
                         false))
     jitter_fatal ("At this point I would call the GC, if there were one.\n");
+  /* printf ("After allocating %luB the next allocation pointer is %p, "
+          "whose misalignment is %lu\n",
+          (unsigned long) size_in_bytes,
+          litter_allocator_pointer,
+          ((unsigned long) litter_allocator_pointer) & JITTERLISP_ALIGNMENT_BIT_MASK
+          );*/
   return res;
 #elif defined(JITTERLISP_BOEHM_GC)
   return GC_malloc (size_in_bytes);

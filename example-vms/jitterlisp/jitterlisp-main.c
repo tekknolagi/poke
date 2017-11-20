@@ -523,7 +523,7 @@ main (void)
   {
     int q;
 #define L 1024
-#define T (10000)
+#define T (10)
     for (q = 0; q < T; q ++)
       jitterlisp_iota (JITTERLISP_FIXNUM_ENCODE(L));
   }

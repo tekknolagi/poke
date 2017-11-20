@@ -30,6 +30,35 @@
 #include "jitterlisp-sexpression.h"
 
 
+/* Alignment.
+ * ************************************************************************** */
+
+/* In order to make sure that the allocated pointers respect the minimum
+   alignment of (1 << JITTERLISP_TAG_BIT_NO) even when using my own allocator,
+   I need to use a constant expression more complex than a simple sizeof to
+   represent the required object size.
+
+   Here it is crucial to compute at compile time rather than at run time as far
+   as possible: this is why we don't realign an updated allocation pointer, but
+   rather assume that the allocation pointer always remains correctly aligned,
+   and compute an object size which keeps alignment into account.  Object sizes
+   are compile-time constants in most cases. */
+#define JITTERLISP_ALIGNMENT_BIT_MASK  \
+  JITTERLISP_TAG_BIT_MASK
+
+/* Expand to the smallest multiple of (1 << JITTERLISP_TAG_BIT_NO) which is
+   greater than or equal to the given size. */
+#define JITTERLISP_ALIGNED_SIZE(_jitterlisp_original_size)        \
+  (((_jitterlisp_original_size) + JITTERLISP_ALIGNMENT_BIT_MASK)  \
+   & ~ JITTERLISP_ALIGNMENT_BIT_MASK)
+
+/* Given a type name compute its "aligned sizeof", which is to say the size
+   of an object of the given type or the smallest multiple of the alignment
+   size which is large enough to accommodate an object. */
+#define JITTERLISP_ALIGNED_SIZEOF(_jitterlisp_original_type)   \
+  JITTERLISP_ALIGNED_SIZE(sizeof (_jitterlisp_original_type))
+
+
 
 
 /* Cons allocation.
@@ -37,10 +66,10 @@
 
 /* Expand to an rvalue of type struct jitterlisp_cons * whose evaluation points
    to a just allocated and uninitialized cons. */
-#define JITTERLISP_CONS_MAKE_UNINITIALIZED_UNENCODED()                     \
-  /* FIXME: this works, but of course the implementation is temporary. */  \
-  ((struct jitterlisp_cons*)                                               \
-   (jitterlisp_allocate (sizeof (struct jitterlisp_cons))))
+#define JITTERLISP_CONS_MAKE_UNINITIALIZED_UNENCODED()                         \
+  /* FIXME: this works, but of course the implementation is temporary. */      \
+  ((struct jitterlisp_cons*)                                                   \
+   (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(struct jitterlisp_cons))))
 
 
 
@@ -61,13 +90,13 @@
  * ************************************************************************** */
 
 /* Expand to an rvalue of type struct jitterlisp_symbol * whose evaluation
-   points to a just-allocated and uninitialized symbol, not meant to be interned.
-   Notice that the name_or_NULL field must be set to NULL for an uninterned symbol,
-   but this macro does not do that. */
-#define JITTERLISP_SYMBOL_UNINTERNED_MAKE_UNINITIALIZED_UNENCODED()        \
-  /* FIXME: this works, but of course the implementation is temporary. */  \
-  ((struct jitterlisp_symbol*)                                             \
-   (jitterlisp_allocate (sizeof (struct jitterlisp_symbol))))
+   points to a just-allocated and uninitialized symbol, not meant to be
+   interned.  Notice that the name_or_NULL field must be set to NULL for an
+   uninterned symbol, but this macro does not do that. */
+#define JITTERLISP_SYMBOL_UNINTERNED_MAKE_UNINITIALIZED_UNENCODED()             \
+  /* FIXME: this works, but of course the implementation is temporary. */       \
+  ((struct jitterlisp_symbol*)                                                  \
+   (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(struct jitterlisp_symbol))))
 
 /* Return a pointer to a fresh unencoded uninterned symbol, already correctly
    initialized. */
@@ -107,7 +136,8 @@ jitterlisp_symbol_make_interned (const char *name)
 /* Return an unencoded pointer to a buffer of uninitialized memory with the
    given size.
 
-   The size must be a multiple of the minimum required alignment in bytes. */
+   The size must be a multiple of the minimum required alignment in bytes (see
+   the "Alignment" section above), but this is not checked for. */
 char *
 jitterlisp_allocate (size_t size_in_bytes)
   __attribute__ ((returns_nonnull, malloc));
