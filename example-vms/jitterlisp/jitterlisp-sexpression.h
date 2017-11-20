@@ -156,15 +156,16 @@ typedef jitter_uint jitterlisp_object;
 
 /* Expand to an r-value evaluating to the given object representation modified
    by arithmetically shifting the value right, eliminating the tag bits.  No
-   side effects. */
-// FIXME: write in a comment, and check in configure, that here I depend
-// on signed right shift to be arithmetic.  According to the C standard
-// that is undefined behavior, even if GCC does arithmetic right shifts
-// on signed types, and so seems to do everybody else.
-// Shall I write a slower alternative implementation just to be pedantic?
-#define JITTERLISP_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_object)        \
-  ((jitter_uint)                                                           \
-   (((jitter_int) (_jitterlisp_tagged_object)) >> JITTERLISP_TAG_BIT_NO))
+   side effects.
+   This does not use >> since the C Standard regards right-shifting of signed
+   quantities as undefined, even if GCC (like probably most compilers)
+   sign-extends, which is what we need here.  We can achieve the same effect
+   in a portable way with a division by a power-of-two constant, which should
+   be compiled to an arithmetic shift. */
+#define JITTERLISP_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_object)  \
+  ((jitter_uint)                                                     \
+   (((jitter_int) (_jitterlisp_tagged_object))                       \
+    / (1 << JITTERLISP_TAG_BIT_NO)))
 
 /* Expand to an r-value evaluating to the given object representation modified
    by logically shifting the value right, eliminating the tag bits.  No
