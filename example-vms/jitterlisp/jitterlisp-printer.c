@@ -167,7 +167,10 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
                   jitterlisp_object o)
 {
   if (JITTERLISP_IS_FIXNUM(o))
-    jitterlisp_print_long_long (cp, cps, JITTERLISP_FIXNUM_DECODE(o));
+    {
+      jitter_int decoded = JITTERLISP_FIXNUM_DECODE(o);
+      jitterlisp_print_long_long (cp, cps, decoded);
+    }
   else if (JITTERLISP_IS_UNIQUE(o))
     {
       jitter_uint index = JITTERLISP_UNIQUE_DECODE(o);
