@@ -193,28 +193,30 @@ jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
 {
   if (JITTERLISP_IS_EMPTY_LIST(o))
     {
-      /* There is nothing to print, not even a space: the caller will append a
-         closed parens right after this. */
+      /* There is nothing to print, not even a space: the caller has already
+         written the open parens and will append the matching closed parens
+         right after this function returns. */
     }
   else if (JITTERLISP_IS_CONS(o))
     {
       /* So, o is another cons: print o's car as the next list element, but
          first separate it from the previous element, which must exist if we got
          here, with a space. */
-      struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
       jitterlisp_print_string (cp, cps, NOATTR);
       jitterlisp_print_char (cp, cps, ' ');
+      struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
       jitterlisp_print (cp, cps, c->car);
 
-      /* We're still within a list and so we'll keep using cdr notation for o's
-         cdr, without adding more parens.  If o's cdr is still a cons the
-         recursive call will prepend a space. */
+      /* We're still within a list or improper/dotted list and so we'll keep
+         using cdr notation for o's cdr, without adding more parens.  If o's cdr
+         is still a cons then the recursive call will prepend a space to the
+         elements. */
       jitterlisp_print_cdr (cp, cps, c->cdr);
     }
   else
     {
-      /* The innermost cdr of the spine is not (): this is an "improper
-         list". */
+      /* The innermost cdr of the spine is not (): this is an improper/dotted
+         list. */
       jitterlisp_print_string (cp, cps, CONSATTR);
       jitterlisp_print_string (cp, cps, " . ");
       jitterlisp_print_string (cp, cps, NOATTR);
