@@ -1113,6 +1113,26 @@ AC_CONFIG_FILES([scripts/jitter-config],
                 [chmod +x scripts/jitter-config])
 
 
+# Optional dependencies, for examples only.
+################################################################
+
+# JitterLisp can optionally use Boehm's garbage collector.  I use AC_CHECK_LIB
+# with an explicit ACTION-IF-FOUND rather than AC_SEARCH_LIBS , because I don't
+# want to modify the LIBS variable.  This is specific to some examples.
+AC_CHECK_LIB([gc], [GC_malloc], [JITTER_HAVE_BOEHM_GC_LIBRARY=yes])
+AC_CHECK_HEADERS([gc/gc.h], [JITTER_HAVE_BOEHM_GC_HEADER=yes])
+if    test "x$JITTER_HAVE_BOEHM_GC_LIBRARY" = "xyes" \
+   && test "x$JITTER_HAVE_BOEHM_GC_HEADER" = "xyes"; then
+  JITTER_HAVE_BOEHM_GC=yes
+else
+  JITTER_HAVE_BOEHM_GC=no
+fi
+AC_MSG_CHECKING([if Boehm's GC is usable for JitterLisp])
+AC_MSG_RESULT([$JITTER_HAVE_BOEHM_GC])
+AM_CONDITIONAL([JITTER_HAVE_BOEHM_GC],
+               [test "x$JITTER_HAVE_BOEHM_GC" = "xyes"])
+
+
 # ChangeLog generation.
 ################################################################
 

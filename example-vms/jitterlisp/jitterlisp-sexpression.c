@@ -1,4 +1,4 @@
-/* Jittery Lisp: s-expression header.
+/* Jittery Lisp: s-expression implementation.
 
    Copyright (C) 2017 Luca Saiu
    Written by Luca Saiu
@@ -20,16 +20,81 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+/* Include the Gnulib header. */
+#include <config.h>
+
 #include <stdio.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
 
 #include <jitter/jitter.h>
+#include <jitter/jitter-fatal.h>
+#include <jitter/jitter-malloc.h>
 
 #include "jitterlisp-sexpression.h"
+
+
+/* Compiler sanity checks.
+ * ************************************************************************** */
+
+/* We currently rely on some behavior which is very common across C compilers
+   but not mandated by the C standard.  Some of this logic should probably be
+   moved to configure. */
+
+/* Did we already perform the sanity check?  We only need to do it once. */
+static bool
+jitterlisp_platform_sanity_check_performed = false;
+
+/* Perform compiler sanity checks on the C compiler and hardware and set
+   jitterlisp_compiler_sanity_check_performed to true.  Fail fatally if any
+   check fails. */
+static void
+jitterlisp_platform_sanity_check (void)
+{
+  /* These checks are all based on constant expressions, and a sensible C
+     compiler will not generate any conditional to be executed at run time. */
+
+  /* Check that the C implementation uses two's complement arithmetic. */
+  jitter_int signed_minus_one = (jitter_int) -1;
+  jitter_uint bitwise_negated_unsigned_zero = ~ (jitter_uint) 0;
+  if ((jitter_uint) signed_minus_one
+      != (jitter_uint) bitwise_negated_unsigned_zero)
+    jitter_fatal ("this machine doesn't seem to use two's complement");
+
+  /* Check that the C implementation sign-extends on signed >> operands. */
+  if (! JITTERLISP_RIGHT_SHIFT_SIGN_EXTENDS)
+    jitter_fatal ("this compiler doesn't sign-extend on signed >> .  "
+                  "You can comment out this fatal error and everything "
+                  "should still work, but performance will suffer.  "
+                  "Write me if you have constructive suggestions on how "
+                  "to improve this.");
+
+  /* We've checked everything, and we can proceed.  There's no need to do this
+     ever again. */
+  jitterlisp_platform_sanity_check_performed = true;
+}
+
+
+
+
+/* S-expression initialization and finalization.
+ * ************************************************************************** */
+
+void
+jitterlisp_sexpression_initialize (void)
+{
+  /* Perform sanity checks, unless we've already done it before. */
+  if (! jitterlisp_platform_sanity_check_performed)
+    jitterlisp_platform_sanity_check ();
+}
+
+void
+jitterlisp_sexpression_finalize (void)
+{
+  /* Do nothing. */
+}
 
 
 
@@ -47,78 +112,3 @@ jitterlisp_unique_object_names []
       "#<eof>",                  /* The unique object with index 3. */
       "#<nothing>",              /* The unique object with index 4. */
     };
-
-
-
-
-/* S-expression printing.
- * ************************************************************************** */
-
-// FIXME: explain the idea in a comment.
-static void
-jitterlisp_print_cdr (FILE *f, jitterlisp_object o)
-{
-  if (JITTERLISP_IS_EMPTY_LIST(o))
-    {
-      /* Print nothing. */
-    }
-  else if (JITTERLISP_IS_CONS(o))
-    {
-      struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
-      fprintf (f, " ");
-      jitterlisp_print (f, c->car);
-      jitterlisp_print_cdr (f, c->cdr);
-    }
-  else
-    {
-      fprintf (f, " . ");
-      jitterlisp_print (f, o);
-    }
-}
-
-void
-jitterlisp_print (FILE *f, jitterlisp_object o)
-{
-  if (JITTERLISP_IS_FIXNUM(o))
-    fprintf (f, "%" JITTER_PRIi, JITTERLISP_FIXNUM_DECODE(o));
-  else if (JITTERLISP_IS_UNIQUE(o))
-    {
-      jitter_uint index = JITTERLISP_UNIQUE_DECODE(o);
-      if (index < JITTERLISP_UNIQUE_OBJECT_NO)
-        fprintf (f, "%s", jitterlisp_unique_object_names [index]);
-      else
-        fprintf (f, "#<invalid-unique-object:%" JITTER_PRIu ">", index);
-    }
-  else if (JITTERLISP_IS_CHARACTER(o))
-    {
-      jitter_int c = JITTERLISP_CHARACTER_DECODE(o);
-      switch (c)
-        {
-        case ' ':  fprintf (f, "#\\space");       break;
-        case '\0': fprintf (f, "#\\zero");        break;
-        case '\r': fprintf (f, "#\\return");      break;
-        case '\n': fprintf (f, "#\\newline");     break;
-        default:   fprintf (f, "#\\%c", (int) c); break;
-        }
-    }
-  else if (JITTERLISP_IS_SYMBOL(o))
-    {
-      struct jitterlisp_symbol *s = JITTERLISP_SYMBOL_DECODE(o);
-      if (s->name_or_NULL != NULL)
-        fprintf (f, "%s", s->name_or_NULL);
-      else
-        fprintf (f, "#<uninterned-symbol:%p>", s);
-    }
-  else if (JITTERLISP_IS_CONS(o))
-    {
-      struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
-      jitterlisp_object car = c->car;
-      jitterlisp_object cdr = c->cdr;
-      fprintf (f, "(");
-      jitterlisp_print (f, car);
-      jitterlisp_print_cdr (f, cdr);
-      fprintf (f, ")");
-    }
-  else
-    fprintf (f, "#<invalid-or-unknown>");
-}
