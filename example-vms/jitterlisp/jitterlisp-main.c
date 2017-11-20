@@ -512,9 +512,13 @@ main (void)
   print (JITTERLISP_FIXNUM_ENCODE(-2));
   print (JITTERLISP_NOTHING);
   printf ("\n");
+  //asm volatile ("nop\n\tnop\n\tnop");
   jitterlisp_object fa = JITTERLISP_FIXNUM_ENCODE(10);
   jitterlisp_object fb = JITTERLISP_FIXNUM_ENCODE(14);
+  //asm volatile ("": "+r" (fb));
+  //asm volatile ("addq $2, %rax\n\taddq $-2, %rax\n\t");
   print (JITTERLISP_FIXNUM_PLUS(fa, fb));
+  //asm volatile ("addq $1, %rax\n\taddq $-1, %rax\n\t");
 
   //print (jitterlisp_cons(fa, fb));
   print (jitterlisp_cons(fa, JITTERLISP_EMPTY_LIST));
