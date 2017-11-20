@@ -85,6 +85,10 @@
 #define JITTER_RESIDUAL_REGISTER_1          %r12
 #define JITTER_RESIDUAL_REGISTER_1_32BIT    %r12d
 
+/* These are normally used when JITTER_RESIDUAL_REGISTER_NO is 2. */
+#define JITTER_RESIDUAL_REGISTER_2          %r15
+#define JITTER_RESIDUAL_REGISTER_2_32BIT    %r15d
+
 /* The scratch register.  The same remark above applies. */
 #define JITTER_SCRATCH_REGISTER             %r13
 #define JITTER_SCRATCH_REGISTER_32BIT       %r13d
