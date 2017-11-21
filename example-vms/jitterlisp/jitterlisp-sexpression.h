@@ -164,10 +164,10 @@ typedef jitter_uint jitterlisp_object;
    There are basically two separate implementations of this, one relying on >>
    sign-extending on signed operands, like GCC does, and another generic but
    slow solution.  Which implementation is used depends on a constant expression
-   checking the feature at compile time.  It might be desirable to move this
+   checking how >> behaves at compile time.  It might be desirable to move this
    logic to configure.
 
-   Notice that the apparently simpler alternative of doing a signed division by
+   Notice that the seemingly obvious alternative of doing a signed division by
    a power of two does not always compute the correct result with a negative
    operand in two's complement: the rounding direction for signed division is
    not what we need here. */
@@ -291,10 +291,9 @@ typedef jitter_uint jitterlisp_object;
 /* Expand to an r-value evaluating to non-false iff the given object has the
    given tag. */
 #define JITTERLISP_HAS_TAG(_jitterlisp_tagged_object, _jitterlisp_tag)  \
-  JITTERLISP_HAS_BITS((_jitterlisp_tagged_object),                      \
-                      (_jitterlisp_tag),                                \
+  JITTERLISP_HAS_BITS(_jitterlisp_tagged_object,                        \
+                      _jitterlisp_tag,                                  \
                       JITTERLISP_TAG_BIT_NO)
-
 
 /* Expand to an r-value evaluating to the given object representation modified
    by seeting all the tag bits to zero.  The object payload may or may not need
