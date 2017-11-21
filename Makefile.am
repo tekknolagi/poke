@@ -1020,12 +1020,13 @@ SOURCES_FOR_JITTERLISP = \
 # There is only one version for the best dispatching model, as of now.
 bin_jitterlisp_SOURCES = $(SOURCES_FOR_JITTERLISP)
 bin_jitterlisp_CPPFLAGS = \
-  $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/jitterlisp" $(JITTER_CPPFLAGS) \
+  $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/jitterlisp" $(CPPFLAGS_FOR_GNULIB) \
+  $(JITTER_CPPFLAGS) \
   -DJITTERLISP_LITTER=1
 bin_jitterlisp_CFLAGS = \
   $(AM_CFLAGS) $(JITTER_CFLAGS)
 bin_jitterlisp_LDADD = \
-  $(AM_LDADD) $(JITTER_LDADD)
+  $(AM_LDADD) $(JITTER_LDADD) $(LDADD_FOR_GNULIB)
 bin_jitterlisp_LDFLAGS = \
   $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
 
@@ -1033,8 +1034,8 @@ bin_jitterlisp_LDFLAGS = \
 if JITTER_HAVE_BOEHM_GC
   PROGRAMS_JITTERLISP += bin/jitterlisp-boehm
   bin_jitterlisp_boehm_SOURCES = $(SOURCES_FOR_JITTERLISP)
-  bin_jitterlisp_boehm_CPPFLAGS = -DJITTERLISP_BOEHM_GC=1 $(bin_jitterlisp_CPPFLAGS) \
-    -UJITTERLISP_LITTER
+  bin_jitterlisp_boehm_CPPFLAGS = $(bin_jitterlisp_CPPFLAGS) \
+    -UJITTERLISP_LITTER -DJITTERLISP_BOEHM_GC=1
   bin_jitterlisp_boehm_CFLAGS = $(bin_jitterlisp_CFLAGS)
   bin_jitterlisp_boehm_LDADD = -lgc $(bin_jitterlisp_LDADD)
   bin_jitterlisp_boehm_LDFLAGS = $(bin_jitterlisp_LDFLAGS)
