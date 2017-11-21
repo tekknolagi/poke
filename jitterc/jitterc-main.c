@@ -316,8 +316,8 @@ parse_opt (int key, char *arg, struct argp_state *state)
 int
 main (int argc, char **argv)
 {
-  /* Parse our arguments; every option seen by 'parse_opt' will
-     be reflected in 'arguments'. */
+  /* Parse our arguments; cl will contain the information provided in the
+     command line. */
   struct jitterc_command_line cl;
   argp_parse (&argp, argc, argv,
               0,//ARGP_IN_ORDER,
