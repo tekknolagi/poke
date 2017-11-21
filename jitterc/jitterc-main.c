@@ -145,7 +145,7 @@ static struct argp_option jitterc_option_specification[] =
     "braces, and for debugging Jitter itself"},
    /* Debugging negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 41},
-   {"no-verbose", jitterc_negative_option_no_frontend, NULL, 0,
+   {"no-verbose", jitterc_negative_option_no_verbose, NULL, 0,
     "Don't show progress information (default)"},
    {"line", jitterc_negative_option_generate_line, NULL, 0,
     "Generate #line directives (default)"},
