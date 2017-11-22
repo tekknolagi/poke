@@ -138,11 +138,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
   struct jitterlisp_settings *sp = state->input;
   switch (key)
     {
-    /* Command-line initialization. */
-    case ARGP_KEY_INIT:
-      /* Nothing particular to do, at this point.. */
-      break;
-
     /* File options. */
     case jitterlisp_long_only_option_no_repl:
     case 'q':
