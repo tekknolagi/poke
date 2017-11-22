@@ -231,6 +231,7 @@ lib_libjitterutility__convenience_la_SOURCES = \
   jitter/jitter-dynamic-buffer.h jitter/jitter-dynamic-buffer.c \
   jitter/jitter-hash.h jitter/jitter-hash.c jitter/jitter-hash-random-table.c \
   jitter/jitter-parse-int.h jitter/jitter-parse-int.c \
+  jitter/jitter-readline.h jitter/jitter-readline.c \
   jitter/jitter-string.h jitter/jitter-string.c
 
 # The headers need to be installed and be available to the user or to the
@@ -243,6 +244,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-dynamic-buffer.h \
   jitter/jitter-hash.h \
   jitter/jitter-parse-int.h \
+  jitter/jitter-readline.h \
   jitter/jitter-string.h
 
 
