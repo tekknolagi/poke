@@ -46,6 +46,9 @@ struct jitterlisp_command_line
   /* Non-false iff the output needs to be verbose. */
   bool verbose;
 
+  /* Some s-expressions provided from the command line to evaluate, or NULL. */
+  char *sexps_string;
+
   /* The Lisp file to run, or NULL to read from stdin. */
   char *input_file;
 
@@ -72,28 +75,33 @@ enum jitterlisp_long_only_option
 
 /* Command-line option specification. */
 static struct argp_option jitterlisp_option_specification[] =
-  {/* Commonly used options. */
-   {NULL, '\0', NULL, OPTION_DOC, "Commonly used options:", 10},
+  {/* File options. */
+   {NULL, '\0', NULL, OPTION_DOC, "File options:", 10},
    {"no-repl", jitterlisp_long_only_option_no_repl, NULL, 0,
     "Run non-interactively, without a REPL" },
    {"batch", 'q', NULL, OPTION_ALIAS },
-   /* Commonly used negative options. */
+   /* File negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 11},
    {"repl", jitterlisp_negative_option_repl, NULL, 0,
     "Run interactively, with a REPL (default)"},
    {"no-batch", '\0', NULL, OPTION_ALIAS },
 
+   /* Command-line s-expression evaluation. */
+   {NULL, '\0', NULL, OPTION_DOC, "Command-line s-expression evaluation:", 20},
+   {"eval", 'e', "SEXPRS", 0,
+    "Evaluate the given s-expressions after running the files (if any) "
+    "and before running the REPL (unless the REPL is disabled)" },
 
    /* Debugging options. */
-   {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 20},
+   {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 30},
    {"verbose", 'v', NULL, 0,
     "Show progress information at run time" },
    /* Debugging negative options. */
-   {NULL, '\0', NULL, OPTION_DOC, "", 21},
+   {NULL, '\0', NULL, OPTION_DOC, "", 31},
    {"no-verbose", jitterlisp_negative_option_no_verbose, NULL, 0,
     "Don't show progress information (default)"},
 
-   {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 20},
+   {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 40},
    {"dump-version", jitterlisp_long_only_option_dump_version, NULL, 0,
     "Print the JitterLisp version only, without any surrounding text; this "
     "is convenient for scripts" },
@@ -125,7 +133,7 @@ static struct argp argp =
   {
     jitterlisp_option_specification,
     parse_opt,
-    "[FILE.lisp|-]",
+    "[FILE.lisp|-]...",
     "Run a JitterLisp program and/or a JitterLisp interactive REPL."
   };
 
@@ -142,7 +150,24 @@ parse_opt (int key, char *arg, struct argp_state *state)
       /* Set sensible default values. */
       cl->verbose = false;
       cl->input_file = NULL;
+      cl->sexps_string = NULL;
       cl->repl = true;
+      break;
+
+    /* File options. */
+    case jitterlisp_long_only_option_no_repl:
+    case 'q':
+      cl->repl = false;
+      break;
+
+    /* File negative options. */
+    case jitterlisp_negative_option_repl:
+      cl->repl = true;
+      break;
+
+    /* Command-line s-expression evaluation. */
+    case 'e':
+      cl->sexps_string = arg;
       break;
 
     /* Debugging options. */
@@ -160,17 +185,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
       printf ("%s\n", JITTER_PACKAGE_VERSION);
       exit (EXIT_SUCCESS);
 
-    /* Commonly used options. */
-    case jitterlisp_long_only_option_no_repl:
-    case 'q':
-      cl->repl = false;
-      break;
-
-    /* Commonly used negative options. */
-    case jitterlisp_negative_option_repl:
-      cl->repl = true;
-      break;
-
     /* Non-option arguments. */
     case ARGP_KEY_ARG:
       cl->input_file = arg;
@@ -180,7 +194,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case ARGP_KEY_END:
       if (state->arg_num > 1)
         argp_error (state,
-                    "you gave %i input files instead of one or none.",
+                    "you gave %i input files instead of one or none: "
+                    "right now we support only one file, which should "
+                    "change",
                     (int)state->arg_num);
       break;
     default:
@@ -675,20 +691,41 @@ main (int argc, char **argv)
         jitter_fatal ("could not open input file %s", cl.input_file);
     }
 
+  /* An s-expression. */
+  jitterlisp_object form;
+
+#if 0
   /* Read from the input file. */
   printf ("Reading from input...\n");
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_stream_reader_state (in);
-  jitterlisp_object toplevel_form;
-  while (! JITTERLISP_IS_EOF (toplevel_form = jitterlisp_read (rstate)))
+  while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
     {
       printf ("I read this: ");
-      jitterlisp_print_to_stream (stdout, toplevel_form);
-      //print (toplevel_form);
+      jitterlisp_print_to_stream (stdout, form);
+      //print (form);
       printf ("\n");
     }
   jitterlisp_destroy_reader_state (rstate);
   printf ("...End of input\n");
+#endif
+
+  /* Evaluate s-expressions from the command line. */
+  if (cl.sexps_string != NULL)
+    {
+      printf ("The command line eval string is \"%s\".\n", cl.sexps_string);
+      struct jitterlisp_reader_state *rstate
+        = jitterlisp_make_string_reader_state (cl.sexps_string);
+      while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
+        {
+          printf ("I got this from the command line: ");
+          jitterlisp_print_to_stream (stdout, form);
+          //print (form);
+          printf ("\n");
+        }
+      jitterlisp_destroy_reader_state (rstate);
+      printf ("Done with the command line eval string, which was \"%s\".\n", cl.sexps_string);
+    }
 
   /* Finalize JitterLisp. */
   jitterlisp_finalize ();

@@ -45,9 +45,10 @@ jitterlisp_string_char_reader_function (void *const_char_star_star)
   const char **pointer_to_string_pointer = const_char_star_star;
   char res;
 
-  /* If we're at the end already return EOF and don't increment the pointer;
-     otherwise read the current character and only after that increment the
-     pointer. */
+  /* If we're at the end already return EOF and don't increment the pointer, out
+     of defensiveness (if every function is used correctly, no reading should be
+     performed after that point anyhow); otherwise read the current character
+     and only after that increment the pointer. */
   if ((res = ** pointer_to_string_pointer) == '\0')
     return EOF;
   else
@@ -57,9 +58,6 @@ jitterlisp_string_char_reader_function (void *const_char_star_star)
     }
 }
 
-/* A reader function reading from a FILE * input stream.  The argument, declared
-   as void * for compatibility with jitterlisp_char_reader_function , is
-   actually of type FILE*. */
 int
 jitterlisp_stream_char_reader_function (void *file_star)
 {
@@ -742,6 +740,7 @@ jitterlisp_make_string_reader_state (const char *string)
   return jitterlisp_make_reader_state (jitterlisp_string_char_reader_function,
                                        & string);
 }
+
 
 
 
