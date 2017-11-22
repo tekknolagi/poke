@@ -20,15 +20,21 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+#include "jitterlisp-reader.h"
+
+#include <stdbool.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
 
 #include <jitter/jitter-dynamic-buffer.h>
-#include <jitter/jitter-parse-int.h>
 #include <jitter/jitter-fatal.h>
+#include <jitter/jitter-malloc.h>
+#include <jitter/jitter-parse-int.h>
+#include <jitter/jitter-readline.h>
+#include <jitter/jitter-string.h>
 
-#include "jitterlisp-reader.h"
+#include "jitterlisp-error.h"
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-allocator.h"
 
@@ -39,14 +45,16 @@
  * ************************************************************************** */
 
 int
-jitterlisp_string_char_reader_function (void *const_char_star_star)
+jitterlisp_string_char_reader_function
+   (jitterlisp_char_reader_state *const_char_star_star)
 {
-  const char **pointer_to_string_pointer = const_char_star_star;
+  const char **pointer_to_string_pointer = (const char **) const_char_star_star;
   char res;
 
-  /* If we're at the end already return EOF and don't increment the pointer;
-     otherwise read the current character and only after that increment the
-     pointer. */
+  /* If we're at the end already return EOF and don't increment the pointer, out
+     of defensiveness (if every function is used correctly, no reading should be
+     performed after that point anyhow); otherwise read the current character
+     and only after that increment the pointer. */
   if ((res = ** pointer_to_string_pointer) == '\0')
     return EOF;
   else
@@ -56,13 +64,11 @@ jitterlisp_string_char_reader_function (void *const_char_star_star)
     }
 }
 
-/* A reader function reading from a FILE * input stream.  The argument, declared
-   as void * for compatibility with jitterlisp_char_reader_function , is
-   actually of type FILE*. */
 int
-jitterlisp_stream_char_reader_function (void *file_star)
+jitterlisp_stream_char_reader_function
+   (jitterlisp_char_reader_state *file_star_star)
 {
-  FILE *f = file_star;
+  FILE *f = * (FILE **) file_star_star;
   return fgetc (f);
 }
 
@@ -91,10 +97,14 @@ struct jitterlisp_scanner_state
   struct jitter_dynamic_buffer token_text;
 
   /* The char-reader function. */
-  jitterlisp_char_reader_function char_reader;
+  jitterlisp_char_reader_function char_reader_function;
 
   /* The char-reader state. */
-  void *char_reader_state;
+  jitterlisp_char_reader_state char_reader_state;
+
+  /* The char-reader finalizing function, freeing resources for the char-reader
+     state. */
+  jitterlisp_char_reader_finalizer char_reader_finalizer;
 };
 
 /* Read the next character of the input in the pointed sstate, setting the
@@ -104,7 +114,8 @@ struct jitterlisp_scanner_state
 static void
 jitterlisp_scanner_advance (struct jitterlisp_scanner_state *sstate)
 {
-  sstate->lookahead = sstate->char_reader (sstate->char_reader_state);
+  sstate->lookahead
+    = sstate->char_reader_function (& sstate->char_reader_state);
 
   /* Advance row and column indices. */
   if (sstate->lookahead == '\n')
@@ -153,20 +164,23 @@ jitterlisp_scanner_clear_token_text (struct jitterlisp_scanner_state *sstate)
 
 /* Initialize the pointed scanner state using the given char-reader.  Notice
    that the lookahead character is set immediately (to EOF if the input is
-   empty), so that a scanner doesn't need to deal with uninitialized data. */
+   empty), so that a scanner doesn't ever need to deal with uninitialized
+   data.  The consequence of this is this function will read the first
+   token before returning, which potentially makes it a blocking operation. */
 static void
-jitterlisp_initialize_scanner_state
-   (struct jitterlisp_scanner_state *sstate,
-    jitterlisp_char_reader_function char_reader,
-    void *char_reader_state)
+jitterlisp_initialize_scanner_state (struct jitterlisp_scanner_state *sstate,
+                                     jitterlisp_char_reader_function crfu,
+                                     jitterlisp_char_reader_state crs,
+                                     jitterlisp_char_reader_finalizer crfi)
 {
   /* Initialize the dynamic buffer.  It will contains zero characters at the
      beginning. */
   jitter_dynamic_buffer_initialize (& sstate->token_text);
 
   /* Initialize the char reader. */
-  sstate->char_reader = char_reader;
-  sstate->char_reader_state = char_reader_state;
+  sstate->char_reader_function = crfu;
+  sstate->char_reader_state = crs;
+  sstate->char_reader_finalizer = crfi;
 
   /* Initialize input location.  Here I'm following the Emacs convention, with
      1-based row indices and 0-based column indices. */
@@ -182,6 +196,8 @@ jitterlisp_initialize_scanner_state
 static void
 jitterlisp_finalize_scanner_state (struct jitterlisp_scanner_state *sstate)
 {
+  if (sstate->char_reader_finalizer != NULL)
+    sstate->char_reader_finalizer (& sstate->char_reader_state);
   jitter_dynamic_buffer_finalize (& sstate->token_text);
 }
 
@@ -226,6 +242,11 @@ enum jitterlisp_scanner_dfa_state
 /* A token identifier as recognized by the scanner. */
 enum jitterlisp_token
   {
+    /* This case is only used as an intentionally invalid value at
+       initialization, to make sure that we advance instead of using a
+       non-existent lookahead. */
+    jitterlisp_token_invalid,
+
     jitterlisp_token_open,
     jitterlisp_token_close,
     jitterlisp_token_dot,
@@ -468,18 +489,29 @@ jitterlisp_parser_advance (struct jitterlisp_parser_state *pstate)
 }
 
 /* Initialize the pointed parser state, using the given char reader.  This also
-   initializes the scanner state contained in the parser state. */
+   initializes the scanner state contained in the parser state.
+   Notice that this function calls jitterlisp_initialize_scanner_state , which
+   doesn't terminate until the first character is read, making this function
+   blocking. */
 static void
 jitterlisp_initialize_parser_state (struct jitterlisp_parser_state *pstate,
-                                    jitterlisp_char_reader_function char_reader,
-                                    void *char_reader_state)
+                                    jitterlisp_char_reader_function crfi,
+                                    jitterlisp_char_reader_state crs,
+                                    jitterlisp_char_reader_finalizer crfu)
 {
-  /* Initialize the scanner state. */
-  jitterlisp_initialize_scanner_state (& pstate->scanner_state, char_reader,
-                                       char_reader_state);
+  /* Initialize the scanner state.  Notice that this reads the first *character*
+     (not token) as the scanner lookahead, which may be a blocking operation. */
+  jitterlisp_initialize_scanner_state (& pstate->scanner_state,
+                                       crfi, crs, crfu);
 
-  /* Scan the first token.  This will set the pstate->lookahead_token . */
-  jitterlisp_parser_advance (pstate);
+  /* Calling jitterlisp_parser_advance (pstate) here would make the parser
+     slightly more intuitive, and also ensure that pstate->lookahead_token
+     is always set: see the comments below about non-advancing parsing
+     functions.
+     Unfortunately that alternative is unacceptable for an interactive REPL
+     where we want to recognize a nonterminal as soon as it ends, with one
+     lookahead *character* instead of one lookahead token. */
+  pstate->lookahead_token = jitterlisp_token_invalid;
 }
 
 /* Finalize the pointed parser state, using the given char reader.  This also
@@ -500,18 +532,24 @@ jitterlisp_parser_token_text (const struct jitterlisp_parser_state *pstate)
   return pstate->scanner_state.token_text.region;
 }
 
-/* Fail from the pointed parser state printing the given message -- currently in
-   a fatal way. */
+/* Fail from the pointed parser state printing the given message. */
 __attribute__ ((noreturn))
 static void
 jitterlisp_parse_error (struct jitterlisp_parser_state *pstate,
-                        const char *message)
+                        const char *user_message)
 {
-  jitter_fatal ("<INPUT>:%i:%i: parse error near %s: %s",
-                (int) pstate->scanner_state.row_no,
-                (int) pstate->scanner_state.column_no,
-                jitterlisp_parser_token_text (pstate),
-                message);
+  /* Prepare a malloc-allocated string for jitterlisp_error. */
+  size_t message_length = 1000 + strlen (user_message);
+  char *message = jitter_xmalloc (message_length);
+  sprintf (message,
+           "<INPUT>:%i:%i: parse error near %s: %s",
+           (int) pstate->scanner_state.row_no,
+           (int) pstate->scanner_state.column_no,
+           jitterlisp_parser_token_text (pstate),
+           user_message);
+
+  /* Call jitterlisp_error, which will longjmp away. */
+  jitterlisp_error (message);
 }
 
 
@@ -577,18 +615,63 @@ jitterlisp_prefix_sexpression (const char *prefix_symbol_name,
 
 
 
+/* Advancing and non-advancing parsing functions.
+ * ************************************************************************** */
+
+/* It would be more intuitive not to have both "advancing" and "non-advancing"
+   parser functions; each parsing function could advance just after recognizing
+   each token.
+   That would work, except for one big flaw: in order to recognize the end of a
+   nonterminal we would always need to have the *next* token available.
+   Unfortunately that alternative would break the REPL, making it react to the
+   each s-expression in a delayed fashion, only when the next one begins.
+
+   The first parsing function to be called must be advancing.  The lookahead
+   token is initialized as invalid in each parser state out of defensiveness,
+   to make parsing fail if a non-advancing function is used first. */
+
+/* Parse the next s-expression without advancing first: the current lookahead
+   will be the first token of the result. */
+static jitterlisp_object
+jitterlisp_parse_sexp_non_advancing (struct jitterlisp_parser_state *pstate);
+
+/* Parse the next cdr without advancing first: the current lookahead will be the
+   first token of the result. */
+static jitterlisp_object
+jitterlisp_parse_cdr_non_advancing (struct jitterlisp_parser_state *pstate);
+
+/* Advance the parser (to have the next token in the input as the lookahead) and
+   then parse the next s-expression. */
+static jitterlisp_object
+jitterlisp_parse_sexp (struct jitterlisp_parser_state *pstate)
+{
+  jitterlisp_parser_advance (pstate);
+  return jitterlisp_parse_sexp_non_advancing (pstate);
+}
+
+/* Advance the parser and then parse the next cdr. */
+static jitterlisp_object
+jitterlisp_parse_cdr (struct jitterlisp_parser_state *pstate)
+{
+  jitterlisp_parser_advance (pstate);
+  return jitterlisp_parse_cdr_non_advancing (pstate);
+}
+
+
+
+
 /* S-expression parser.
  * ************************************************************************** */
 
-/* The two mutually recursive functions below are a hand-translation of the
+/* The mutually recursive functions below are a hand-translation of the
    following attributed grammar:
 
    <sexp> ::= #<eof>         { $$ = eof; }
             | atom           { $$ = $1; }
-            | prefix <sexp>  { if is_eof ($2)
+            | prefix <sexp>  { if is_eof ($2) then
                                  error ();
                                else
-                                 $$ = with-prefix (prefix, $2); }
+                                 $$ = with-prefix ($1, $2); }
             | ( <cdr>        { $$ = $1; }
 
    <cdr>  ::= #<eof>         { error (); }
@@ -601,35 +684,26 @@ jitterlisp_prefix_sexpression (const char *prefix_symbol_name,
    make the grammar, and therefore the parser, slightly more complicated. */
 
 static jitterlisp_object
-jitterlisp_parse_cdr (struct jitterlisp_parser_state *pstate);
-
-static jitterlisp_object
-jitterlisp_parse_sexp (struct jitterlisp_parser_state *pstate)
+jitterlisp_parse_sexp_non_advancing (struct jitterlisp_parser_state *pstate)
 {
   switch (pstate->lookahead_token)
     {
     case jitterlisp_token_eof:
-      /* Do not advance in this case. */
       return JITTERLISP_EOF;
     case jitterlisp_token_false:
-      jitterlisp_parser_advance (pstate);
       return JITTERLISP_FALSE;
     case jitterlisp_token_true:
-      jitterlisp_parser_advance (pstate);
       return JITTERLISP_TRUE;
     case jitterlisp_token_fixnum:
       {
-        jitter_long_long i
-          = jitter_string_to_long_long_unsafe
-               (jitterlisp_parser_token_text (pstate));
-        jitterlisp_parser_advance (pstate);
+        jitter_long_long i = jitter_string_to_long_long_unsafe
+                               (jitterlisp_parser_token_text (pstate));
         return JITTERLISP_FIXNUM_ENCODE(i);
       }
     case jitterlisp_token_symbol:
       {
         const char *name = jitterlisp_parser_token_text (pstate);
         struct jitterlisp_symbol *s = jitterlisp_symbol_make_interned (name);
-        jitterlisp_parser_advance (pstate);
         return JITTERLISP_SYMBOL_ENCODE(s);
       }
 
@@ -638,7 +712,6 @@ jitterlisp_parse_sexp (struct jitterlisp_parser_state *pstate)
         const char *prefix_name = jitterlisp_parser_token_text (pstate);
         const char *prefix_symbol_name
           = jitterlisp_prefix_name_to_symbol_name (prefix_name);
-        jitterlisp_parser_advance (pstate);
         jitterlisp_object se = jitterlisp_parse_sexp (pstate);
         if (JITTERLISP_IS_EOF(se))
           jitterlisp_parse_error (pstate, "prefix at EOF");
@@ -647,7 +720,6 @@ jitterlisp_parse_sexp (struct jitterlisp_parser_state *pstate)
       }
 
     case jitterlisp_token_open:
-      jitterlisp_parser_advance (pstate);
       return jitterlisp_parse_cdr (pstate);
 
     default:
@@ -656,7 +728,7 @@ jitterlisp_parse_sexp (struct jitterlisp_parser_state *pstate)
 }
 
 static jitterlisp_object
-jitterlisp_parse_cdr (struct jitterlisp_parser_state *pstate)
+jitterlisp_parse_cdr_non_advancing (struct jitterlisp_parser_state *pstate)
 {
   switch (pstate->lookahead_token)
     {
@@ -664,29 +736,239 @@ jitterlisp_parse_cdr (struct jitterlisp_parser_state *pstate)
       jitterlisp_parse_error (pstate, "EOF after open parens");
 
     case jitterlisp_token_close:
-      jitterlisp_parser_advance (pstate); /* Skip ) . */
       return JITTERLISP_EMPTY_LIST;
 
     case jitterlisp_token_dot:
       {
-        jitterlisp_parser_advance (pstate); /* Skip . */
         jitterlisp_object res = jitterlisp_parse_sexp (pstate);
+        jitterlisp_parser_advance (pstate); /* Check for ) */
         if (pstate->lookahead_token == jitterlisp_token_close)
-          {
-            jitterlisp_parser_advance (pstate); /* Skip ) . */
-            return res;
-          }
+          return res;
         else
           jitterlisp_parse_error (pstate, "expected )");
       }
 
     default:
       {
-        jitterlisp_object car = jitterlisp_parse_sexp (pstate);
+        jitterlisp_object car = jitterlisp_parse_sexp_non_advancing (pstate);
         jitterlisp_object cdr = jitterlisp_parse_cdr (pstate);
         return jitterlisp_cons(car, cdr);
       }
     }
+}
+
+
+
+
+/* Reader state: user API.
+ * ************************************************************************** */
+
+/* We export to the user a struct called struct jitterlisp_reader_state , as an
+   abstract type; the user doesn't need to see the distinction between scanner
+   and parser, and even less the lookahead field. */
+struct jitterlisp_reader_state
+{
+  /* The parser state, which contains the scanner state as well. */
+  struct jitterlisp_parser_state pstate;
+
+  /* The hook to run after each toplevel s-expression parsing. */
+  jitterlisp_post_parsing_hook post_parsing_hook;
+};
+
+struct jitterlisp_reader_state*
+jitterlisp_make_reader_state (jitterlisp_char_reader_function crfi,
+                              jitterlisp_char_reader_state crs,
+                              jitterlisp_char_reader_finalizer crfu,
+                              jitterlisp_post_parsing_hook pph)
+{
+  struct jitterlisp_reader_state *res
+    = jitter_xmalloc (sizeof (struct jitterlisp_reader_state));
+  jitterlisp_initialize_parser_state (& res->pstate, crfi, crs, crfu);
+  res->post_parsing_hook = pph;
+  return res;
+}
+
+void
+jitterlisp_destroy_reader_state (struct jitterlisp_reader_state *rs)
+{
+  jitterlisp_finalize_parser_state (& rs->pstate);
+  free (rs);
+}
+
+
+
+
+/* Reader state convenience function: stream reader.
+ * ************************************************************************** */
+
+struct jitterlisp_reader_state*
+jitterlisp_make_stream_reader_state (FILE *input)
+{
+  return jitterlisp_make_reader_state (jitterlisp_stream_char_reader_function,
+                                       ((jitterlisp_char_reader_state) input),
+                                       NULL, NULL);
+}
+
+
+
+
+/* Reader state convenience function: string reader.
+ * ************************************************************************** */
+
+struct jitterlisp_reader_state*
+jitterlisp_make_string_reader_state (const char *string)
+{
+  return jitterlisp_make_reader_state (jitterlisp_string_char_reader_function,
+                                       ((jitterlisp_char_reader_state) string),
+                                       NULL, NULL);
+}
+
+
+
+
+/* Reader state convenience function: readline and readline-one readers.
+ * ************************************************************************** */
+
+/* The struct implementing the reader state of readline and readline-one
+   readers.  Notice that this struct is malloc-allocated as part of the reader
+   state, and destroyed at reader state destruction: the user doesn't need
+   to keep any data structure alive for the lifetime of the reader including
+   the prompt string, which is cloned. */
+struct jitterlisp_readline_char_reader_state
+{
+  /* The prompt string to show at every jitter_readline call.  This is a
+     malloc-allocated copy. */
+  char *prompt;
+
+  /* A flag telling whether we saw an EOF result, which is to say if
+     jitter_readline has returned NULL. */
+  bool got_EOF;
+
+  /* The last entire line we read as returned by jitter_readline, or NULL. */
+  char *last_line_or_NULL;
+
+  /* The next character to be sent to the scanner within last_line_or_NULL when
+     last_line_or_NULL is non-NULL; unspecified otherwise. */
+  char *next_char_p;
+
+  /* A boolean flag preventing further jitter_readline calls; this is used
+     in the hook to implement the "one" semantics. */
+  bool no_more_lines;
+};
+
+/* Return the next character (or NULL if we found EOF as detected by
+   jitter_readline) of the input, automatically calling jitter_readline if we
+   are at the end of the string in memory and advancing next_char_p as
+   needed. */
+static int
+jitterlisp_readline_char_reader_function (jitterlisp_char_reader_state *crspp)
+{
+  struct jitterlisp_readline_char_reader_state *crsp
+    = * (struct jitterlisp_readline_char_reader_state **) crspp;
+
+  /* If we already saw EOF refuse to read any more lines, and return EOF. */
+  if (crsp->got_EOF)
+    return EOF;
+
+  /* If we haven't got a line read one... */
+  if (crsp->last_line_or_NULL == NULL)
+    {
+      /* ...Unless we've been told to stop.  If after reading one more line
+         we receive NULL we've found EOF. */
+      if (crsp->no_more_lines
+          || ((crsp->last_line_or_NULL = jitter_readline (crsp->prompt))
+              == NULL))
+        {
+          crsp->got_EOF = true;
+          return EOF;
+        }
+
+      /* If we haven't returned yet then we have a non-NULL line: set the next
+         character pointer to its beginning, and go on. */
+      crsp->next_char_p = crsp->last_line_or_NULL;
+    }
+
+  /* If we arrived here then we have an actual line to read from, and
+     crsp->next_char_p points within it. */
+
+  /* Does crsp->next_char_p point to a '\0' character?  If so, we have to
+     interpret that as a '\n' character (which readline strips off), and prepare
+     to read a new entire line at the next call. */
+  if (* crsp->next_char_p == '\0')
+    {
+      free (crsp->last_line_or_NULL);
+      crsp->last_line_or_NULL = NULL;
+      return '\n';
+    }
+
+  /* If we arrived here then the next character is ordinary. */
+  return * (crsp->next_char_p ++);
+}
+
+static void
+jitterlisp_readline_char_reader_finalizer (jitterlisp_char_reader_state *crspp)
+{
+  struct jitterlisp_readline_char_reader_state *crsp
+    = * (struct jitterlisp_readline_char_reader_state **) crspp;
+
+  free (crsp->prompt);
+  free (crsp);
+}
+
+/* A hook preventing a readline reader state from getting further lines, and
+   then checking that the next parsed s-expression is #<eof> -- meaning that
+   there is nothing more after what we parsed.  This is where the "one" part of
+   readline-once is implemented. */
+static void
+jitterlisp_readline_one_post_parsing_hook (jitterlisp_char_reader_state *crspp,
+                                           struct jitterlisp_reader_state *rsp,
+                                           jitterlisp_object o)
+{
+  struct jitterlisp_readline_char_reader_state *crsp
+    = * (struct jitterlisp_readline_char_reader_state **) crspp;
+
+  crsp->no_more_lines = true;
+  if (jitterlisp_parse_sexp (& rsp->pstate) != JITTERLISP_EOF)
+    jitterlisp_parse_error (& rsp->pstate,
+                            "trailing garbage after the one s-expression");
+
+}
+
+/* The common implementation of jitterlisp_make_readline_reader_state and
+   jitterlisp_make_readline_one_reader_state . */
+static struct jitterlisp_reader_state*
+jitterlisp_make_readline_possibly_one_reader_state (const char *prompt,
+                                                    bool one_only)
+{
+  /* Make a readline state data structure, allocated with malloc.  The structure
+     will be destroyed by the char-state finalization function. */
+  struct jitterlisp_readline_char_reader_state *crstate
+    = jitter_xmalloc (sizeof (struct jitterlisp_readline_char_reader_state));;
+  crstate->prompt = jitter_clone_string (prompt);
+  crstate->last_line_or_NULL = NULL;
+  crstate->got_EOF = false;
+  crstate->next_char_p = NULL;
+
+  crstate->no_more_lines = false;
+
+  /* Make a new reader state*/
+  return jitterlisp_make_reader_state
+     (jitterlisp_readline_char_reader_function,
+      crstate,
+      jitterlisp_readline_char_reader_finalizer,
+      one_only ? jitterlisp_readline_one_post_parsing_hook : NULL);
+}
+
+struct jitterlisp_reader_state*
+jitterlisp_make_readline_reader_state (const char *prompt)
+{
+  return jitterlisp_make_readline_possibly_one_reader_state (prompt, false);
+}
+
+struct jitterlisp_reader_state*
+jitterlisp_make_readline_one_reader_state (const char *prompt)
+{
+  return jitterlisp_make_readline_possibly_one_reader_state (prompt, true);
 }
 
 
@@ -697,33 +979,38 @@ jitterlisp_parse_cdr (struct jitterlisp_parser_state *pstate)
 
 /* The non-static function for the user. */
 jitterlisp_object
-jitterlisp_read_from_char_reader (jitterlisp_char_reader_function char_reader,
-                                  void *char_reader_state)
+jitterlisp_read (struct jitterlisp_reader_state *rsp)
 {
-  struct jitterlisp_parser_state pstate;
-  jitterlisp_initialize_parser_state (& pstate, char_reader, char_reader_state);
-  jitterlisp_object res = jitterlisp_parse_sexp (& pstate);
-  jitterlisp_finalize_parser_state (& pstate);
+  jitterlisp_object res = jitterlisp_parse_sexp (& rsp->pstate);
+  if (rsp->post_parsing_hook != NULL)
+    rsp->post_parsing_hook (& rsp->pstate.scanner_state.char_reader_state,
+                            rsp,
+                            res);
   return res;
 }
 
 
 
 
-/* S-expression reader: user convenience functions hiding char readers.
+/* S-expression readline convenience reader.
  * ************************************************************************** */
 
 jitterlisp_object
-jitterlisp_read_from_string (const char *string)
+jitterlisp_read_readline_one (const char *prompt)
 {
-  return jitterlisp_read_from_char_reader
-            (jitterlisp_string_char_reader_function, & string);
-}
+  /* Make a readline-one reader state, read from it once and destroy it.  In
+     case of error still destroy the context, to avoid leaks, and propagate the
+     error outside. */
+  struct jitterlisp_reader_state *rstate
+    = jitterlisp_make_readline_one_reader_state (prompt);
+  jitterlisp_object res;
+  bool success = true;
+  JITTERLISP_HANDLE_ERRORS({ res = jitterlisp_read (rstate); },
+                           { success = false; });
+  jitterlisp_destroy_reader_state (rstate);
+  if (! success)
+    jitterlisp_reerror ();
 
-/* Return the first s-expression read from the given input stream. */
-jitterlisp_object
-jitterlisp_read_from_stream (FILE *f)
-{
-  return jitterlisp_read_from_char_reader
-            (jitterlisp_stream_char_reader_function, f);
+  /* Return what we read. */
+  return res;
 }

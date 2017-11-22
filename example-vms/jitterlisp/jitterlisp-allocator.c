@@ -138,8 +138,8 @@ jitterlisp_memory_finalize (void)
 {
   /* Finalize the symbol table, destroying every interned symbol in the
      process. */
-  jitter_hash_finalize (& jitterlisp_symbol_table, NULL,
-                        jitterlisp_destroy_interned_symbol);
+  jitter_string_hash_finalize (& jitterlisp_symbol_table,
+                               jitterlisp_destroy_interned_symbol);
 
   /* Finalize the garbage-collected heap. */
 #if   defined(JITTERLISP_LITTER)
@@ -187,6 +187,7 @@ jitterlisp_symbol_make_uninterned (void)
   struct jitterlisp_symbol *res
     = JITTERLISP_SYMBOL_UNINTERNED_MAKE_UNINITIALIZED_UNENCODED();
   res->name_or_NULL = NULL;
+  res->global_value = JITTERLISP_UNDEFINED;
   return res;
 }
 
@@ -210,6 +211,7 @@ jitterlisp_symbol_make_interned (const char *name)
         = jitter_xmalloc (sizeof (struct jitterlisp_symbol));
       res->name_or_NULL = jitter_xmalloc (strlen (name) + 1);
       strcpy (res->name_or_NULL, name);
+      res->global_value = JITTERLISP_UNDEFINED;
       union jitter_word w = { .pointer = (void *) res };
       jitter_string_hash_table_add (& jitterlisp_symbol_table, name, w);
       return res;

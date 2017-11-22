@@ -231,6 +231,7 @@ lib_libjitterutility__convenience_la_SOURCES = \
   jitter/jitter-dynamic-buffer.h jitter/jitter-dynamic-buffer.c \
   jitter/jitter-hash.h jitter/jitter-hash.c jitter/jitter-hash-random-table.c \
   jitter/jitter-parse-int.h jitter/jitter-parse-int.c \
+  jitter/jitter-readline.h jitter/jitter-readline.c \
   jitter/jitter-string.h jitter/jitter-string.c
 
 # The headers need to be installed and be available to the user or to the
@@ -243,6 +244,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-dynamic-buffer.h \
   jitter/jitter-hash.h \
   jitter/jitter-parse-int.h \
+  jitter/jitter-readline.h \
   jitter/jitter-string.h
 
 
@@ -1008,10 +1010,22 @@ SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-sexpression.h \
   example-vms/jitterlisp/jitterlisp-allocator.h \
   example-vms/jitterlisp/jitterlisp-allocator.c \
+  example-vms/jitterlisp/jitterlisp-error.h \
+  example-vms/jitterlisp/jitterlisp-error.c \
+  example-vms/jitterlisp/jitterlisp-eval-interpreter.h \
+  example-vms/jitterlisp/jitterlisp-eval-interpreter.c \
+  example-vms/jitterlisp/jitterlisp-eval.h \
+  example-vms/jitterlisp/jitterlisp-eval.c \
+  example-vms/jitterlisp/jitterlisp-operations.h \
+  example-vms/jitterlisp/jitterlisp-operations.c \
   example-vms/jitterlisp/jitterlisp-printer.h \
   example-vms/jitterlisp/jitterlisp-printer.c \
   example-vms/jitterlisp/jitterlisp-reader.h \
   example-vms/jitterlisp/jitterlisp-reader.c \
+  example-vms/jitterlisp/jitterlisp-run-input.h \
+  example-vms/jitterlisp/jitterlisp-run-input.c \
+  example-vms/jitterlisp/jitterlisp-settings.h \
+  example-vms/jitterlisp/jitterlisp-settings.c \
   example-vms/jitterlisp/jitterlisp.c \
   example-vms/jitterlisp/jitterlisp.h \
   example-vms/jitterlisp/jitterlisp-config.h \
@@ -1043,6 +1057,9 @@ endif # JITTER_HAVE_BOEHM_GC
 
 # Examples for JitterLisp.  There is none yet.
 EXTRA_DIST +=
+
+# Other files for JitterLisp.
+EXTRA_DIST += example-vms/jitterlisp/THANKS
 
 
 # Brainfuck example VM.

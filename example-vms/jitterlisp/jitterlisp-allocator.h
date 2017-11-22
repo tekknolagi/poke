@@ -44,7 +44,7 @@
    and compute an object size which keeps alignment into account.  Object sizes
    are compile-time constants in most cases. */
 #define JITTERLISP_ALIGNMENT_BIT_MASK  \
-  JITTERLISP_TAG_BIT_MASK
+  JITTERLISP_PTAG_BIT_MASK
 
 /* Expand to the smallest multiple of (1 << JITTERLISP_TAG_BIT_NO) which is
    greater than or equal to the given size. */
@@ -98,7 +98,7 @@
   ((struct jitterlisp_symbol*)                                                  \
    (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(struct jitterlisp_symbol))))
 
-/* Return a pointer to a fresh unencoded uninterned symbol, already correctly
+/* Return a pointer to a fresh unencoded uninterned symbol, already
    initialized. */
 struct jitterlisp_symbol *
 jitterlisp_symbol_make_uninterned (void)
@@ -110,10 +110,10 @@ jitterlisp_symbol_make_uninterned (void)
 /* Interned symbol allocation.
  * ************************************************************************** */
 
-/* Return a symbol with the given name (which must be non-NULL), either
-   interning a new one if no other symbol with the same name is already
-   interned, and returning the previously interned symbol with the same name
-   otherwise.
+/* Return a symbol with the given name, which must be non-NULL, either interning
+   a new (correctly initialized) object if no other symbol with the same name is
+   already interned, or returning the previously interned symbol with the same
+   name otherwise.
    The returned symbol is allocated with malloc.  Right now there is no
    facility to garbage-collect interned symbols, which live as long as the
    symbol table lives, until finalization.

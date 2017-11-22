@@ -23,18 +23,182 @@
 /* Include the Gnulib header. */
 #include <config.h>
 
-#include <stdio.h>
+#include <argp.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-cpp.h>
+#include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-fatal.h>
 
 #include "jitterlisp.h"
+
+
+/* Command line handling using argp.
+ * ************************************************************************** */
+
+/* An enumerate to represent options with no short version.  These
+   are options negating some other option: any negative option serves
+   to reset a setting to its default value. */
+enum jitterlisp_negative_option
+  {
+    jitterlisp_negative_option_no_verbose = -1,
+    jitterlisp_negative_option_vm = -2,
+    jitterlisp_negative_option_repl = -3,
+    jitterlisp_negative_option_no_colorize = -4
+  };
+
+/* Numeric keys for options having only a long format.  These must not conflict
+   with any value in enum jitterlisp_negative_option . */
+enum jitterlisp_long_only_option
+  {
+    jitterlisp_long_only_option_no_vm = -5,
+    jitterlisp_long_only_option_no_repl = -6,
+    jitterlisp_long_only_option_dump_version = -7
+  };
+
+/* Command-line option specification. */
+static struct argp_option jitterlisp_option_specification[] =
+  {/* File options. */
+   {NULL, '\0', NULL, OPTION_DOC, "File options:", 10},
+   {"no-repl", jitterlisp_long_only_option_no_repl, NULL, 0,
+    "Run non-interactively, without a REPL" },
+   {"batch", 'q', NULL, OPTION_ALIAS },
+   /* File negative options. */
+   {NULL, '\0', NULL, OPTION_DOC, "", 11},
+   {"repl", jitterlisp_negative_option_repl, NULL, 0,
+    "Run interactively, with a REPL (default)"},
+   {"no-batch", '\0', NULL, OPTION_ALIAS },
+
+   /* Command-line s-expression evaluation. */
+   {NULL, '\0', NULL, OPTION_DOC, "Command-line s-expression evaluation:", 20},
+   {"eval", 'e', "SEXPRS", 0,
+    "Evaluate the given s-expressions after running the files (if any) "
+    "and before running the REPL (unless the REPL is disabled)" },
+
+   /* Debugging options. */
+   {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 30},
+   {"colorize", 'c', NULL, 0,
+    "Colorize s-expressions with ANSI terminal escape sequences" },
+   {"verbose", 'v', NULL, 0,
+    "Show progress information at run time" },
+   {"no-vm", jitterlisp_long_only_option_no_vm, NULL, 0,
+    "Use a naïf C interpreter instead of the Jittery VM" },
+   {"no-jittery", '\0', NULL, OPTION_ALIAS },
+   /* Debugging negative options. */
+   {NULL, '\0', NULL, OPTION_DOC, "", 31},
+   {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
+    "Don't colorize s-expressions (default)"},
+   {"no-verbose", jitterlisp_negative_option_no_verbose, NULL, 0,
+    "Don't show progress information (default)"},
+   {"vm", jitterlisp_negative_option_vm, NULL, 0,
+    "Use the Jittery VM (default)"},
+   {"jittery", '\0', NULL, OPTION_ALIAS },
+
+   {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 40},
+   {"dump-version", jitterlisp_long_only_option_dump_version, NULL, 0,
+    "Print the JitterLisp version only, without any surrounding text; this "
+    "is convenient for scripts" },
+
+   /* Common GNU-style options. */
+   {NULL, '\0', NULL, OPTION_DOC, "Common GNU-style options:", -1},
+   /* These are automatically generated. */
+
+   /* Option terminator. */
+   { 0 }};
+
+const char *argp_program_version
+  = "JitterLisp (" PACKAGE_NAME ") " PACKAGE_VERSION "\n"
+    "Copyright (C) 2017 Luca Saiu.\n"
+    "JitterLisp comes with ABSOLUTELY NO WARRANTY.\n"
+    "You may redistribute copies of JitterLisp under the terms of the GNU General Public\n"
+    "License, version 3 or any later version published by the Free Software Foundation.\n"
+    "For more information see the file named COPYING in the source distribution.\n\n"
+    "Written by Luca Saiu <http://ageinghacker.net>.";
+const char *argp_program_bug_address = PACKAGE_BUGREPORT;
+
+/* Forward-declaration.  I like having argp defined here, before parse_opt which
+   is quite long. */
+static error_t
+parse_opt (int key, char *arg, struct argp_state *state);
+
+/* The parser main data structure. */
+static struct argp argp =
+  {
+    jitterlisp_option_specification,
+    parse_opt,
+    "[FILE.lisp|-]...",
+    "Run a JitterLisp program and/or a JitterLisp interactive REPL."
+  };
+
+/* Update our option state with the information from a single command-line
+   option. */
+static error_t
+parse_opt (int key, char *arg, struct argp_state *state)
+{
+  /* Because of how parse_opt is called sp points to jitterlisp_settings . */
+  struct jitterlisp_settings *sp = state->input;
+  switch (key)
+    {
+    /* File options. */
+    case jitterlisp_long_only_option_no_repl:
+    case 'q':
+      sp->repl = false;
+      break;
+
+    /* File negative options. */
+    case jitterlisp_negative_option_repl:
+      sp->repl = true;
+      break;
+
+    /* Command-line s-expression evaluation. */
+    case 'e':
+      sp->sexps_string = arg;
+      break;
+
+    /* Debugging options. */
+    case 'c':
+      sp->colorize = true;
+      break;
+    case 'v':
+      sp->verbose = true;
+      break;
+    case jitterlisp_long_only_option_no_vm:
+      sp->vm = false;
+      break;
+
+    /* Debugging negative options. */
+    case jitterlisp_negative_option_no_colorize:
+      sp->colorize = false;
+      break;
+    case jitterlisp_negative_option_no_verbose:
+      sp->verbose = false;
+      break;
+    case jitterlisp_negative_option_vm:
+      sp->vm = true;
+      break;
+
+    /* Scripting options. */
+    case jitterlisp_long_only_option_dump_version:
+      printf ("%s\n", JITTER_PACKAGE_VERSION);
+      exit (EXIT_SUCCESS);
+
+    /* Non-option arguments. */
+    case ARGP_KEY_ARG:
+      jitter_dynamic_buffer_push (& sp->input_file_path_names, & arg,
+                                  sizeof (char *));
+      break;
+
+    /* Handle anything else. */
+    default:
+      return ARGP_ERR_UNKNOWN;
+    }
+  return 0;
+}
 
 
 
@@ -54,6 +218,10 @@ jitterlisp_make_unencoded_cons (jitterlisp_object a, jitterlisp_object b)
 
 /* Binary printing.
  * ************************************************************************** */
+
+/* FIXME: move these to a new file under jitter/ after I rebase all the
+   changesets about JitterLisp into something clean.  Changing the history on
+   this might be messy, unless I do it after everything else. */
 
 // FIXME: I might want to keep this around.
 /* A helper function for jitter_print_binary_padded, with the same API, but not
@@ -109,13 +277,14 @@ jitter_print_binary (FILE *stream, jitter_uint u)
 /* Scratch.
  * ************************************************************************** */
 
+__attribute__ ((unused))
 static void
 print (jitterlisp_object o)
 {
 #define WIDTH "020"
   printf ("* 0x%" WIDTH JITTER_PRIx "  (tag ", o);
-  jitter_print_binary_padded (stdout, JITTERLISP_GET_TAG(o),
-                              JITTERLISP_TAG_BIT_NO);
+  jitter_print_binary_padded (stdout, JITTERLISP_GET_PTAG(o),
+                              JITTERLISP_PTAG_BIT_NO);
   printf (") ");
   if (JITTERLISP_IS_FIXNUM(o))
     printf ("is a fixnum");
@@ -123,8 +292,6 @@ print (jitterlisp_object o)
     printf ("is a unique object");
   else if (JITTERLISP_IS_CHARACTER(o))
     printf ("is a character");
-  else if (JITTERLISP_IS_UNIQUE_OR_CHARACTER(o))
-    printf ("is a unique-or-character (this shouldn't happen)");
   else if (JITTERLISP_IS_SYMBOL(o))
     printf ("is a symbol");
   else if (JITTERLISP_IS_CONS(o))
@@ -189,49 +356,49 @@ type_error (void)
 jitterlisp_object
 jitterlisp_fixnum_plus (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_PLUS(a, b);
+  return JITTERLISP_EXP_FF_F_PLUS(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_uminus (jitterlisp_object a)
 {
-  return JITTERLISP_FIXNUM_UNARY_MINUS(a);
+  return JITTERLISP_EXP_F_F_MINUS(a);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_minus (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_MINUS(a, b);
+  return JITTERLISP_EXP_FF_F_MINUS(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_times (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_TIMES(a, b);
+  return JITTERLISP_EXP_FF_F_TIMES(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_divided (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_DIVIDED(a, b);
+  return JITTERLISP_EXP_FF_F_DIVIDED(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_remainder (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_REMAINDER(a, b);
+  return JITTERLISP_EXP_FF_F_REMAINDER(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_less (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_LESS(a, b);
+  return JITTERLISP_EXP_FF_B_LESS(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_notgreater (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_NOTGREATER(a, b);
+  return JITTERLISP_EXP_FF_B_NOTGREATER(a, b);
 }
 
 bool
@@ -293,7 +460,7 @@ jitterlisp_plus_of_constants (void)
 {
   jitterlisp_object a = JITTERLISP_FIXNUM_ENCODE(40);
   jitterlisp_object b = JITTERLISP_FIXNUM_ENCODE(2);
-  return JITTERLISP_FIXNUM_PLUS(a, b);
+  return JITTERLISP_EXP_FF_F_PLUS(a, b);
 }
 
 jitterlisp_object
@@ -377,9 +544,9 @@ jitterlisp_iota (jitterlisp_object limit)
 jitter_uint
 jitterlisp_two_tags (jitterlisp_object a, jitterlisp_object b)
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
-  return (tag_a << JITTERLISP_TAG_BIT_NO) | tag_b;
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
+  return (tag_a << JITTERLISP_PTAG_BIT_NO) | tag_b;
 }
 
 typedef
@@ -392,7 +559,7 @@ jitter_uint
 jitterlisp_two_tag_dispatch_unary
   (jitterlisp_object a, jitterlisp_one_arity_operator *functions)
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
   return functions [tag_a] (a);
 }
 
@@ -401,18 +568,18 @@ jitterlisp_two_tag_dispatch_2d
   (jitterlisp_object a, jitterlisp_object b,
    jitterlisp_two_arity_operator **functions)
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
   return functions [tag_a] [tag_b] (a, b);
 }
 
 jitter_uint
 jitterlisp_two_tag_dispatch_2d_one_known_dimenstion
   (jitterlisp_object a, jitterlisp_object b,
-   const jitterlisp_two_arity_operator functions[][JITTERLISP_TAG_BIT_NO])
+   const jitterlisp_two_arity_operator functions[][JITTERLISP_PTAG_BIT_NO])
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
   return functions [tag_a] [tag_b] (a, b);
 }
 
@@ -421,9 +588,9 @@ jitterlisp_two_tag_dispatch_1d
   (jitterlisp_object a, jitterlisp_object b,
    const jitterlisp_two_arity_operator functions[])
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
-  return functions [(tag_a << JITTERLISP_TAG_BIT_NO) | tag_b] (a, b);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
+  return functions [(tag_a << JITTERLISP_PTAG_BIT_NO) | tag_b] (a, b);
 }
 
 jitter_uint
@@ -431,9 +598,9 @@ jitterlisp_two_tag_dispatch_1d_alt
   (jitterlisp_object a, jitterlisp_object b,
    const jitterlisp_two_arity_operator functions[])
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
-  return (* (functions + ((tag_a * JITTERLISP_TAG_NO) | tag_b))) (a, b);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
+  return (* (functions + ((tag_a * JITTERLISP_PTAG_NO) | tag_b))) (a, b);
 }
 
 jitter_uint
@@ -441,12 +608,12 @@ jitterlisp_two_tag_dispatch_1d_alt2
   (jitterlisp_object a, jitterlisp_object b,
    const jitterlisp_two_arity_operator functions[])
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
   jitter_uint offset
-    = ((tag_a << JITTERLISP_TAG_BIT_NO
+    = ((tag_a << JITTERLISP_PTAG_BIT_NO
         | tag_b)
-       << JITTERLISP_TAG_BIT_NO);
+       << JITTERLISP_PTAG_BIT_NO);
   return ((* ((jitterlisp_two_arity_operator *)
              ((char *) functions) + offset))
           (a, b));
@@ -490,114 +657,57 @@ jitterlisp_last (jitterlisp_object a)
  * ************************************************************************** */
 
 int
-main (void)
+main (int argc, char **argv)
 {
+  /* Initialize JitterLisp.  This among the rest initializes the settings data
+     structure with default values, so it must be called before argp_parse ,
+     which may change those. */
   jitterlisp_initialize ();
 
-  /* Initialize the litter-allocator.  I must not delete this while I'm
-     testing. */
+  /* Parse our arguments; jitterlisp_settings will contain the information
+     provided in the command line.  We also define the "settings pointer"
+     sp as a pointer to it, for convenience. */
+  argp_parse (& argp, argc, argv, 0, 0, & jitterlisp_settings);
+  struct jitterlisp_settings * const sp = & jitterlisp_settings;
 
-  // int useless; jitterlisp_error_handler_register = & useless;
+  /* Run input files and s-expressions from the command-line; halting at the
+     first error; still free the resources before exiting, even in case of
+     error.
+     Rationale: this level of attention to memory leaks would not be justified
+     here at the top level where failure is effectively fatal and the process is
+     about to terminate anyway, automaically freeing resources; however this is
+     a good place to test the non-local error handling mechanism, and an example
+     for users. */
+  int return_code = EXIT_SUCCESS;
+  JITTERLISP_HANDLE_ERRORS(
+    {
+      /* Run the input files. */
+      jitterlisp_run_from_input_files ();
 
-  jitterlisp_object ch = JITTERLISP_CHARACTER_ENCODE('a');
-  print (ch);
+      /* Evaluate s-expressions from the command line, if any. */
+      if (sp->sexps_string != NULL)
+        jitterlisp_run_from_string (sp->sexps_string);
+    },
+    {
+      /* On failure: */
+      printf ("Failed when evaluating input files or command-line "
+              "s-expressions.\n");
+      return_code = EXIT_FAILURE;
+    });
 
-  //print (JITTERLISP_CHARACTER_ENCODE('a'));
-  print (JITTERLISP_EMPTY_LIST);
-  print (JITTERLISP_EOF);
+  /* Run the REPL if enabled, and only if we didn't fail before.  Failure works
+     differently in the REPL: every single command can fail, but such failures
+     are handled internally and don't propagate: we don't want to kill the
+     process every time the user makes a mistake in interactive use. */
+  if (sp->repl && return_code != EXIT_FAILURE)
+    jitterlisp_repl ();
 
-  print (JITTERLISP_FIXNUM_ENCODE(0));
-  print (JITTERLISP_FIXNUM_ENCODE(1));
-  print (JITTERLISP_FIXNUM_ENCODE(14));
-  print (JITTERLISP_FIXNUM_ENCODE(-1));
-  print (JITTERLISP_FIXNUM_ENCODE(-2));
-  print (JITTERLISP_NOTHING);
-  printf ("\n");
-  //asm volatile ("nop\n\tnop\n\tnop");
-  jitterlisp_object fa = JITTERLISP_FIXNUM_ENCODE(10);
-  jitterlisp_object fb = JITTERLISP_FIXNUM_ENCODE(14);
-  //asm volatile ("": "+r" (fb));
-  //asm volatile ("addq $2, %rax\n\taddq $-2, %rax\n\t");
-  print (JITTERLISP_FIXNUM_PLUS(fa, fb));
-  //asm volatile ("addq $1, %rax\n\taddq $-1, %rax\n\t");
+  /* Finalize JitterLisp, freeing up resources.  This of course wouldn't be
+     needed right before exiting, but is convenient when checking for memory
+     leaks with Valgrind which this way won't show false positives. */
+  jitterlisp_finalize ();
 
-  //print (jitterlisp_cons(fa, fb));
-  print (jitterlisp_cons(fa, JITTERLISP_EMPTY_LIST));
-  print (jitterlisp_cons(JITTERLISP_EMPTY_LIST, fa));
-
-  {
-    int q;
-#define L 1024
-#define T (10)
-    for (q = 0; q < T; q ++)
-      jitterlisp_iota (JITTERLISP_FIXNUM_ENCODE(L));
-  }
-
-  long list_length = 10;//10000000;
-  print (jitterlisp_iota (JITTERLISP_FIXNUM_ENCODE(list_length)));
-  print (jitterlisp_symbol ("foo"));
-  print (jitterlisp_uninterned_symbol ());
-  print (jitterlisp_cons(jitterlisp_symbol ("bar"),
-                         JITTERLISP_EMPTY_LIST));
-  print (jitterlisp_factorial(JITTERLISP_FIXNUM_ENCODE(10)));
-  printf ("\n\n");
-
-  const char *s __attribute__ ((unused));
-  const char *s_ __attribute__ ((unused));
-  s
-    = ("(define (fact n);; Foo!\n"
-       "\n" // An empty line, just to test.
-       "\r" // And even a '\r' character.
-       "  (if (= n 0) ;; here's another comment\n"
-       "    1\n"
-       "    (* n (fact (1- n)))))");
-  //char *s = "a b c d e f";
-  //char *s = ";;;abc\n 42";
-  s_ = "`(+ ,a 1)";
-  print (jitterlisp_read_from_string (s));
-  printf ("\n\n");
-  //print (jitterlisp_read_from_stream (stdin));
-  char *ds = jitterlisp_print_to_string (jitterlisp_read_from_string (s));
-  printf ("s:  %s\n\n", s);
-  printf ("ds: %s\n\n", ds);
-  free (ds);
-
-  print (JITTERLISP_CHARACTER_ENCODE('a'));
-  print (JITTERLISP_TRUE);
-  print (JITTERLISP_EMPTY_LIST);
-  print (jitterlisp_cons(jitterlisp_symbol ("foo"),
-                         jitterlisp_uninterned_symbol ()));//jitterlisp_symbol ("bar")));
-  print (jitterlisp_iota (JITTERLISP_FIXNUM_ENCODE(15)));
-  print (JITTERLISP_FIXNUM_MINUS(JITTERLISP_FIXNUM_ENCODE(10),
-                                 JITTERLISP_FIXNUM_ENCODE(-5)));
-  print (JITTERLISP_FIXNUM_PLUS(JITTERLISP_FIXNUM_ENCODE(0),
-                                JITTERLISP_FIXNUM_ENCODE(-1)));
-  print (JITTERLISP_FIXNUM_PLUS(JITTERLISP_FIXNUM_ENCODE(-1),
-                                JITTERLISP_FIXNUM_ENCODE(0)));
-
-  jitterlisp_object c
-    /*
-    = jitterlisp_cons(JITTERLISP_FIXNUM_ENCODE(1),
-                      JITTERLISP_EMPTY_LIST);
-    */
-    = jitterlisp_cons(JITTERLISP_EMPTY_LIST,
-                      JITTERLISP_FIXNUM_ENCODE(1));
-  asm volatile ("nop 0xaaaa");
-  jitterlisp_object q, q1, q2;
-  q = JITTERLISP_FALSE;
-  q1 = JITTERLISP_FIXNUM_ENCODE(3);
-  q2 = JITTERLISP_FIXNUM_ENCODE(-3);
-  //asm volatile ("": "+r" (q1));
-  asm volatile ("": "+r" (c));
-  asm volatile ("nop 0xbbbb");
-  q1 = JITTERLISP_CONS_DECODE(c)->car;
-  asm volatile ("": "+r" (q1));
-  q2 = JITTERLISP_CONS_DECODE(c)->cdr;
-  asm volatile ("": "+r" (q2));
-  asm volatile ("nop 0xcccc");
-  print (c);
-  print (q); print (q1); print (q2);
-
-  printf ("\n\n");
-  return 0;
+  /* Return success or failure, as we decided before.  Yes, we go to the trouble
+     of freeing resources even on fatal errors: see the comment above. */
+  return return_code;
 }

@@ -1,4 +1,4 @@
-/* Jittery Lisp: main header.
+/* Jittery Lisp: global settings.
 
    Copyright (C) 2017 Luca Saiu
    Written by Luca Saiu
@@ -20,41 +20,39 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-#ifndef JITTERLISP_H_
-#define JITTERLISP_H_
-
-
-/* Header transitive inclusion.
- * ************************************************************************** */
-
-/* Include the other JitterLisp headers, so that the user has to deal with this
-   one only. */
-#include "jitterlisp-config.h"
-#include "jitterlisp-sexpression.h"
-#include "jitterlisp-allocator.h"
-#include "jitterlisp-error.h"
-#include "jitterlisp-operations.h"
-#include "jitterlisp-reader.h"
-#include "jitterlisp-run-input.h"
-#include "jitterlisp-printer.h"
 #include "jitterlisp-settings.h"
-#include "jitterlisp-eval.h"
 
 
 
 
-/* Initialization and finalization.
+/* JitterLisp global settings.
  * ************************************************************************** */
 
-/* Initialize JitterLisp.  It is in general unsafe to call any function or macro
-   from the JitterLisp headers before this. */
-void
-jitterlisp_initialize (void);
+/* The one global variable we define here.  This is initialized by the argp
+   parser in main. */
+struct jitterlisp_settings
+jitterlisp_settings;
 
-/* Finalize JitterLisp.  It is in general unsafe to call any function or macro
-   from the JitterLisp headers after this, until jitterlisp_initialize is called
-   again. */
 void
-jitterlisp_finalize (void);
+jitterlisp_settings_set_default (void)
+{
+  jitterlisp_settings.verbose = false;
+  jitterlisp_settings.vm = true;
+  jitterlisp_settings.colorize = false;
+  jitter_dynamic_buffer_initialize
+     (& jitterlisp_settings.input_file_path_names);
+  jitterlisp_settings.sexps_string = NULL;
+  jitterlisp_settings.repl = true;
+}
 
-#endif // #ifndef JITTERLISP_H_
+
+
+
+/* Not fo the user: finalization.
+ * ************************************************************************** */
+
+void
+jitterlisp_settings_finalize (void)
+{
+  jitter_dynamic_buffer_finalize (& jitterlisp_settings.input_file_path_names);
+}

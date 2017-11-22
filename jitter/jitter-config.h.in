@@ -42,6 +42,9 @@
 
 #undef JITTER_HAS_ASSEMBLY
 
+/* Optional libraries. */
+#undef JITTER_HAS_GNU_READLINE
+
 /* These are needed by jitter-dispatch.h when no dispatching-model CPP macros
    are defined from the command line. */
 #undef JITTER_BEST_DISPATCHING_MODEL_IS_DIRECT_THREADING
