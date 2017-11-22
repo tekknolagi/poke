@@ -82,6 +82,14 @@ jitter_readline (char *prompt_or_NULL)
     {
       malloced = true;
       char c_as_char = c;
+
+      /* Ignore any '\r' character. */
+      if (c == '\r')
+        continue;
+
+      /* End the string if we find a '\n' character without adding the character
+         to the string; consider any other character as "ordinary", belonging to
+         the string. */
       if (c == '\n')
         break;
       else
