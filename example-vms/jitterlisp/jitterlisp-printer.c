@@ -28,6 +28,7 @@
 #include <jitter/jitter-dynamic-buffer.h>
 
 #include "jitterlisp-printer.h"
+#include "jitterlisp-settings.h"
 #include "jitterlisp-sexpression.h"
 
 
@@ -181,6 +182,18 @@ jitterlisp_print_char (jitterlisp_char_printer_function char_printer,
   char_printer (char_printer_state, c);
 }
 
+/* Print a terminal escape sequence for color/font decorations, if colorization
+   is enabled; do nothing otherwise.  By convention every printing function is
+   supposed to print the NOATTR decoration at the end. */
+static void
+jitterlisp_print_decoration (jitterlisp_char_printer_function char_printer,
+                             void *char_printer_state,
+                             const char *s)
+{
+  if (jitterlisp_settings.colorize)
+    jitterlisp_print_string (char_printer, char_printer_state, s);
+}
+
 
 
 
@@ -205,7 +218,6 @@ jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
       /* So, o is another cons: print o's car as the next list element, but
          first separate it from the previous element, which must exist if we got
          here, with a space. */
-      jitterlisp_print_string (cp, cps, NOATTR);
       jitterlisp_print_char (cp, cps, ' ');
       struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
       jitterlisp_print (cp, cps, c->car);
@@ -220,9 +232,9 @@ jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
     {
       /* The innermost cdr of the spine is not (): this is an improper/dotted
          list. */
-      jitterlisp_print_string (cp, cps, CONSATTR);
+      jitterlisp_print_decoration (cp, cps, CONSATTR);
       jitterlisp_print_string (cp, cps, " . ");
-      jitterlisp_print_string (cp, cps, NOATTR);
+      jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print (cp, cps, o);
     }
 }
@@ -234,30 +246,32 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
   if (JITTERLISP_IS_FIXNUM(o))
     {
       jitter_int decoded = JITTERLISP_FIXNUM_DECODE(o);
-      jitterlisp_print_string (cp, cps, FIXNUMATTR);
+      jitterlisp_print_decoration (cp, cps, FIXNUMATTR);
       jitterlisp_print_long_long (cp, cps, decoded);
-      jitterlisp_print_string (cp, cps, NOATTR);
+      jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_UNIQUE(o))
     {
-      jitterlisp_print_string (cp, cps, UNIQUEATTR);
       jitter_uint index = JITTERLISP_UNIQUE_DECODE(o);
       if (index < JITTERLISP_UNIQUE_OBJECT_NO)
-        jitterlisp_print_string (cp, cps,
-                                 jitterlisp_unique_object_names [index]);
+        {
+          jitterlisp_print_decoration (cp, cps, UNIQUEATTR);
+          jitterlisp_print_string (cp, cps,
+                                   jitterlisp_unique_object_names [index]);
+        }
       else
         {
-          jitterlisp_print_string (cp, cps, NOATTR);
-          jitterlisp_print_string (cp, cps, ERRORATTR);
+          jitterlisp_print_decoration (cp, cps, NOATTR);
+          jitterlisp_print_decoration (cp, cps, ERRORATTR);
           jitterlisp_print_string (cp, cps, "#<invalid-unique-object:");
           jitterlisp_print_long_long (cp, cps, index);
           jitterlisp_print_char (cp, cps, '>');
         }
-      jitterlisp_print_string (cp, cps, NOATTR);
+      jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_CHARACTER(o))
     {
-      jitterlisp_print_string (cp, cps, CHARACTERATTR);
+      jitterlisp_print_decoration (cp, cps, CHARACTERATTR);
       jitter_int c = JITTERLISP_CHARACTER_DECODE(o);
       switch (c)
         {
@@ -270,35 +284,36 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
           jitterlisp_print_char (cp, cps, c);
           break;
         }
-      jitterlisp_print_string (cp, cps, NOATTR);
+      jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_SYMBOL(o))
     {
       struct jitterlisp_symbol *s = JITTERLISP_SYMBOL_DECODE(o);
       if (s->name_or_NULL != NULL)
         {
-          jitterlisp_print_string (cp, cps, INTERNEDSYMBOLATTR);
+          jitterlisp_print_decoration (cp, cps, INTERNEDSYMBOLATTR);
           jitterlisp_print_string (cp, cps, s->name_or_NULL);
         }
       else
         {
-          jitterlisp_print_string (cp, cps, UNINTERNEDSYMBOLATTR);
+          jitterlisp_print_decoration (cp, cps, UNINTERNEDSYMBOLATTR);
           jitterlisp_print_string (cp, cps, "#<uninterned-symbol>");
         }
-      jitterlisp_print_string (cp, cps, NOATTR);
+      jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_CONS(o))
     {
       struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
       jitterlisp_object car = c->car;
       jitterlisp_object cdr = c->cdr;
-      jitterlisp_print_string (cp, cps, CONSATTR);
+      jitterlisp_print_decoration (cp, cps, CONSATTR);
       jitterlisp_print_char (cp, cps, '(');
+      jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print (cp, cps, car);
       jitterlisp_print_cdr (cp, cps, cdr);
-      jitterlisp_print_string (cp, cps, CONSATTR);
+      jitterlisp_print_decoration (cp, cps, CONSATTR);
       jitterlisp_print_char (cp, cps, ')');
-      jitterlisp_print_string (cp, cps, NOATTR);
+      jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else
     {

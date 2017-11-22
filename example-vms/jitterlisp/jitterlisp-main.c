@@ -43,37 +43,22 @@
 /* Command line handling using argp.
  * ************************************************************************** */
 
-struct jitterlisp_command_line
-{
-  /* Non-false iff the output needs to be verbose. */
-  bool verbose;
-
-  /* Some s-expressions provided from the command line to evaluate, or NULL. */
-  char *sexps_string;
-
-  /* A dynamic buffer with char * elements, each containing a filename.
-     Possibly empty. */
-  struct jitter_dynamic_buffer input_file_path_names;
-
-  /* Provide an interactive REPL. */
-  bool repl;
-};
-
 /* An enumerate to represent options with no short version.  These
    are options negating some other option: any negative option serves
    to reset a setting to its default value. */
 enum jitterlisp_negative_option
   {
     jitterlisp_negative_option_no_verbose = -1,
-    jitterlisp_negative_option_repl = -2
+    jitterlisp_negative_option_repl = -2,
+    jitterlisp_negative_option_no_colorize = -3
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum jitterlisp_negative_option . */
 enum jitterlisp_long_only_option
   {
-    jitterlisp_long_only_option_no_repl = -3,
-    jitterlisp_long_only_option_dump_version = -4
+    jitterlisp_long_only_option_no_repl = -4,
+    jitterlisp_long_only_option_dump_version = -5
   };
 
 /* Command-line option specification. */
@@ -97,10 +82,14 @@ static struct argp_option jitterlisp_option_specification[] =
 
    /* Debugging options. */
    {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 30},
+   {"colorize", 'c', NULL, 0,
+    "Colorize s-expressions with ANSI terminal escape sequences" },
    {"verbose", 'v', NULL, 0,
     "Show progress information at run time" },
    /* Debugging negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 31},
+   {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
+    "Don't colorize s-expressions (default)"},
    {"no-verbose", jitterlisp_negative_option_no_verbose, NULL, 0,
     "Don't show progress information (default)"},
 
@@ -145,42 +134,42 @@ static struct argp argp =
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
-  struct jitterlisp_command_line *cl = state->input;
+  /* Because of how parse_opt is called sp points to jitterlisp_settings . */
+  struct jitterlisp_settings *sp = state->input;
   switch (key)
     {
     /* Command-line initialization. */
     case ARGP_KEY_INIT:
-      /* Set sensible default values. */
-      cl->verbose = false;
-      jitter_dynamic_buffer_initialize (& cl->input_file_path_names);
-      cl->sexps_string = NULL;
-      cl->repl = true;
+      /* Nothing particular to do, at this point.. */
       break;
 
     /* File options. */
     case jitterlisp_long_only_option_no_repl:
     case 'q':
-      cl->repl = false;
+      sp->repl = false;
       break;
 
     /* File negative options. */
     case jitterlisp_negative_option_repl:
-      cl->repl = true;
+      sp->repl = true;
       break;
 
     /* Command-line s-expression evaluation. */
     case 'e':
-      cl->sexps_string = arg;
+      sp->sexps_string = arg;
       break;
 
     /* Debugging options. */
+    case 'c':
+      sp->colorize = true;
+      break;
     case 'v':
-      cl->verbose = true;
+      sp->verbose = true;
       break;
 
     /* Debugging negative options. */
     case jitterlisp_negative_option_no_verbose:
-      cl->verbose = false;
+      sp->verbose = false;
       break;
 
     /* Scripting options. */
@@ -190,7 +179,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
     /* Non-option arguments. */
     case ARGP_KEY_ARG:
-      jitter_dynamic_buffer_push (& cl->input_file_path_names, & arg,
+      jitter_dynamic_buffer_push (& sp->input_file_path_names, & arg,
                                   sizeof (char *));
       break;
 
@@ -813,32 +802,34 @@ jitterlisp_repl (void)
 int
 main (int argc, char **argv)
 {
-  /* Parse our arguments; cl will contain the information provided in the
-     command line. */
-  struct jitterlisp_command_line cl;
-  argp_parse (& argp, argc, argv,
-              0, 0, & cl);
-
-  /* Initialize JitterLisp. */
+  /* Initialize JitterLisp.  This initializes the settings data structure
+     with default values, so it must be called before argp_parse , which
+     may change those. */
   jitterlisp_initialize ();
+
+  /* Parse our arguments; jitterlisp_settings will contain the information
+     provided in the command line.  We also define the "settings pointer"
+     sp as a pointer to it, for convenience. */
+  argp_parse (& argp, argc, argv, 0, 0, & jitterlisp_settings);
+  struct jitterlisp_settings * const sp = & jitterlisp_settings;
 
   /* Run the input files.  The final free just serves to placate Valgrind and
      not to distract me from any actual problem. */
   size_t input_file_path_name_no
-    = cl.input_file_path_names.used_size / sizeof (char *);
+    = sp->input_file_path_names.used_size / sizeof (char *);
   char **input_file_path_names =
-    jitter_dynamic_buffer_extract (& cl.input_file_path_names);
+    jitter_dynamic_buffer_extract (& sp->input_file_path_names);
   int i;
   for (i = 0; i < input_file_path_name_no; i ++)
     jitterlisp_run_from_named_file (input_file_path_names [i]);
   free (input_file_path_names);
 
   /* Evaluate s-expressions from the command line, if any. */
-  if (cl.sexps_string != NULL)
-    jitterlisp_run_from_string (cl.sexps_string);
+  if (sp->sexps_string != NULL)
+    jitterlisp_run_from_string (sp->sexps_string);
 
   /* Run the REPL, if enabled. */
-  if (cl.repl)
+  if (sp->repl)
     jitterlisp_repl ();
 
   /* Finalize JitterLisp. */

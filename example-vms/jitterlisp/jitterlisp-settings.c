@@ -1,4 +1,4 @@
-/* Jittery Lisp: main file.
+/* Jittery Lisp: global settings.
 
    Copyright (C) 2017 Luca Saiu
    Written by Luca Saiu
@@ -20,23 +20,26 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-#include "jitterlisp.h"
+#include "jitterlisp-settings.h"
+
+
+
+
+/* JitterLisp global settings.
+ * ************************************************************************** */
+
+/* The one global variable we define here.  This is initialized by the argp
+   parser in main. */
+struct jitterlisp_settings
+jitterlisp_settings;
 
 void
-jitterlisp_initialize (void)
+jitterlisp_settings_set_default (void)
 {
-  /* Provide default values for the global settings. */
-  jitterlisp_settings_set_default ();
-
-  /* Initialize every subsystem. */
-  jitterlisp_memory_initialize ();
-  jitterlisp_sexpression_initialize ();
-}
-
-void
-jitterlisp_finalize (void)
-{
-  /* Finalize every subsystem, in the opposite order of initialization. */
-  jitterlisp_sexpression_finalize ();
-  jitterlisp_memory_finalize ();
+  jitterlisp_settings.verbose = false;
+  jitterlisp_settings.colorize = false;
+  jitter_dynamic_buffer_initialize
+     (& jitterlisp_settings.input_file_path_names);
+  jitterlisp_settings.sexps_string = NULL;
+  jitterlisp_settings.repl = true;
 }

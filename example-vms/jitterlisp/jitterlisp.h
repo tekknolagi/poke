@@ -29,11 +29,12 @@
 
 /* Include the other JitterLisp headers, so that the user has to deal with this
    one only. */
+#include "jitterlisp-config.h"
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-allocator.h"
 #include "jitterlisp-reader.h"
 #include "jitterlisp-printer.h"
-#include "jitterlisp-config.h"
+#include "jitterlisp-settings.h"
 
 
 
