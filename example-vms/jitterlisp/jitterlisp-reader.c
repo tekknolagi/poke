@@ -40,9 +40,10 @@
  * ************************************************************************** */
 
 int
-jitterlisp_string_char_reader_function (void *const_char_star_star)
+jitterlisp_string_char_reader_function
+   (jitterlisp_char_reader_state *const_char_star_star)
 {
-  const char **pointer_to_string_pointer = const_char_star_star;
+  const char **pointer_to_string_pointer = (const char **) const_char_star_star;
   char res;
 
   /* If we're at the end already return EOF and don't increment the pointer, out
@@ -59,9 +60,10 @@ jitterlisp_string_char_reader_function (void *const_char_star_star)
 }
 
 int
-jitterlisp_stream_char_reader_function (void *file_star)
+jitterlisp_stream_char_reader_function
+   (jitterlisp_char_reader_state *file_star_star)
 {
-  FILE *f = file_star;
+  FILE *f = * (FILE **) file_star_star;
   return fgetc (f);
 }
 
@@ -90,10 +92,10 @@ struct jitterlisp_scanner_state
   struct jitter_dynamic_buffer token_text;
 
   /* The char-reader function. */
-  jitterlisp_char_reader_function char_reader;
+  jitterlisp_char_reader_function char_reader_function;
 
   /* The char-reader state. */
-  void *char_reader_state;
+  jitterlisp_char_reader_state char_reader_state;
 };
 
 /* Read the next character of the input in the pointed sstate, setting the
@@ -103,7 +105,8 @@ struct jitterlisp_scanner_state
 static void
 jitterlisp_scanner_advance (struct jitterlisp_scanner_state *sstate)
 {
-  sstate->lookahead = sstate->char_reader (sstate->char_reader_state);
+  sstate->lookahead
+    = sstate->char_reader_function (& sstate->char_reader_state);
 
   /* Advance row and column indices. */
   if (sstate->lookahead == '\n')
@@ -152,20 +155,21 @@ jitterlisp_scanner_clear_token_text (struct jitterlisp_scanner_state *sstate)
 
 /* Initialize the pointed scanner state using the given char-reader.  Notice
    that the lookahead character is set immediately (to EOF if the input is
-   empty), so that a scanner doesn't need to deal with uninitialized data. */
+   empty), so that a scanner doesn't ever need to deal with uninitialized
+   data.  The consequence of this is this function will read the first
+   token before returning, which potentially makes it a blocking operation. */
 static void
-jitterlisp_initialize_scanner_state
-   (struct jitterlisp_scanner_state *sstate,
-    jitterlisp_char_reader_function char_reader,
-    void *char_reader_state)
+jitterlisp_initialize_scanner_state (struct jitterlisp_scanner_state *sstate,
+                                     jitterlisp_char_reader_function crf,
+                                     jitterlisp_char_reader_state crs)
 {
   /* Initialize the dynamic buffer.  It will contains zero characters at the
      beginning. */
   jitter_dynamic_buffer_initialize (& sstate->token_text);
 
   /* Initialize the char reader. */
-  sstate->char_reader = char_reader;
-  sstate->char_reader_state = char_reader_state;
+  sstate->char_reader_function = crf;
+  sstate->char_reader_state = crs;
 
   /* Initialize input location.  Here I'm following the Emacs convention, with
      1-based row indices and 0-based column indices. */
@@ -467,15 +471,18 @@ jitterlisp_parser_advance (struct jitterlisp_parser_state *pstate)
 }
 
 /* Initialize the pointed parser state, using the given char reader.  This also
-   initializes the scanner state contained in the parser state. */
+   initializes the scanner state contained in the parser state.
+   Notice that, like jitterlisp_initialize_scanner_state , this function
+   doesn't terminate until the first token is read, which makes it a potentially
+   blocking operation. */
 static void
 jitterlisp_initialize_parser_state (struct jitterlisp_parser_state *pstate,
                                     jitterlisp_char_reader_function char_reader,
-                                    void *char_reader_state)
+                                    jitterlisp_char_reader_state crs)
 {
   /* Initialize the scanner state. */
-  jitterlisp_initialize_scanner_state (& pstate->scanner_state, char_reader,
-                                       char_reader_state);
+  jitterlisp_initialize_scanner_state (& pstate->scanner_state,
+                                       char_reader, crs);
 
   /* Scan the first token.  This will set the pstate->lookahead_token . */
   jitterlisp_parser_advance (pstate);
@@ -705,13 +712,12 @@ struct jitterlisp_reader_state
 };
 
 struct jitterlisp_reader_state*
-jitterlisp_make_reader_state (jitterlisp_char_reader_function char_reader,
-                              void *char_reader_state)
+jitterlisp_make_reader_state (jitterlisp_char_reader_function crf,
+                              jitterlisp_char_reader_state crs)
 {
   struct jitterlisp_reader_state *res
     = jitter_xmalloc (sizeof (struct jitterlisp_reader_state));
-  jitterlisp_initialize_parser_state (& res->pstate,
-                                      char_reader, char_reader_state);
+  jitterlisp_initialize_parser_state (& res->pstate, crf, crs);
   return res;
 }
 
@@ -731,14 +737,16 @@ struct jitterlisp_reader_state*
 jitterlisp_make_stream_reader_state (FILE *input)
 {
   return jitterlisp_make_reader_state (jitterlisp_stream_char_reader_function,
-                                       input);
+                                       ((jitterlisp_char_reader_state)
+                                        input));
 }
 
 struct jitterlisp_reader_state*
 jitterlisp_make_string_reader_state (const char *string)
 {
   return jitterlisp_make_reader_state (jitterlisp_string_char_reader_function,
-                                       & string);
+                                       ((jitterlisp_char_reader_state)
+                                        string));
 }
 
 

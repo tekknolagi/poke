@@ -36,10 +36,17 @@
 /* This API makes it easy to use the same functions for reading from a stream,
    from a string in memory or from some other source defined by the user. */
 
+/* This type is purely conventional: the actual char-reader state type depends
+   on the char-reader function, which receives a pointer to a char-reader
+   state which it will cast to the appropriate pointer type. */
+typedef void * jitterlisp_char_reader_state;
+
 /* A char-reading function, at every call, returns either a valid char from the
    input or EOF.  The exact nature of the state depends on the reader function,
-   but the function will update it after reading each character. */
-typedef int (*jitterlisp_char_reader_function) (void *reader_state);
+   but the function will update the pointed state after reading each
+   character. */
+typedef int (*jitterlisp_char_reader_function)
+   (jitterlisp_char_reader_state *reader_state_pointer);
 
 
 
@@ -48,22 +55,28 @@ typedef int (*jitterlisp_char_reader_function) (void *reader_state);
  * ************************************************************************** */
 
 /* A char-reader function reading from a '\0'-terminated string.  The argument,
-   declared as void * for compatibility with jitterlisp_char_reader_function ,
-   is actually of type const char ** .  The function increments the pointed
-   const char * pointer after reading each character, unless it has reached the
-   terminator already.
-   The user can destroy the pointed string after reading is over. */
+   declared as jitterlisp_char_reader_state * for compatibility with
+   jitterlisp_char_reader_function , is actually of type const char ** .  The
+   function increments the pointed const char * pointer after reading each
+   character, unless it has reached the terminator already.
+   The user can destroy the pointed string after reading is over; in that case,
+   however, it's her responsibility to keep a pointer to the original beginning
+   of the string: at every character read the pointer-to-pointer-to-char which
+   is passed as the char-reader state will be dereferenced, and the pointed
+   pointer-to-char advanced. */
 int
-jitterlisp_string_char_reader_function (void *const_char_star_star)
+jitterlisp_string_char_reader_function
+   (jitterlisp_char_reader_state *file_star_star)
   __attribute__ ((nonnull (1)));
 
-/* A char-reader function reading from a FILE * input stream.  The argument, declared
-   as void * for compatibility with jitterlisp_char_reader_function , is
-   actually of type FILE * , and must be open for reading at at the correct
-   position.
-   After reading is over the caller may close the stream. */
+/* A char-reader function reading from a FILE * input stream.  The argument,
+   declared as jitterlisp_char_reader_state * for compatibility with
+   jitterlisp_char_reader_function , is actually of type FILE ** (two levels of
+   pointers), and the stream must be open for reading at at the correct
+   position.  After reading is over the caller may close the stream. */
 int
-jitterlisp_stream_char_reader_function (void *file_star)
+jitterlisp_stream_char_reader_function
+   (jitterlisp_char_reader_state *file_star_star)
   __attribute__ ((nonnull (1)));
 
 
@@ -81,10 +94,20 @@ jitterlisp_stream_char_reader_function (void *file_star)
    this struct. */
 struct jitterlisp_reader_state;
 
-/* Make a new reader state from the given char reader. */
+/* Return a pointer to a new reader state made from the given char-reader
+   function and the given char-reader state.
+
+   Notice that the char-reader state is not pointed, differently from the
+   argument in jitterlisp_char_reader_function : the char-reader state here is
+   *copied*, and then a pointer to it is passed to
+   jitterlisp_char_reader_function .
+
+   This function needs to read the first token, and therefore is potentially
+   blocking. */
 struct jitterlisp_reader_state*
-jitterlisp_make_reader_state (jitterlisp_char_reader_function char_reader,
-                              void *char_reader_state)
+jitterlisp_make_reader_state
+   (jitterlisp_char_reader_function char_reader,
+    jitterlisp_char_reader_state char_reader_state)
   __attribute__ ((nonnull (1, 2), returns_nonnull));
 
 /* Destroy the given reader state, freeing up its resources.  Calling this does
@@ -105,13 +128,17 @@ jitterlisp_destroy_reader_state (struct jitterlisp_reader_state *rs)
    descriptors, streams or string memory. */
 
 /* Return a pointer to a fresh reader state reading from the pointed stream,
-   which must be open for reading. */
+   which must be open for reading.
+   This function needs to read the first token, and therefore is potentially
+   blocking. */
 struct jitterlisp_reader_state*
 jitterlisp_make_stream_reader_state (FILE *input)
   __attribute__ ((nonnull (1), returns_nonnull));
 
 /* Return a pointer to a fresh reader state reading from the pointed
-   '\0'-terminated string. */
+   '\0'-terminated string.
+   This function needs to read the first token, and therefore is potentially
+   blocking. */
 struct jitterlisp_reader_state*
 jitterlisp_make_string_reader_state (const char *string)
   __attribute__ ((nonnull (1), returns_nonnull));

@@ -694,7 +694,7 @@ main (int argc, char **argv)
   /* An s-expression. */
   jitterlisp_object form;
 
-#if 0
+#if 1
   /* Read from the input file. */
   printf ("Reading from input...\n");
   struct jitterlisp_reader_state *rstate
@@ -713,7 +713,8 @@ main (int argc, char **argv)
   /* Evaluate s-expressions from the command line. */
   if (cl.sexps_string != NULL)
     {
-      printf ("The command line eval string is \"%s\".\n", cl.sexps_string);
+      printf ("The command line eval string is \"%s\" at %p.\n",
+              cl.sexps_string, cl.sexps_string);
       struct jitterlisp_reader_state *rstate
         = jitterlisp_make_string_reader_state (cl.sexps_string);
       while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
