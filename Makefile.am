@@ -1048,6 +1048,9 @@ endif # JITTER_HAVE_BOEHM_GC
 # Examples for JitterLisp.  There is none yet.
 EXTRA_DIST +=
 
+# Other files for JitterLisp.
+EXTRA_DIST += example-vms/jitterlisp/THANKS
+
 
 # Brainfuck example VM.
 # ################################################################
