@@ -594,7 +594,7 @@ jitterlisp_prefix_sexpression (const char *prefix_symbol_name,
             | prefix <sexp>  { if is_eof ($2)
                                  error ();
                                else
-                                 $$ = with-prefix (prefix, $2); }
+                                 $$ = with-prefix ($1, $2); }
             | ( <cdr>        { $$ = $1; }
 
    <cdr>  ::= #<eof>         { error (); }
