@@ -168,6 +168,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
 
     /* Debugging negative options. */
+    case jitterlisp_negative_option_no_colorize:
+      sp->colorize = false;
+      break;
     case jitterlisp_negative_option_no_verbose:
       sp->verbose = false;
       break;
