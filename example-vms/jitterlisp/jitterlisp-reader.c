@@ -229,6 +229,11 @@ enum jitterlisp_scanner_dfa_state
 /* A token identifier as recognized by the scanner. */
 enum jitterlisp_token
   {
+    /* This case is only used as an intentionally invalid value at
+       initialization, to make sure that we advance instead of using a
+       non-existent lookahead. */
+    jitterlisp_token_invalid,
+
     jitterlisp_token_open,
     jitterlisp_token_close,
     jitterlisp_token_dot,
@@ -492,6 +497,7 @@ jitterlisp_initialize_parser_state (struct jitterlisp_parser_state *pstate,
      Unfortunately that alternative is unacceptable for an interactive REPL
      where we want to recognize a nonterminal as soon as it ends, with one
      lookahead *character* instead of one lookahead token. */
+  pstate->lookahead_token = jitterlisp_token_invalid;
 }
 
 /* Finalize the pointed parser state, using the given char reader.  This also
@@ -598,7 +604,11 @@ jitterlisp_prefix_sexpression (const char *prefix_symbol_name,
    That would work, except for one big flaw: in order to recognize the end of a
    nonterminal we would always need to have the *next* token available.
    Unfortunately that alternative would break the REPL, making it react to the
-   each s-expression in a delayed fashion, only when the next one begins. */
+   each s-expression in a delayed fashion, only when the next one begins.
+
+   The first parsing function to be called must be advancing.  The lookahead
+   token is initialized as invalid in each parser state out of defensiveness,
+   to make parsing fail if a non-advancing function is used first. */
 
 /* Parse the next s-expression without advancing first: the current lookahead
    will be the first token of the result. */
@@ -610,8 +620,8 @@ jitterlisp_parse_sexp_non_advancing (struct jitterlisp_parser_state *pstate);
 static jitterlisp_object
 jitterlisp_parse_cdr_non_advancing (struct jitterlisp_parser_state *pstate);
 
-/* Advance the parser (to have the next token as the lookahead) and then parse
-   the next s-expression. */
+/* Advance the parser (to have the next token in the input as the lookahead) and
+   then parse the next s-expression. */
 static jitterlisp_object
 jitterlisp_parse_sexp (struct jitterlisp_parser_state *pstate)
 {
