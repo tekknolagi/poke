@@ -106,7 +106,7 @@ jitter_readline (char *prompt_or_NULL)
     }
 
   /* We have an actual string to return.  Terminate it. */
-  char terminator = '\0';
+  const char terminator = '\0';
   jitter_dynamic_buffer_push (& db, & terminator, 1);
 
   /* Return the dynamic buffer content, trimmed to only use the required
