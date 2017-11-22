@@ -138,8 +138,8 @@ jitterlisp_memory_finalize (void)
 {
   /* Finalize the symbol table, destroying every interned symbol in the
      process. */
-  jitter_hash_finalize (& jitterlisp_symbol_table, NULL,
-                        jitterlisp_destroy_interned_symbol);
+  jitter_string_hash_finalize (& jitterlisp_symbol_table,
+                               jitterlisp_destroy_interned_symbol);
 
   /* Finalize the garbage-collected heap. */
 #if   defined(JITTERLISP_LITTER)
