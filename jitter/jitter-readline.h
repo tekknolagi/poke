@@ -38,7 +38,7 @@
    When using the actual GNU Readline in the implementation also add the
    returned line to the history, unless the line is empty. */
 char *
-jitter_readline (char *prompt_or_NULL);
+jitter_readline (const char *prompt_or_NULL);
 
 
 #endif // #ifndef JITTER_READLINE_H_

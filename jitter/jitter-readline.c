@@ -36,7 +36,7 @@
 # include <readline/history.h>
 
 char *
-jitter_readline (char *prompt_or_NULL)
+jitter_readline (const char *prompt_or_NULL)
 {
   /* Get a line from the terminal. */
   char *res = readline (prompt_or_NULL);
@@ -63,7 +63,7 @@ jitter_readline (char *prompt_or_NULL)
 # include "jitter-dynamic-buffer.h"
 
 char *
-jitter_readline (char *prompt_or_NULL)
+jitter_readline (const char *prompt_or_NULL)
 {
   /* Show the prompt, if any. */
   if (prompt_or_NULL != NULL)
