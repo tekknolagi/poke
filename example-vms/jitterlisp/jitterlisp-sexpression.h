@@ -40,7 +40,7 @@
 
 
 
-/* Multiple-evaluation warning.
+/* Correctness and performance caveats.
  * ************************************************************************** */
 
 /* Some of the macro defined in this header may evaluate their arguments
@@ -49,7 +49,16 @@
    relied upon.
 
    The user should not pass C expressions with side effects as arguments to the
-   macros defined here. */
+   macros defined here.
+
+   Tag and sub-tag configurations, tag lengths and sub-tag lengths should be
+   compile-time constants.  Everything should work even if those values were not
+   known at compile time but there would be a considerable performance impact.
+
+   Like Jitter-generated code, this code is designed to be *always* compiled
+   with optimization; in particular some macros may expand to C conditional
+   expressions with compile-time constants as conditions, meant to reduce to
+   just one of the two branches at compile time. */
 
 
 
