@@ -153,7 +153,7 @@ jitterlisp_make_string_reader_state (const char *string)
    there is nothing more to read. */
 jitterlisp_object
 jitterlisp_read (struct jitterlisp_reader_state *rs)
-  __attribute__ ((nonnull (1))); /* I omit nonnull (2) just for generality. */
+  __attribute__ ((nonnull (1)));
 
 
 #endif // #ifndef JITTERLISP_READER_H_
