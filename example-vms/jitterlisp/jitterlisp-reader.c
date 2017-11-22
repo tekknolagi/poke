@@ -472,20 +472,26 @@ jitterlisp_parser_advance (struct jitterlisp_parser_state *pstate)
 
 /* Initialize the pointed parser state, using the given char reader.  This also
    initializes the scanner state contained in the parser state.
-   Notice that, like jitterlisp_initialize_scanner_state , this function
-   doesn't terminate until the first token is read, which makes it a potentially
-   blocking operation. */
+   Notice that this function calls jitterlisp_initialize_scanner_state , which
+   doesn't terminate until the first character is read, making this function
+   blocking. */
 static void
 jitterlisp_initialize_parser_state (struct jitterlisp_parser_state *pstate,
                                     jitterlisp_char_reader_function char_reader,
                                     jitterlisp_char_reader_state crs)
 {
-  /* Initialize the scanner state. */
+  /* Initialize the scanner state.  Notice that this reads the first *character*
+     (not token) as the scanner lookahead, which may be a blocking operation. */
   jitterlisp_initialize_scanner_state (& pstate->scanner_state,
                                        char_reader, crs);
 
-  /* Scan the first token.  This will set the pstate->lookahead_token . */
-  jitterlisp_parser_advance (pstate);
+  /* Calling jitterlisp_parser_advance (pstate) here would make the parser
+     slightly more intuitive, and also ensure that pstate->lookahead_token
+     is always set: see the comments below about non-advancing parsing
+     functions.
+     Unfortunately that alternative is unacceptable for an interactive REPL
+     where we want to recognize a nonterminal as soon as it ends, with one
+     lookahead *character* instead of one lookahead token. */
 }
 
 /* Finalize the pointed parser state, using the given char reader.  This also
@@ -583,10 +589,51 @@ jitterlisp_prefix_sexpression (const char *prefix_symbol_name,
 
 
 
+/* Advancing and non-advancing parsing functions.
+ * ************************************************************************** */
+
+/* It would be more intuitive not to have both "advancing" and "non-advancing"
+   parser functions; each parsing function could advance just after recognizing
+   each token.
+   That would work, except for one big flaw: in order to recognize the end of a
+   nonterminal we would always need to have the *next* token available.
+   Unfortunately that alternative would break the REPL, making it react to the
+   each s-expression in a delayed fashion, only when the next one begins. */
+
+/* Parse the next s-expression without advancing first: the current lookahead
+   will be the first token of the result. */
+static jitterlisp_object
+jitterlisp_parse_sexp_non_advancing (struct jitterlisp_parser_state *pstate);
+
+/* Parse the next cdr without advancing first: the current lookahead will be the
+   first token of the result. */
+static jitterlisp_object
+jitterlisp_parse_cdr_non_advancing (struct jitterlisp_parser_state *pstate);
+
+/* Advance the parser (to have the next token as the lookahead) and then parse
+   the next s-expression. */
+static jitterlisp_object
+jitterlisp_parse_sexp (struct jitterlisp_parser_state *pstate)
+{
+  jitterlisp_parser_advance (pstate);
+  return jitterlisp_parse_sexp_non_advancing (pstate);
+}
+
+/* Advance the parser and then parse the next cdr. */
+static jitterlisp_object
+jitterlisp_parse_cdr (struct jitterlisp_parser_state *pstate)
+{
+  jitterlisp_parser_advance (pstate);
+  return jitterlisp_parse_cdr_non_advancing (pstate);
+}
+
+
+
+
 /* S-expression parser.
  * ************************************************************************** */
 
-/* The two mutually recursive functions below are a hand-translation of the
+/* The mutually recursive functions below are a hand-translation of the
    following attributed grammar:
 
    <sexp> ::= #<eof>         { $$ = eof; }
@@ -607,35 +654,26 @@ jitterlisp_prefix_sexpression (const char *prefix_symbol_name,
    make the grammar, and therefore the parser, slightly more complicated. */
 
 static jitterlisp_object
-jitterlisp_parse_cdr (struct jitterlisp_parser_state *pstate);
-
-static jitterlisp_object
-jitterlisp_parse_sexp (struct jitterlisp_parser_state *pstate)
+jitterlisp_parse_sexp_non_advancing (struct jitterlisp_parser_state *pstate)
 {
   switch (pstate->lookahead_token)
     {
     case jitterlisp_token_eof:
-      /* Do not advance in this case. */
       return JITTERLISP_EOF;
     case jitterlisp_token_false:
-      jitterlisp_parser_advance (pstate);
       return JITTERLISP_FALSE;
     case jitterlisp_token_true:
-      jitterlisp_parser_advance (pstate);
       return JITTERLISP_TRUE;
     case jitterlisp_token_fixnum:
       {
-        jitter_long_long i
-          = jitter_string_to_long_long_unsafe
-               (jitterlisp_parser_token_text (pstate));
-        jitterlisp_parser_advance (pstate);
+        jitter_long_long i = jitter_string_to_long_long_unsafe
+                               (jitterlisp_parser_token_text (pstate));
         return JITTERLISP_FIXNUM_ENCODE(i);
       }
     case jitterlisp_token_symbol:
       {
         const char *name = jitterlisp_parser_token_text (pstate);
         struct jitterlisp_symbol *s = jitterlisp_symbol_make_interned (name);
-        jitterlisp_parser_advance (pstate);
         return JITTERLISP_SYMBOL_ENCODE(s);
       }
 
@@ -644,7 +682,6 @@ jitterlisp_parse_sexp (struct jitterlisp_parser_state *pstate)
         const char *prefix_name = jitterlisp_parser_token_text (pstate);
         const char *prefix_symbol_name
           = jitterlisp_prefix_name_to_symbol_name (prefix_name);
-        jitterlisp_parser_advance (pstate);
         jitterlisp_object se = jitterlisp_parse_sexp (pstate);
         if (JITTERLISP_IS_EOF(se))
           jitterlisp_parse_error (pstate, "prefix at EOF");
@@ -653,7 +690,6 @@ jitterlisp_parse_sexp (struct jitterlisp_parser_state *pstate)
       }
 
     case jitterlisp_token_open:
-      jitterlisp_parser_advance (pstate);
       return jitterlisp_parse_cdr (pstate);
 
     default:
@@ -662,7 +698,7 @@ jitterlisp_parse_sexp (struct jitterlisp_parser_state *pstate)
 }
 
 static jitterlisp_object
-jitterlisp_parse_cdr (struct jitterlisp_parser_state *pstate)
+jitterlisp_parse_cdr_non_advancing (struct jitterlisp_parser_state *pstate)
 {
   switch (pstate->lookahead_token)
     {
@@ -670,25 +706,21 @@ jitterlisp_parse_cdr (struct jitterlisp_parser_state *pstate)
       jitterlisp_parse_error (pstate, "EOF after open parens");
 
     case jitterlisp_token_close:
-      jitterlisp_parser_advance (pstate); /* Skip ) . */
       return JITTERLISP_EMPTY_LIST;
 
     case jitterlisp_token_dot:
       {
-        jitterlisp_parser_advance (pstate); /* Skip . */
         jitterlisp_object res = jitterlisp_parse_sexp (pstate);
+        jitterlisp_parser_advance (pstate); /* Check for ) */
         if (pstate->lookahead_token == jitterlisp_token_close)
-          {
-            jitterlisp_parser_advance (pstate); /* Skip ) . */
-            return res;
-          }
+          return res;
         else
           jitterlisp_parse_error (pstate, "expected )");
       }
 
     default:
       {
-        jitterlisp_object car = jitterlisp_parse_sexp (pstate);
+        jitterlisp_object car = jitterlisp_parse_sexp_non_advancing (pstate);
         jitterlisp_object cdr = jitterlisp_parse_cdr (pstate);
         return jitterlisp_cons(car, cdr);
       }
