@@ -719,19 +719,96 @@ jitterlisp_run_from_named_file (const char *path_name)
 
 
 
-/* Main function.
+/* REPL.
  * ************************************************************************** */
 
-void
-repl (void)
+struct jitterlisp_readline_char_reader_state
 {
-  char *line;
-  while ((line = jitter_readline ("foo> ")) != NULL)
+  const char *prompt;
+  bool got_EOF;
+  char *last_line_or_NULL;
+  char *next_char_p;
+};
+
+static int
+jitterlisp_readline_char_reader_function (jitterlisp_char_reader_state *crspp)
+{
+  struct jitterlisp_readline_char_reader_state *crsp
+    = * (struct jitterlisp_readline_char_reader_state **) crspp;
+
+  /* If we already saw EOF refuse to read any more lines, and return EOF. */
+  if (crsp->got_EOF)
     {
-      printf ("You wrote: \"%s\"\n", line);
-      free (line);
+      printf ("[returning a previously found EOF]\n");
+      return EOF;
     }
+
+  /* If we haven't got a line read one... */
+  if (crsp->last_line_or_NULL == NULL)
+    {
+      printf ("[we need to read a line...]\n");
+      /* ...But if the line we receive from readline is NULL we've found EOF. */
+      if ((crsp->last_line_or_NULL = jitter_readline (crsp->prompt))
+          == NULL)
+        {
+          printf ("  [returning a just-found EOF]\n");
+          crsp->got_EOF = true;
+          return EOF;
+        }
+      printf ("  [it was a non-EOF line]\n");
+      /* If we haven't returned yet then we have a non-NULL line: set the next
+         character pointer to its beginning, and go on. */
+      crsp->next_char_p = crsp->last_line_or_NULL;
+    }
+
+  /* If we arrived here then we have an actual line to read from, and
+     crsp->next_char_p points within it. */
+
+  /* Does crsp->next_char_p point to a '\0' character?  If so, we have to
+     interpret that as a '\n' character (which readline strips off), and prepare
+     to read a new entire line at the next call. */
+  if (* crsp->next_char_p == '\0')
+    {
+      printf ("[returning newline]\n");
+      free (crsp->last_line_or_NULL);
+      crsp->last_line_or_NULL = NULL;
+      return '\n';
+    }
+
+  /* If we arrived here then the next character is ordinary. */
+  printf ("[returning ordinary character '%c']\n", * crsp->next_char_p);
+  return * (crsp->next_char_p ++);
 }
+
+void
+jitterlisp_repl (void)
+{
+  printf ("Running the REPL...\n");
+  /* Initialize a readline state data structure. */
+  struct jitterlisp_readline_char_reader_state crstate;
+  crstate.prompt = "jitterlisp> ";
+  crstate.last_line_or_NULL = NULL;
+  crstate.got_EOF = false;
+  crstate.next_char_p = NULL;
+
+  /* Use the readline state data structure and the readline char-reader
+     function as a reader state.  Read forms from there until we get to
+     #<eof>, and run each one. */
+  struct jitterlisp_reader_state *rstate
+    = jitterlisp_make_reader_state (jitterlisp_readline_char_reader_function,
+                                    & crstate);
+  jitterlisp_object form;
+  while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
+    jitterlisp_run (form);
+  jitterlisp_destroy_reader_state (rstate);
+  printf ("...Done running the REPL.\n");
+}
+
+
+
+
+/* Main function.
+ * ************************************************************************** */
 
 int
 main (int argc, char **argv)
@@ -745,10 +822,8 @@ main (int argc, char **argv)
   /* Initialize JitterLisp. */
   jitterlisp_initialize ();
 
-  if (cl.repl)
-    printf ("WARNING: REPL not implemented yet.\n");
-
-  /* Run from the input files. */
+  /* Run the input files.  The final free just serves to placate Valgrind and
+     not to distract me from any actual problem. */
   size_t input_file_path_name_no
     = cl.input_file_path_names.used_size / sizeof (char *);
   char **input_file_path_names =
@@ -758,9 +833,13 @@ main (int argc, char **argv)
     jitterlisp_run_from_named_file (input_file_path_names [i]);
   free (input_file_path_names);
 
-  /* Evaluate s-expressions from the command line. */
+  /* Evaluate s-expressions from the command line, if any. */
   if (cl.sexps_string != NULL)
     jitterlisp_run_from_string (cl.sexps_string);
+
+  /* Run the REPL, if enabled. */
+  if (cl.repl)
+    jitterlisp_repl ();
 
   /* Finalize JitterLisp. */
   jitterlisp_finalize ();
