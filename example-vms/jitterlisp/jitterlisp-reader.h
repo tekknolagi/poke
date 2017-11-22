@@ -104,6 +104,7 @@ struct jitterlisp_reader_state;
 
    This function needs to read the first token, and therefore is potentially
    blocking. */
+// FIXME: make it non-blocking.
 struct jitterlisp_reader_state*
 jitterlisp_make_reader_state
    (jitterlisp_char_reader_function char_reader,
@@ -131,6 +132,7 @@ jitterlisp_destroy_reader_state (struct jitterlisp_reader_state *rs)
    which must be open for reading.
    This function needs to read the first token, and therefore is potentially
    blocking. */
+// FIXME: make it non-blocking.
 struct jitterlisp_reader_state*
 jitterlisp_make_stream_reader_state (FILE *input)
   __attribute__ ((nonnull (1), returns_nonnull));
@@ -139,6 +141,7 @@ jitterlisp_make_stream_reader_state (FILE *input)
    '\0'-terminated string.
    This function needs to read the first token, and therefore is potentially
    blocking. */
+// FIXME: make it non-blocking.
 struct jitterlisp_reader_state*
 jitterlisp_make_string_reader_state (const char *string)
   __attribute__ ((nonnull (1), returns_nonnull));

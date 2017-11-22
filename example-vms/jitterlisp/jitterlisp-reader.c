@@ -725,6 +725,7 @@ void
 jitterlisp_destroy_reader_state (struct jitterlisp_reader_state *rs)
 {
   jitterlisp_finalize_parser_state (& rs->pstate);
+  free (rs);
 }
 
 

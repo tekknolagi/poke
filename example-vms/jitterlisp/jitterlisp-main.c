@@ -33,7 +33,9 @@
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-cpp.h>
+#include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-fatal.h>
+#include <jitter/jitter-readline.h>
 
 #include "jitterlisp.h"
 
@@ -49,8 +51,9 @@ struct jitterlisp_command_line
   /* Some s-expressions provided from the command line to evaluate, or NULL. */
   char *sexps_string;
 
-  /* The Lisp file to run, or NULL to read from stdin. */
-  char *input_file;
+  /* A dynamic buffer with char * elements, each containing a filename.
+     Possibly empty. */
+  struct jitter_dynamic_buffer input_file_path_names;
 
   /* Provide an interactive REPL. */
   bool repl;
@@ -149,7 +152,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case ARGP_KEY_INIT:
       /* Set sensible default values. */
       cl->verbose = false;
-      cl->input_file = NULL;
+      jitter_dynamic_buffer_initialize (& cl->input_file_path_names);
       cl->sexps_string = NULL;
       cl->repl = true;
       break;
@@ -187,18 +190,11 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
     /* Non-option arguments. */
     case ARGP_KEY_ARG:
-      cl->input_file = arg;
+      jitter_dynamic_buffer_push (& cl->input_file_path_names, & arg,
+                                  sizeof (char *));
       break;
 
-    /* Command-line end. */
-    case ARGP_KEY_END:
-      if (state->arg_num > 1)
-        argp_error (state,
-                    "you gave %i input files instead of one or none: "
-                    "right now we support only one file, which should "
-                    "change",
-                    (int)state->arg_num);
-      break;
+    /* Handle anything else. */
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -660,8 +656,82 @@ jitterlisp_last (jitterlisp_object a)
 
 
 
+/* Run from input.  FIXME: move this section.
+ * ************************************************************************** */
+
+jitterlisp_object
+jitterlisp_run (jitterlisp_object form)
+{
+  printf ("Pretending to run ");
+  jitterlisp_print_to_stream (stdout, form);
+  printf ("\n");
+  jitterlisp_object res = JITTERLISP_NOTHING;
+  printf ("The result is ");
+  jitterlisp_print_to_stream (stdout, res);
+  printf ("\n");
+  return res;
+}
+
+/* Parse s-expressions from the given string and run each of them. */
+void
+jitterlisp_run_from_string (const char *string)
+{
+  printf ("Running from string \"%s\"...\n", string);
+  struct jitterlisp_reader_state *rstate
+    = jitterlisp_make_string_reader_state (string);
+  jitterlisp_object form;
+  while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
+    jitterlisp_run (form);
+  jitterlisp_destroy_reader_state (rstate);
+  printf ("...Done running from string \"%s\".\n", string);
+}
+
+/* Parse s-expressions from the named file and run each of them. */
+void
+jitterlisp_run_from_named_file (const char *path_name)
+{
+  printf ("Running from file \"%s\"...\n", path_name);
+
+  /* Open an input stream. */
+  FILE *in;
+  if (! strcmp (path_name, "-"))
+    in = stdin;
+  else
+    in = fopen (path_name, "r");
+  if (in == NULL)
+    jitter_fatal ("could not read %s", path_name);
+
+  /* An s-expression. */
+  jitterlisp_object form;
+
+  /* Read forms from the input file and run each of them. */
+  struct jitterlisp_reader_state *rstate
+    = jitterlisp_make_stream_reader_state (in);
+  while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
+    jitterlisp_run (form);
+  jitterlisp_destroy_reader_state (rstate);
+
+  /* Close the input stream. */
+  fclose (in);
+  printf ("...Done running from file \"%s\".\n", path_name);
+}
+
+
+
+
 /* Main function.
  * ************************************************************************** */
+
+void
+repl (void)
+{
+  char *line;
+  while ((line = jitter_readline ("foo> ")) != NULL)
+    {
+      printf ("You wrote: \"%s\"\n", line);
+      free (line);
+    }
+}
 
 int
 main (int argc, char **argv)
@@ -673,65 +743,28 @@ main (int argc, char **argv)
               0,//ARGP_IN_ORDER,
               0, &cl);
 
-  if (cl.repl)
-    printf ("WARNING: REPL not implemented yet.\n");
-
   /* Initialize JitterLisp. */
   jitterlisp_initialize ();
 
-  /* Open the input file. */
-  FILE *in;
-  if (cl.input_file == NULL
-      || ! strcmp (cl.input_file, "-"))
-    in = stdin;
-  else
-    {
-      in = fopen (cl.input_file, "r");
-      if (in == NULL)
-        jitter_fatal ("could not open input file %s", cl.input_file);
-    }
+  if (cl.repl)
+    printf ("WARNING: REPL not implemented yet.\n");
 
-  /* An s-expression. */
-  jitterlisp_object form;
-
-#if 1
-  /* Read from the input file. */
-  printf ("Reading from input...\n");
-  struct jitterlisp_reader_state *rstate
-    = jitterlisp_make_stream_reader_state (in);
-  while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
-    {
-      printf ("I read this: ");
-      jitterlisp_print_to_stream (stdout, form);
-      //print (form);
-      printf ("\n");
-    }
-  jitterlisp_destroy_reader_state (rstate);
-  printf ("...End of input\n");
-#endif
+  /* Run from the input files. */
+  size_t input_file_path_name_no
+    = cl.input_file_path_names.used_size / sizeof (char *);
+  char **input_file_path_names =
+    jitter_dynamic_buffer_extract (& cl.input_file_path_names);
+  int i;
+  for (i = 0; i < input_file_path_name_no; i ++)
+    jitterlisp_run_from_named_file (input_file_path_names [i]);
+  free (input_file_path_names);
 
   /* Evaluate s-expressions from the command line. */
   if (cl.sexps_string != NULL)
-    {
-      printf ("The command line eval string is \"%s\" at %p.\n",
-              cl.sexps_string, cl.sexps_string);
-      struct jitterlisp_reader_state *rstate
-        = jitterlisp_make_string_reader_state (cl.sexps_string);
-      while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
-        {
-          printf ("I got this from the command line: ");
-          jitterlisp_print_to_stream (stdout, form);
-          //print (form);
-          printf ("\n");
-        }
-      jitterlisp_destroy_reader_state (rstate);
-      printf ("Done with the command line eval string, which was \"%s\".\n", cl.sexps_string);
-    }
+    jitterlisp_run_from_string (cl.sexps_string);
 
   /* Finalize JitterLisp. */
   jitterlisp_finalize ();
 
-  /* Close the input file. */
-  fclose (in);
   return 0;
 }
