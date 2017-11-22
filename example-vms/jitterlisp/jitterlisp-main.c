@@ -677,15 +677,17 @@ main (int argc, char **argv)
 
   /* Read from the input file. */
   printf ("Reading from input...\n");
+  struct jitterlisp_reader_state *rstate
+    = jitterlisp_make_stream_reader_state (in);
   jitterlisp_object toplevel_form;
-  while (! JITTERLISP_IS_EOF (toplevel_form
-                              = jitterlisp_read_from_stream (in)))
+  while (! JITTERLISP_IS_EOF (toplevel_form = jitterlisp_read (rstate)))
     {
       printf ("I read this: ");
       jitterlisp_print_to_stream (stdout, toplevel_form);
       //print (toplevel_form);
       printf ("\n");
     }
+  jitterlisp_destroy_reader_state (rstate);
   printf ("...End of input\n");
 
   /* Finalize JitterLisp. */

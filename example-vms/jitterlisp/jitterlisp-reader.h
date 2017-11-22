@@ -69,34 +69,64 @@ jitterlisp_stream_char_reader_function (void *file_star)
 
 
 
-/* S-expression reader.
+/* Reader state.
  * ************************************************************************** */
 
-/* Return the next s-expression read using the given char-reader in the given
-   char-reader-state, or #<eof> if there is nothing more to read. */
-jitterlisp_object
-jitterlisp_read_from_char_reader (jitterlisp_char_reader_function char_reader,
-                                  void *char_reader_state)
-  __attribute__ ((nonnull (1))); /* I omit nonnull (2) just for generality. */
+/* In order to read s-expressions from a stream, a string or something else
+   the user needs to make a "reader state" structure, containing some data
+   to be kept between one s-expression and the next. */
+
+/* The reader state is an abstract type, whose definition is subject to change.
+   The user should only use the functions below to make and destroy instances of
+   this struct. */
+struct jitterlisp_reader_state;
+
+/* Make a new reader state from the given char reader. */
+struct jitterlisp_reader_state*
+jitterlisp_make_reader_state (jitterlisp_char_reader_function char_reader,
+                              void *char_reader_state)
+  __attribute__ ((nonnull (1, 2), returns_nonnull));
+
+/* Destroy the given reader state, freeing up its resources.  Calling this does
+   not explicitly close files or streams, however. */
+void
+jitterlisp_destroy_reader_state (struct jitterlisp_reader_state *rs)
+  __attribute__ ((nonnull (1)));
 
 
 
 
-/* S-expression reader: convenience functions hiding char readers.
+/* Reader state convenience functions.
  * ************************************************************************** */
 
-/* Return the first s-expression read from the given string.  This is a simple
-   wrapper around jitterlisp_read_from_char_reader , hiding the char reader
-   and its state. */
-jitterlisp_object
-jitterlisp_read_from_string (const char *string)
-  __attribute__ ((nonnull (1)));
+/* The functions below, all simple wrappers around jitterlisp_make_reader_state
+   , have the advantage of hiding char readers from the user.  The user is still
+   responsible for releasing any external resource for the input such as file
+   descriptors, streams or string memory. */
 
-/* Return the first s-expression read from the given input stream.  This is a
-   simple wrapper around jitterlisp_read_from_char_reader , hiding the char
-   reader and its state. */
+/* Return a pointer to a fresh reader state reading from the pointed stream,
+   which must be open for reading. */
+struct jitterlisp_reader_state*
+jitterlisp_make_stream_reader_state (FILE *input)
+  __attribute__ ((nonnull (1), returns_nonnull));
+
+/* Return a pointer to a fresh reader state reading from the pointed
+   '\0'-terminated string. */
+struct jitterlisp_reader_state*
+jitterlisp_make_string_reader_state (const char *string)
+  __attribute__ ((nonnull (1), returns_nonnull));
+
+
+
+
+/* S-expression reader.
+ * ************************************************************************** */
+
+/* Return the next s-expression read from the given reader state, or #<eof> if
+   there is nothing more to read. */
 jitterlisp_object
-jitterlisp_read_from_stream (FILE *f)
-  __attribute__ ((nonnull (1)));
+jitterlisp_read (struct jitterlisp_reader_state *rs)
+  __attribute__ ((nonnull (1))); /* I omit nonnull (2) just for generality. */
+
 
 #endif // #ifndef JITTERLISP_READER_H_

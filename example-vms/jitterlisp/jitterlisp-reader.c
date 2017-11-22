@@ -25,8 +25,9 @@
 #include <string.h>
 
 #include <jitter/jitter-dynamic-buffer.h>
-#include <jitter/jitter-parse-int.h>
 #include <jitter/jitter-fatal.h>
+#include <jitter/jitter-malloc.h>
+#include <jitter/jitter-parse-int.h>
 
 #include "jitterlisp-reader.h"
 #include "jitterlisp-sexpression.h"
@@ -692,38 +693,64 @@ jitterlisp_parse_cdr (struct jitterlisp_parser_state *pstate)
 
 
 
-/* S-expression reader: user API.
+/* Reader state: user API.
  * ************************************************************************** */
 
-/* The non-static function for the user. */
-jitterlisp_object
-jitterlisp_read_from_char_reader (jitterlisp_char_reader_function char_reader,
-                                  void *char_reader_state)
+/* We export to the user a struct called struct jitterlisp_reader_state ; this
+   is actually just a struct jitterlisp_parser_state, but the user doesn't need
+   to see the distinction between scanner and parser, and even more the
+   lookahead field. */
+struct jitterlisp_reader_state
 {
+  /* The actually useful fields. */
   struct jitterlisp_parser_state pstate;
-  jitterlisp_initialize_parser_state (& pstate, char_reader, char_reader_state);
-  jitterlisp_object res = jitterlisp_parse_sexp (& pstate);
-  jitterlisp_finalize_parser_state (& pstate);
+};
+
+struct jitterlisp_reader_state*
+jitterlisp_make_reader_state (jitterlisp_char_reader_function char_reader,
+                              void *char_reader_state)
+{
+  struct jitterlisp_reader_state *res
+    = jitter_xmalloc (sizeof (struct jitterlisp_reader_state));
+  jitterlisp_initialize_parser_state (& res->pstate,
+                                      char_reader, char_reader_state);
   return res;
+}
+
+void
+jitterlisp_destroy_reader_state (struct jitterlisp_reader_state *rs)
+{
+  jitterlisp_finalize_parser_state (& rs->pstate);
 }
 
 
 
 
-/* S-expression reader: user convenience functions hiding char readers.
+/* Reader state convenience functions.
  * ************************************************************************** */
 
-jitterlisp_object
-jitterlisp_read_from_string (const char *string)
+struct jitterlisp_reader_state*
+jitterlisp_make_stream_reader_state (FILE *input)
 {
-  return jitterlisp_read_from_char_reader
-            (jitterlisp_string_char_reader_function, & string);
+  return jitterlisp_make_reader_state (jitterlisp_stream_char_reader_function,
+                                       input);
 }
 
-/* Return the first s-expression read from the given input stream. */
-jitterlisp_object
-jitterlisp_read_from_stream (FILE *f)
+struct jitterlisp_reader_state*
+jitterlisp_make_string_reader_state (const char *string)
 {
-  return jitterlisp_read_from_char_reader
-            (jitterlisp_stream_char_reader_function, f);
+  return jitterlisp_make_reader_state (jitterlisp_string_char_reader_function,
+                                       & string);
+}
+
+
+
+/* S-expression reader: user API.
+ * ************************************************************************** */
+
+/* The non-static function for the user. */
+jitterlisp_object
+jitterlisp_read (struct jitterlisp_reader_state *rs)
+{
+  return jitterlisp_parse_sexp (& rs->pstate);
 }
