@@ -739,9 +739,8 @@ main (int argc, char **argv)
   /* Parse our arguments; cl will contain the information provided in the
      command line. */
   struct jitterlisp_command_line cl;
-  argp_parse (&argp, argc, argv,
-              0,//ARGP_IN_ORDER,
-              0, &cl);
+  argp_parse (& argp, argc, argv,
+              0, 0, & cl);
 
   /* Initialize JitterLisp. */
   jitterlisp_initialize ();
