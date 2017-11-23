@@ -57,7 +57,7 @@ jitter_readline (const char *prompt_or_NULL)
  * ************************************************************************** */
 
 #ifndef JITTER_HAS_GNU_READLINE
-/* Include what we need for the crude Readline emulator. */
+  /* Include what we need for the crude Readline emulator. */
 # include <stdbool.h>
 # include <stdio.h>
 # include "jitter-dynamic-buffer.h"
