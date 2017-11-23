@@ -28,7 +28,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #include <jitter/jitter.h>
@@ -642,92 +641,6 @@ jitterlisp_last (jitterlisp_object a)
 
 
 
-/* Run from input.  FIXME: move this section.
- * ************************************************************************** */
-
-jitterlisp_object
-jitterlisp_run (jitterlisp_object form)
-{
-  printf ("Pretending to run ");
-  jitterlisp_print_to_stream (stdout, form);
-  printf ("\n");
-  jitterlisp_object res = JITTERLISP_NOTHING;
-  printf ("The result is ");
-  jitterlisp_print_to_stream (stdout, res);
-  printf ("\n");
-  return res;
-}
-
-/* Parse s-expressions from the given string and run each of them. */
-void
-jitterlisp_run_from_string (const char *string)
-{
-  printf ("Running from string \"%s\"...\n", string);
-  struct jitterlisp_reader_state *rstate
-    = jitterlisp_make_string_reader_state (string);
-  jitterlisp_object form;
-  while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
-    jitterlisp_run (form);
-  jitterlisp_destroy_reader_state (rstate);
-  printf ("...Done running from string \"%s\".\n", string);
-}
-
-/* Parse s-expressions from the named file and run each of them. */
-void
-jitterlisp_run_from_named_file (const char *path_name)
-{
-  printf ("Running from file \"%s\"...\n", path_name);
-
-  /* Open an input stream. */
-  FILE *in;
-  if (! strcmp (path_name, "-"))
-    in = stdin;
-  else
-    in = fopen (path_name, "r");
-  if (in == NULL)
-    jitter_fatal ("could not read %s", path_name);
-
-  /* An s-expression. */
-  jitterlisp_object form;
-
-  /* Read forms from the input file and run each of them. */
-  struct jitterlisp_reader_state *rstate
-    = jitterlisp_make_stream_reader_state (in);
-  while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
-    jitterlisp_run (form);
-  jitterlisp_destroy_reader_state (rstate);
-
-  /* Close the input stream. */
-  fclose (in);
-  printf ("...Done running from file \"%s\".\n", path_name);
-}
-
-
-
-
-/* REPL.
- * ************************************************************************** */
-
-void
-jitterlisp_repl (void)
-{
-  printf ("Running the REPL...\n");
-
-  /* Use the readline state data structure and the readline char-reader
-     function as a reader state.  Read forms from there until we get to
-     #<eof>, and run each one. */
-  struct jitterlisp_reader_state *rstate
-    = jitterlisp_make_readline_reader_state ("jitterlisp> ");
-  jitterlisp_object form;
-  while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
-    jitterlisp_run (form);
-  jitterlisp_destroy_reader_state (rstate);
-  printf ("...Done running the REPL.\n");
-}
-
-
-
-
 /* Main function.
  * ************************************************************************** */
 
@@ -745,16 +658,8 @@ main (int argc, char **argv)
   argp_parse (& argp, argc, argv, 0, 0, & jitterlisp_settings);
   struct jitterlisp_settings * const sp = & jitterlisp_settings;
 
-  /* Run the input files.  The final free just serves to placate Valgrind and
-     not to distract me from any actual problem. */
-  size_t input_file_path_name_no
-    = sp->input_file_path_names.used_size / sizeof (char *);
-  char **input_file_path_names =
-    jitter_dynamic_buffer_extract (& sp->input_file_path_names);
-  int i;
-  for (i = 0; i < input_file_path_name_no; i ++)
-    jitterlisp_run_from_named_file (input_file_path_names [i]);
-  free (input_file_path_names);
+  /* Run the input files.  */
+  jitterlisp_run_from_input_files ();
 
   /* Evaluate s-expressions from the command line, if any. */
   if (sp->sexps_string != NULL)

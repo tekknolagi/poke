@@ -33,6 +33,7 @@
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-allocator.h"
 #include "jitterlisp-reader.h"
+#include "jitterlisp-run-input.h"
 #include "jitterlisp-printer.h"
 #include "jitterlisp-settings.h"
 

@@ -43,3 +43,15 @@ jitterlisp_settings_set_default (void)
   jitterlisp_settings.sexps_string = NULL;
   jitterlisp_settings.repl = true;
 }
+
+
+
+
+/* Not fo the user: finalization.
+ * ************************************************************************** */
+
+void
+jitterlisp_settings_finalize (void)
+{
+  jitter_dynamic_buffer_finalize (& jitterlisp_settings.input_file_path_names);
+}

@@ -62,4 +62,16 @@ jitterlisp_settings;
 void
 jitterlisp_settings_set_default (void);
 
+
+
+
+/* Not fo the user: finalization.
+ * ************************************************************************** */
+
+/* The functionality here is called by JitterLisp's global finalization. */
+
+/* Finalize the settings data structure, freeing resources. */
+void
+jitterlisp_settings_finalize (void);
+
 #endif // #ifndef JITTERLISP_SETTINGS_H_

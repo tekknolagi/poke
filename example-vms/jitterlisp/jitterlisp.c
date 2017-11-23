@@ -39,4 +39,5 @@ jitterlisp_finalize (void)
   /* Finalize every subsystem, in the opposite order of initialization. */
   jitterlisp_sexpression_finalize ();
   jitterlisp_memory_finalize ();
+  jitterlisp_settings_finalize (); /* There's a dynamic buffer to finalize. */
 }

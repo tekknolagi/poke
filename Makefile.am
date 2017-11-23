@@ -1014,6 +1014,8 @@ SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-printer.c \
   example-vms/jitterlisp/jitterlisp-reader.h \
   example-vms/jitterlisp/jitterlisp-reader.c \
+  example-vms/jitterlisp/jitterlisp-run-input.h \
+  example-vms/jitterlisp/jitterlisp-run-input.c \
   example-vms/jitterlisp/jitterlisp-settings.h \
   example-vms/jitterlisp/jitterlisp-settings.c \
   example-vms/jitterlisp/jitterlisp.c \
