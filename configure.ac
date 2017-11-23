@@ -407,9 +407,9 @@ AM_PATH_LISPDIR
 # Check for libraries: GNU Readline
 ################################################################
 
-# Jitter can use GNU Readline, even if there is a compatibility wrapper for when
-# it's not installed.  It is currently only used in JitterLisp but I plan to
-# use it more in the future, so it's linked to every program.
+# Jitter can use GNU Readline, even if there is a crude emulation facility
+# for when it's not installed.  It is currently only used in JitterLisp but
+# I plan to use it more in the future, so it's linked to every program.
 #
 # Anyway, don't check for Readline and refuse to use it if we got
 # --without-readline or --with-readline=no as a configure option.
