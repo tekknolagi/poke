@@ -659,7 +659,7 @@ jitterlisp_parse_cdr (struct jitterlisp_parser_state *pstate)
 
    <sexp> ::= #<eof>         { $$ = eof; }
             | atom           { $$ = $1; }
-            | prefix <sexp>  { if is_eof ($2)
+            | prefix <sexp>  { if is_eof ($2) then
                                  error ();
                                else
                                  $$ = with-prefix ($1, $2); }
