@@ -46,7 +46,11 @@ typedef void * jitterlisp_char_reader_state;
    but the function will update the pointed state after reading each
    character. */
 typedef int (*jitterlisp_char_reader_function)
-   (jitterlisp_char_reader_state *reader_state_pointer);
+   (jitterlisp_char_reader_state *char_reader_state_pointer);
+
+/* A function freeing up resources for the pointed char-reader state. */
+typedef void (*jitterlisp_char_reader_finalizer)
+   (jitterlisp_char_reader_state *char_reader_state_pointer);
 
 
 
@@ -94,8 +98,22 @@ jitterlisp_stream_char_reader_function
    this struct. */
 struct jitterlisp_reader_state;
 
+/* A function called after each successful parsing of a top-level s-expression
+   on a pointer to the char-reader state, a pointer to the reader state, and the
+   s-expression which was just parsed.
+   Rationale: this exists so that I'm able to use readline from a Lisp
+   function reading *one* s-expression, but possibly spanning multiple lines,
+   inside an ordinary REPL.  The idea is stopping after the inner reader reads
+   *one* s-expression, checking that there are no trailing tokens. */
+typedef void (*jitterlisp_post_parsing_hook)
+   (jitterlisp_char_reader_state *crspp,
+    struct jitterlisp_reader_state *rsp,
+    jitterlisp_object o);
+
 /* Return a pointer to a new reader state made from the given char-reader
-   function and the given char-reader state.
+   function, the given char-reader state, the given char-reader finalizer
+   and the given post-parsing hool; the finalizer and hook are allowed to be
+   NULL, in which case no action is performed.
 
    Notice that the char-reader state is not pointed, differently from the
    argument in jitterlisp_char_reader_function : the char-reader state here is
@@ -108,7 +126,9 @@ struct jitterlisp_reader_state;
 struct jitterlisp_reader_state*
 jitterlisp_make_reader_state
    (jitterlisp_char_reader_function char_reader,
-    jitterlisp_char_reader_state char_reader_state)
+    jitterlisp_char_reader_state char_reader_state,
+    jitterlisp_char_reader_finalizer char_reader_finalizer,
+    jitterlisp_post_parsing_hook post_parsing_hook)
   __attribute__ ((nonnull (1, 2), returns_nonnull));
 
 /* Destroy the given reader state, freeing up its resources.  Calling this does
@@ -146,6 +166,28 @@ struct jitterlisp_reader_state*
 jitterlisp_make_string_reader_state (const char *string)
   __attribute__ ((nonnull (1), returns_nonnull));
 
+/* Return a fresh reader state reading s-expression from readline calls,
+   automatically performed as needed with the given prompt.  The prompt
+   is copied  internally and the user is allowed to release or ovewrite
+   its memory immediately.  The s-expressions being read are allowed to
+   span multiple lines.
+   This functions is blocking for the same reasons as the ones above. */
+// FIXME: make it non-blocking.
+struct jitterlisp_reader_state*
+jitterlisp_make_readline_reader_state (const char *prompt)
+  __attribute__ ((nonnull (1), returns_nonnull));
+
+/* Like jitterlisp_make_readline_reader_state but read only one s-expression,
+   still allowed to span multiple lines.  Fail with a parse error if there is
+   any trailing garbage, including other complete s-expressions, after the
+   one s-expression we are supposed to read.
+   This functions is blocking for the same reasons as the ones above.
+   Rationale: see the comment before jitterlisp_post_parsing_hook . */
+// FIXME: make it non-blocking.
+struct jitterlisp_reader_state*
+jitterlisp_make_readline_one_reader_state (const char *prompt)
+  __attribute__ ((nonnull (1), returns_nonnull));
+
 
 
 
@@ -156,6 +198,19 @@ jitterlisp_make_string_reader_state (const char *string)
    there is nothing more to read. */
 jitterlisp_object
 jitterlisp_read (struct jitterlisp_reader_state *rs)
+  __attribute__ ((nonnull (1)));
+
+
+
+
+/* S-expression readline convenience reader.
+ * ************************************************************************** */
+
+/* Read and return exactly one s-expression (allowed to span multiple lines)
+   using readline.  This is a convenience wrapper over the functions above,
+   hiding reader states from the user. */
+jitterlisp_object
+jitterlisp_read_readline_one (const char *prompt)
   __attribute__ ((nonnull (1)));
 
 

@@ -35,7 +35,6 @@
 #include <jitter/jitter-cpp.h>
 #include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-fatal.h>
-#include <jitter/jitter-readline.h>
 
 #include "jitterlisp.h"
 
@@ -709,81 +708,16 @@ jitterlisp_run_from_named_file (const char *path_name)
 /* REPL.
  * ************************************************************************** */
 
-struct jitterlisp_readline_char_reader_state
-{
-  const char *prompt;
-  bool got_EOF;
-  char *last_line_or_NULL;
-  char *next_char_p;
-};
-
-static int
-jitterlisp_readline_char_reader_function (jitterlisp_char_reader_state *crspp)
-{
-  struct jitterlisp_readline_char_reader_state *crsp
-    = * (struct jitterlisp_readline_char_reader_state **) crspp;
-
-  /* If we already saw EOF refuse to read any more lines, and return EOF. */
-  if (crsp->got_EOF)
-    {
-      printf ("[returning a previously found EOF]\n");
-      return EOF;
-    }
-
-  /* If we haven't got a line read one... */
-  if (crsp->last_line_or_NULL == NULL)
-    {
-      printf ("[we need to read a line...]\n");
-      /* ...But if the line we receive from readline is NULL we've found EOF. */
-      if ((crsp->last_line_or_NULL = jitter_readline (crsp->prompt))
-          == NULL)
-        {
-          printf ("  [returning a just-found EOF]\n");
-          crsp->got_EOF = true;
-          return EOF;
-        }
-      printf ("  [it was a non-EOF line]\n");
-      /* If we haven't returned yet then we have a non-NULL line: set the next
-         character pointer to its beginning, and go on. */
-      crsp->next_char_p = crsp->last_line_or_NULL;
-    }
-
-  /* If we arrived here then we have an actual line to read from, and
-     crsp->next_char_p points within it. */
-
-  /* Does crsp->next_char_p point to a '\0' character?  If so, we have to
-     interpret that as a '\n' character (which readline strips off), and prepare
-     to read a new entire line at the next call. */
-  if (* crsp->next_char_p == '\0')
-    {
-      printf ("[returning newline]\n");
-      free (crsp->last_line_or_NULL);
-      crsp->last_line_or_NULL = NULL;
-      return '\n';
-    }
-
-  /* If we arrived here then the next character is ordinary. */
-  printf ("[returning ordinary character '%c']\n", * crsp->next_char_p);
-  return * (crsp->next_char_p ++);
-}
-
 void
 jitterlisp_repl (void)
 {
   printf ("Running the REPL...\n");
-  /* Initialize a readline state data structure. */
-  struct jitterlisp_readline_char_reader_state crstate;
-  crstate.prompt = "jitterlisp> ";
-  crstate.last_line_or_NULL = NULL;
-  crstate.got_EOF = false;
-  crstate.next_char_p = NULL;
 
   /* Use the readline state data structure and the readline char-reader
      function as a reader state.  Read forms from there until we get to
      #<eof>, and run each one. */
   struct jitterlisp_reader_state *rstate
-    = jitterlisp_make_reader_state (jitterlisp_readline_char_reader_function,
-                                    & crstate);
+    = jitterlisp_make_readline_reader_state ("jitterlisp> ");
   jitterlisp_object form;
   while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
     jitterlisp_run (form);

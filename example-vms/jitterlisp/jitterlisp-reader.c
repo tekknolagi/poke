@@ -28,6 +28,8 @@
 #include <jitter/jitter-fatal.h>
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-parse-int.h>
+#include <jitter/jitter-readline.h>
+#include <jitter/jitter-string.h>
 
 #include "jitterlisp-reader.h"
 #include "jitterlisp-sexpression.h"
@@ -96,6 +98,10 @@ struct jitterlisp_scanner_state
 
   /* The char-reader state. */
   jitterlisp_char_reader_state char_reader_state;
+
+  /* The char-reader finalizing function, freeing resources for the char-reader
+     state. */
+  jitterlisp_char_reader_finalizer char_reader_finalizer;
 };
 
 /* Read the next character of the input in the pointed sstate, setting the
@@ -160,16 +166,18 @@ jitterlisp_scanner_clear_token_text (struct jitterlisp_scanner_state *sstate)
    token before returning, which potentially makes it a blocking operation. */
 static void
 jitterlisp_initialize_scanner_state (struct jitterlisp_scanner_state *sstate,
-                                     jitterlisp_char_reader_function crf,
-                                     jitterlisp_char_reader_state crs)
+                                     jitterlisp_char_reader_function crfu,
+                                     jitterlisp_char_reader_state crs,
+                                     jitterlisp_char_reader_finalizer crfi)
 {
   /* Initialize the dynamic buffer.  It will contains zero characters at the
      beginning. */
   jitter_dynamic_buffer_initialize (& sstate->token_text);
 
   /* Initialize the char reader. */
-  sstate->char_reader_function = crf;
+  sstate->char_reader_function = crfu;
   sstate->char_reader_state = crs;
+  sstate->char_reader_finalizer = crfi;
 
   /* Initialize input location.  Here I'm following the Emacs convention, with
      1-based row indices and 0-based column indices. */
@@ -185,6 +193,8 @@ jitterlisp_initialize_scanner_state (struct jitterlisp_scanner_state *sstate,
 static void
 jitterlisp_finalize_scanner_state (struct jitterlisp_scanner_state *sstate)
 {
+  if (sstate->char_reader_finalizer != NULL)
+    sstate->char_reader_finalizer (& sstate->char_reader_state);
   jitter_dynamic_buffer_finalize (& sstate->token_text);
 }
 
@@ -482,13 +492,14 @@ jitterlisp_parser_advance (struct jitterlisp_parser_state *pstate)
    blocking. */
 static void
 jitterlisp_initialize_parser_state (struct jitterlisp_parser_state *pstate,
-                                    jitterlisp_char_reader_function char_reader,
-                                    jitterlisp_char_reader_state crs)
+                                    jitterlisp_char_reader_function crfi,
+                                    jitterlisp_char_reader_state crs,
+                                    jitterlisp_char_reader_finalizer crfu)
 {
   /* Initialize the scanner state.  Notice that this reads the first *character*
      (not token) as the scanner lookahead, which may be a blocking operation. */
   jitterlisp_initialize_scanner_state (& pstate->scanner_state,
-                                       char_reader, crs);
+                                       crfi, crs, crfu);
 
   /* Calling jitterlisp_parser_advance (pstate) here would make the parser
      slightly more intuitive, and also ensure that pstate->lookahead_token
@@ -743,23 +754,28 @@ jitterlisp_parse_cdr_non_advancing (struct jitterlisp_parser_state *pstate)
 /* Reader state: user API.
  * ************************************************************************** */
 
-/* We export to the user a struct called struct jitterlisp_reader_state ; this
-   is actually just a struct jitterlisp_parser_state, but the user doesn't need
-   to see the distinction between scanner and parser, and even more the
-   lookahead field. */
+/* We export to the user a struct called struct jitterlisp_reader_state , as an
+   abstract type; the user doesn't need to see the distinction between scanner
+   and parser, and even less the lookahead field. */
 struct jitterlisp_reader_state
 {
-  /* The actually useful fields. */
+  /* The parser state, which contains the scanner state as well. */
   struct jitterlisp_parser_state pstate;
+
+  /* The hook to run after each toplevel s-expression parsing. */
+  jitterlisp_post_parsing_hook post_parsing_hook;
 };
 
 struct jitterlisp_reader_state*
-jitterlisp_make_reader_state (jitterlisp_char_reader_function crf,
-                              jitterlisp_char_reader_state crs)
+jitterlisp_make_reader_state (jitterlisp_char_reader_function crfi,
+                              jitterlisp_char_reader_state crs,
+                              jitterlisp_char_reader_finalizer crfu,
+                              jitterlisp_post_parsing_hook pph)
 {
   struct jitterlisp_reader_state *res
     = jitter_xmalloc (sizeof (struct jitterlisp_reader_state));
-  jitterlisp_initialize_parser_state (& res->pstate, crf, crs);
+  jitterlisp_initialize_parser_state (& res->pstate, crfi, crs, crfu);
+  res->post_parsing_hook = pph;
   return res;
 }
 
@@ -773,23 +789,177 @@ jitterlisp_destroy_reader_state (struct jitterlisp_reader_state *rs)
 
 
 
-/* Reader state convenience functions.
+/* Reader state convenience function: stream reader.
  * ************************************************************************** */
 
 struct jitterlisp_reader_state*
 jitterlisp_make_stream_reader_state (FILE *input)
 {
   return jitterlisp_make_reader_state (jitterlisp_stream_char_reader_function,
-                                       ((jitterlisp_char_reader_state)
-                                        input));
+                                       ((jitterlisp_char_reader_state) input),
+                                       NULL, NULL);
 }
+
+
+
+
+/* Reader state convenience function: string reader.
+ * ************************************************************************** */
 
 struct jitterlisp_reader_state*
 jitterlisp_make_string_reader_state (const char *string)
 {
   return jitterlisp_make_reader_state (jitterlisp_string_char_reader_function,
-                                       ((jitterlisp_char_reader_state)
-                                        string));
+                                       ((jitterlisp_char_reader_state) string),
+                                       NULL, NULL);
+}
+
+
+
+
+/* Reader state convenience function: readline and readline-one readers.
+ * ************************************************************************** */
+
+/* The struct implementing the reader state of readline and readline-one
+   readers.  Notice that this struct is malloc-allocated as part of the reader
+   state, and destroyed at reader state destruction: the user doesn't need
+   to keep any data structure alive for the lifetime of the reader including
+   the prompt string, which is cloned. */
+struct jitterlisp_readline_char_reader_state
+{
+  /* The prompt string to show at every jitter_readline call.  This is a
+     malloc-allocated copy. */
+  char *prompt;
+
+  /* A flag telling whether we saw an EOF result, which is to say if
+     jitter_readline has returned NULL. */
+  bool got_EOF;
+
+  /* The last entire line we read as returned by jitter_readline, or NULL. */
+  char *last_line_or_NULL;
+
+  /* The next character to be sent to the scanner within last_line_or_NULL when
+     last_line_or_NULL is non-NULL; unspecified otherwise. */
+  char *next_char_p;
+
+  /* A boolean flag preventing further jitter_readline calls; this is used
+     in the hook to implement the "one" semantics. */
+  bool no_more_lines;
+};
+
+/* Return the next character (or NULL if we found EOF as detected by
+   jitter_readline) of the input, automatically calling jitter_readline if we
+   are at the end of the string in memory and advancing next_char_p as
+   needed. */
+static int
+jitterlisp_readline_char_reader_function (jitterlisp_char_reader_state *crspp)
+{
+  struct jitterlisp_readline_char_reader_state *crsp
+    = * (struct jitterlisp_readline_char_reader_state **) crspp;
+
+  /* If we already saw EOF refuse to read any more lines, and return EOF. */
+  if (crsp->got_EOF)
+    return EOF;
+
+  /* If we haven't got a line read one... */
+  if (crsp->last_line_or_NULL == NULL)
+    {
+      /* ...Unless we've been told to stop.  If after reading one more line
+         we receive NULL we've found EOF. */
+      if (crsp->no_more_lines
+          || ((crsp->last_line_or_NULL = jitter_readline (crsp->prompt))
+              == NULL))
+        {
+          crsp->got_EOF = true;
+          return EOF;
+        }
+
+      /* If we haven't returned yet then we have a non-NULL line: set the next
+         character pointer to its beginning, and go on. */
+      crsp->next_char_p = crsp->last_line_or_NULL;
+    }
+
+  /* If we arrived here then we have an actual line to read from, and
+     crsp->next_char_p points within it. */
+
+  /* Does crsp->next_char_p point to a '\0' character?  If so, we have to
+     interpret that as a '\n' character (which readline strips off), and prepare
+     to read a new entire line at the next call. */
+  if (* crsp->next_char_p == '\0')
+    {
+      free (crsp->last_line_or_NULL);
+      crsp->last_line_or_NULL = NULL;
+      return '\n';
+    }
+
+  /* If we arrived here then the next character is ordinary. */
+  return * (crsp->next_char_p ++);
+}
+
+static void
+jitterlisp_readline_char_reader_finalizer (jitterlisp_char_reader_state *crspp)
+{
+  struct jitterlisp_readline_char_reader_state *crsp
+    = * (struct jitterlisp_readline_char_reader_state **) crspp;
+
+  free (crsp->prompt);
+  free (crsp);
+}
+
+/* A hook preventing a readline reader state from getting further lines, and
+   then checking that the next parsed s-expression is #<eof> -- meaning that
+   there is nothing more after what we parsed.  This is where the "one" part of
+   readline-once is implemented. */
+static void
+jitterlisp_readline_one_post_parsing_hook (jitterlisp_char_reader_state *crspp,
+                                           struct jitterlisp_reader_state *rsp,
+                                           jitterlisp_object o)
+{
+  struct jitterlisp_readline_char_reader_state *crsp
+    = * (struct jitterlisp_readline_char_reader_state **) crspp;
+
+  crsp->no_more_lines = true;
+  if (jitterlisp_parse_sexp (& rsp->pstate) != JITTERLISP_EOF)
+    jitterlisp_parse_error (& rsp->pstate,
+                            "trailing garbage after the one s-expression");
+
+}
+
+/* The common implementation of jitterlisp_make_readline_reader_state and
+   jitterlisp_make_readline_one_reader_state . */
+static struct jitterlisp_reader_state*
+jitterlisp_make_readline_possibly_one_reader_state (const char *prompt,
+                                                    bool one_only)
+{
+  /* Make a readline state data structure, allocated with malloc.  The structure
+     will be destroyed by the char-state finalization function. */
+  struct jitterlisp_readline_char_reader_state *crstate
+    = jitter_xmalloc (sizeof (struct jitterlisp_readline_char_reader_state));;
+  crstate->prompt = jitter_clone_string (prompt);
+  crstate->last_line_or_NULL = NULL;
+  crstate->got_EOF = false;
+  crstate->next_char_p = NULL;
+
+  crstate->no_more_lines = false;
+
+  /* Make a new reader state*/
+  return jitterlisp_make_reader_state
+     (jitterlisp_readline_char_reader_function,
+      crstate,
+      jitterlisp_readline_char_reader_finalizer,
+      one_only ? jitterlisp_readline_one_post_parsing_hook : NULL);
+}
+
+struct jitterlisp_reader_state*
+jitterlisp_make_readline_reader_state (const char *prompt)
+{
+  return jitterlisp_make_readline_possibly_one_reader_state (prompt, false);
+}
+
+struct jitterlisp_reader_state*
+jitterlisp_make_readline_one_reader_state (const char *prompt)
+{
+  return jitterlisp_make_readline_possibly_one_reader_state (prompt, true);
 }
 
 
@@ -800,7 +970,31 @@ jitterlisp_make_string_reader_state (const char *string)
 
 /* The non-static function for the user. */
 jitterlisp_object
-jitterlisp_read (struct jitterlisp_reader_state *rs)
+jitterlisp_read (struct jitterlisp_reader_state *rsp)
 {
-  return jitterlisp_parse_sexp (& rs->pstate);
+  jitterlisp_object res = jitterlisp_parse_sexp (& rsp->pstate);
+  if (rsp->post_parsing_hook != NULL)
+    rsp->post_parsing_hook (& rsp->pstate.scanner_state.char_reader_state,
+                            rsp,
+                            res);
+  return res;
+}
+
+
+
+
+/* S-expression readline convenience reader.
+ * ************************************************************************** */
+
+jitterlisp_object
+jitterlisp_read_readline_one (const char *prompt)
+{
+  /* Make a readline-once reader state, read from it once and destroy it. */
+  struct jitterlisp_reader_state *rstate
+    = jitterlisp_make_readline_one_reader_state (prompt);
+  jitterlisp_object res = jitterlisp_read (rstate);
+  jitterlisp_destroy_reader_state (rstate);
+
+  /* Return what we read. */
+  return res;
 }
