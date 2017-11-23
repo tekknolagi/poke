@@ -96,7 +96,7 @@ jitter_readline (const char *prompt_or_NULL)
         jitter_dynamic_buffer_push (& db, & c_as_char, 1);
     }
 
-  /* If we found EOF return NULL. */
+  /* If we found EOF before reading any actual character return NULL. */
   if (! malloced)
     {
       /* This is only for defensiveness. */
