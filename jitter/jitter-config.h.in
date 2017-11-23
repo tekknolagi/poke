@@ -43,7 +43,7 @@
 #undef JITTER_HAS_ASSEMBLY
 
 /* Optional libraries. */
-#undef JITTER_HAS_GNU_READLINE /* FIXME: right now this is always undefined. */
+#undef JITTER_HAS_GNU_READLINE
 
 /* These are needed by jitter-dispatch.h when no dispatching-model CPP macros
    are defined from the command line. */

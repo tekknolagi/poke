@@ -404,8 +404,40 @@ gl_INIT
 AM_PATH_LISPDIR
 
 
-# Check for libraries.
+# Check for libraries: GNU Readline
 ################################################################
+
+# Jitter can use GNU Readline, even if there is a compatibility wrapper for when
+# it's not installed.  It is currently only used in JitterLisp, but I plan to
+# use it more in the future, so it's linked to every programs.
+#
+# Anyway, don't check for Readline and refuse to use it if we got
+# --without-readline or --with-readline=no as a configure option.
+AC_ARG_WITH([readline],
+            AS_HELP_STRING([--with-readline],
+                           [use GNU ReadLine (default: detected)]),
+            jitter_check_readline="$withval",
+            jitter_check_readline="yes")
+if test "x$jitter_check_readline" != "xno"; then
+  # These seem to be readline dependencies.
+  AC_CHECK_LIB([ncurses], [main])
+  AC_CHECK_LIB([termcap], [main])
+  AC_CHECK_LIB([tinfo], [main])
+
+  # Check for the actual Readline library.
+  AC_CHECK_LIB([readline], [readline], , [did_we_find_readline=no])
+
+  # If we found it, LDADD has already been updated.  In that case also define a
+  # CPP feature macro, so as to use the actual Readline instead of my crude
+  # emulation.
+  if test "x$did_we_find_readline" != "xno"; then
+    AC_DEFINE_UNQUOTED([JITTER_HAS_GNU_READLINE], [1],
+                       [Use the actual GNU Readline library])
+  fi
+else
+  # We were requested to do without Readline.
+  AC_MSG_NOTICE([not using GNU Readline because of configure option])
+fi # if test "x$jitter_check_readline" = "xyes"
 
 
 # Check for headers.
