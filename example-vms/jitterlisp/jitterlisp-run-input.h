@@ -87,7 +87,10 @@ jitterlisp_run_from_input_files (void);
 /* Run s-expressions interactively from a REPL.
  * ************************************************************************** */
 
-/* Run the JitterLisp interactive REPL, returning on EOF. */
+/* Run the JitterLisp interactive REPL until the reader finds #<eof>.  Treat
+   errors (at either read or eval time) internally, without ever propagating
+   them out: the program shouldn't abort just because of user mistakes in
+   interactive use. */
 void
 jitterlisp_repl (void);
 

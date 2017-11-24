@@ -38,21 +38,19 @@
 jitterlisp_object
 jitterlisp_eval_globally (jitterlisp_object form)
 {
-  printf ("Pretending to eval ");
-  jitterlisp_print_to_stream (stdout, form);
-  printf ("\n");
-
   /* FIXME: before having a real eval I can still check for memory leaks using
      Valgrind; the critical case is freeing resources on error.  Here by
-     convention an empty list causes a failure, everything else doesn't. */
+     convention the empty list causes a failure, symbols evaluate to 42,
+     booleans to a symbol and everything else to #<nothing>. */
   if (form == JITTERLISP_EMPTY_LIST)
     jitterlisp_error (jitter_clone_string ("the empty list is evil"));
-
-  jitterlisp_object res = JITTERLISP_NOTHING;
-  printf ("The result is ");
-  jitterlisp_print_to_stream (stdout, res);
-  printf ("\n");
-  return res;
+  else if (JITTERLISP_IS_SYMBOL(form))
+    return JITTERLISP_FIXNUM_ENCODE(42);
+  else if (JITTERLISP_IS_BOOLEAN(form))
+    return JITTERLISP_SYMBOL_ENCODE(
+              jitterlisp_symbol_make_interned("something"));
+  else
+    return JITTERLISP_NOTHING;
 }
 
 
@@ -101,12 +99,6 @@ jitterlisp_run_from_string (const char *string)
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_string_reader_state (string);
   jitterlisp_run_and_destroy_reader_state (rstate);
-  /*
-  jitterlisp_object form;
-  while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
-    jitterlisp_eval_globally (form);
-  jitterlisp_destroy_reader_state (rstate);
-  */
   printf ("...Done running from string \"%s\".\n", string);
 }
 
@@ -119,15 +111,11 @@ jitterlisp_run_from_string (const char *string)
 void
 jitterlisp_run_from_stream (FILE *input)
 {
-  /* An s-expression. */
-  jitterlisp_object form;
-
-  /* Read forms from the input file and run each of them. */
+  printf ("Running from stream %p...\n", input);
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_stream_reader_state (input);
-  while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
-    jitterlisp_eval_globally (form);
-  jitterlisp_destroy_reader_state (rstate);
+  jitterlisp_run_and_destroy_reader_state (rstate);
+  printf ("...Done running from stream %p.\n", input);
 }
 
 
@@ -185,19 +173,44 @@ jitterlisp_repl (void)
 {
   printf ("Running the REPL...\n");
 
-  /* Use the readline state data structure and the readline char-reader
-     function as a reader state.  Read forms from there until we get to
-     #<eof>, and run each one. */
+  /* Make a readline reader state.  It will be used to read every form
+     from the REPL, even in case of parse errors. */
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_readline_reader_state ("jitterlisp> ");
-  jitterlisp_object form;
-JITTERLISP_HANDLE_ERRORS(
-  while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
-    jitterlisp_eval_globally (form)
-  ,
-  printf ("bad boy\n"));
-  /* while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate))) */
-  /*   jitterlisp_eval_globally (form); */
+
+  /* Loop: read a form, exit if it's #<eof>, otherwise evaluate it.  In case of
+     any error, at either read or evaluation time, just continue with the next
+     iteration. */
+  do
+    {
+      JITTERLISP_HANDLE_ERRORS(
+        {
+          jitterlisp_object form = jitterlisp_read (rstate);
+          if (JITTERLISP_IS_EOF (form))
+            goto out;
+          else
+            {
+              jitterlisp_object result = jitterlisp_eval_globally (form);
+              printf ("  ");
+              jitterlisp_print_to_stream (stdout, form);
+              if (! JITTERLISP_IS_NOTHING (result))
+                {
+                  printf (" ==> ");
+                  jitterlisp_print_to_stream (stdout, result);
+                }
+              printf ("\n");
+            }
+        },
+        {
+          /* Do nothing on error. */
+          printf ("User error in the REPL.  Continuing.\n");
+        });
+    }
+  while (true);
+
+  /* We got out of the loop.  Only now we can destroy the reader. */
+ out:
   jitterlisp_destroy_reader_state (rstate);
+
   printf ("...Done running the REPL.\n");
 }

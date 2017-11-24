@@ -44,27 +44,23 @@
    to let the user call jitterlisp_error or jitterlisp_reerror from the failure
    statement, longjmp'ing to the outer context rather than back to the same
    error handler. */
-#define JITTERLISP_HANDLE_ERRORS(_jitterlisp_success_statement,   \
-                                 _jitterlisp_failure_statement)   \
-  do                                                              \
-    {                                                             \
-      printf ("before error handler: pushing error context\n");   \
-      struct jitterlisp_error_context *_jitterlisp_new_ec         \
-        = jitterlisp_error_context_push ();                       \
-      if (setjmp (_jitterlisp_new_ec->the_jmp_buf))               \
-        {                                                         \
-          printf ("got an error: dropping error context\n");      \
-          jitterlisp_error_context_drop ();                       \
-          { _jitterlisp_failure_statement; }                      \
-        }                                                         \
-      else                                                        \
-        {                                                         \
-          { _jitterlisp_success_statement; }                      \
-          jitterlisp_error_context_drop ();                       \
-          printf ("no error at the end: dropping error context\n"); \
-        }                                                         \
-      printf ("after of the error hander\n");                     \
-    }                                                             \
+#define JITTERLISP_HANDLE_ERRORS(_jitterlisp_success_statement,       \
+                                 _jitterlisp_failure_statement)       \
+  do                                                                  \
+    {                                                                 \
+      struct jitterlisp_error_context *_jitterlisp_new_error_context  \
+        = jitterlisp_error_context_push ();                           \
+      if (setjmp (_jitterlisp_new_error_context->the_jmp_buf))        \
+        {                                                             \
+          jitterlisp_error_context_drop ();                           \
+          { _jitterlisp_failure_statement; }                          \
+        }                                                             \
+      else                                                            \
+        {                                                             \
+          { _jitterlisp_success_statement; }                          \
+          jitterlisp_error_context_drop ();                           \
+        }                                                             \
+    }                                                                 \
   while (false)
 
 
