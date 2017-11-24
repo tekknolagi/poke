@@ -29,6 +29,7 @@
 
 #include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-fatal.h>
+#include <jitter/jitter-string.h>
 
 
 /* Global data.
@@ -165,4 +166,16 @@ void
 jitterlisp_reerror (void)
 {
   jitterlisp_error (jitterlisp_last_message_or_NULL);
+}
+
+
+
+
+/* String-cloning wrapper error wrapper.
+ * ************************************************************************** */
+
+void
+jitterlisp_error_cloned (char *message_or_NULL)
+{
+  jitterlisp_error (jitter_clone_string (message_or_NULL));
 }

@@ -47,16 +47,18 @@
 enum jitterlisp_negative_option
   {
     jitterlisp_negative_option_no_verbose = -1,
-    jitterlisp_negative_option_repl = -2,
-    jitterlisp_negative_option_no_colorize = -3
+    jitterlisp_negative_option_vm = -2,
+    jitterlisp_negative_option_repl = -3,
+    jitterlisp_negative_option_no_colorize = -4
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum jitterlisp_negative_option . */
 enum jitterlisp_long_only_option
   {
-    jitterlisp_long_only_option_no_repl = -4,
-    jitterlisp_long_only_option_dump_version = -5
+    jitterlisp_long_only_option_no_vm = -5,
+    jitterlisp_long_only_option_no_repl = -6,
+    jitterlisp_long_only_option_dump_version = -7
   };
 
 /* Command-line option specification. */
@@ -84,12 +86,18 @@ static struct argp_option jitterlisp_option_specification[] =
     "Colorize s-expressions with ANSI terminal escape sequences" },
    {"verbose", 'v', NULL, 0,
     "Show progress information at run time" },
+   {"no-vm", jitterlisp_long_only_option_no_vm, NULL, 0,
+    "Use a naïf C interpreter instead of the Jittery VM" },
+   {"no-jittery", '\0', NULL, OPTION_ALIAS },
    /* Debugging negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 31},
    {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
     "Don't colorize s-expressions (default)"},
    {"no-verbose", jitterlisp_negative_option_no_verbose, NULL, 0,
     "Don't show progress information (default)"},
+   {"vm", jitterlisp_negative_option_vm, NULL, 0,
+    "Use a Jittery VM (default)"},
+   {"jittery", '\0', NULL, OPTION_ALIAS },
 
    {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 40},
    {"dump-version", jitterlisp_long_only_option_dump_version, NULL, 0,
@@ -159,6 +167,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'v':
       sp->verbose = true;
       break;
+    case jitterlisp_long_only_option_no_vm:
+      sp->vm = false;
+      break;
 
     /* Debugging negative options. */
     case jitterlisp_negative_option_no_colorize:
@@ -166,6 +177,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case jitterlisp_negative_option_no_verbose:
       sp->verbose = false;
+      break;
+    case jitterlisp_negative_option_vm:
+      sp->vm = true;
       break;
 
     /* Scripting options. */

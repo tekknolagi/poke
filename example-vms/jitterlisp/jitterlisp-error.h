@@ -34,12 +34,12 @@
    case of errors in interactive use, and letting the user retry. */
 
 /* Try running _jitterlisp_success_statement.  If during the statement execution
-   jitterlisp_error or jitterlisp_reerror is called abort the execution and
-   longjmp to _jitterlisp_failure_statement, which is not executed if
-   _jitterlisp_success_statement succeeds.  Then go back to the statement
-   following the macro call, Unless _jitterlisp_failure_statement errors out
-   as well, in which case the execution longjmp's back to the outer error
-   handler.
+   jitterlisp_error, jitterlisp_error_cloned or jitterlisp_reerror is called
+   abort the execution and longjmp to _jitterlisp_failure_statement, which is
+   not executed if _jitterlisp_success_statement succeeds.  Then go back to
+   the statement following the macro call, Unless _jitterlisp_failure_statement
+   errors out as well, in which case the execution longjmp's back to the outer
+   error handler.
    Internally, we duplicate the call to jitterlisp_error_context_drop in order
    to let the user call jitterlisp_error or jitterlisp_reerror from the failure
    statement, longjmp'ing to the outer context rather than back to the same
@@ -74,6 +74,13 @@
    or a malloc-allocated '\0'-terminated string. */
 void
 jitterlisp_error (char *message_or_NULL)
+  __attribute__ ((noreturn));
+
+/* A wrapper around jitterlisp_error, passing a malloc-allocated copy of the
+   given message_or_NULL when not NULL.  In this case the caller is responsible
+   for releasing memory used for the passed string. */
+void
+jitterlisp_error_cloned (char *message_or_NULL)
   __attribute__ ((noreturn));
 
 /* Fail again using the previous message_or_NULL.  This is useful to propagate

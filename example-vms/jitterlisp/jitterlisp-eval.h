@@ -1,4 +1,4 @@
-/* Jittery Lisp: global settings.
+/* Jittery Lisp: eval wrapper header.
 
    Copyright (C) 2017 Luca Saiu
    Written by Luca Saiu
@@ -20,39 +20,22 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-#include "jitterlisp-settings.h"
+#ifndef JITTERLISP_EVAL_H_
+#define JITTERLISP_EVAL_H_
+
+#include "jitterlisp-sexpression.h"
 
 
-
-
-/* JitterLisp global settings.
+/* Eval wrapper.
  * ************************************************************************** */
 
-/* The one global variable we define here.  This is initialized by the argp
-   parser in main. */
-struct jitterlisp_settings
-jitterlisp_settings;
+/* This is a wrapper, calling either the naïf C interpreter or a Jittery VM
+   according to the global settings. */
 
-void
-jitterlisp_settings_set_default (void)
-{
-  jitterlisp_settings.verbose = false;
-  jitterlisp_settings.vm = true;
-  jitterlisp_settings.colorize = false;
-  jitter_dynamic_buffer_initialize
-     (& jitterlisp_settings.input_file_path_names);
-  jitterlisp_settings.sexps_string = NULL;
-  jitterlisp_settings.repl = true;
-}
+/* Return the result of evaluating the given JitterLisp form in the global
+   environment.  This is a naïf interpreter written in C, not using a Jittery
+   VM and intended as a baseline to compare against. */
+jitterlisp_object
+jitterlisp_eval_globally (jitterlisp_object form);
 
-
-
-
-/* Not fo the user: finalization.
- * ************************************************************************** */
-
-void
-jitterlisp_settings_finalize (void)
-{
-  jitter_dynamic_buffer_finalize (& jitterlisp_settings.input_file_path_names);
-}
+#endif // #ifndef JITTERLISP_EVAL_H_

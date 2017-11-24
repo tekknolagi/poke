@@ -1,4 +1,4 @@
-/* Jittery Lisp: global settings.
+/* Jittery Lisp: eval wrapper.
 
    Copyright (C) 2017 Luca Saiu
    Written by Luca Saiu
@@ -20,39 +20,25 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+#include "jitterlisp-eval.h"
+
+#include <jitter/jitter-fatal.h>
+
+#include "jitterlisp.h"
+#include "jitterlisp-eval-interpreter.h"
 #include "jitterlisp-settings.h"
 
 
-
-
-/* JitterLisp global settings.
+/* Eval wrapper.
  * ************************************************************************** */
 
-/* The one global variable we define here.  This is initialized by the argp
-   parser in main. */
-struct jitterlisp_settings
-jitterlisp_settings;
-
-void
-jitterlisp_settings_set_default (void)
+jitterlisp_object
+jitterlisp_eval_globally (jitterlisp_object form)
 {
-  jitterlisp_settings.verbose = false;
-  jitterlisp_settings.vm = true;
-  jitterlisp_settings.colorize = false;
-  jitter_dynamic_buffer_initialize
-     (& jitterlisp_settings.input_file_path_names);
-  jitterlisp_settings.sexps_string = NULL;
-  jitterlisp_settings.repl = true;
-}
-
-
-
-
-/* Not fo the user: finalization.
- * ************************************************************************** */
-
-void
-jitterlisp_settings_finalize (void)
-{
-  jitter_dynamic_buffer_finalize (& jitterlisp_settings.input_file_path_names);
+  /* Right now only the naïf interpreter exists. */
+  if (jitterlisp_settings.vm)
+    jitterlisp_error_cloned ("Jittery VM not implemented yet: plase run "
+                             "with --no-vm");
+  else
+    return jitterlisp_eval_globally_interpreter (form);
 }

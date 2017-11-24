@@ -32,28 +32,6 @@
 #include <jitter/jitter-string.h> // jitter_clone_string: probably to remove
 
 
-/* Eval stub, to be actually implemented and moved.
- * ************************************************************************** */
-
-jitterlisp_object
-jitterlisp_eval_globally (jitterlisp_object form)
-{
-  /* FIXME: before having a real eval I can still check for memory leaks using
-     Valgrind; the critical case is freeing resources on error.  Here by
-     convention the empty list causes a failure, symbols evaluate to 42,
-     booleans to a symbol and everything else to #<nothing>. */
-  if (form == JITTERLISP_EMPTY_LIST)
-    jitterlisp_error (jitter_clone_string ("the empty list is evil"));
-  else if (JITTERLISP_IS_SYMBOL(form))
-    return JITTERLISP_FIXNUM_ENCODE(42);
-  else if (JITTERLISP_IS_BOOLEAN(form))
-    return JITTERLISP_SYMBOL_ENCODE(
-              jitterlisp_symbol_make_interned("something"));
-  else
-    return JITTERLISP_NOTHING;
-}
-
-
 
 
 /* Run multiple s-expressions from a reader state.

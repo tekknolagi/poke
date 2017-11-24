@@ -32,17 +32,6 @@
 
 
 
-/* Eval stub, to be actually implemented and moved.
- * ************************************************************************** */
-
-/* Return the s-expression which is the evaluation of the given s-expression
-   in the global environment. */
-jitterlisp_object
-jitterlisp_eval_globally (jitterlisp_object o);
-
-
-
-
 /* Run s-expressions parsed from a C string.
  * ************************************************************************** */
 
