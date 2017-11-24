@@ -29,6 +29,7 @@
 
 #include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-fatal.h>
+#include <jitter/jitter-string.h> // jitter_clone_string: probably to remove
 
 
 /* Eval stub, to be actually implemented and moved.
@@ -40,11 +41,51 @@ jitterlisp_eval_globally (jitterlisp_object form)
   printf ("Pretending to eval ");
   jitterlisp_print_to_stream (stdout, form);
   printf ("\n");
+
+  /* FIXME: before having a real eval I can still check for memory leaks using
+     Valgrind; the critical case is freeing resources on error.  Here by
+     convention an empty list causes a failure, everything else doesn't. */
+  if (form == JITTERLISP_EMPTY_LIST)
+    jitterlisp_error (jitter_clone_string ("the empty list is evil"));
+
   jitterlisp_object res = JITTERLISP_NOTHING;
   printf ("The result is ");
   jitterlisp_print_to_stream (stdout, res);
   printf ("\n");
   return res;
+}
+
+
+
+
+/* Run multiple s-expressions from a reader state.
+ * ************************************************************************** */
+
+/* Keep reading and evaluating every s-expression from the given reader state
+   until the reader returns #<eof>, then destroy the reader state.  In case
+   of errors free the resources correctly and propagate. */
+static void
+jitterlisp_run_and_destroy_reader_state (struct jitterlisp_reader_state *rstate)
+{
+  bool success = true;
+  JITTERLISP_HANDLE_ERRORS(
+    {
+      /* Read and execute until #<eof> or until the first error. */
+      jitterlisp_object form;
+      while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
+        jitterlisp_eval_globally (form);
+    },
+    {
+      /* If we arrived here there was an error. */
+      success = false;
+    });
+
+  /* Free the resources in either case, success or error. */
+  jitterlisp_destroy_reader_state (rstate);
+
+  /* If we failed propagate the error outside. */
+  if (! success)
+    jitterlisp_reerror ();
 }
 
 
@@ -59,10 +100,13 @@ jitterlisp_run_from_string (const char *string)
   printf ("Running from string \"%s\"...\n", string);
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_string_reader_state (string);
+  jitterlisp_run_and_destroy_reader_state (rstate);
+  /*
   jitterlisp_object form;
   while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
     jitterlisp_eval_globally (form);
   jitterlisp_destroy_reader_state (rstate);
+  */
   printf ("...Done running from string \"%s\".\n", string);
 }
 
@@ -95,7 +139,7 @@ jitterlisp_run_from_stream (FILE *input)
 void
 jitterlisp_run_from_named_file (const char *path_name)
 {
-    printf ("Running from file \"%s\"...\n", path_name);
+  printf ("Running from file \"%s\"...\n", path_name);
 
   /* Open an input stream. */
   FILE *in;
@@ -147,8 +191,13 @@ jitterlisp_repl (void)
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_readline_reader_state ("jitterlisp> ");
   jitterlisp_object form;
+JITTERLISP_HANDLE_ERRORS(
   while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
-    jitterlisp_eval_globally (form);
+    jitterlisp_eval_globally (form)
+  ,
+  printf ("bad boy\n"));
+  /* while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate))) */
+  /*   jitterlisp_eval_globally (form); */
   jitterlisp_destroy_reader_state (rstate);
   printf ("...Done running the REPL.\n");
 }

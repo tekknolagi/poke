@@ -20,6 +20,9 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+#include "jitterlisp-reader.h"
+
+#include <stdbool.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
@@ -31,7 +34,7 @@
 #include <jitter/jitter-readline.h>
 #include <jitter/jitter-string.h>
 
-#include "jitterlisp-reader.h"
+#include "jitterlisp-error.h"
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-allocator.h"
 
@@ -529,18 +532,24 @@ jitterlisp_parser_token_text (const struct jitterlisp_parser_state *pstate)
   return pstate->scanner_state.token_text.region;
 }
 
-/* Fail from the pointed parser state printing the given message -- currently in
-   a fatal way. */
+/* Fail from the pointed parser state printing the given message. */
 __attribute__ ((noreturn))
 static void
 jitterlisp_parse_error (struct jitterlisp_parser_state *pstate,
-                        const char *message)
+                        const char *user_message)
 {
-  jitter_fatal ("<INPUT>:%i:%i: parse error near %s: %s",
-                (int) pstate->scanner_state.row_no,
-                (int) pstate->scanner_state.column_no,
-                jitterlisp_parser_token_text (pstate),
-                message);
+  /* Prepare a malloc-allocated string for jitterlisp_error. */
+  size_t message_length = 1000 + strlen (user_message);
+  char *message = jitter_xmalloc (message_length);
+  sprintf (message,
+           "<INPUT>:%i:%i: parse error near %s: %s",
+           (int) pstate->scanner_state.row_no,
+           (int) pstate->scanner_state.column_no,
+           jitterlisp_parser_token_text (pstate),
+           user_message);
+
+  /* Call jitterlisp_error, which will longjmp away. */
+  jitterlisp_error (message);
 }
 
 
@@ -989,11 +998,18 @@ jitterlisp_read (struct jitterlisp_reader_state *rsp)
 jitterlisp_object
 jitterlisp_read_readline_one (const char *prompt)
 {
-  /* Make a readline-once reader state, read from it once and destroy it. */
+  /* Make a readline-one reader state, read from it once and destroy it.  In
+     case of error still destroy the context, to avoid leaks, and propagate the
+     error outside. */
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_readline_one_reader_state (prompt);
-  jitterlisp_object res = jitterlisp_read (rstate);
+  jitterlisp_object res;
+  bool success = true;
+  JITTERLISP_HANDLE_ERRORS({ res = jitterlisp_read (rstate); },
+                           { success = false; });
   jitterlisp_destroy_reader_state (rstate);
+  if (! success)
+    jitterlisp_reerror ();
 
   /* Return what we read. */
   return res;

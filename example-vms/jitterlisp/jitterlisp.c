@@ -22,6 +22,13 @@
 
 #include "jitterlisp.h"
 
+/* Include the GNU Readline header for initialization.  This may not be the most
+   appropriate place for this, but it's just one line. */
+#ifdef JITTER_HAS_GNU_READLINE
+# include <readline/readline.h>
+#endif // #ifdef JITTER_HAS_GNU_READLINE
+
+
 void
 jitterlisp_initialize (void)
 {
@@ -31,12 +38,21 @@ jitterlisp_initialize (void)
   /* Initialize every subsystem. */
   jitterlisp_memory_initialize ();
   jitterlisp_sexpression_initialize ();
+  jitterlisp_error_initialize ();
+
+#ifdef JITTER_HAS_GNU_READLINE
+  /* Enable blink-matching-paren if using GNU Readline.  Some people might find
+     this default somewhat Lisp-specific, which is why it's not in
+     jitter-readline.c . */
+  rl_variable_bind ("blink-matching-paren", "on");
+#endif // #ifdef JITTER_HAS_GNU_READLINE
 }
 
 void
 jitterlisp_finalize (void)
 {
   /* Finalize every subsystem, in the opposite order of initialization. */
+  jitterlisp_error_finalize ();
   jitterlisp_sexpression_finalize ();
   jitterlisp_memory_finalize ();
   jitterlisp_settings_finalize (); /* There's a dynamic buffer to finalize. */

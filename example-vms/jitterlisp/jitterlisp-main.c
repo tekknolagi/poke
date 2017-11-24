@@ -647,9 +647,9 @@ jitterlisp_last (jitterlisp_object a)
 int
 main (int argc, char **argv)
 {
-  /* Initialize JitterLisp.  This initializes the settings data structure
-     with default values, so it must be called before argp_parse , which
-     may change those. */
+  /* Initialize JitterLisp.  This among the rest initializes the settings data
+     structure with default values, so it must be called before argp_parse ,
+     which may change those. */
   jitterlisp_initialize ();
 
   /* Parse our arguments; jitterlisp_settings will contain the information
@@ -658,19 +658,44 @@ main (int argc, char **argv)
   argp_parse (& argp, argc, argv, 0, 0, & jitterlisp_settings);
   struct jitterlisp_settings * const sp = & jitterlisp_settings;
 
-  /* Run the input files.  */
-  jitterlisp_run_from_input_files ();
+  /* Run input files and s-expressions from the command-line; halting at the
+     first error; still free the resources before exiting, even in case of
+     error.
+     Rationale: this level of attention to memory leaks would not be justified
+     here at the top level where failure is effectively fatal and the process is
+     about to terminate anyway, automaically freeing resources; however this is
+     a good place to test the non-local error handling mechanism, and an example
+     for users. */
+  int return_code = EXIT_SUCCESS;
+  JITTERLISP_HANDLE_ERRORS(
+    {
+      /* Run the input files. */
+      jitterlisp_run_from_input_files ();
 
-  /* Evaluate s-expressions from the command line, if any. */
-  if (sp->sexps_string != NULL)
-    jitterlisp_run_from_string (sp->sexps_string);
+      /* Evaluate s-expressions from the command line, if any. */
+      if (sp->sexps_string != NULL)
+        jitterlisp_run_from_string (sp->sexps_string);
+    },
+    {
+      /* On failure: */
+      printf ("Failed when evaluating input files or command-line "
+              "s-exoressions.\n");
+      return_code = EXIT_FAILURE;
+    });
 
-  /* Run the REPL, if enabled. */
-  if (sp->repl)
+  /* Run the REPL if enabled, and only if we didn't fail before.  Failure works
+     differently in the REPL: every single command can fail, but such failures
+     are handled internally and don't propagate: we don't want to kill the
+     process every time the user makes a mistake in interactive use. */
+  if (sp->repl && return_code != EXIT_FAILURE)
     jitterlisp_repl ();
 
-  /* Finalize JitterLisp. */
+  /* Finalize JitterLisp, freeing up resources.  This of course wouldn't be
+     needed right before exiting, but is convenient when checking for memory
+     leaks with Valgrind which this way won't show false positives. */
   jitterlisp_finalize ();
 
-  return 0;
+  /* Return success or failure, as we decided before.  Yes, we go to the trouble
+     of freeing resources even on fatal errors: see the comment above. */
+  return return_code;
 }

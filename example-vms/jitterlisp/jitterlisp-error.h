@@ -1,0 +1,143 @@
+/* Jittery Lisp: error handling header.
+
+   Copyright (C) 2017 Luca Saiu
+   Written by Luca Saiu
+
+   This file is part of the Jittery Lisp language implementation, distributed as
+   an example along with Jitter under the same license.
+
+   Jitter is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   Jitter is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
+
+
+#ifndef JITTERLISP_ERROR_H_
+#define JITTERLISP_ERROR_H_
+
+#include <setjmp.h>
+
+
+/* Error handling.
+ * ************************************************************************** */
+
+/* This is a simple exception facility implemented with setjmp and longjmp .  It
+   is particularly useful to handle errors graciously, freeing up resources in
+   case of errors in interactive use, and letting the user retry. */
+
+/* Try running _jitterlisp_success_statement.  If during the statement execution
+   jitterlisp_error or jitterlisp_reerror is called abort the execution and
+   longjmp to _jitterlisp_failure_statement, which is not executed if
+   _jitterlisp_success_statement succeeds.  Then go back to the statement
+   following the macro call, Unless _jitterlisp_failure_statement errors out
+   as well, in which case the execution longjmp's back to the outer error
+   handler.
+   Internally, we duplicate the call to jitterlisp_error_context_drop in order
+   to let the user call jitterlisp_error or jitterlisp_reerror from the failure
+   statement, longjmp'ing to the outer context rather than back to the same
+   error handler. */
+#define JITTERLISP_HANDLE_ERRORS(_jitterlisp_success_statement,   \
+                                 _jitterlisp_failure_statement)   \
+  do                                                              \
+    {                                                             \
+      printf ("before error handler: pushing error context\n");   \
+      struct jitterlisp_error_context *_jitterlisp_new_ec         \
+        = jitterlisp_error_context_push ();                       \
+      if (setjmp (_jitterlisp_new_ec->the_jmp_buf))               \
+        {                                                         \
+          printf ("got an error: dropping error context\n");      \
+          jitterlisp_error_context_drop ();                       \
+          { _jitterlisp_failure_statement; }                      \
+        }                                                         \
+      else                                                        \
+        {                                                         \
+          { _jitterlisp_success_statement; }                      \
+          jitterlisp_error_context_drop ();                       \
+          printf ("no error at the end: dropping error context\n"); \
+        }                                                         \
+      printf ("after of the error hander\n");                     \
+    }                                                             \
+  while (false)
+
+
+
+
+/* Error non-local exit.
+ * ************************************************************************** */
+
+/* Print the pointed error message if non-NULL, free it if non-NULL and exit the
+   current C evaluation context with a longjmp.  The message must be either NULL
+   or a malloc-allocated '\0'-terminated string. */
+void
+jitterlisp_error (char *message_or_NULL)
+  __attribute__ ((noreturn));
+
+/* Fail again using the previous message_or_NULL.  This is useful to propagate
+   failure to an outer context, after the problem was handled in the inner
+   context. */
+void
+jitterlisp_reerror (void)
+  __attribute__ ((noreturn));
+
+
+
+
+/* Not for the user: error contexts.
+ * ************************************************************************** */
+
+/* The user should manipulate error contexts only using the macros from this
+   header.  The data structure fields are subject to change, and even the
+   function prototypes in this section only serve to define user macros. */
+
+/* This data structure holds information about the context where to jump back to
+   in case of error.  Not for the user. */
+struct jitterlisp_error_context
+{
+  /* The jmp_buf to be used with setjmp and longjmp . */
+  jmp_buf the_jmp_buf;
+};
+
+/* Return a pointer to the topmost error context, or fail fatally if none
+   exists.  Not for the user. */
+struct jitterlisp_error_context *
+jitterlisp_error_context_top (void)
+  __attribute__ ((returns_nonnull));
+
+/* Push an uninitialized error context on the top of the error context stack,
+   and return a pointer to the new structure to be initialized.  Not for the
+   user. */
+struct jitterlisp_error_context *
+jitterlisp_error_context_push (void)
+  __attribute__ ((returns_nonnull));
+
+/* Drop the topmost error context from the stack.  Fail fatally if there is
+   none.  Not for the user. */
+void
+jitterlisp_error_context_drop (void);
+
+
+
+
+/* Not for the user: error-handling initialization and finalization.
+ * ************************************************************************** */
+
+/* These functions are called at initialization/finalization, and the user
+   doesn't need to touch them. */
+
+/* Initialize the error-handling subsystem. */
+void
+jitterlisp_error_initialize (void);
+
+/* Finalize the error-handling subsystem. */
+void
+jitterlisp_error_finalize (void);
+
+#endif // #ifndef JITTERLISP_ERROR_H_

@@ -1010,6 +1010,8 @@ SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-sexpression.h \
   example-vms/jitterlisp/jitterlisp-allocator.h \
   example-vms/jitterlisp/jitterlisp-allocator.c \
+  example-vms/jitterlisp/jitterlisp-error.h \
+  example-vms/jitterlisp/jitterlisp-error.c \
   example-vms/jitterlisp/jitterlisp-printer.h \
   example-vms/jitterlisp/jitterlisp-printer.c \
   example-vms/jitterlisp/jitterlisp-reader.h \
