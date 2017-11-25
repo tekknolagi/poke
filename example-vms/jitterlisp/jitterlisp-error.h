@@ -31,7 +31,9 @@
 
 /* This is a simple exception facility implemented with setjmp and longjmp .  It
    is particularly useful to handle errors graciously, freeing up resources in
-   case of errors in interactive use, and letting the user retry. */
+   case of errors in interactive use, and letting the user retry.
+
+   The exception facility is currently non-reentrant. */
 
 /* Try running _jitterlisp_success_statement.  If during the statement execution
    jitterlisp_error, jitterlisp_error_cloned or jitterlisp_reerror is called

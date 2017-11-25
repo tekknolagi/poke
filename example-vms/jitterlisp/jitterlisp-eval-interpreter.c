@@ -22,16 +22,69 @@
 
 #include "jitterlisp-eval-interpreter.h"
 
+#include <jitter/jitter-dynamic-buffer.h>
+#include <jitter/jitter-malloc.h>
 #include <jitter/jitter-string.h> // for jitter_clone_string: possibly to remove.
 
 #include "jitterlisp.h"
 
 
+/* Environments.
+ * ************************************************************************** */
+
+/* This data structure holds a binding from variable to value representing a
+   non-global environment.  Non-global means local (procedure arguments, let)
+   plus non-local (locals from outer static contexts) variables.  Global
+   variables are handled differently, with a value directly stored in the symbol
+   data structure.  Non-global bindings have precedence over global bindings.
+   The most recent non-global binding has precedence over the previous ones, and
+   will be the first to be removed.  As non-global bindings follow a LIFO
+   discipline the underlying data structure is, unsurprisingly, a stack.
+
+   Variables are encoding as symbols and compared by identity.  This
+   functionality is for this compilation unit's internal use, not exported in a
+   header: the VM implementation will need something similar but not identical,
+   and I still have to figure out the details. */
+
+/* FIXME: if I introduce a moving garbage collector this will need some
+   careful checking, to ensure that symbols from an evaluation environemnts
+   are correctly treated as roots. */
+
+/* FIXME: the entire idea of doing this in C is questionable.  I will need
+   garbage-collected environment anyway for closures. */
+
+/* A non-global environment. */
+struct jitterlisp_environment
+{
+};
+
+/* Return a pointer to a fresh nonglobal environment structure containing no
+   bindings. */
+struct jitterlisp_environment*
+jitterlisp_environment_make (void)
+{
+  struct jitterlisp_environment *res
+    = jitter_xmalloc (sizeof (struct jitterlisp_environment));
+  return res;
+}
+
+/* Destroy the pointed nonglobal environment. */
+void
+jitterlisp_environment_destroy (struct jitterlisp_environment *e)
+{
+  free (e);
+}
+
+
+
+
 /* Non-Jittery interpreter.
  * ************************************************************************** */
 
-jitterlisp_object
-jitterlisp_eval_globally_interpreter (jitterlisp_object form)
+static jitterlisp_object
+jitterlisp_eval_globally_interpreter_in
+  (jitterlisp_object form,
+   struct jitterlisp_environment * const env)
 {
   /* FIXME: before having a real eval I can still check for memory leaks using
      Valgrind; the critical case is freeing resources on error.  Here by
@@ -46,4 +99,20 @@ jitterlisp_eval_globally_interpreter (jitterlisp_object form)
               jitterlisp_symbol_make_interned("something"));
   else
     return JITTERLISP_NOTHING;
+}
+
+
+
+
+/* Non-Jittery interpreter: user API.
+ * ************************************************************************** */
+
+jitterlisp_object
+jitterlisp_eval_globally_interpreter (jitterlisp_object form)
+{
+  struct jitterlisp_environment *env
+    = jitterlisp_environment_make ();
+  jitterlisp_object res = jitterlisp_eval_globally_interpreter_in (form, env);
+  jitterlisp_environment_destroy (env);
+  return res;
 }

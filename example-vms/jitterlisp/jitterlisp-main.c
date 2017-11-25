@@ -96,7 +96,7 @@ static struct argp_option jitterlisp_option_specification[] =
    {"no-verbose", jitterlisp_negative_option_no_verbose, NULL, 0,
     "Don't show progress information (default)"},
    {"vm", jitterlisp_negative_option_vm, NULL, 0,
-    "Use a Jittery VM (default)"},
+    "Use the Jittery VM (default)"},
    {"jittery", '\0', NULL, OPTION_ALIAS },
 
    {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 40},
@@ -693,7 +693,7 @@ main (int argc, char **argv)
     {
       /* On failure: */
       printf ("Failed when evaluating input files or command-line "
-              "s-exoressions.\n");
+              "s-expressions.\n");
       return_code = EXIT_FAILURE;
     });
 

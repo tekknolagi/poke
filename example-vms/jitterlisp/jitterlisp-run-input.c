@@ -114,7 +114,7 @@ jitterlisp_run_from_named_file (const char *path_name)
   else
     in = fopen (path_name, "r");
   if (in == NULL)
-    jitter_fatal ("could not read %s", path_name);
+    jitterlisp_error_cloned ("could not open input file");
 
   /* Read forms from the input stream and run each of them. */
   jitterlisp_run_from_stream (in);
