@@ -111,4 +111,5 @@ jitterlisp_unique_object_names []
       "()",                      /* The unique object with index 2. */
       "#<eof>",                  /* The unique object with index 3. */
       "#<nothing>",              /* The unique object with index 4. */
+      "#<undefined>",            /* The unique object with index 5. */
     };
