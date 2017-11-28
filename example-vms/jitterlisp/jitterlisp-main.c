@@ -283,8 +283,8 @@ print (jitterlisp_object o)
 {
 #define WIDTH "020"
   printf ("* 0x%" WIDTH JITTER_PRIx "  (tag ", o);
-  jitter_print_binary_padded (stdout, JITTERLISP_GET_TAG(o),
-                              JITTERLISP_TAG_BIT_NO);
+  jitter_print_binary_padded (stdout, JITTERLISP_GET_PTAG(o),
+                              JITTERLISP_PTAG_BIT_NO);
   printf (") ");
   if (JITTERLISP_IS_FIXNUM(o))
     printf ("is a fixnum");
@@ -544,9 +544,9 @@ jitterlisp_iota (jitterlisp_object limit)
 jitter_uint
 jitterlisp_two_tags (jitterlisp_object a, jitterlisp_object b)
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
-  return (tag_a << JITTERLISP_TAG_BIT_NO) | tag_b;
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
+  return (tag_a << JITTERLISP_PTAG_BIT_NO) | tag_b;
 }
 
 typedef
@@ -559,7 +559,7 @@ jitter_uint
 jitterlisp_two_tag_dispatch_unary
   (jitterlisp_object a, jitterlisp_one_arity_operator *functions)
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
   return functions [tag_a] (a);
 }
 
@@ -568,18 +568,18 @@ jitterlisp_two_tag_dispatch_2d
   (jitterlisp_object a, jitterlisp_object b,
    jitterlisp_two_arity_operator **functions)
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
   return functions [tag_a] [tag_b] (a, b);
 }
 
 jitter_uint
 jitterlisp_two_tag_dispatch_2d_one_known_dimenstion
   (jitterlisp_object a, jitterlisp_object b,
-   const jitterlisp_two_arity_operator functions[][JITTERLISP_TAG_BIT_NO])
+   const jitterlisp_two_arity_operator functions[][JITTERLISP_PTAG_BIT_NO])
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
   return functions [tag_a] [tag_b] (a, b);
 }
 
@@ -588,9 +588,9 @@ jitterlisp_two_tag_dispatch_1d
   (jitterlisp_object a, jitterlisp_object b,
    const jitterlisp_two_arity_operator functions[])
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
-  return functions [(tag_a << JITTERLISP_TAG_BIT_NO) | tag_b] (a, b);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
+  return functions [(tag_a << JITTERLISP_PTAG_BIT_NO) | tag_b] (a, b);
 }
 
 jitter_uint
@@ -598,9 +598,9 @@ jitterlisp_two_tag_dispatch_1d_alt
   (jitterlisp_object a, jitterlisp_object b,
    const jitterlisp_two_arity_operator functions[])
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
-  return (* (functions + ((tag_a * JITTERLISP_TAG_NO) | tag_b))) (a, b);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
+  return (* (functions + ((tag_a * JITTERLISP_PTAG_NO) | tag_b))) (a, b);
 }
 
 jitter_uint
@@ -608,12 +608,12 @@ jitterlisp_two_tag_dispatch_1d_alt2
   (jitterlisp_object a, jitterlisp_object b,
    const jitterlisp_two_arity_operator functions[])
 {
-  jitter_uint tag_a = JITTERLISP_GET_TAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_TAG(b);
+  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
+  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
   jitter_uint offset
-    = ((tag_a << JITTERLISP_TAG_BIT_NO
+    = ((tag_a << JITTERLISP_PTAG_BIT_NO
         | tag_b)
-       << JITTERLISP_TAG_BIT_NO);
+       << JITTERLISP_PTAG_BIT_NO);
   return ((* ((jitterlisp_two_arity_operator *)
              ((char *) functions) + offset))
           (a, b));

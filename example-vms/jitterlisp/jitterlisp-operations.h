@@ -61,6 +61,10 @@
    to its top or undertop as an l-value, just like a register. */
 
 
+/* The operations defined here perform no type checking: it is assumed, and not
+   checked, that the operands have the required tags. */
+
+
 
 
 /* Fixnums-to-fixnum operations.
@@ -91,34 +95,34 @@
    others with respect to tagging, even more if the fixnum tag is zero.
    Signedness does not matter for sum and subtraction on a two's complement
    machine, so we can avoid casting to and from a signed integer. */
-#if JITTERLISP_FIXNUM_TAG == 0
+#if JITTERLISP_FIXNUM_PTAG == 0
 # define JITTERLISP_FIXNUM_PLUS_OR_MINUS(_jitterlisp_infix,            \
                                          _jitterlisp_tagged_fixnum_a,  \
                                          _jitterlisp_tagged_fixnum_b)  \
-    JITTERLISP_WITH_EXTENDED_TAG_MASKED_ON(                            \
+    JITTERLISP_WITH_TAG_MASKED_ON(                                     \
        ((_jitterlisp_tagged_fixnum_a)                                  \
         _jitterlisp_infix                                              \
         (_jitterlisp_tagged_fixnum_b)),                                \
-       JITTERLISP_FIXNUM_TAG,                                          \
-       JITTERLISP_FIXNUM_SUBTAG,                                       \
-       JITTERLISP_FIXNUM_SUBTAG_BIT_NO)
-#else // JITTERLISP_FIXNUM_TAG != 0
+       JITTERLISP_FIXNUM_PTAG,                                         \
+       JITTERLISP_FIXNUM_STAG,                                         \
+       JITTERLISP_FIXNUM_STAG_BIT_NO)
+#else // JITTERLISP_FIXNUM_PTAG != 0
 # define JITTERLISP_FIXNUM_PLUS_OR_MINUS(_jitterlisp_infix,            \
                                          _jitterlisp_tagged_fixnum_a,  \
                                          _jitterlisp_tagged_fixnum_b)  \
     /* Notice that the infix operation is on unsigned operands. */     \
-    JITTERLISP_WITH_EXTENDED_TAG_MASKED_ON(                            \
+    JITTERLISP_WITH_TAG_MASKED_ON(                                     \
       ((_jitterlisp_tagged_fixnum_a)                                   \
        _jitterlisp_infix                                               \
-       (JITTERLISP_WITH_EXTENDED_TAG_SUBTRACTED(                       \
+       (JITTERLISP_WITH_TAG_SUBTRACTED(                                \
           (_jitterlisp_tagged_fixnum_b),                               \
-          JITTERLISP_FIXNUM_TAG,                                       \
-          JITTERLISP_FIXNUM_SUBTAG,                                    \
-          JITTERLISP_FIXNUM_SUBTAG_BIT_NO))),                          \
-      JITTERLISP_FIXNUM_TAG,                                           \
-      JITTERLISP_FIXNUM_SUBTAG,                                        \
-      JITTERLISP_FIXNUM_SUBTAG_BIT_NO)
-#endif // #if JITTERLISP_FIXNUM_TAG == 0
+          JITTERLISP_FIXNUM_PTAG,                                      \
+          JITTERLISP_FIXNUM_STAG,                                      \
+          JITTERLISP_FIXNUM_STAG_BIT_NO))),                            \
+      JITTERLISP_FIXNUM_PTAG,                                          \
+      JITTERLISP_FIXNUM_STAG,                                          \
+      JITTERLISP_FIXNUM_STAG_BIT_NO)
+#endif // #if JITTERLISP_FIXNUM_PTAG == 0
 
 /* Oprations on fixnums. */
 #define JITTERLISP_FIXNUM_PLUS(_jitterlisp_tagged_fixnum_a,     \

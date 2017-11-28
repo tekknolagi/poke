@@ -44,7 +44,7 @@
    and compute an object size which keeps alignment into account.  Object sizes
    are compile-time constants in most cases. */
 #define JITTERLISP_ALIGNMENT_BIT_MASK  \
-  JITTERLISP_TAG_BIT_MASK
+  JITTERLISP_PTAG_BIT_MASK
 
 /* Expand to the smallest multiple of (1 << JITTERLISP_TAG_BIT_NO) which is
    greater than or equal to the given size. */
