@@ -88,8 +88,12 @@ jitterlisp_eval_globally_interpreter_in
 {
   /* FIXME: before having a real eval I can still check for memory leaks using
      Valgrind; the critical case is freeing resources on error.  Here by
-     convention the empty list causes a failure, symbols evaluate to 42,
-     booleans to a symbol and everything else to #<nothing>. */
+     convention
+     // the empty list causes a failure,
+     the empty list evaluates to the character #\a ,
+     symbols evaluate to the fixnum 42 ,
+     booleans to a symbol
+     and everything else to #<nothing>. */
   if (form == JITTERLISP_EMPTY_LIST)
     return JITTERLISP_CHARACTER_ENCODE('a');
       /*if (form == JITTERLISP_EMPTY_LIST)
