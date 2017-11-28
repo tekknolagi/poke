@@ -292,8 +292,6 @@ print (jitterlisp_object o)
     printf ("is a unique object");
   else if (JITTERLISP_IS_CHARACTER(o))
     printf ("is a character");
-  else if (JITTERLISP_IS_UNIQUE_OR_CHARACTER(o))
-    printf ("is a unique-or-character (this shouldn't happen)");
   else if (JITTERLISP_IS_SYMBOL(o))
     printf ("is a symbol");
   else if (JITTERLISP_IS_CONS(o))

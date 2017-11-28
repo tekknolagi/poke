@@ -91,9 +91,13 @@ jitterlisp_eval_globally_interpreter_in
      convention the empty list causes a failure, symbols evaluate to 42,
      booleans to a symbol and everything else to #<nothing>. */
   if (form == JITTERLISP_EMPTY_LIST)
+    return JITTERLISP_CHARACTER_ENCODE('a');
+      /*if (form == JITTERLISP_EMPTY_LIST)
     jitterlisp_error (jitter_clone_string ("the empty list is evil"));
-  else if (JITTERLISP_IS_SYMBOL(form))
-    return JITTERLISP_FIXNUM_ENCODE(42);
+  else*/ if (JITTERLISP_IS_SYMBOL(form))
+    //return JITTERLISP_FIXNUM_ENCODE(42);
+    return JITTERLISP_FIXNUM_PLUS(JITTERLISP_FIXNUM_ENCODE(40),
+                                  JITTERLISP_FIXNUM_ENCODE(2));
   else if (JITTERLISP_IS_BOOLEAN(form))
     return JITTERLISP_SYMBOL_ENCODE(
               jitterlisp_symbol_make_interned("something"));
