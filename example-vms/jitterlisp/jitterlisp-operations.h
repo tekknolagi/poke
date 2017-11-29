@@ -175,42 +175,42 @@
 /* In the case of comparison expression operations on fixnums a solution in the
    spirit of the more efficient solution for plus and minus above works with
    *any* tag.  Notice that the operands must be compared as signed. */
-#define JITTERLISP_EXP_FF_B_COMPARISON(_jitterlisp_infix,        \
-                                   _jitterlisp_tagged_fixnum_a,  \
-                                   _jitterlisp_tagged_fixnum_b)  \
-  JITTERLISP_BOOLEAN_ENCODE(((jitter_int)                        \
-                             (_jitterlisp_tagged_fixnum_a))      \
-                            _jitterlisp_infix                    \
-                            ((jitter_int)                        \
+#define JITTERLISP_EXP_FF_B_COMPARISON(_jitterlisp_infix,            \
+                                       _jitterlisp_tagged_fixnum_a,  \
+                                       _jitterlisp_tagged_fixnum_b)  \
+  JITTERLISP_BOOLEAN_ENCODE(((jitter_int)                            \
+                             (_jitterlisp_tagged_fixnum_a))          \
+                            _jitterlisp_infix                        \
+                            ((jitter_int)                            \
                              (_jitterlisp_tagged_fixnum_b)))
 
 /* Boolean operations on fixnum operands. */
 #define JITTERLISP_EXP_FF_B_EQUAL(_jitterlisp_tagged_fixnum_a,  \
-                              _jitterlisp_tagged_fixnum_b)      \
+                                  _jitterlisp_tagged_fixnum_b)  \
   JITTERLISP_EXP_FF_B_COMPARISON(==,                            \
                                  _jitterlisp_tagged_fixnum_a,   \
                                  _jitterlisp_tagged_fixnum_b)
 #define JITTERLISP_EXP_FF_B_NOTEQUAL(_jitterlisp_tagged_fixnum_a,  \
-                                 _jitterlisp_tagged_fixnum_b)      \
+                                     _jitterlisp_tagged_fixnum_b)  \
   JITTERLISP_EXP_FF_B_COMPARISON(!=,                               \
                                  _jitterlisp_tagged_fixnum_a,      \
                                  _jitterlisp_tagged_fixnum_b)
 #define JITTERLISP_EXP_FF_B_LESS(_jitterlisp_tagged_fixnum_a,  \
-                             _jitterlisp_tagged_fixnum_b)      \
+                                 _jitterlisp_tagged_fixnum_b)  \
   JITTERLISP_EXP_FF_B_COMPARISON(<,                            \
                                  _jitterlisp_tagged_fixnum_a,  \
                                  _jitterlisp_tagged_fixnum_b)
 #define JITTERLISP_EXP_FF_B_NOTLESS(_jitterlisp_tagged_fixnum_a,  \
-                                _jitterlisp_tagged_fixnum_b)      \
+                                    _jitterlisp_tagged_fixnum_b)  \
   JITTERLISP_EXP_FF_B_COMPARISON(>=,                              \
                                  _jitterlisp_tagged_fixnum_a,     \
                                  _jitterlisp_tagged_fixnum_b)
 #define JITTERLISP_EXP_FF_B_GREATER(_jitterlisp_tagged_fixnum_a,  \
-                                _jitterlisp_tagged_fixnum_b)      \
+                                    _jitterlisp_tagged_fixnum_b)  \
   JITTERLISP_EXP_FF_B_LESS(_jitterlisp_tagged_fixnum_b,           \
                            _jitterlisp_tagged_fixnum_a)
 #define JITTERLISP_EXP_FF_B_NOTGREATER(_jitterlisp_tagged_fixnum_a,  \
-                                   _jitterlisp_tagged_fixnum_b)      \
+                                       _jitterlisp_tagged_fixnum_b)  \
   JITTERLISP_EXP_FF_B_NOTLESS(_jitterlisp_tagged_fixnum_b,           \
                               _jitterlisp_tagged_fixnum_a)
 
