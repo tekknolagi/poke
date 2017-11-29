@@ -172,9 +172,9 @@
 /* Fixnums-to-boolean expression operations.
  * ************************************************************************** */
 
-/* In the case of comparison operators on fixnums a solution in the spirit of
-   the more efficient solution for plus and minus above works with *any* tag.
-   Notice that the operands must be compared as *signed*. */
+/* In the case of comparison expression operations on fixnums a solution in the
+   spirit of the more efficient solution for plus and minus above works with
+   *any* tag.  Notice that the operands must be compared as signed. */
 #define JITTERLISP_EXP_FF_B_COMPARISON(_jitterlisp_infix,        \
                                    _jitterlisp_tagged_fixnum_a,  \
                                    _jitterlisp_tagged_fixnum_b)  \
