@@ -23,9 +23,11 @@
 #ifndef JITTERLISP_SEXPRESSION_H_
 #define JITTERLISP_SEXPRESSION_H_
 
-#include <stdio.h>
+/* We need the jitter_int and jitter_uint types. */
 #include <jitter/jitter.h>
 
+
+
 
 /* About this file.
  * ************************************************************************** */
@@ -35,7 +37,8 @@
    Lisp representation of the same object, and vice-versa.
 
    Allocation and memory handling is *not* covered here: see
-   jitterlisp-allocator.h . */
+   jitterlisp-allocator.h .  Operations on Lisp objects are not defined here
+   either: see jitterlisp-operations.h . */
 
 
 
@@ -151,8 +154,10 @@
     >> (_jitterlisp_bit_no)))
 
 /* One of the two implementations for JITTERLISP_WITH_BITS_ASHIFTED_OFF .  This
-   solution is not pretty and probably very inefficient, but doesn't rely on
-   arithmetic right shifts in its implementation. */
+   solution is not pretty and probably very inefficient, with a conditional
+   essentially impossible to optimize away and even difficult to compile to
+   non-branching code; but at least this doesn't rely on >> performing
+   arithmetic right shifts on signed operands. */
 #define JITTERLISP_WITH_BITS_ASHIFTED_OFF_GENERIC(_jitterlisp_word,    \
                                                   _jitterlisp_bit_no)  \
   (JITTERLISP_MOST_SIGNIFICANT_BIT(_jitterlisp_word)                   \
@@ -597,7 +602,7 @@ typedef jitter_uint jitterlisp_object;
    in the space of the possible configurations.  Some other type might fit
    here in the future, with just one more stag bit to discriminate, which
    wouldn't be a problem for representing unique and character objects. */
-#define JITTERLISP_UNIQUE_OR_CHARACTER_PTAG  0b001 // FIXME: I've not really thought about what value is best here
+#define JITTERLISP_UNIQUE_OR_CHARACTER_PTAG         0b001
 
 /* How to distinguish unique values from characters. */
 #define JITTERLISP_UNIQUE_STAG_BIT_NO               1
@@ -738,6 +743,13 @@ struct jitterlisp_symbol
   /* The symbol name as a malloc-allocated string, or NULL if the symbol is not
      interned. */
   char *name_or_NULL;
+
+  /* The value bound to the symbol in the global environment, or
+     JITTERLISP_UNDEFINED if there is no global binding.
+
+     FIXME: this makes each symbol a GC root which will require some careful
+     testing in the case of interned symbols, as they are malloc-allocated. */
+  jitterlisp_object global_value;
 };
 
 /* Symbol tag checking, encoding and decoding. */

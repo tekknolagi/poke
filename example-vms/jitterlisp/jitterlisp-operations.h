@@ -67,8 +67,20 @@
 
 
 
-/* Fixnums-to-fixnum operations.
+/* Expression operations.
  * ************************************************************************** */
+
+// FIXME: describe the expression-operation idea.
+
+// FIXME: JITTERLISP_EXP_
+
+
+
+
+/* Fixnums-to-fixnum and fixnum-to-fixnum expression operations.
+ * ************************************************************************** */
+
+// FIXME: JITTERLISP_EXP_FF_F_
 
 /* These operations take one or more fixnums and compute another fixnum as a
    result.  Right now there is no other numeric type in JitterLisp, but these
@@ -77,13 +89,13 @@
 /* Expand to an r-value expression evaluating to the tagged fixnum operation
    result having the given tagged fixnum operands, and the given infix C
    operation as the operator (the C operator working on untagged operands). */
-#define JITTERLISP_FIXNUMS_TO_FIXNUM_BINARY(_jitterlisp_infix,            \
-                                            _jitterlisp_tagged_fixnum_a,  \
-                                            _jitterlisp_tagged_fixnum_b)  \
-  (JITTERLISP_FIXNUM_ENCODE(                                              \
-     (JITTERLISP_FIXNUM_DECODE(_jitterlisp_tagged_fixnum_a))              \
-     _jitterlisp_infix                                                    \
-     (JITTERLISP_FIXNUM_DECODE(_jitterlisp_tagged_fixnum_b))))
+#define JITTERLISP_EXP_FF_F_BINARY(_jitterlisp_infix,            \
+                                   _jitterlisp_tagged_fixnum_a,  \
+                                   _jitterlisp_tagged_fixnum_b)  \
+  JITTERLISP_FIXNUM_ENCODE(                                      \
+     (JITTERLISP_FIXNUM_DECODE(_jitterlisp_tagged_fixnum_a))     \
+     _jitterlisp_infix                                           \
+     (JITTERLISP_FIXNUM_DECODE(_jitterlisp_tagged_fixnum_b)))
 
 /* Right now fixnum-to-fixnum operations behave "correctly" on overflow and
    underflow, where correctly means that the result is always tagged correctly
@@ -96,111 +108,111 @@
    Signedness does not matter for sum and subtraction on a two's complement
    machine, so we can avoid casting to and from a signed integer. */
 #if JITTERLISP_FIXNUM_PTAG == 0
-# define JITTERLISP_FIXNUM_PLUS_OR_MINUS(_jitterlisp_infix,            \
-                                         _jitterlisp_tagged_fixnum_a,  \
-                                         _jitterlisp_tagged_fixnum_b)  \
-    JITTERLISP_WITH_TAG_MASKED_ON(                                     \
-       ((_jitterlisp_tagged_fixnum_a)                                  \
-        _jitterlisp_infix                                              \
-        (_jitterlisp_tagged_fixnum_b)),                                \
-       JITTERLISP_FIXNUM_PTAG,                                         \
-       JITTERLISP_FIXNUM_STAG,                                         \
+# define JITTERLISP_EXP_FF_F_PLUS_OR_MINUS(_jitterlisp_infix,            \
+                                           _jitterlisp_tagged_fixnum_a,  \
+                                           _jitterlisp_tagged_fixnum_b)  \
+    JITTERLISP_WITH_TAG_MASKED_ON(                                       \
+       ((_jitterlisp_tagged_fixnum_a)                                    \
+        _jitterlisp_infix                                                \
+        (_jitterlisp_tagged_fixnum_b)),                                  \
+       JITTERLISP_FIXNUM_PTAG,                                           \
+       JITTERLISP_FIXNUM_STAG,                                           \
        JITTERLISP_FIXNUM_STAG_BIT_NO)
 #else // JITTERLISP_FIXNUM_PTAG != 0
-# define JITTERLISP_FIXNUM_PLUS_OR_MINUS(_jitterlisp_infix,            \
-                                         _jitterlisp_tagged_fixnum_a,  \
-                                         _jitterlisp_tagged_fixnum_b)  \
-    /* Notice that the infix operation is on unsigned operands. */     \
-    JITTERLISP_WITH_TAG_MASKED_ON(                                     \
-      ((_jitterlisp_tagged_fixnum_a)                                   \
-       _jitterlisp_infix                                               \
-       (JITTERLISP_WITH_TAG_SUBTRACTED(                                \
-          (_jitterlisp_tagged_fixnum_b),                               \
-          JITTERLISP_FIXNUM_PTAG,                                      \
-          JITTERLISP_FIXNUM_STAG,                                      \
-          JITTERLISP_FIXNUM_STAG_BIT_NO))),                            \
-      JITTERLISP_FIXNUM_PTAG,                                          \
-      JITTERLISP_FIXNUM_STAG,                                          \
-      JITTERLISP_FIXNUM_STAG_BIT_NO)
+# define JITTERLISP_EXP_FF_F_PLUS_OR_MINUS(_jitterlisp_infix,            \
+                                           _jitterlisp_tagged_fixnum_a,  \
+                                           _jitterlisp_tagged_fixnum_b)  \
+    /* Notice that the infix operation is on unsigned operands. */       \
+    JITTERLISP_WITH_TAG_MASKED_ON(                                       \
+       ((_jitterlisp_tagged_fixnum_a)                                    \
+        _jitterlisp_infix                                                \
+        (JITTERLISP_WITH_TAG_SUBTRACTED(                                 \
+           (_jitterlisp_tagged_fixnum_b),                                \
+           JITTERLISP_FIXNUM_PTAG,                                       \
+           JITTERLISP_FIXNUM_STAG,                                       \
+           JITTERLISP_FIXNUM_STAG_BIT_NO))),                             \
+       JITTERLISP_FIXNUM_PTAG,                                           \
+       JITTERLISP_FIXNUM_STAG,                                           \
+       JITTERLISP_FIXNUM_STAG_BIT_NO)
 #endif // #if JITTERLISP_FIXNUM_PTAG == 0
 
-/* Oprations on fixnums. */
-#define JITTERLISP_FIXNUM_PLUS(_jitterlisp_tagged_fixnum_a,     \
-                               _jitterlisp_tagged_fixnum_b)     \
-  JITTERLISP_FIXNUM_PLUS_OR_MINUS(+,                            \
-                                  _jitterlisp_tagged_fixnum_a,  \
-                                  _jitterlisp_tagged_fixnum_b)
-#define JITTERLISP_FIXNUM_MINUS(_jitterlisp_tagged_fixnum_a,    \
-                                _jitterlisp_tagged_fixnum_b)    \
-  JITTERLISP_FIXNUM_PLUS_OR_MINUS(-,                            \
-                                  _jitterlisp_tagged_fixnum_a,  \
-                                  _jitterlisp_tagged_fixnum_b)
-#define JITTERLISP_FIXNUM_TIMES(_jitterlisp_tagged_fixnum_a,        \
-                                _jitterlisp_tagged_fixnum_b)        \
-  JITTERLISP_FIXNUMS_TO_FIXNUM_BINARY(*,                            \
-                                      _jitterlisp_tagged_fixnum_a,  \
-                                      _jitterlisp_tagged_fixnum_b)
-#define JITTERLISP_FIXNUM_DIVIDED(_jitterlisp_tagged_fixnum_a,      \
+/* Expression oprations on fixnums. */
+#define JITTERLISP_EXP_FF_F_PLUS(_jitterlisp_tagged_fixnum_a,     \
+                                 _jitterlisp_tagged_fixnum_b)     \
+  JITTERLISP_EXP_FF_F_PLUS_OR_MINUS(+,                            \
+                                    _jitterlisp_tagged_fixnum_a,  \
+                                    _jitterlisp_tagged_fixnum_b)
+#define JITTERLISP_EXP_FF_F_MINUS(_jitterlisp_tagged_fixnum_a,    \
+                                  _jitterlisp_tagged_fixnum_b)    \
+  JITTERLISP_EXP_FF_F_PLUS_OR_MINUS(-,                            \
+                                    _jitterlisp_tagged_fixnum_a,  \
+                                    _jitterlisp_tagged_fixnum_b)
+#define JITTERLISP_EXP_FF_F_TIMES(_jitterlisp_tagged_fixnum_a,  \
+                                  _jitterlisp_tagged_fixnum_b)  \
+  JITTERLISP_EXP_FF_F_BINARY(*,                                 \
+                             _jitterlisp_tagged_fixnum_a,       \
+                             _jitterlisp_tagged_fixnum_b)
+#define JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_tagged_fixnum_a,  \
+                                _jitterlisp_tagged_fixnum_b)      \
+  JITTERLISP_EXP_FF_F_BINARY(/,                                   \
+                             _jitterlisp_tagged_fixnum_a,         \
+                             _jitterlisp_tagged_fixnum_b)
+#define JITTERLISP_EXP_FF_F_REMAINDER(_jitterlisp_tagged_fixnum_a,  \
                                   _jitterlisp_tagged_fixnum_b)      \
-  JITTERLISP_FIXNUMS_TO_FIXNUM_BINARY(/,                            \
-                                      _jitterlisp_tagged_fixnum_a,  \
-                                      _jitterlisp_tagged_fixnum_b)
-#define JITTERLISP_FIXNUM_REMAINDER(_jitterlisp_tagged_fixnum_a,    \
-                                    _jitterlisp_tagged_fixnum_b)    \
-  JITTERLISP_FIXNUMS_TO_FIXNUM_BINARY(%,                            \
-                                      _jitterlisp_tagged_fixnum_a,  \
-                                      _jitterlisp_tagged_fixnum_b)
-#define JITTERLISP_FIXNUM_UNARY_MINUS(_jitterlisp_tagged_fixnum_a)  \
-  JITTERLISP_FIXNUM_MINUS(JITTERLISP_FIXNUM_ENCODE(0),              \
-                          _jitterlisp_tagged_fixnum_a)
+  JITTERLISP_EXP_FF_F_BINARY(%,                                     \
+                             _jitterlisp_tagged_fixnum_a,           \
+                             _jitterlisp_tagged_fixnum_b)
+#define JITTERLISP_EXP_F_F_MINUS(_jitterlisp_tagged_fixnum_a)  \
+  JITTERLISP_EXP_FF_F_MINUS(JITTERLISP_FIXNUM_ENCODE(0),       \
+                            _jitterlisp_tagged_fixnum_a)
 
 
 
 
-/* Fixnums-to-boolean operations.
+/* Fixnums-to-boolean expression operations.
  * ************************************************************************** */
 
 /* In the case of comparison operators on fixnums a solution in the spirit of
    the more efficient solution for plus and minus above works with *any* tag.
    Notice that the operands must be compared as *signed*. */
-#define JITTERLISP_FIXNUM_COMPARISON(_jitterlisp_infix,            \
-                                     _jitterlisp_tagged_fixnum_a,  \
-                                     _jitterlisp_tagged_fixnum_b)  \
-  (JITTERLISP_BOOLEAN_ENCODE(((jitter_int)                         \
-                              (_jitterlisp_tagged_fixnum_a))       \
-                             _jitterlisp_infix                     \
-                             ((jitter_int)                         \
-                              (_jitterlisp_tagged_fixnum_b))))
+#define JITTERLISP_EXP_FF_B_COMPARISON(_jitterlisp_infix,        \
+                                   _jitterlisp_tagged_fixnum_a,  \
+                                   _jitterlisp_tagged_fixnum_b)  \
+  JITTERLISP_BOOLEAN_ENCODE(((jitter_int)                        \
+                             (_jitterlisp_tagged_fixnum_a))      \
+                            _jitterlisp_infix                    \
+                            ((jitter_int)                        \
+                             (_jitterlisp_tagged_fixnum_b)))
 
 /* Boolean operations on fixnum operands. */
-#define JITTERLISP_FIXNUM_EQUAL(_jitterlisp_tagged_fixnum_a,  \
-                                _jitterlisp_tagged_fixnum_b)  \
-  JITTERLISP_FIXNUM_COMPARISON(==,                            \
-                                _jitterlisp_tagged_fixnum_a,  \
-                                _jitterlisp_tagged_fixnum_b)
-#define JITTERLISP_FIXNUM_NOTEQUAL(_jitterlisp_tagged_fixnum_a,  \
-                                _jitterlisp_tagged_fixnum_b)     \
-  JITTERLISP_FIXNUM_COMPARISON(!=,                               \
-                                _jitterlisp_tagged_fixnum_a,     \
-                                _jitterlisp_tagged_fixnum_b)
-#define JITTERLISP_FIXNUM_LESS(_jitterlisp_tagged_fixnum_a,  \
-                               _jitterlisp_tagged_fixnum_b)  \
-  JITTERLISP_FIXNUM_COMPARISON(<,                            \
-                               _jitterlisp_tagged_fixnum_a,  \
-                               _jitterlisp_tagged_fixnum_b)
-#define JITTERLISP_FIXNUM_NOTLESS(_jitterlisp_tagged_fixnum_a,  \
-                                  _jitterlisp_tagged_fixnum_b)  \
-  JITTERLISP_FIXNUM_COMPARISON(>=,                              \
-                               _jitterlisp_tagged_fixnum_a,     \
-                               _jitterlisp_tagged_fixnum_b)
-#define JITTERLISP_FIXNUM_GREATER(_jitterlisp_tagged_fixnum_a,  \
-                                  _jitterlisp_tagged_fixnum_b)  \
-  JITTERLISP_FIXNUM_LESS(_jitterlisp_tagged_fixnum_b,           \
-                         _jitterlisp_tagged_fixnum_a)
-#define JITTERLISP_FIXNUM_NOTGREATER(_jitterlisp_tagged_fixnum_a,  \
-                                     _jitterlisp_tagged_fixnum_b)  \
-  JITTERLISP_FIXNUM_NOTLESS(_jitterlisp_tagged_fixnum_b,           \
-                            _jitterlisp_tagged_fixnum_a)
+#define JITTERLISP_EXP_FF_B_EQUAL(_jitterlisp_tagged_fixnum_a,  \
+                              _jitterlisp_tagged_fixnum_b)      \
+  JITTERLISP_EXP_FF_B_COMPARISON(==,                            \
+                                 _jitterlisp_tagged_fixnum_a,   \
+                                 _jitterlisp_tagged_fixnum_b)
+#define JITTERLISP_EXP_FF_B_NOTEQUAL(_jitterlisp_tagged_fixnum_a,  \
+                                 _jitterlisp_tagged_fixnum_b)      \
+  JITTERLISP_EXP_FF_B_COMPARISON(!=,                               \
+                                 _jitterlisp_tagged_fixnum_a,      \
+                                 _jitterlisp_tagged_fixnum_b)
+#define JITTERLISP_EXP_FF_B_LESS(_jitterlisp_tagged_fixnum_a,  \
+                             _jitterlisp_tagged_fixnum_b)      \
+  JITTERLISP_EXP_FF_B_COMPARISON(<,                            \
+                                 _jitterlisp_tagged_fixnum_a,  \
+                                 _jitterlisp_tagged_fixnum_b)
+#define JITTERLISP_EXP_FF_B_NOTLESS(_jitterlisp_tagged_fixnum_a,  \
+                                _jitterlisp_tagged_fixnum_b)      \
+  JITTERLISP_EXP_FF_B_COMPARISON(>=,                              \
+                                 _jitterlisp_tagged_fixnum_a,     \
+                                 _jitterlisp_tagged_fixnum_b)
+#define JITTERLISP_EXP_FF_B_GREATER(_jitterlisp_tagged_fixnum_a,  \
+                                _jitterlisp_tagged_fixnum_b)      \
+  JITTERLISP_EXP_FF_B_LESS(_jitterlisp_tagged_fixnum_b,           \
+                           _jitterlisp_tagged_fixnum_a)
+#define JITTERLISP_EXP_FF_B_NOTGREATER(_jitterlisp_tagged_fixnum_a,  \
+                                   _jitterlisp_tagged_fixnum_b)      \
+  JITTERLISP_EXP_FF_B_NOTLESS(_jitterlisp_tagged_fixnum_b,           \
+                              _jitterlisp_tagged_fixnum_a)
 
 
 

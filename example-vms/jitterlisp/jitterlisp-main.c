@@ -356,49 +356,49 @@ type_error (void)
 jitterlisp_object
 jitterlisp_fixnum_plus (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_PLUS(a, b);
+  return JITTERLISP_EXP_FF_F_PLUS(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_uminus (jitterlisp_object a)
 {
-  return JITTERLISP_FIXNUM_UNARY_MINUS(a);
+  return JITTERLISP_EXP_F_F_MINUS(a);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_minus (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_MINUS(a, b);
+  return JITTERLISP_EXP_FF_F_MINUS(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_times (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_TIMES(a, b);
+  return JITTERLISP_EXP_FF_F_TIMES(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_divided (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_DIVIDED(a, b);
+  return JITTERLISP_EXP_FF_F_DIVIDED(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_remainder (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_REMAINDER(a, b);
+  return JITTERLISP_EXP_FF_F_REMAINDER(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_less (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_LESS(a, b);
+  return JITTERLISP_EXP_FF_B_LESS(a, b);
 }
 
 jitterlisp_object
 jitterlisp_fixnum_notgreater (jitterlisp_object a, jitterlisp_object b)
 {
-  return JITTERLISP_FIXNUM_NOTGREATER(a, b);
+  return JITTERLISP_EXP_FF_B_NOTGREATER(a, b);
 }
 
 bool
@@ -460,7 +460,7 @@ jitterlisp_plus_of_constants (void)
 {
   jitterlisp_object a = JITTERLISP_FIXNUM_ENCODE(40);
   jitterlisp_object b = JITTERLISP_FIXNUM_ENCODE(2);
-  return JITTERLISP_FIXNUM_PLUS(a, b);
+  return JITTERLISP_EXP_FF_F_PLUS(a, b);
 }
 
 jitterlisp_object

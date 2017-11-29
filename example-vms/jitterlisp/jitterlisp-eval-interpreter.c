@@ -100,8 +100,8 @@ jitterlisp_eval_globally_interpreter_in
     jitterlisp_error (jitter_clone_string ("the empty list is evil"));
   else*/ if (JITTERLISP_IS_SYMBOL(form))
     //return JITTERLISP_FIXNUM_ENCODE(42);
-    return JITTERLISP_FIXNUM_PLUS(JITTERLISP_FIXNUM_ENCODE(40),
-                                  JITTERLISP_FIXNUM_ENCODE(2));
+    return JITTERLISP_EXP_FF_F_PLUS(JITTERLISP_FIXNUM_ENCODE(40),
+                                    JITTERLISP_FIXNUM_ENCODE(2));
   else if (JITTERLISP_IS_BOOLEAN(form))
     return JITTERLISP_SYMBOL_ENCODE(
               jitterlisp_symbol_make_interned("something"));
