@@ -653,17 +653,50 @@ typedef jitter_uint jitterlisp_object;
                                    JITTERLISP_CHARACTER_STAG,            \
                                    JITTERLISP_CHARACTER_STAG_BIT_NO)
 
+/* Every unique object has a unique printable name.  The array is meant to be
+   indexed by decoded unique values and is defined to have exactly
+   JITTERLISP_UNIQUE_OBJECT_NO elements. */
+extern const char * const
+jitterlisp_unique_object_names [];
+
+
+
+
+/* S-expression representation: specific unique objects.
+ * ************************************************************************** */
+
+/* Unique objects are simple unboxed objects, each represented as a shifted
+   index.  They are efficient to compare to, but by themselves hold no mutable
+   state and no attributes. */
+
 /* How many unique objects there are.  This of course must agree with the
    definitions below. */
 #define JITTERLISP_UNIQUE_OBJECT_NO  6
 
 /* Define every unique object.  The names in the definition of
    jitterlisp_unique_object_names must follow this order. */
+
+/* The #f object.  In JitterLisp this is distinct from () and the symbol named
+   nil, which is a symbol like any other. */
 #define JITTERLISP_FALSE       JITTERLISP_UNIQUE_ENCODE(0)
+
+/* The #t object. */
 #define JITTERLISP_TRUE        JITTERLISP_UNIQUE_ENCODE(1)
+
+/* The () object.  In JitterLisp this is distinct from #f and the symbol named
+   nil, which is a symbol like any other. */
 #define JITTERLISP_EMPTY_LIST  JITTERLISP_UNIQUE_ENCODE(2)
+
+/* The end-of-file or end-of-input object. */
 #define JITTERLISP_EOF         JITTERLISP_UNIQUE_ENCODE(3)
+
+/* A unique object conventionally used as the result of forms not evaluating to
+   any useful result. */
 #define JITTERLISP_NOTHING     JITTERLISP_UNIQUE_ENCODE(4)
+
+/* A unique object used to represent the global value of globally unbound
+   symbols.  This is used in the internal symbol representation but should never
+   be the result of an evaluation. */
 #define JITTERLISP_UNDEFINED   JITTERLISP_UNIQUE_ENCODE(5)
 
 /* Unique object predicates.  Since unique objects are unboxed (and unique)
@@ -679,12 +712,8 @@ typedef jitter_uint jitterlisp_object;
   ((_jitterlisp_tagged_object) == JITTERLISP_EOF)
 #define JITTERLISP_IS_NOTHING(_jitterlisp_tagged_object)  \
   ((_jitterlisp_tagged_object) == JITTERLISP_NOTHING)
-
-/* Every unique object has a unique printable name.  The array is meant to be
-   indexed by decoded unique values and is defined to have exactly
-   JITTERLISP_UNIQUE_OBJECT_NO elements. */
-extern const char * const
-jitterlisp_unique_object_names [];
+#define JITTERLISP_IS_UNDEFINED(_jitterlisp_tagged_object)  \
+  ((_jitterlisp_tagged_object) == JITTERLISP_UNDEFINED)
 
 
 
