@@ -29,11 +29,18 @@
 /* Error handling.
  * ************************************************************************** */
 
-/* This is a simple exception facility implemented with setjmp and longjmp .  It
-   is particularly useful to handle errors graciously, freeing up resources in
-   case of errors in interactive use, and letting the user retry.
+/* This is a very simple exception facility implemented with setjmp and longjmp
+   .  It is particularly useful to handle errors graciously, freeing up
+   resources in case of errors in interactive use, and letting the user retry.
 
-   The exception facility is currently non-reentrant. */
+   This exception subsystem has not been designed to handle recoverable errors
+   at the level of VM programs, even if it should be possible to bend it in that
+   direction by nested invocations of VM "programs".  Such a solution, while
+   probably not the most efficient, appears easy to implement and might serve as
+   an example for other applications.
+
+   The exception facility is currently non-reentrant.  Adding a thread-local
+   error context would not be difficult. */
 
 /* Try running _jitterlisp_success_statement.  If during the statement execution
    jitterlisp_error, jitterlisp_error_cloned or jitterlisp_reerror is called
