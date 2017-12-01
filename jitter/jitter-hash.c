@@ -89,7 +89,7 @@ jitter_string_hash_function (const union jitter_word key)
   jitter_uint res = 0;
   unsigned char *s;
   for (s = (unsigned char*) key.pointer_to_char; *s != '\0'; s ++)
-    res = (res << 1) ^ jitter_hash_random_words [* s];
+    res ^= (res << 1) ^ jitter_hash_random_words [* s];
   return res;
 }
 
