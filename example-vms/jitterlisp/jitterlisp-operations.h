@@ -368,6 +368,25 @@
 
 // FIXME: implement.
 
+#define JITTERLISP_LESSP_(_jitterlisp_out, _jitterlisp_in0,           \
+                          _jitterlisp_in1)                            \
+  JITTER_BEGIN_                                                       \
+    _jitterlisp_out                                                   \
+      = JITTERLISP_EXP_FF_B_LESS(_jitterlisp_in0, _jitterlisp_in1);   \
+  JITTER_END_
+#define JITTERLISP_GREATERP_(_jitterlisp_out, _jitterlisp_in0,          \
+                             _jitterlisp_in1)                           \
+  JITTERLISP_LESSP_(_jitterlisp_out, _jitterlisp_in1, _jitterlisp_in0)
+#define JITTERLISP_NOTLESSP_(_jitterlisp_out, _jitterlisp_in0,          \
+                             _jitterlisp_in1)                           \
+  JITTER_BEGIN_                                                         \
+    _jitterlisp_out                                                     \
+      = JITTERLISP_EXP_FF_B_NOTLESS(_jitterlisp_in0, _jitterlisp_in1);  \
+  JITTER_END_
+#define JITTERLISP_NOTGREATERP_(_jitterlisp_out, _jitterlisp_in0,          \
+                                _jitterlisp_in1)                           \
+  JITTERLISP_NOTLESSP_(_jitterlisp_out, _jitterlisp_in1, _jitterlisp_in0)
+
 
 
 

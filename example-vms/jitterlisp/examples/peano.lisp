@@ -19,6 +19,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
+(define (1- n) (- n 1))  ;; For MIT/GNU Scheme
 
 ;;;; Peano fundamental operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -107,6 +108,20 @@
       (peano-successor peano-zero)
       (peano-* b (peano-expt b (peano-predecessor e)))))
 
+(define (peano-tak x y z)
+  (if (peano-<= x y)
+      y
+      (peano-tak (peano-tak (peano-predecessor x) y z)
+                 (peano-tak (peano-predecessor y) z x)
+                 (peano-tak (peano-predecessor z) x y))))
+
+(define (tak x y z)
+  (if (<= x y)
+      y
+      (tak (tak (1- x) y z)
+           (tak (1- y) z x)
+           (tak (1- z) x y))))
+
 
 
 
@@ -143,9 +158,16 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (show (peano->fixnum (fixnum->peano 10)))
-(show (peano->fixnum (peano-remainder (fixnum->peano 10) (fixnum->peano 4))))
+(show (peano->fixnum (peano-remainder (fixnum->peano 10)
+                                      (fixnum->peano 4))))
 (show (peano->fixnum (peano-fact (fixnum->peano 6))))
-(show (peano->fixnum (peano-expt (fixnum->peano 10) (fixnum->peano 4))))
+(show (peano->fixnum (peano-expt (fixnum->peano 10)
+                                 (fixnum->peano 4))))
 (show (peano->fixnum (peano-remainder (peano-expt (fixnum->peano 10)
                                                   (fixnum->peano 4))
                                       (fixnum->peano 7))))
+(newline)
+
+;; This is a good way to stress the GC.
+;;(show (tak 14 8 2))
+;;(show (peano->fixnum (peano-tak (fixnum->peano 14) (fixnum->peano 8) (fixnum->peano 2))))

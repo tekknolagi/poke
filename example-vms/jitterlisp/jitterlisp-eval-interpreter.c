@@ -637,6 +637,31 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
       JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
       JITTERLISP_EQP_(res, args [0], args [1]);
     }
+  else if (! strcmp (interned_name, "<>"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_NEQP_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, "<"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_LESSP_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, ">"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_GREATERP_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, ">="))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_NOTLESSP_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, "<="))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_NOTGREATERP_(res, args [0], args [1]);
+    }
   /* Comparison. */
   else if (! strcmp (interned_name, "eq?"))
     {
