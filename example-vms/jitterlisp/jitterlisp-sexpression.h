@@ -687,16 +687,16 @@ jitterlisp_unique_object_names [];
    nil, which is a symbol like any other. */
 #define JITTERLISP_EMPTY_LIST  JITTERLISP_UNIQUE_ENCODE(2)
 
-/* The end-of-file or end-of-input object. */
+/* The end-of-file or end-of-input object.  This object has no reader syntax. */
 #define JITTERLISP_EOF         JITTERLISP_UNIQUE_ENCODE(3)
 
 /* A unique object conventionally used as the result of forms not evaluating to
-   any useful result. */
+   any useful result.  No reader syntax. */
 #define JITTERLISP_NOTHING     JITTERLISP_UNIQUE_ENCODE(4)
 
 /* A unique object used to represent the global value of globally unbound
    symbols.  This is used in the internal symbol representation but should never
-   be the result of an evaluation. */
+   be the result of an evaluation.  No reader syntax, of course. */
 #define JITTERLISP_UNDEFINED   JITTERLISP_UNIQUE_ENCODE(5)
 
 /* Unique object predicates.  Since unique objects are unboxed (and unique)
@@ -841,6 +841,67 @@ struct jitterlisp_cons
                                    JITTERLISP_CONS_PTAG,           \
                                    JITTERLISP_CONS_STAG,           \
                                    JITTERLISP_CONS_STAG_BIT_NO)))
+
+
+
+/* S-expression representation: closurees.
+ * ************************************************************************** */
+
+/* Closures are represented boxed, with no header. */
+
+#define JITTERLISP_CLOSURE_PTAG           0b100
+
+#define JITTERLISP_CLOSURE_STAG_BIT_NO    0
+#define JITTERLISP_CLOSURE_STAG           0b0
+
+/* A closure datum.  The exact list of fields will probably change. */
+struct jitterlisp_closure
+{
+  /* The non-global environment, as an a-list. */
+  jitterlisp_object environment;
+
+  /* The function formal arguments as a list of symbols. */
+  jitterlisp_object formals;
+
+  /* The function body as a form list. */
+  jitterlisp_object body;
+};
+
+/* Closure tag checking, encoding and decoding. */
+#define JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)  \
+  JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),         \
+                     JITTERLISP_CLOSURE_PTAG,             \
+                     JITTERLISP_CLOSURE_STAG,             \
+                     JITTERLISP_CLOSURE_STAG_BIT_NO)
+#define JITTERLISP_CLOSURE_ENCODE(_jitterlisp_untagged_closure)  \
+  JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_closure,        \
+                            JITTERLISP_CLOSURE_PTAG,             \
+                            JITTERLISP_CLOSURE_STAG,             \
+                            JITTERLISP_CLOSURE_STAG_BIT_NO)
+#define JITTERLISP_CLOSURE_DECODE(_jitterlisp_tagged_closure)         \
+  ((struct jitterlisp_closure *)                                      \
+   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_closure),      \
+                                   JITTERLISP_CLOSURE_PTAG,           \
+                                   JITTERLISP_CLOSURE_STAG,           \
+                                   JITTERLISP_CLOSURE_STAG_BIT_NO)))
+
+
+
+
+/* Globally named objects.
+ * ************************************************************************** */
+
+/* A few s-expressions, particularly some interned symbols, are important enough
+   for performance reasons to be bound to global C variables.  It would be nice
+   to make them constant, but this is not possible since most of them require
+   heap-allocation.
+
+   This requires them to be GC roots, which will need some work if I switch to a
+   moving GC. */
+extern jitterlisp_object jitterlisp_object_begin;
+extern jitterlisp_object jitterlisp_object_if;
+extern jitterlisp_object jitterlisp_object_lambda;
+extern jitterlisp_object jitterlisp_object_quote;
 
 
 

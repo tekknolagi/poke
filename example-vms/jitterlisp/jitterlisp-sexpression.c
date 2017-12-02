@@ -34,6 +34,7 @@
 #include <jitter/jitter-malloc.h>
 
 #include "jitterlisp-sexpression.h"
+#include "jitterlisp-allocator.h" /* For globally named objects. */
 
 
 /* Compiler sanity checks.
@@ -82,12 +83,18 @@ jitterlisp_platform_sanity_check (void)
 /* S-expression initialization and finalization.
  * ************************************************************************** */
 
+/* A forward-declaration. */
+static void
+jitterlisp_initialize_globally_named_objects (void);
+
 void
 jitterlisp_sexpression_initialize (void)
 {
   /* Perform sanity checks, unless we've already done it before. */
   if (! jitterlisp_platform_sanity_check_performed)
     jitterlisp_platform_sanity_check ();
+
+  jitterlisp_initialize_globally_named_objects ();
 }
 
 void
@@ -113,3 +120,34 @@ jitterlisp_unique_object_names []
       "#<nothing>",              /* The unique object with index 4. */
       "#<undefined>",            /* The unique object with index 5. */
     };
+
+
+
+
+/* Globally named objects.
+ * ************************************************************************** */
+
+/* Return an interned symbol with the given name as a tagged s-expression. */
+static jitterlisp_object
+jitterlisp_make_interned (const char *name)
+{
+  struct jitterlisp_symbol *untagged_res
+    = jitterlisp_symbol_make_interned (name);
+  return JITTERLISP_SYMBOL_ENCODE(untagged_res);
+}
+
+/* Globally named object variables. */
+jitterlisp_object jitterlisp_object_begin;
+jitterlisp_object jitterlisp_object_if;
+jitterlisp_object jitterlisp_object_lambda;
+jitterlisp_object jitterlisp_object_quote;
+
+/* Initialize globally named object variables. */
+static void
+jitterlisp_initialize_globally_named_objects (void)
+{
+  jitterlisp_object_begin = jitterlisp_make_interned ("begin");
+  jitterlisp_object_if = jitterlisp_make_interned ("if");
+  jitterlisp_object_lambda = jitterlisp_make_interned ("lambda");
+  jitterlisp_object_quote = jitterlisp_make_interned ("quote");
+}

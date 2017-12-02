@@ -126,6 +126,19 @@ jitterlisp_symbol_make_interned (const char *name)
 
 
 
+/* Closure allocation.
+ * ************************************************************************** */
+
+/* Expand to an rvalue of type struct jitterlisp_closure * whose evaluation
+   points to a just allocated and uninitialized closure. */
+#define JITTERLISP_CLOSURE_MAKE_UNINITIALIZED_UNENCODED()                         \
+  /* FIXME: this works, but of course the implementation is temporary. */      \
+  ((struct jitterlisp_closure*)                                                   \
+   (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(struct jitterlisp_closure))))
+
+
+
+
 /* Fallback allocation.
  * ************************************************************************** */
 

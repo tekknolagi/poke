@@ -44,6 +44,7 @@ jitterlisp_non_ordinary_character_name_bindings []
       { '\0', "nul" },
       { ' ',  "space" },
       { '\n', "newline" },
+      { '\r', "cr" },
       { '\r', "return" }
     };
 
@@ -124,6 +125,7 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 # define INTERNEDSYMBOLATTR   YELLOW ITALIC
 # define UNINTERNEDSYMBOLATTR YELLOW ITALIC UNDERLINE
 # define UNIQUEATTR           LIGHTMAGENTA UNDERLINE ITALIC
+# define CLOSUREATTR          LIGHTCYAN ITALIC
 # define ERRORATTR            RED REVERSE
 #endif // #ifdef NOTERMINAL
 
@@ -339,6 +341,27 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
           jitterlisp_print_decoration (cp, cps, UNINTERNEDSYMBOLATTR);
           jitterlisp_print_string (cp, cps, "#<uninterned-symbol>");
         }
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_CLOSURE(o))
+    {
+      struct jitterlisp_closure * const closure = JITTERLISP_CLOSURE_DECODE(o);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, "#<procedure ");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print (cp, cps, closure->environment);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, " ");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print (cp, cps, closure->formals);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      /* The body is a form list, so I print it as a cdr.  The cdr printer
+         prepends a space only if the list is not empty, which is what we need
+         in this case as well. */
+      jitterlisp_print_cdr (cp, cps, closure->body);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, ">");
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_CONS(o))

@@ -38,7 +38,7 @@ jitterlisp_eval_globally (jitterlisp_object form)
   /* Right now only the naïf interpreter exists. */
   if (jitterlisp_settings.vm)
     jitterlisp_error_cloned ("Jittery VM not implemented yet: plase run "
-                             "with --no-vm");
+                             "with --no-vm if you want to use eval");
   else
     return jitterlisp_eval_globally_interpreter (form);
 }
