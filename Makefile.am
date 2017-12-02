@@ -1058,7 +1058,8 @@ endif # JITTER_HAVE_BOEHM_GC
 # Examples for JitterLisp.
 EXTRA_DIST += \
   example-vms/jitterlisp/examples/counter.lisp \
-  example-vms/jitterlisp/examples/factorial.lisp
+  example-vms/jitterlisp/examples/factorial.lisp \
+  example-vms/jitterlisp/examples/peano.lisp
 
 # Other files for JitterLisp.
 EXTRA_DIST += example-vms/jitterlisp/THANKS

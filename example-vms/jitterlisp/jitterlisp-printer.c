@@ -44,8 +44,10 @@ jitterlisp_non_ordinary_character_name_bindings []
       { '\0', "nul" },
       { ' ',  "space" },
       { '\n', "newline" },
+      { '\n', "linefeed" },
       { '\r', "cr" },
-      { '\r', "return" }
+      { '\r', "return" },
+      { '\f', "page" }
     };
 
 const size_t

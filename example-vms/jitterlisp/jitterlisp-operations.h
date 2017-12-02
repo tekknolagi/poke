@@ -563,6 +563,13 @@
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_BOOLEAN(_jitterlisp_in0));  \
   JITTER_END_
 
+/* Compute a tagged boolean, #t iff the given in-argument is the eof object . */
+#define JITTERLISP_EOFP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                           \
+    _jitterlisp_out =                                                     \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_EOF(_jitterlisp_in0));  \
+  JITTER_END_
+
 /* Compute a tagged boolean, #t iff the given in-argument is the nothing
    object. */
 #define JITTERLISP_NOTHINGP_(_jitterlisp_out, _jitterlisp_in0)            \

@@ -550,6 +550,11 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
       JITTERLISP_EVAL_ARGS_1;
       JITTERLISP_NULLP_(res, args [0]);
     }
+  else if (! strcmp (interned_name, "eof?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EOFP_(res, args [0]);
+    }
   else if (! strcmp (interned_name, "boolean?"))
     {
       JITTERLISP_EVAL_ARGS_1;

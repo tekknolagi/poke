@@ -93,7 +93,7 @@ jitterlisp_symbol_table;
    should stay in registers; but I can live with this until a proper VM for
    JitterLisp exists. */
 #ifdef JITTERLISP_LITTER
-#define JITTERLISP_LITTER_BYTE_NO (10 * 1024 * 1024)
+#define JITTERLISP_LITTER_BYTE_NO (20 * 1024 * 1024)
 
   /* The lowest heap address. */
   static char *litter_heap_beginning;
