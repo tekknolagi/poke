@@ -90,8 +90,8 @@ jitterlisp_closure (jitterlisp_object environment,
    header: the VM implementation will need something similar but not identical,
    and I still have to figure out the details.
 
-   This is an ordinary a-list implemented on s-expressions, and used in a
-   non-destructive way.  An inefficient but very simple solution. */
+   This is an ordinary a-list implemented as an s-expression; set! modifies it
+   destructively.  An inefficient but very simple solution. */
 
 /* The empty non-global environment. */
 static const jitterlisp_object
@@ -159,6 +159,35 @@ jitterlisp_environment_has (jitterlisp_object env, jitterlisp_object name)
   return ! JITTERLISP_IS_UNDEFINED(unencoded_name->global_value);
 }
 
+/* Destructively update the first binding for the given name in the given
+   non-global environment, setting it to the given new value.  If the name is
+   not bound in the non-global environment then modify the global binding. */
+static void
+jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
+                            jitterlisp_object new_value)
+{
+  /* First look for a binding in the local environment, which is to say look
+     for the first cons in env whose car is equal-by-identity to name... */
+  jitterlisp_object env_rest;
+  for (env_rest = env;
+       env_rest != JITTERLISP_EMPTY_LIST;
+       env_rest = JITTERLISP_EXP_C___CDR(env_rest))
+    {
+      jitterlisp_object next_cons = JITTERLISP_EXP_C___CAR(env_rest);
+      jitterlisp_object next_name = JITTERLISP_EXP_C___CAR(next_cons);
+      if (next_name == name)
+        {
+          JITTERLISP_SET_CDR_(next_cons, new_value);
+          return;
+        }
+    }
+
+  /* ...The symbol is not bound in the given local environment.  Change its
+     global binding. */
+  struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
+  unencoded_name->global_value = new_value;
+}
+
 
 
 
@@ -215,6 +244,26 @@ jitterlisp_eval_interpreter_begin (jitterlisp_object forms,
 }
 
 static jitterlisp_object
+jitterlisp_eval_interpreter_if (jitterlisp_object cdr,
+                                jitterlisp_object env)
+{
+  if (! JITTERLISP_IS_CONS(cdr))
+    jitterlisp_error_cloned ("if not followed by a cons");
+  jitterlisp_object condition = JITTERLISP_EXP_C___CAR(cdr);
+  jitterlisp_object after_condition = JITTERLISP_EXP_C___CDR(cdr);
+  if (! JITTERLISP_IS_CONS(after_condition))
+    jitterlisp_error_cloned ("if condition not followed by a cons");
+  jitterlisp_object then = JITTERLISP_EXP_C___CAR(after_condition);
+  jitterlisp_object else_forms = JITTERLISP_EXP_C___CDR(after_condition);
+
+  if (! JITTERLISP_IS_FALSE (jitterlisp_eval_interpreter_in (condition,
+                                                             env)))
+    return jitterlisp_eval_interpreter_in (then, env);
+  else
+    return jitterlisp_eval_interpreter_begin (else_forms, env);
+}
+
+static jitterlisp_object
 jitterlisp_eval_interpreter_lambda (jitterlisp_object cdr,
                                     jitterlisp_object env)
 {
@@ -222,8 +271,8 @@ jitterlisp_eval_interpreter_lambda (jitterlisp_object cdr,
     jitterlisp_error_cloned ("lambda not followed by a cons");
 
   jitterlisp_object formals = JITTERLISP_EXP_C___CAR(cdr);
-  jitterlisp_object body = JITTERLISP_EXP_C___CDR(cdr);
-  return jitterlisp_closure (env, formals, body);
+  jitterlisp_object body_forms = JITTERLISP_EXP_C___CDR(cdr);
+  return jitterlisp_closure (env, formals, body_forms);
 }
 
 static jitterlisp_object
@@ -238,6 +287,38 @@ jitterlisp_eval_interpreter_quote (jitterlisp_object cdr,
   jitterlisp_object cadr = JITTERLISP_EXP_C___CAR(cdr);
 
   return cadr;
+}
+
+static jitterlisp_object
+jitterlisp_eval_interpreter_set_bang (jitterlisp_object cdr,
+                                      jitterlisp_object env)
+{
+  if (! JITTERLISP_IS_CONS(cdr))
+    jitterlisp_error_cloned ("set! not followed by a cons");
+  jitterlisp_object variable = JITTERLISP_EXP_C___CAR(cdr);
+  if (! JITTERLISP_IS_SYMBOL(variable))
+    jitterlisp_error_cloned ("set! not followed by a symbol");
+  jitterlisp_object after_variable_forms = JITTERLISP_EXP_C___CDR(cdr);
+  jitterlisp_object new_value
+    = jitterlisp_eval_interpreter_begin (after_variable_forms, env);
+  jitterlisp_environment_set (env, variable, new_value);
+
+  return JITTERLISP_NOTHING;
+}
+
+static jitterlisp_object
+jitterlisp_eval_interpreter_while (jitterlisp_object cdr,
+                                   jitterlisp_object env)
+{
+  if (! JITTERLISP_IS_CONS(cdr))
+    jitterlisp_error_cloned ("while not followed by a cons");
+  jitterlisp_object guard = JITTERLISP_EXP_C___CAR(cdr);
+  jitterlisp_object body = JITTERLISP_EXP_C___CDR(cdr);
+
+  while (! JITTERLISP_IS_FALSE (jitterlisp_eval_interpreter_in (guard,
+                                                                env)))
+    jitterlisp_eval_interpreter_begin (body, env);
+  return JITTERLISP_NOTHING;
 }
 
 /* Evaluate the given operator and operands in the given environment, and return
@@ -303,10 +384,16 @@ jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
      special form thru its helper. */
   if (symbol == jitterlisp_object_begin)
     return jitterlisp_eval_interpreter_begin (cdr, env);
+  if (symbol == jitterlisp_object_if)
+    return jitterlisp_eval_interpreter_if (cdr, env);
   else if (symbol == jitterlisp_object_lambda)
     return jitterlisp_eval_interpreter_lambda (cdr, env);
   else if (symbol == jitterlisp_object_quote)
     return jitterlisp_eval_interpreter_quote (cdr, env);
+  else if (symbol == jitterlisp_object_set_bang)
+    return jitterlisp_eval_interpreter_set_bang (cdr, env);
+  else if (symbol == jitterlisp_object_while)
+    return jitterlisp_eval_interpreter_while (cdr, env);
 
   /* The symbol is unbound so it can't evaluate to a procedure, and is not the
      name of a special form either. */

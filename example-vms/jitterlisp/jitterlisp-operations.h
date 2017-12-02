@@ -348,23 +348,35 @@
   JITTER_BEGIN_                                                              \
     struct jitterlisp_cons *_jitterlisp_tmp                                  \
       = JITTERLISP_CONS_MAKE_UNINITIALIZED_UNENCODED();                      \
-    _jitterlisp_tmp->car = _jitterlisp_in0;                                  \
-    _jitterlisp_tmp->cdr = _jitterlisp_in1;                                  \
-    _jitterlisp_out = JITTERLISP_CONS_ENCODE(_jitterlisp_tmp);               \
+    _jitterlisp_tmp->car = (_jitterlisp_in0);                                \
+    _jitterlisp_tmp->cdr = (_jitterlisp_in1);                                \
+    (_jitterlisp_out) = JITTERLISP_CONS_ENCODE(_jitterlisp_tmp);             \
   JITTER_END_
 
 #define JITTERLISP_CAR_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTER_BEGIN_                                            \
     struct jitterlisp_cons *_jitterlisp_tmp                \
       = JITTERLISP_CONS_DECODE(_jitterlisp_in0);           \
-    _jitterlisp_out = _jitterlisp_tmp->car;                \
+    (_jitterlisp_out) = _jitterlisp_tmp->car;              \
   JITTER_END_
-
 #define JITTERLISP_CDR_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTER_BEGIN_                                            \
     struct jitterlisp_cons *_jitterlisp_tmp                \
       = JITTERLISP_CONS_DECODE(_jitterlisp_in0);           \
-    _jitterlisp_out = _jitterlisp_tmp->cdr;                \
+    (_jitterlisp_out) = _jitterlisp_tmp->cdr;              \
+  JITTER_END_
+
+#define JITTERLISP_SET_CAR_(_jitterlisp_cons, _jitterlisp_new_car)  \
+  JITTER_BEGIN_                                                     \
+    struct jitterlisp_cons *_jitterlisp_tmp                         \
+      = JITTERLISP_CONS_DECODE(_jitterlisp_cons);                   \
+    _jitterlisp_tmp->car = (_jitterlisp_new_car);                   \
+  JITTER_END_
+#define JITTERLISP_SET_CDR_(_jitterlisp_cons, _jitterlisp_new_cdr)  \
+  JITTER_BEGIN_                                                     \
+    struct jitterlisp_cons *_jitterlisp_tmp                         \
+      = JITTERLISP_CONS_DECODE(_jitterlisp_cons);                   \
+    _jitterlisp_tmp->cdr = (_jitterlisp_new_cdr);                   \
   JITTER_END_
 
 

@@ -100,7 +100,8 @@ jitterlisp_sexpression_initialize (void)
 void
 jitterlisp_sexpression_finalize (void)
 {
-  /* Do nothing. */
+  /* Do nothing.  There is no need to destroy each globally named object, as the
+     symbol table finalization will deal with them. */
 }
 
 
@@ -140,7 +141,11 @@ jitterlisp_make_interned (const char *name)
 jitterlisp_object jitterlisp_object_begin;
 jitterlisp_object jitterlisp_object_if;
 jitterlisp_object jitterlisp_object_lambda;
+jitterlisp_object jitterlisp_object_let;
+jitterlisp_object jitterlisp_object_let_star;
 jitterlisp_object jitterlisp_object_quote;
+jitterlisp_object jitterlisp_object_set_bang;
+jitterlisp_object jitterlisp_object_while;
 
 /* Initialize globally named object variables. */
 static void
@@ -149,5 +154,9 @@ jitterlisp_initialize_globally_named_objects (void)
   jitterlisp_object_begin = jitterlisp_make_interned ("begin");
   jitterlisp_object_if = jitterlisp_make_interned ("if");
   jitterlisp_object_lambda = jitterlisp_make_interned ("lambda");
+  jitterlisp_object_let = jitterlisp_make_interned ("let");
+  jitterlisp_object_let_star = jitterlisp_make_interned ("let*");
   jitterlisp_object_quote = jitterlisp_make_interned ("quote");
+  jitterlisp_object_set_bang = jitterlisp_make_interned ("set!");
+  jitterlisp_object_while = jitterlisp_make_interned ("while");
 }

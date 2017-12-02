@@ -901,7 +901,11 @@ struct jitterlisp_closure
 extern jitterlisp_object jitterlisp_object_begin;
 extern jitterlisp_object jitterlisp_object_if;
 extern jitterlisp_object jitterlisp_object_lambda;
+extern jitterlisp_object jitterlisp_object_let;
+extern jitterlisp_object jitterlisp_object_let_star;
 extern jitterlisp_object jitterlisp_object_quote;
+extern jitterlisp_object jitterlisp_object_set_bang;
+extern jitterlisp_object jitterlisp_object_while;
 
 
 
