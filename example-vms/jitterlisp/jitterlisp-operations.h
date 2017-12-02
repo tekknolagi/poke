@@ -371,6 +371,20 @@
 
 
 
+/* Boolean operations.
+ * ************************************************************************** */
+
+/* Compute a tagged boolean, #t iff the argument is #f. */
+#define JITTERLISP_NOT_(_jitterlisp_out, _jitterlisp_in0)              \
+  JITTER_BEGIN_                                                        \
+    _jitterlisp_out =                                                  \
+      JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                      \
+                                == JITTERLISP_BOOLEAN_ENCODE(false));  \
+  JITTER_END_
+
+
+
+
 /* Cons operations.
  * ************************************************************************** */
 
@@ -450,6 +464,23 @@
   JITTER_BEGIN_                                                              \
     _jitterlisp_out =                                                        \
       JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0) != (_jitterlisp_in1));     \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given argument is the fixnum zero. */
+#define JITTERLISP_ZEROP_(_jitterlisp_out, _jitterlisp_in0)       \
+  JITTER_BEGIN_                                                   \
+    _jitterlisp_out =                                             \
+      JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                 \
+                                == JITTERLISP_FIXNUM_ENCODE(0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given argument is different from the
+   fixnum zero. */
+#define JITTERLISP_NZEROP_(_jitterlisp_out, _jitterlisp_in0)      \
+  JITTER_BEGIN_                                                   \
+    _jitterlisp_out =                                             \
+      JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                 \
+                                != JITTERLISP_FIXNUM_ENCODE(0));  \
   JITTER_END_
 
 

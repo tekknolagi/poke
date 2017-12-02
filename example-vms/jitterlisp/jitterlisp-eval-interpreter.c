@@ -230,28 +230,12 @@ jitterlisp_is_self_evaluating (jitterlisp_object o)
           || JITTERLISP_IS_FIXNUM(o));
 }
 
-/* /\* Eval a list of forms in sequence; return the list of each evaluation result */
-/*    in order. *\/ */
-/* static jitterlisp_object */
-/* jitterlisp_eval_list_interpreter (jitterlisp_object forms, */
-/*                                   jitterlisp_object env) */
-/* { */
-/*   if (JITTERLISP_IS_EMPTY_LIST(forms)) */
-/*     return JITTERLISP_EMPTY_LIST; */
-
-/*   jitterlisp_object first_form = JITTERLISP_EXP_C_A_CAR(forms); */
-/*   jitterlisp_object more_forms = JITTERLISP_EXP_C_A_CDR(forms); */
-/*   jitterlisp_object first_result */
-/*     = jitterlisp_eval_interpreter (first_form, env); */
-/*   return jitterlisp_cons (first_result, */
-/*                           jitterlisp_eval_list_interpreter (more_forms, env)); */
-/* } */
-
-/* Eval a list of forms in sequence; return the last result, or #<nothing> for
-   an empty sequence. */
+/* See the comments in the version below to see why this implementation is not
+   used. */
+__attribute__ ((unused))
 static jitterlisp_object
-jitterlisp_eval_interpreter_begin (jitterlisp_object forms,
-                                   jitterlisp_object env)
+jitterlisp_eval_interpreter_begin_alternative (jitterlisp_object forms,
+                                               jitterlisp_object env)
 {
   jitterlisp_object res = JITTERLISP_NOTHING;
   while (! JITTERLISP_IS_EMPTY_LIST(forms))
@@ -263,6 +247,36 @@ jitterlisp_eval_interpreter_begin (jitterlisp_object forms,
       forms = JITTERLISP_EXP_C_A_CDR(forms);
     }
   return res;
+}
+
+/* Eval a list of forms in sequence; return the last result, or #<nothing> for
+   an empty sequence. */
+static jitterlisp_object
+jitterlisp_eval_interpreter_begin (jitterlisp_object forms,
+                                   jitterlisp_object env)
+{
+  /* It is very important that a tail call as the last form is correctly
+     recognized by GCC.  The code could be made simpler otherwise; see the
+     unused alternative above. */
+  if (JITTERLISP_IS_EMPTY_LIST(forms))
+    return JITTERLISP_NOTHING;
+
+  while (true)
+    {
+      if (! JITTERLISP_IS_CONS(forms))
+        jitterlisp_error_cloned ("form-sequence body not a list");
+      jitterlisp_object first_form = JITTERLISP_EXP_C_A_CAR(forms);
+      jitterlisp_object more_forms = JITTERLISP_EXP_C_A_CDR(forms);
+      /* If there is nothing more after first_form evaluate it in a tail
+         call. */
+      if (JITTERLISP_IS_EMPTY_LIST(more_forms))
+        return jitterlisp_eval_interpreter (first_form, env);
+
+      /* If we arrived here then more_forms is not empty.  Evaluate first_form,
+         ignoring the result, and keep iterating on more_forms. */
+      jitterlisp_eval_interpreter (first_form, env);
+      forms = more_forms;
+    }
 }
 
 static jitterlisp_object
@@ -551,6 +565,12 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
       JITTERLISP_EVAL_ARGS_TYPED_1(FIXNUM);
       JITTERLISP_1MINUS_(res, args [0]);
     }
+  /* Boolean operations. */
+  else if (! strcmp (interned_name, "not"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_NOT_(res, args [0]);
+    }
   /* Comparison. */
   else if (! strcmp (interned_name, "eq?"))
     {
@@ -561,6 +581,16 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
     {
       JITTERLISP_EVAL_ARGS_2;
       JITTERLISP_NEQP_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, "zero?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_ZEROP_(res, args [0]);
+    }
+  else if (! strcmp (interned_name, "nzero?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_NZEROP_(res, args [0]);
     }
   /* Conses. */
   else if (! strcmp (interned_name, "cons"))
