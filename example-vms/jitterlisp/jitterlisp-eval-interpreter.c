@@ -22,6 +22,9 @@
 
 #include "jitterlisp-eval-interpreter.h"
 
+#include <string.h>  // For strcmp .  FIXME: Probably not needed in the end.
+
+#include <jitter/jitter-cpp.h>
 #include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-string.h> // for jitter_clone_string: possibly to remove.
@@ -41,8 +44,8 @@ jitterlisp_is_list_of_symbols (jitterlisp_object o)
     {
       if (! JITTERLISP_IS_CONS (o))
         return false;
-      jitterlisp_object car = JITTERLISP_EXP_C___CAR(o);
-      jitterlisp_object cdr = JITTERLISP_EXP_C___CDR(o);
+      jitterlisp_object car = JITTERLISP_EXP_C_A_CAR(o);
+      jitterlisp_object cdr = JITTERLISP_EXP_C_A_CDR(o);
       if (! JITTERLISP_IS_SYMBOL (car))
         return false;
       o = cdr;
@@ -57,6 +60,26 @@ jitterlisp_cons (jitterlisp_object car, jitterlisp_object cdr)
   jitterlisp_object res;
   JITTERLISP_CONS_(res, car, cdr);
   return res;
+}
+
+/* Return the encoded car of the given encoded cons, tag-checking. */
+static inline jitterlisp_object
+jitterlisp_car (jitterlisp_object cons)
+{
+  if (! JITTERLISP_IS_CONS(cons))
+    jitterlisp_error_cloned ("car of non-cons");
+  else
+    return JITTERLISP_EXP_C_A_CAR(cons);
+}
+
+/* Return the encoded cdr of the given encoded cons, tag-checking. */
+static inline jitterlisp_object
+jitterlisp_cdr (jitterlisp_object cons)
+{
+  if (! JITTERLISP_IS_CONS(cons))
+    jitterlisp_error_cloned ("cdr of non-cons");
+  else
+    return JITTERLISP_EXP_C_A_CDR(cons);
 }
 
 /* Return a fresh closure with the given components. */
@@ -118,12 +141,12 @@ jitterlisp_environment_lookup (jitterlisp_object env, jitterlisp_object name)
   jitterlisp_object env_rest;
   for (env_rest = env;
        env_rest != JITTERLISP_EMPTY_LIST;
-       env_rest = JITTERLISP_EXP_C___CDR(env_rest))
+       env_rest = JITTERLISP_EXP_C_A_CDR(env_rest))
     {
-      jitterlisp_object next_cons = JITTERLISP_EXP_C___CAR(env_rest);
-      jitterlisp_object next_name = JITTERLISP_EXP_C___CAR(next_cons);
+      jitterlisp_object next_cons = JITTERLISP_EXP_C_A_CAR(env_rest);
+      jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
       if (next_name == name)
-        return JITTERLISP_EXP_C___CDR(next_cons);
+        return JITTERLISP_EXP_C_A_CDR(next_cons);
     }
 
   /* ...The symbol is not bound in the given local environment.  Look it up as a
@@ -145,10 +168,10 @@ jitterlisp_environment_has (jitterlisp_object env, jitterlisp_object name)
   jitterlisp_object env_rest;
   for (env_rest = env;
        env_rest != JITTERLISP_EMPTY_LIST;
-       env_rest = JITTERLISP_EXP_C___CDR(env_rest))
+       env_rest = JITTERLISP_EXP_C_A_CDR(env_rest))
     {
-      jitterlisp_object next_cons = JITTERLISP_EXP_C___CAR(env_rest);
-      jitterlisp_object next_name = JITTERLISP_EXP_C___CAR(next_cons);
+      jitterlisp_object next_cons = JITTERLISP_EXP_C_A_CAR(env_rest);
+      jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
       if (next_name == name)
         return true;
     }
@@ -171,10 +194,10 @@ jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
   jitterlisp_object env_rest;
   for (env_rest = env;
        env_rest != JITTERLISP_EMPTY_LIST;
-       env_rest = JITTERLISP_EXP_C___CDR(env_rest))
+       env_rest = JITTERLISP_EXP_C_A_CDR(env_rest))
     {
-      jitterlisp_object next_cons = JITTERLISP_EXP_C___CAR(env_rest);
-      jitterlisp_object next_name = JITTERLISP_EXP_C___CAR(next_cons);
+      jitterlisp_object next_cons = JITTERLISP_EXP_C_A_CAR(env_rest);
+      jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
       if (next_name == name)
         {
           JITTERLISP_SET_CDR_(next_cons, new_value);
@@ -196,8 +219,7 @@ jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
 
 /* Forward-declaration: eval the given form in the given local environment. */
 static jitterlisp_object
-jitterlisp_eval_interpreter_in (jitterlisp_object form,
-                                jitterlisp_object env);
+jitterlisp_eval_interpreter (jitterlisp_object form, jitterlisp_object env);
 
 /* Return non-false iff the given object is self-evaluating. */
 static bool
@@ -217,10 +239,10 @@ jitterlisp_is_self_evaluating (jitterlisp_object o)
 /*   if (JITTERLISP_IS_EMPTY_LIST(forms)) */
 /*     return JITTERLISP_EMPTY_LIST; */
 
-/*   jitterlisp_object first_form = JITTERLISP_EXP_C___CAR(forms); */
-/*   jitterlisp_object more_forms = JITTERLISP_EXP_C___CDR(forms); */
+/*   jitterlisp_object first_form = JITTERLISP_EXP_C_A_CAR(forms); */
+/*   jitterlisp_object more_forms = JITTERLISP_EXP_C_A_CDR(forms); */
 /*   jitterlisp_object first_result */
-/*     = jitterlisp_eval_interpreter_in (first_form, env); */
+/*     = jitterlisp_eval_interpreter (first_form, env); */
 /*   return jitterlisp_cons (first_result, */
 /*                           jitterlisp_eval_list_interpreter (more_forms, env)); */
 /* } */
@@ -237,8 +259,8 @@ jitterlisp_eval_interpreter_begin (jitterlisp_object forms,
       if (! JITTERLISP_IS_CONS(forms))
         jitterlisp_error_cloned ("form-sequence body not a list");
 
-      res = jitterlisp_eval_interpreter_in (JITTERLISP_EXP_C___CAR(forms), env);
-      forms = JITTERLISP_EXP_C___CDR(forms);
+      res = jitterlisp_eval_interpreter (JITTERLISP_EXP_C_A_CAR(forms), env);
+      forms = JITTERLISP_EXP_C_A_CDR(forms);
     }
   return res;
 }
@@ -249,16 +271,16 @@ jitterlisp_eval_interpreter_if (jitterlisp_object cdr,
 {
   if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("if not followed by a cons");
-  jitterlisp_object condition = JITTERLISP_EXP_C___CAR(cdr);
-  jitterlisp_object after_condition = JITTERLISP_EXP_C___CDR(cdr);
+  jitterlisp_object condition = JITTERLISP_EXP_C_A_CAR(cdr);
+  jitterlisp_object after_condition = JITTERLISP_EXP_C_A_CDR(cdr);
   if (! JITTERLISP_IS_CONS(after_condition))
     jitterlisp_error_cloned ("if condition not followed by a cons");
-  jitterlisp_object then = JITTERLISP_EXP_C___CAR(after_condition);
-  jitterlisp_object else_forms = JITTERLISP_EXP_C___CDR(after_condition);
+  jitterlisp_object then = JITTERLISP_EXP_C_A_CAR(after_condition);
+  jitterlisp_object else_forms = JITTERLISP_EXP_C_A_CDR(after_condition);
 
-  if (! JITTERLISP_IS_FALSE (jitterlisp_eval_interpreter_in (condition,
-                                                             env)))
-    return jitterlisp_eval_interpreter_in (then, env);
+  if (! JITTERLISP_IS_FALSE (jitterlisp_eval_interpreter (condition,
+                                                          env)))
+    return jitterlisp_eval_interpreter (then, env);
   else
     return jitterlisp_eval_interpreter_begin (else_forms, env);
 }
@@ -270,8 +292,8 @@ jitterlisp_eval_interpreter_lambda (jitterlisp_object cdr,
   if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("lambda not followed by a cons");
 
-  jitterlisp_object formals = JITTERLISP_EXP_C___CAR(cdr);
-  jitterlisp_object body_forms = JITTERLISP_EXP_C___CDR(cdr);
+  jitterlisp_object formals = JITTERLISP_EXP_C_A_CAR(cdr);
+  jitterlisp_object body_forms = JITTERLISP_EXP_C_A_CDR(cdr);
   return jitterlisp_closure (env, formals, body_forms);
 }
 
@@ -281,10 +303,10 @@ jitterlisp_eval_interpreter_quote (jitterlisp_object cdr,
 {
   if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("quote not followed by a cons");
-  jitterlisp_object cddr = JITTERLISP_EXP_C___CDR(cdr);
+  jitterlisp_object cddr = JITTERLISP_EXP_C_A_CDR(cdr);
   if (! JITTERLISP_IS_EMPTY_LIST(cddr))
     jitterlisp_error_cloned ("invalid quote argument");
-  jitterlisp_object cadr = JITTERLISP_EXP_C___CAR(cdr);
+  jitterlisp_object cadr = JITTERLISP_EXP_C_A_CAR(cdr);
 
   return cadr;
 }
@@ -295,10 +317,10 @@ jitterlisp_eval_interpreter_set_bang (jitterlisp_object cdr,
 {
   if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("set! not followed by a cons");
-  jitterlisp_object variable = JITTERLISP_EXP_C___CAR(cdr);
+  jitterlisp_object variable = JITTERLISP_EXP_C_A_CAR(cdr);
   if (! JITTERLISP_IS_SYMBOL(variable))
     jitterlisp_error_cloned ("set! not followed by a symbol");
-  jitterlisp_object after_variable_forms = JITTERLISP_EXP_C___CDR(cdr);
+  jitterlisp_object after_variable_forms = JITTERLISP_EXP_C_A_CDR(cdr);
   jitterlisp_object new_value
     = jitterlisp_eval_interpreter_begin (after_variable_forms, env);
   jitterlisp_environment_set (env, variable, new_value);
@@ -312,11 +334,10 @@ jitterlisp_eval_interpreter_while (jitterlisp_object cdr,
 {
   if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("while not followed by a cons");
-  jitterlisp_object guard = JITTERLISP_EXP_C___CAR(cdr);
-  jitterlisp_object body = JITTERLISP_EXP_C___CDR(cdr);
+  jitterlisp_object guard = JITTERLISP_EXP_C_A_CAR(cdr);
+  jitterlisp_object body = JITTERLISP_EXP_C_A_CDR(cdr);
 
-  while (! JITTERLISP_IS_FALSE (jitterlisp_eval_interpreter_in (guard,
-                                                                env)))
+  while (! JITTERLISP_IS_FALSE (jitterlisp_eval_interpreter (guard, env)))
     jitterlisp_eval_interpreter_begin (body, env);
   return JITTERLISP_NOTHING;
 }
@@ -333,7 +354,7 @@ jitterlisp_eval_interpreter_call (jitterlisp_object operator,
   /* Evaluate the operator into a closure and keep closure fields into local C
      variables. */
   jitterlisp_object operator_result
-    = jitterlisp_eval_interpreter_in (operator, env);
+    = jitterlisp_eval_interpreter (operator, env);
   if (! JITTERLISP_IS_CLOSURE(operator_result))
     jitterlisp_error_cloned ("call: non-closure operator");
   struct jitterlisp_closure *closure
@@ -352,15 +373,15 @@ jitterlisp_eval_interpreter_call (jitterlisp_object operator,
         jitterlisp_error_cloned ("call actuals not a list");
       if (JITTERLISP_IS_EMPTY_LIST(formals))
         jitterlisp_error_cloned ("too many actuals");
-      jitterlisp_object formal = JITTERLISP_EXP_C___CAR(formals);
-      jitterlisp_object actual = JITTERLISP_EXP_C___CAR(actuals);
+      jitterlisp_object formal = JITTERLISP_EXP_C_A_CAR(formals);
+      jitterlisp_object actual = JITTERLISP_EXP_C_A_CAR(actuals);
       jitterlisp_object actual_result
-        = jitterlisp_eval_interpreter_in (actual, env);
+        = jitterlisp_eval_interpreter (actual, env);
       body_environment
         = jitterlisp_environment_bind (body_environment, formal, actual_result);
 
-      formals = JITTERLISP_EXP_C___CDR(formals);
-      actuals = JITTERLISP_EXP_C___CDR(actuals);
+      formals = JITTERLISP_EXP_C_A_CDR(formals);
+      actuals = JITTERLISP_EXP_C_A_CDR(actuals);
     }
   if (! JITTERLISP_IS_EMPTY_LIST(formals))
     jitterlisp_error_cloned ("not enough actuals");
@@ -368,6 +389,214 @@ jitterlisp_eval_interpreter_call (jitterlisp_object operator,
   /* Evaluate the global body in the environment we have extended. */
   return jitterlisp_eval_interpreter_begin (body, body_environment);
 }
+
+static jitterlisp_object
+jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
+                                       jitterlisp_object actuals,
+                                       jitterlisp_object env)
+{
+  jitterlisp_object res;
+  jitterlisp_object args [10];
+  int next_arg_index = 0;
+#define JITTERLISP_NO_MORE_ARGS                                       \
+  JITTER_BEGIN_                                                       \
+    if (! JITTERLISP_IS_EMPTY_LIST(actuals))                          \
+      jitterlisp_error_cloned ("too many primitive actuals");         \
+  JITTER_END_
+#define JITTERLISP_EVAL_ARG                                           \
+  JITTER_BEGIN_                                                       \
+    if (JITTERLISP_IS_EMPTY_LIST(actuals))                            \
+      jitterlisp_error_cloned ("not enough primitive actuals");       \
+    if (! JITTERLISP_IS_CONS(actuals))                                \
+      jitterlisp_error_cloned ("primitive actuals not a list");       \
+    args [next_arg_index ++]                                          \
+      = jitterlisp_eval_interpreter (jitterlisp_car (actuals), env);  \
+    actuals = jitterlisp_cdr (actuals);                               \
+  JITTER_END_
+#define JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE)                 \
+  JITTER_BEGIN_                                                     \
+    JITTERLISP_EVAL_ARG;                                            \
+  if (! JITTER_CONCATENATE_TWO(JITTERLISP_IS_, _JITTERLISP_TYPE)(   \
+           args [next_arg_index - 1]))                              \
+    jitterlisp_error_cloned ("invalid type for primitive actual");  \
+  JITTER_END_
+#define JITTERLISP_EVAL_ARGS_0  \
+  JITTER_BEGIN_                 \
+    JITTERLISP_NO_MORE_ARGS;    \
+  JITTER_END_
+#define JITTERLISP_EVAL_ARGS_1  \
+  JITTER_BEGIN_                 \
+    JITTERLISP_EVAL_ARG;        \
+    JITTERLISP_NO_MORE_ARGS;    \
+  JITTER_END_
+#define JITTERLISP_EVAL_ARGS_2  \
+  JITTER_BEGIN_                 \
+    JITTERLISP_EVAL_ARG;        \
+    JITTERLISP_EVAL_ARG;        \
+    JITTERLISP_NO_MORE_ARGS;    \
+  JITTER_END_
+#define JITTERLISP_EVAL_ARGS_3  \
+  JITTER_BEGIN_                 \
+    JITTERLISP_EVAL_ARG;        \
+    JITTERLISP_EVAL_ARG;        \
+    JITTERLISP_EVAL_ARG;        \
+    JITTERLISP_NO_MORE_ARGS;    \
+  JITTER_END_
+
+#define JITTERLISP_EVAL_ARGS_TYPED_1(_JITTERLISP_TYPE1)  \
+  JITTER_BEGIN_                                          \
+    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE1);        \
+    JITTERLISP_NO_MORE_ARGS;                             \
+  JITTER_END_
+#define JITTERLISP_EVAL_ARGS_TYPED_2(_JITTERLISP_TYPE1,  \
+                                     _JITTERLISP_TYPE2)  \
+  JITTER_BEGIN_                                          \
+    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE1);        \
+    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE2);        \
+    JITTERLISP_NO_MORE_ARGS;                             \
+  JITTER_END_
+#define JITTERLISP_EVAL_ARGS_TYPED_3(_JITTERLISP_TYPE1,  \
+                                     _JITTERLISP_TYPE2,  \
+                                     _JITTERLISP_TYPE3)  \
+  JITTER_BEGIN_                                          \
+    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE1);        \
+    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE2);        \
+    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE3);        \
+    JITTERLISP_NO_MORE_ARGS;                             \
+  JITTER_END_
+
+  struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
+  char *interned_name = unencoded_name->name_or_NULL;
+  if (interned_name == NULL)
+    jitterlisp_error_cloned ("uninterned symbol as primitive operator");
+
+  if (false)
+    {
+      /* Useless case, just to make all of the following cases start with
+         "else". */
+    }
+  /* Type checking. */
+  else if (! strcmp (interned_name, "fixnum?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_FIXNUMP_(res, args [0]);
+    }
+  else if (! strcmp (interned_name, "character?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_CHARACTERP_(res, args [0]);
+    }
+  else if (! strcmp (interned_name, "null?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_NULLP_(res, args [0]);
+    }
+  else if (! strcmp (interned_name, "boolean?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_BOOLEANP_(res, args [0]);
+    }
+  else if (! strcmp (interned_name, "symbol?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_SYMBOLP_(res, args [0]);
+    }
+  else if (! strcmp (interned_name, "cons?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_CONSP_(res, args [0]);
+    }
+  else if (! strcmp (interned_name, "procedure?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_PROCEDUREP_(res, args [0]);
+    }
+  /* Arithmetic. */
+  else if (! strcmp (interned_name, "+"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_PLUS_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, "-"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_MINUS_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, "*"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_TIMES_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, "/"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      if (args [1] == JITTERLISP_FIXNUM_ENCODE(0))
+        jitterlisp_error_cloned ("division by zero");
+      JITTERLISP_DIVIDED_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, "remainder"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      if (args [1] == JITTERLISP_FIXNUM_ENCODE(0))
+        jitterlisp_error_cloned ("remainder of division by zero");
+      JITTERLISP_REMAINDER_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, "1+"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_1(FIXNUM);
+      JITTERLISP_1PLUS_(res, args [0]);
+    }
+  else if (! strcmp (interned_name, "1-"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_1(FIXNUM);
+      JITTERLISP_1MINUS_(res, args [0]);
+    }
+  /* Comparison. */
+  else if (! strcmp (interned_name, "eq?"))
+    {
+      JITTERLISP_EVAL_ARGS_2;
+      JITTERLISP_EQP_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, "neq?"))
+    {
+      JITTERLISP_EVAL_ARGS_2;
+      JITTERLISP_NEQP_(res, args [0], args [1]);
+    }
+  /* Conses. */
+  else if (! strcmp (interned_name, "cons"))
+    {
+      JITTERLISP_EVAL_ARGS_2;
+      JITTERLISP_CONS_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, "car"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_1(CONS);
+      JITTERLISP_CAR_(res, args [0]);
+    }
+  else if (! strcmp (interned_name, "cdr"))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_1(CONS);
+      JITTERLISP_CDR_(res, args [0]);
+    }
+  /* FIXME: add composed selectors. */
+  /* Default. */
+  else
+    jitterlisp_error_cloned ("unbound primitive");
+
+
+#undef JITTERLISP_EVAL_ARG
+#undef JITTERLISP_EVAL_ARG_TYPED
+#undef JITTERLISP_EVAL_ARGS_0
+#undef JITTERLISP_EVAL_ARGS_1
+#undef JITTERLISP_EVAL_ARGS_2
+#undef JITTERLISP_EVAL_ARGS_3
+#undef JITTERLISP_EVAL_ARGS_TYPED_1
+#undef JITTERLISP_EVAL_ARGS_TYPED_2
+#undef JITTERLISP_EVAL_ARGS_TYPED_3
+#undef JITTERLISP_NO_MORE_ARGS
+  return res;
+}
+
 
 static jitterlisp_object
 jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
@@ -395,9 +624,12 @@ jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
   else if (symbol == jitterlisp_object_while)
     return jitterlisp_eval_interpreter_while (cdr, env);
 
-  /* The symbol is unbound so it can't evaluate to a procedure, and is not the
-     name of a special form either. */
-  jitterlisp_error_cloned ("unbound operator");
+  else
+    return jitterlisp_eval_interpreter_primitive (symbol, cdr, env);
+
+  //  /* The symbol is unbound so it can't evaluate to a procedure, and is not the
+  //     name of a special form either. */
+  //  jitterlisp_error_cloned ("unbound operator");
 }
 
 
@@ -407,8 +639,7 @@ jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
  * ************************************************************************** */
 
 static jitterlisp_object
-jitterlisp_eval_interpreter_in (jitterlisp_object form,
-                                jitterlisp_object env)
+jitterlisp_eval_interpreter (jitterlisp_object form, jitterlisp_object env)
 {
   if (jitterlisp_is_self_evaluating (form))
     return form;
@@ -418,8 +649,8 @@ jitterlisp_eval_interpreter_in (jitterlisp_object form,
 
   if (JITTERLISP_IS_CONS(form))
     {
-      jitterlisp_object car = JITTERLISP_EXP_C___CAR(form);
-      jitterlisp_object cdr = JITTERLISP_EXP_C___CDR(form);
+      jitterlisp_object car = JITTERLISP_EXP_C_A_CAR(form);
+      jitterlisp_object cdr = JITTERLISP_EXP_C_A_CDR(form);
       if (JITTERLISP_IS_SYMBOL(car))
         return jitterlisp_eval_interpreter_cons_of_symbol (car, cdr, env);
       else
@@ -438,5 +669,5 @@ jitterlisp_eval_interpreter_in (jitterlisp_object form,
 jitterlisp_object
 jitterlisp_eval_globally_interpreter (jitterlisp_object form)
 {
-  return jitterlisp_eval_interpreter_in (form, jitterlisp_empty_environment);
+  return jitterlisp_eval_interpreter (form, jitterlisp_empty_environment);
 }

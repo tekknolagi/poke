@@ -226,73 +226,73 @@
 
 /* Expand to an r-value expression evaluating to the tagged car or cdr of the
    given tagged cons operand. */
-#define JITTERLISP_EXP_C___CAR(_jitterlisp_tagged_cons)   \
+#define JITTERLISP_EXP_C_A_CAR(_jitterlisp_tagged_cons)   \
   (JITTERLISP_CONS_DECODE(_jitterlisp_tagged_cons)->car)
-#define JITTERLISP_EXP_C___CDR(_jitterlisp_tagged_cons)   \
+#define JITTERLISP_EXP_C_A_CDR(_jitterlisp_tagged_cons)   \
   (JITTERLISP_CONS_DECODE(_jitterlisp_tagged_cons)->cdr)
 
 /* Composed cons selectors.  Given a tagged value expand to an expression
    evaluating to its tagged caar, cadr, and so on.  These are compositions of
-   JITTERLISP_EXP_C___CAR and JITTERLISP_EXP_C___CDR . */
+   JITTERLISP_EXP_C_A_CAR and JITTERLISP_EXP_C_A_CDR . */
 /* Length 2. */
-#define JITTERLISP_EXP_C___CAAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CADR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CDR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDDR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CDR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CAAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CADR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CDR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDDR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CDR(_jitterlisp_tagged_cons))
 /* Length 3. */
-#define JITTERLISP_EXP_C___CAAAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CAAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CAADR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CADR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CADAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CDAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CADDR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CDDR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDAAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CAAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDADR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CADR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDDAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CDAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDDDR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CDDR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CAAAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CAAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CAADR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CADR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CADAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CDAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CADDR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CDDR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDAAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CAAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDADR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CADR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDDAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CDAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDDDR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CDDR(_jitterlisp_tagged_cons))
 /* Length 4. */
-#define JITTERLISP_EXP_C___CAAAAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CAAAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CAAADR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CAADR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CAADAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CADAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CAADDR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CADDR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CADAAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CDAAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CADADR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CDADR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CADDAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CDDAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CADDDR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CAR(JITTERLISP_EXP_C___CDDDR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDAAAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CAAAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDAADR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CAADR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDADAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CADAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDADDR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CADDR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDDAAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CDAAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDDADR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CDADR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDDDAR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CDDAR(_jitterlisp_tagged_cons))
-#define JITTERLISP_EXP_C___CDDDDR(_jitterlisp_tagged_cons)                   \
-  JITTERLISP_EXP_C___CDR(JITTERLISP_EXP_C___CDDDR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CAAAAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CAAAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CAAADR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CAADR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CAADAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CADAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CAADDR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CADDR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CADAAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CDAAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CADADR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CDADR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CADDAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CDDAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CADDDR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CAR(JITTERLISP_EXP_C_A_CDDDR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDAAAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CAAAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDAADR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CAADR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDADAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CADAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDADDR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CADDR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDDAAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CDAAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDDADR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CDADR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDDDAR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CDDAR(_jitterlisp_tagged_cons))
+#define JITTERLISP_EXP_C_A_CDDDDR(_jitterlisp_tagged_cons)                   \
+  JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CDDDR(_jitterlisp_tagged_cons))
 
 
 
@@ -326,6 +326,38 @@
   JITTER_BEGIN_                                                               \
     _jitterlisp_out                                                           \
       = JITTERLISP_EXP_FF_F_MINUS(_jitterlisp_in0, _jitterlisp_in1);          \
+  JITTER_END_
+
+#define JITTERLISP_TIMES_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
+  JITTER_BEGIN_                                                               \
+    _jitterlisp_out                                                           \
+      = JITTERLISP_EXP_FF_F_TIMES(_jitterlisp_in0, _jitterlisp_in1);          \
+  JITTER_END_
+
+#define JITTERLISP_DIVIDED_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1) \
+  JITTER_BEGIN_                                                                \
+    _jitterlisp_out                                                            \
+      = JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_in0, _jitterlisp_in1);         \
+  JITTER_END_
+
+#define JITTERLISP_REMAINDER_(_jitterlisp_out, _jitterlisp_in0,           \
+                              _jitterlisp_in1)                            \
+  JITTER_BEGIN_                                                           \
+    _jitterlisp_out                                                       \
+      = JITTERLISP_EXP_FF_F_REMAINDER(_jitterlisp_in0, _jitterlisp_in1);  \
+  JITTER_END_
+
+#define JITTERLISP_1PLUS_(_jitterlisp_out, _jitterlisp_in0)     \
+  JITTER_BEGIN_                                                 \
+    _jitterlisp_out                                             \
+      = JITTERLISP_EXP_FF_F_PLUS(_jitterlisp_in0,               \
+                                 JITTERLISP_FIXNUM_ENCODE(1));  \
+  JITTER_END_
+#define JITTERLISP_1MINUS_(_jitterlisp_out, _jitterlisp_in0)     \
+  JITTER_BEGIN_                                                  \
+    _jitterlisp_out                                              \
+      = JITTERLISP_EXP_FF_F_MINUS(_jitterlisp_in0,               \
+                                  JITTERLISP_FIXNUM_ENCODE(1));  \
   JITTER_END_
 
 
@@ -401,7 +433,29 @@
 
 
 
-/* Unique-object operations.
+/* Comparison operations.
+ * ************************************************************************** */
+
+/* Compute a tagged boolean, #t iff the two given arguments are
+   equal-by-identity. */
+#define JITTERLISP_EQP_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
+  JITTER_BEGIN_                                                             \
+    _jitterlisp_out =                                                       \
+      JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0) == (_jitterlisp_in1));    \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the two given arguments are
+   not equal-by-identity. */
+#define JITTERLISP_NEQP_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
+  JITTER_BEGIN_                                                              \
+    _jitterlisp_out =                                                        \
+      JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0) != (_jitterlisp_in1));     \
+  JITTER_END_
+
+
+
+
+/* Type checking operations.
  * ************************************************************************** */
 
 /* Compute a tagged boolean, #t iff the given in-argument is () . */
@@ -409,6 +463,56 @@
   JITTER_BEGIN_                                                              \
     _jitterlisp_out =                                                        \
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_EMPTY_LIST(_jitterlisp_in0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is a fixnum . */
+#define JITTERLISP_FIXNUMP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                          \
+    _jitterlisp_out =                                                    \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_FIXNUM(_jitterlisp_in0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is a number . */
+#define JITTERLISP_NUMBERP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                          \
+    _jitterlisp_out =                                                    \
+      (JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_FIXNUM(_jitterlisp_in0)   \
+       /* || ... There are no other numbers yet. */));                   \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is a character . */
+#define JITTERLISP_CHARACTERP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                             \
+    _jitterlisp_out =                                                       \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_CHARACTER(_jitterlisp_in0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is a boolean . */
+#define JITTERLISP_BOOLEANP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                           \
+    _jitterlisp_out =                                                     \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_BOOLEAN(_jitterlisp_in0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is a cons . */
+#define JITTERLISP_CONSP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                        \
+    _jitterlisp_out =                                                  \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_CONS(_jitterlisp_in0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is a symbol . */
+#define JITTERLISP_SYMBOLP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                          \
+    _jitterlisp_out =                                                    \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_SYMBOL(_jitterlisp_in0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is a closure . */
+#define JITTERLISP_PROCEDUREP_(_jitterlisp_out, _jitterlisp_in0)          \
+  JITTER_BEGIN_                                                           \
+    _jitterlisp_out =                                                     \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_CLOSURE(_jitterlisp_in0));  \
   JITTER_END_
 
 
