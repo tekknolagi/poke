@@ -34,6 +34,27 @@
 
 
 
+/* Character names.
+ * ************************************************************************** */
+
+const struct jitterlisp_character_name_binding
+jitterlisp_non_ordinary_character_name_bindings []
+  =
+    {
+      { '\0', "nul" },
+      { ' ',  "space" },
+      { '\n', "newline" },
+      { '\r', "return" }
+    };
+
+const size_t
+jitterlisp_non_ordinary_character_name_binding_no
+  = (sizeof (jitterlisp_non_ordinary_character_name_bindings)
+     / sizeof (const struct jitterlisp_character_name_binding));
+
+
+
+
 /* Predefined char-printers.
  * ************************************************************************** */
 
@@ -182,6 +203,35 @@ jitterlisp_print_char (jitterlisp_char_printer_function char_printer,
   char_printer (char_printer_state, c);
 }
 
+/* Use the given char-printer to emit a printed representation of the given
+   character, be it ordinary or non-ordinary. */
+static void
+jitterlisp_print_character_name (jitterlisp_char_printer_function char_printer,
+                                 void *char_printer_state,
+                                 jitter_int c)
+{
+  /* Print the #\ prefix, which is the same for ordinary and non-ordinary
+     characters. */
+  jitterlisp_print_string (char_printer, char_printer_state, "#\\");
+
+  /* Look for the first name binding for c as a non-ordinary character.  If one
+     exists, print it and return. */
+  int i;
+  for (i = 0; i < jitterlisp_non_ordinary_character_name_binding_no; i ++)
+    if (jitterlisp_non_ordinary_character_name_bindings [i].character == c)
+      {
+        jitterlisp_print_string
+           (char_printer,
+            char_printer_state,
+            jitterlisp_non_ordinary_character_name_bindings [i].name);
+        return;
+      }
+
+  /* Since we haven't found a binding c must be an ordinary character.  Print it
+     as it is. */
+  jitterlisp_print_char (char_printer, char_printer_state, c);
+}
+
 /* Print a terminal escape sequence for color/font decorations, if colorization
    is enabled; do nothing otherwise.  By convention every printing function is
    supposed to print the NOATTR decoration at the end. */
@@ -273,17 +323,7 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
     {
       jitterlisp_print_decoration (cp, cps, CHARACTERATTR);
       jitter_int c = JITTERLISP_CHARACTER_DECODE(o);
-      switch (c)
-        {
-        case ' ':  jitterlisp_print_string (cp, cps, "#\\space");       break;
-        case '\0': jitterlisp_print_string (cp, cps, "#\\nul");         break;
-        case '\r': jitterlisp_print_string (cp, cps, "#\\return");      break;
-        case '\n': jitterlisp_print_string (cp, cps, "#\\newline");     break;
-        default:
-          jitterlisp_print_string (cp, cps, "#\\");
-          jitterlisp_print_char (cp, cps, c);
-          break;
-        }
+      jitterlisp_print_character_name (cp, cps, c);
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_SYMBOL(o))
