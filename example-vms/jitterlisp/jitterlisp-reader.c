@@ -37,6 +37,7 @@
 #include "jitterlisp-error.h"
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-allocator.h"
+#include "jitterlisp-printer.h"
 
 
 
@@ -204,6 +205,66 @@ jitterlisp_finalize_scanner_state (struct jitterlisp_scanner_state *sstate)
 
 
 
+/* Character names.
+ * ************************************************************************** */
+
+/* Return non-false iff the given text, including the #\ prefix, represents a
+   valid character. */
+static bool
+jitterlisp_is_valid_character (const char *text)
+{
+  /* If there is no #\ prefix then this is not a character.  */
+  if (strncmp (text, "#\\", 2))
+    return false;
+
+  /* If the character name length including the #\ prefix is just three then
+     the character is ordinary, and valid. */
+  if (strlen (text) == 3)
+    return true;
+
+  /* Look for every non-ordinary character name.  If we find one that matches
+     we have our response. */
+  int i;
+  for (i = 0; i < jitterlisp_non_ordinary_character_name_binding_no; i ++)
+    if (! strcmp (jitterlisp_non_ordinary_character_name_bindings [i].name,
+                  text + 2))
+      return true;
+
+  /* We didn't find a matching name.  If we arrived here the token looks like
+     a character but has an invalid name. */
+  return false;
+}
+
+/* Given a valid character name, including the #\ prefix, return its character.
+   The character name may be ordinary or non-ordinary, but it must be valid. */
+static jitter_int
+jitterlisp_decode_valid_character (const char *text)
+{
+  /* If there is no #\ prefix then this is not a character.  */
+  if (strncmp (text, "#\\", 2))
+    jitter_fatal ("jitterlisp_decode_valid_character: invalid prefix");
+
+  /* If the character name length including the #\ prefix is just three then
+     the character is ordinary. */
+  if (strlen (text) == 3)
+    return text [2];
+
+  /* Look for every non-ordinary character name.  If we find one that matches
+     we have our response. */
+  int i;
+  for (i = 0; i < jitterlisp_non_ordinary_character_name_binding_no; i ++)
+    if (! strcmp (jitterlisp_non_ordinary_character_name_bindings [i].name,
+                  text + 2))
+      return jitterlisp_non_ordinary_character_name_bindings [i].character;
+
+  /* We didn't find a matching name.  If we arrived here the token looks like
+     a character but has an invalid name. */
+  jitter_fatal ("jitterlisp_decode_valid_character: invalid name");
+}
+
+
+
+
 /* S-expression scanner.
  * ************************************************************************** */
 
@@ -242,14 +303,15 @@ enum jitterlisp_scanner_dfa_state
 /* A token identifier as recognized by the scanner. */
 enum jitterlisp_token
   {
-    /* This case is only used as an intentionally invalid value at
-       initialization, to make sure that we advance instead of using a
-       non-existent lookahead. */
+    /* This case is used as an intentionally invalid value at initialization, to
+       make sure that we advance instead of using a non-existent lookahead.  It
+       is also used for ill-formed tokens to make parsing fail. */
     jitterlisp_token_invalid,
 
     jitterlisp_token_open,
     jitterlisp_token_close,
     jitterlisp_token_dot,
+    jitterlisp_token_character,
     jitterlisp_token_fixnum,
     jitterlisp_token_symbol,
     jitterlisp_token_prefix,
@@ -283,9 +345,22 @@ jitterlisp_complicated_text_to_token (const char *text)
     return jitterlisp_token_prefix;
   else if (! strcmp (text, ",@"))
     return jitterlisp_token_prefix;
+  else if (! strcmp (text, "#"))
+    return jitterlisp_token_prefix;
 
-  /* The text is not a key word.  Check if it matches a number; if not we say
-     it's a symbol. */
+  /* The text is not a key word.  Check if it's a character. */
+  if (! strncmp (text, "#\\", 2))
+    {
+      /* The text looks like a character.  It is either a valid character or an
+         invalid token: we don't accept an ill-formed character as a symbol. */
+      if (jitterlisp_is_valid_character (text))
+        return jitterlisp_token_character;
+      else
+        return jitterlisp_token_invalid;
+    }
+
+  /* The text is not a key word or a character.  Check if it matches a number;
+     if not we say it's a symbol. */
   jitter_long_long useless;
   if (jitter_string_to_long_long_inconvenient (text, & useless) == 0)
     return jitterlisp_token_fixnum; // FIXME: this ignores overflow and doesn't support floats or bignums.
@@ -572,6 +647,8 @@ jitterlisp_prefix_name_to_symbol_name (const char *prefix_name)
     return "unquote";
   else if (! strcmp (prefix_name, ",@"))
     return "unquote-splicing";
+  else if (! strcmp (prefix_name, "#"))
+    return "vector-literal";
   else
     jitter_fatal ("jitterlisp_prefix_name_to_symbol_name: invalid prefix "
                   "name \"%s\"", prefix_name);
@@ -694,6 +771,12 @@ jitterlisp_parse_sexp_non_advancing (struct jitterlisp_parser_state *pstate)
       return JITTERLISP_FALSE;
     case jitterlisp_token_true:
       return JITTERLISP_TRUE;
+    case jitterlisp_token_character:
+      {
+        jitter_int character = jitterlisp_decode_valid_character
+                                  (jitterlisp_parser_token_text (pstate));
+        return JITTERLISP_CHARACTER_ENCODE(character);
+      }
     case jitterlisp_token_fixnum:
       {
         jitter_long_long i = jitter_string_to_long_long_unsafe

@@ -34,6 +34,30 @@
 
 
 
+/* Character names.
+ * ************************************************************************** */
+
+const struct jitterlisp_character_name_binding
+jitterlisp_non_ordinary_character_name_bindings []
+  =
+    {
+      { '\0', "nul" },
+      { ' ',  "space" },
+      { '\n', "newline" },
+      { '\n', "linefeed" },
+      { '\r', "cr" },
+      { '\r', "return" },
+      { '\f', "page" }
+    };
+
+const size_t
+jitterlisp_non_ordinary_character_name_binding_no
+  = (sizeof (jitterlisp_non_ordinary_character_name_bindings)
+     / sizeof (const struct jitterlisp_character_name_binding));
+
+
+
+
 /* Predefined char-printers.
  * ************************************************************************** */
 
@@ -95,6 +119,8 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 # define INTERNEDSYMBOLATTR   ""
 # define UNINTERNEDSYMBOLATTR ""
 # define UNIQUEATTR           ""
+# define CLOSUREATTR          ""
+# define VECTORATTR           ""
 # define ERRORATTR            ""
 #else
 # define CONSATTR             LIGHTRED
@@ -103,6 +129,8 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 # define INTERNEDSYMBOLATTR   YELLOW ITALIC
 # define UNINTERNEDSYMBOLATTR YELLOW ITALIC UNDERLINE
 # define UNIQUEATTR           LIGHTMAGENTA UNDERLINE ITALIC
+# define CLOSUREATTR          LIGHTCYAN
+# define VECTORATTR           LIGHTCYAN ITALIC UNDERLINE
 # define ERRORATTR            RED REVERSE
 #endif // #ifdef NOTERMINAL
 
@@ -180,6 +208,35 @@ jitterlisp_print_char (jitterlisp_char_printer_function char_printer,
                        char c)
 {
   char_printer (char_printer_state, c);
+}
+
+/* Use the given char-printer to emit a printed representation of the given
+   character, be it ordinary or non-ordinary. */
+static void
+jitterlisp_print_character_name (jitterlisp_char_printer_function char_printer,
+                                 void *char_printer_state,
+                                 jitter_int c)
+{
+  /* Print the #\ prefix, which is the same for ordinary and non-ordinary
+     characters. */
+  jitterlisp_print_string (char_printer, char_printer_state, "#\\");
+
+  /* Look for the first name binding for c as a non-ordinary character.  If one
+     exists, print it and return. */
+  int i;
+  for (i = 0; i < jitterlisp_non_ordinary_character_name_binding_no; i ++)
+    if (jitterlisp_non_ordinary_character_name_bindings [i].character == c)
+      {
+        jitterlisp_print_string
+           (char_printer,
+            char_printer_state,
+            jitterlisp_non_ordinary_character_name_bindings [i].name);
+        return;
+      }
+
+  /* Since we haven't found a binding c must be an ordinary character.  Print it
+     as it is. */
+  jitterlisp_print_char (char_printer, char_printer_state, c);
 }
 
 /* Print a terminal escape sequence for color/font decorations, if colorization
@@ -273,17 +330,7 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
     {
       jitterlisp_print_decoration (cp, cps, CHARACTERATTR);
       jitter_int c = JITTERLISP_CHARACTER_DECODE(o);
-      switch (c)
-        {
-        case ' ':  jitterlisp_print_string (cp, cps, "#\\space");       break;
-        case '\0': jitterlisp_print_string (cp, cps, "#\\nul");         break;
-        case '\r': jitterlisp_print_string (cp, cps, "#\\return");      break;
-        case '\n': jitterlisp_print_string (cp, cps, "#\\newline");     break;
-        default:
-          jitterlisp_print_string (cp, cps, "#\\");
-          jitterlisp_print_char (cp, cps, c);
-          break;
-        }
+      jitterlisp_print_character_name (cp, cps, c);
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_SYMBOL(o))
@@ -301,6 +348,27 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
         }
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
+  else if (JITTERLISP_IS_CLOSURE(o))
+    {
+      struct jitterlisp_closure * const closure = JITTERLISP_CLOSURE_DECODE(o);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, "#<procedure ");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print (cp, cps, closure->environment);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, " ");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print (cp, cps, closure->formals);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      /* The body is a form list, so I print it as a cdr.  The cdr printer
+         prepends a space only if the list is not empty, which is what we need
+         in this case as well. */
+      jitterlisp_print_cdr (cp, cps, closure->body);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, ">");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
   else if (JITTERLISP_IS_CONS(o))
     {
       struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
@@ -312,6 +380,24 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print (cp, cps, car);
       jitterlisp_print_cdr (cp, cps, cdr);
       jitterlisp_print_decoration (cp, cps, CONSATTR);
+      jitterlisp_print_char (cp, cps, ')');
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_VECTOR(o))
+    {
+      const struct jitterlisp_vector * const v = JITTERLISP_VECTOR_DECODE(o);
+      jitterlisp_print_decoration (cp, cps, VECTORATTR);
+      jitterlisp_print_string (cp, cps, "#(");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      int i;
+      int element_no = JITTERLISP_FIXNUM_DECODE(v->element_no);
+      for (i = 0; i < element_no; i ++)
+        {
+          jitterlisp_print (cp, cps, v->elements [i]);
+          if (i < (element_no - 1))
+            jitterlisp_print_char (cp, cps, ' ');
+        }
+      jitterlisp_print_decoration (cp, cps, VECTORATTR);
       jitterlisp_print_char (cp, cps, ')');
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }

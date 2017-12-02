@@ -27,6 +27,7 @@
 
 #include <string.h>
 
+#include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-fatal.h>
 #include <jitter/jitter-malloc.h>
 
@@ -35,6 +36,7 @@
 
 /* Include headers from Bohem's GC, if used in this configuration. */
 #ifdef JITTERLISP_BOEHM_GC
+# define GC_THREADS 1
 # include <gc/gc.h>
 #endif // #ifdef JITTERLISP_BOEHM_GC
 
@@ -85,45 +87,225 @@ jitterlisp_symbol_table;
 
 
 
+/* Thread registration.
+ * ************************************************************************** */
+
+void
+jitterlisp_register_current_thread (void)
+{
+#if defined(JITTERLISP_BOEHM_GC)
+  struct GC_stack_base stack_base;
+  GC_get_stack_base (& stack_base);
+  GC_register_my_thread (& stack_base);
+#endif // #if defined(JITTERLISP_BOEHM_GC)
+}
+
+void
+jitterlisp_unregister_current_thread (void)
+{
+#if defined(JITTERLISP_BOEHM_GC)
+  GC_unregister_my_thread ();
+#endif // #if defined(JITTERLISP_BOEHM_GC)
+}
+
+
+
+
+/* Explicit GC root registration.
+ * ************************************************************************** */
+
+//#warning "export the public part of this.  Add comments."
+
+struct jitterlisp_gc_root
+{
+  jitterlisp_object *object_pointer;
+};
+
+static struct jitter_dynamic_buffer
+jitterlisp_gc_root_stack;
+
+static void
+jitterlisp_gc_root_stack_initialize (void)
+{
+  jitter_dynamic_buffer_initialize (& jitterlisp_gc_root_stack);
+}
+
+static void
+jitterlisp_gc_root_stack_finalize (void)
+{
+  jitter_dynamic_buffer_initialize (& jitterlisp_gc_root_stack);
+}
+
+void
+jitterlisp_push_gc_root (jitterlisp_object *object_pointer)
+{
+  struct jitterlisp_gc_root root;
+  root.object_pointer = object_pointer;
+  jitter_dynamic_buffer_push (& jitterlisp_gc_root_stack,
+                              & root,
+                              sizeof (struct jitterlisp_gc_root));
+#if   defined(JITTERLISP_LITTER)
+  /* Do nothing. */
+#elif defined(JITTERLISP_BOEHM_GC)
+  GC_add_roots (object_pointer, ((char *) object_pointer) + sizeof (jitterlisp_object));
+#else
+# error "impossible or unimplemented"
+#endif // #if defined(...
+}
+
+void
+jitterlisp_pop_gc_roots (size_t how_many)
+{
+  struct jitterlisp_gc_root *popped_roots __attribute__ ((unused))
+    = jitter_dynamic_buffer_pop (& jitterlisp_gc_root_stack,
+                                 sizeof (struct jitterlisp_gc_root) * how_many);
+#if defined(JITTERLISP_BOEHM_GC)
+  int i;
+  for (i = 0; i < how_many; i ++)
+    GC_remove_roots (popped_roots [i].object_pointer,
+                     ((char *) (popped_roots [i].object_pointer)
+                      + sizeof (jitterlisp_object)));
+#endif // #if defined(JITTERLISP_BOEHM_GC)
+}
+
+void
+jitterlisp_pop_gc_root (void)
+{
+  jitterlisp_pop_gc_roots (1);
+}
+
+void
+jitterlisp_pop_all_gc_roots (void)
+{
+  size_t root_no
+    = (jitter_dynamic_buffer_size (& jitterlisp_gc_root_stack)
+       / sizeof (struct jitterlisp_gc_root));
+  jitterlisp_pop_gc_roots (root_no);
+}
+
+
+
+
 /* Initialization and finalization of the memory subsystem.
  * ************************************************************************** */
 
-/* If littering then we simply use global variables for limits, and a fixed
-   pre-allocated area for the heap.  This is currently suboptimal, as these
-   should stay in registers; but I can live with this until a proper VM for
-   JitterLisp exists. */
+/* If littering then we simply use global variables for limits, and large
+   infrequently allocated blocks for the heap.  This is currently suboptimal, as
+   these should stay in registers; but I can live with this until a proper VM
+   for JitterLisp exists. */
 #ifdef JITTERLISP_LITTER
-#define JITTERLISP_LITTER_BYTE_NO (10 * 1024 * 1024)
+#define JITTERLISP_LITTER_BLOCK_BYTE_NO (1 * 1024L * 1024L)
 
-  /* The lowest heap address. */
-  static char *litter_heap_beginning;
+/* The lowest heap address. */
+static char *litter_heap_beginning;
 
-  /* The address of the next heap-allocated buffer. */
-  JITTERLISP_GLOBAL_REGISTER_VARIABLE_(char *, litter_allocator_pointer, 0);
+/* The address of the next heap-allocated buffer. */
+JITTERLISP_GLOBAL_REGISTER_VARIABLE_(char *, litter_allocator_pointer, 0);
 
-  /* The lowest address *out* of the heap area. */
-  JITTERLISP_GLOBAL_REGISTER_VARIABLE_(char *, litter_allocator_limit, 1);
+/* The lowest address *out* of the heap area. */
+JITTERLISP_GLOBAL_REGISTER_VARIABLE_(char *, litter_allocator_limit, 1);
 
-  ///* Temporary testing stuff. */
-  //JITTERLISP_GLOBAL_REGISTER_VARIABLE_(void *, jitterlisp_error_handler_register, 2);
-#endif // #ifdef JITTERLISP_LITTER
+///* Temporary testing stuff. */
+//JITTERLISP_GLOBAL_REGISTER_VARIABLE_(void *, jitterlisp_error_handler_register, 2);
+
+/* Information about one litter block. */
+struct jitterlisp_litter_block
+{
+  void *beginning;
+  size_t size_in_bytes;
+};
+
+/* A stack of struct jitter_litter_block objects, to keep track of which
+   blocks have been allocated.  Even without releasing the individual
+   objects we can free the entire blocks at finalization.
+   This is currently non-reentrant. */
+static struct jitter_dynamic_buffer
+jitterlisp_litter_blocks;
+
+/* The total heap size in bytes, mostly for debugging and logging.  This is kept
+   as a separate global for efficiency, but the same information could be
+   recovered from jitterlisp_litter_blocks . */
+static size_t
+jitterlisp_litter_heap_size;
+
+/* Make a large block from which we will allocate, without ever releasing
+   individual objects, and add it to the litter block stack.  Set allocation
+   pointer, heap beginning and limit to refer to the new block.  Any previous
+   existing block is kept as well, and objects from one block are allowed to
+   point to objects from another. */
+static void
+jitterlisp_add_litter_block (size_t block_size_in_bytes)
+{
+  /* Set up the allocation pointer and its limit. */
+  litter_allocator_pointer
+    = litter_heap_beginning
+    = jitter_xmalloc (block_size_in_bytes);
+  litter_allocator_limit = (litter_allocator_pointer + block_size_in_bytes);
+
+  /* Add information about it to the stack. */
+  struct jitterlisp_litter_block block;
+  block.beginning = litter_heap_beginning;
+  block.size_in_bytes = block_size_in_bytes;
+  jitter_dynamic_buffer_push (& jitterlisp_litter_blocks,
+                              & block,
+                              sizeof (struct jitterlisp_litter_block));
+
+  /* Update the total heap size. */
+  bool is_this_block_the_first = jitterlisp_litter_heap_size == 0;
+  jitterlisp_litter_heap_size += block_size_in_bytes;
+
+#define JITTERLIST_TO_MB(x) ((x) / 1024.0 / 1024.0)
+  /* Log, unless this block is the first. */
+  if (! is_this_block_the_first)
+    printf ("New %.1fMB litter block.  The heap is now %.1fMB.\n",
+            JITTERLIST_TO_MB(block_size_in_bytes),
+            JITTERLIST_TO_MB(jitterlisp_litter_heap_size));
+#undef JITTERLIST_TO_MB
+}
+
+static void
+jitterlisp_destroy_litter_blocks (void)
+{
+  struct jitterlisp_litter_block *popped_blocks
+    = ((struct jitterlisp_litter_block *)
+       jitterlisp_litter_blocks.region);
+  size_t popped_block_no = (jitterlisp_litter_blocks.used_size
+                            / sizeof (struct jitterlisp_litter_block));
+  int i;
+  for (i = 0; i < popped_block_no; i ++)
+    free (popped_blocks [i].beginning);
+}
+#endif // #if defined(JITTERLISP_LITTER)
 
 void
 jitterlisp_memory_initialize (void)
 {
   /* Initialize the garbage-collected heap. */
 #if   defined(JITTERLISP_LITTER)
-  /* Set up the allocation pointer and its limit. */
-  litter_allocator_pointer
-    = litter_heap_beginning
-    = jitter_xmalloc (JITTERLISP_LITTER_BYTE_NO);
-  litter_allocator_limit = litter_allocator_pointer + JITTERLISP_LITTER_BYTE_NO;
+printf ("Initializing blocks\n");
+  /* Initialize the litter block stack and the total heap size. */
+  jitter_dynamic_buffer_initialize (& jitterlisp_litter_blocks);
+  jitterlisp_litter_heap_size = 0;
+
+  /* Make the first litter block. */
+  jitterlisp_add_litter_block (JITTERLISP_LITTER_BLOCK_BYTE_NO);
+printf ("Made the first block\n");
+
 #elif defined(JITTERLISP_BOEHM_GC)
+  fflush (stdout); fflush (stderr); fprintf (stderr, "Initializing Boehm GC...\n"); fflush (stdout); fflush (stderr);
   /* Initialize Boehm's GC. */
-  GC_init ();
+  GC_INIT ();
+  GC_allow_register_threads ();
+
+  fflush (stdout); fflush (stderr); fprintf (stderr, "...Initialized Boehm GC...\n"); fflush (stdout); fflush (stderr);
+
 #else
 # error "impossible or unimplemented"
 #endif // #if defined(...
+
+  jitterlisp_register_current_thread ();
+
+  jitterlisp_gc_root_stack_initialize ();
 
   /* Initialize the symbol table. */
   jitter_hash_initialize (& jitterlisp_symbol_table);
@@ -136,14 +318,22 @@ jitterlisp_destroy_interned_symbol (const union jitter_word w);
 void
 jitterlisp_memory_finalize (void)
 {
+  jitterlisp_pop_all_gc_roots ();
+  jitterlisp_gc_root_stack_finalize ();
+
   /* Finalize the symbol table, destroying every interned symbol in the
      process. */
   jitter_string_hash_finalize (& jitterlisp_symbol_table,
                                jitterlisp_destroy_interned_symbol);
 
+  jitterlisp_unregister_current_thread ();
+
   /* Finalize the garbage-collected heap. */
 #if   defined(JITTERLISP_LITTER)
-  free (litter_heap_beginning);
+  /* Destroy every litter block referred on the litter block stack. */
+  jitterlisp_destroy_litter_blocks ();
+  /* Finalize the stack itself. */
+  jitter_dynamic_buffer_finalize (& jitterlisp_litter_blocks);
 #elif defined(JITTERLISP_BOEHM_GC)
   /* Boehm's GC doesn't seem to have a global finalization function -- not
      speaking of per-object finalization, of course. */
@@ -166,18 +356,21 @@ jitterlisp_allocate (size_t size_in_bytes)
   litter_allocator_pointer += size_in_bytes;
   if (__builtin_expect (litter_allocator_pointer > litter_allocator_limit,
                         false))
-    jitter_fatal ("At this point I would call the GC, if there were one.\n");
-  /* printf ("After allocating %luB the next allocation pointer is %p, "
-          "whose misalignment is %lu\n",
-          (unsigned long) size_in_bytes,
-          litter_allocator_pointer,
-          ((unsigned long) litter_allocator_pointer) & JITTERLISP_ALIGNMENT_BIT_MASK
-          );*/
+    {
+      size_t new_block_size = JITTERLISP_LITTER_BLOCK_BYTE_NO;
+      if (new_block_size < size_in_bytes)
+        new_block_size = size_in_bytes;
+      jitterlisp_add_litter_block (new_block_size);
+      return jitterlisp_allocate (size_in_bytes);
+    }
   return res;
+
 #elif defined(JITTERLISP_BOEHM_GC)
-  return GC_malloc (size_in_bytes);
+  return GC_MALLOC (size_in_bytes);
+
 #else
 # error "impossible or unimplemented"
+
 #endif // #if defined(...
 }
 
@@ -212,6 +405,7 @@ jitterlisp_symbol_make_interned (const char *name)
       res->name_or_NULL = jitter_xmalloc (strlen (name) + 1);
       strcpy (res->name_or_NULL, name);
       res->global_value = JITTERLISP_UNDEFINED;
+      jitterlisp_push_gc_root (& res->global_value);
       union jitter_word w = { .pointer = (void *) res };
       jitter_string_hash_table_add (& jitterlisp_symbol_table, name, w);
       return res;

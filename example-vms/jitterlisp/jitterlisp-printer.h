@@ -33,7 +33,9 @@
 
 /* This API makes it easy to use the same functions for printing to a stream, to
    a dynamically-allocated string in memory or to some other sink defined by the
-   user. */
+   user.
+
+   This has nothing to do with character names, below. */
 
 /* A char-printing function, at every call, prints the given character to the
    sink referred in the pointed state, updating it if needed.  The exact nature
@@ -102,5 +104,41 @@ char *
 jitterlisp_print_to_string (jitterlisp_object o)
   __attribute__ ((returns_nonnull));
 
+
+
+
+/* Character names.
+ * ************************************************************************** */
+
+/* Characters are either ordinary and simply written with a #\ prefix, like for
+   example #\a , or with longer names for other, not so easy to print
+   characters such as #\newline .  In the case of longer non-ordinary characters
+   we need to keep a mapping between actual characters such as '\n' and their
+   name such as "newline".
+
+   These definitions, used in the printer and in the reader as well, have
+   nothing to do with char-printing, above. */
+
+/* The name for a non-ordinary character. */
+struct jitterlisp_character_name_binding
+{
+  /* The actual character, for example '\n'. */
+  jitter_int character;
+
+  /* The character name without the #\ prefix, for example "newline".  The
+     string length is always strictly greater than one. */
+  char *name;
+};
+
+/* The name bindings for every non-ordinary character, in no particular order.
+   It is allowed for one character to have multiple names, but not the
+   converse. */
+extern const struct jitterlisp_character_name_binding
+jitterlisp_non_ordinary_character_name_bindings [];
+
+/* How many non-ordinary characters there are.  This is the size of
+   jitterlisp_non_ordinary_character_name_bindings in elements. */
+extern const size_t
+jitterlisp_non_ordinary_character_name_binding_no;
 
 #endif // #ifndef JITTERLISP_PRINTER_H_
