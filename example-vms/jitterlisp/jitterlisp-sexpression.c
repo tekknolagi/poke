@@ -139,6 +139,7 @@ jitterlisp_make_interned (const char *name)
 
 /* Globally named object variables. */
 jitterlisp_object jitterlisp_object_begin;
+jitterlisp_object jitterlisp_object_define;
 jitterlisp_object jitterlisp_object_if;
 jitterlisp_object jitterlisp_object_lambda;
 jitterlisp_object jitterlisp_object_let;
@@ -152,6 +153,7 @@ static void
 jitterlisp_initialize_globally_named_objects (void)
 {
   jitterlisp_object_begin = jitterlisp_make_interned ("begin");
+  jitterlisp_object_define = jitterlisp_make_interned ("define");
   jitterlisp_object_if = jitterlisp_make_interned ("if");
   jitterlisp_object_lambda = jitterlisp_make_interned ("lambda");
   jitterlisp_object_let = jitterlisp_make_interned ("let");

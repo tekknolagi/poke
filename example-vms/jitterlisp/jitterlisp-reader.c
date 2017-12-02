@@ -345,6 +345,8 @@ jitterlisp_complicated_text_to_token (const char *text)
     return jitterlisp_token_prefix;
   else if (! strcmp (text, ",@"))
     return jitterlisp_token_prefix;
+  else if (! strcmp (text, "#"))
+    return jitterlisp_token_prefix;
 
   /* The text is not a key word.  Check if it's a character. */
   if (! strncmp (text, "#\\", 2))
@@ -645,6 +647,8 @@ jitterlisp_prefix_name_to_symbol_name (const char *prefix_name)
     return "unquote";
   else if (! strcmp (prefix_name, ",@"))
     return "unquote-splicing";
+  else if (! strcmp (prefix_name, "#"))
+    return "vector-literal";
   else
     jitter_fatal ("jitterlisp_prefix_name_to_symbol_name: invalid prefix "
                   "name \"%s\"", prefix_name);

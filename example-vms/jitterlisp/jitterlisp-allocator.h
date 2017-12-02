@@ -131,10 +131,25 @@ jitterlisp_symbol_make_interned (const char *name)
 
 /* Expand to an rvalue of type struct jitterlisp_closure * whose evaluation
    points to a just allocated and uninitialized closure. */
-#define JITTERLISP_CLOSURE_MAKE_UNINITIALIZED_UNENCODED()                         \
-  /* FIXME: this works, but of course the implementation is temporary. */      \
-  ((struct jitterlisp_closure*)                                                   \
-   (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(struct jitterlisp_closure))))
+#define JITTERLISP_CLOSURE_MAKE_UNINITIALIZED_UNENCODED()                  \
+  /* FIXME: this works, but of course the implementation is temporary. */  \
+  ((struct jitterlisp_closure*)                                            \
+   (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(                        \
+                            struct jitterlisp_closure))))
+
+
+
+
+/* Vector allocation.
+ * ************************************************************************** */
+
+/* Expand to an rvalue of type struct jitterlisp_vector * whose evaluation
+   points to a just allocated and uninitialized vector.  The elements are
+   *not* initialized, nor allocated. */
+#define JITTERLISP_VECTOR_MAKE_UNINITIALIZED_UNENCODED()  \
+  ((struct jitterlisp_vector*)                            \
+   (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(       \
+                            struct jitterlisp_vector))))
 
 
 

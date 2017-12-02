@@ -441,7 +441,45 @@
     _jitterlisp_tmp->environment = _jitterlisp_in0;                \
     _jitterlisp_tmp->formals = _jitterlisp_in1;                    \
     _jitterlisp_tmp->body = _jitterlisp_in2;                       \
-    _jitterlisp_out = JITTERLISP_CLOSURE_ENCODE(_jitterlisp_tmp);  \
+    (_jitterlisp_out) = JITTERLISP_CLOSURE_ENCODE(_jitterlisp_tmp);  \
+  JITTER_END_
+
+
+
+
+/* Vector operations.
+ * ************************************************************************** */
+
+// FIXME: comment.
+
+/* Set the l-value _jitterlisp_out to be a new vector with the given
+   (fixnum-encoded) number of elements, each initialized to the given encoded
+   value. */
+#define JITTERLISP_VECTOR_MAKE_(_jitterlisp_out,                       \
+                                _jitterlisp_in_elt_no,                 \
+                                _jitterlisp_in_initial_elt)            \
+  JITTER_BEGIN_                                                        \
+    const jitter_uint _jitterlisp_elt_no_untagged                      \
+      = JITTERLISP_FIXNUM_DECODE(_jitterlisp_in_elt_no);               \
+    const jitterlisp_object _jitterlisp_in_initial_elt_evaluated       \
+      = (_jitterlisp_in_initial_elt);                                  \
+    jitterlisp_object *_jitterlisp_elts                                \
+      = ((jitterlisp_object *)                                         \
+         jitterlisp_allocate (                                         \
+            JITTERLISP_ALIGNED_SIZE(sizeof (jitterlisp_object)         \
+                                    * _jitterlisp_elt_no_untagged)));  \
+    int _jitterlisp_i;                                                 \
+    for (_jitterlisp_i = 0;                                            \
+         _jitterlisp_i < _jitterlisp_elt_no_untagged;                  \
+         _jitterlisp_i ++)                                             \
+      _jitterlisp_elts [_jitterlisp_i]                                 \
+        = _jitterlisp_in_initial_elt_evaluated;                        \
+    struct jitterlisp_vector *_jitterlisp_tmp                          \
+      = JITTERLISP_VECTOR_MAKE_UNINITIALIZED_UNENCODED();              \
+    _jitterlisp_tmp->element_no                                        \
+      = JITTERLISP_FIXNUM_ENCODE(_jitterlisp_elt_no_untagged);         \
+    _jitterlisp_tmp->elements = _jitterlisp_elts;                      \
+    (_jitterlisp_out) = JITTERLISP_VECTOR_ENCODE(_jitterlisp_tmp);     \
   JITTER_END_
 
 
@@ -525,6 +563,14 @@
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_BOOLEAN(_jitterlisp_in0));  \
   JITTER_END_
 
+/* Compute a tagged boolean, #t iff the given in-argument is the nothing
+   object. */
+#define JITTERLISP_NOTHINGP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                           \
+    _jitterlisp_out =                                                     \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_NOTHING(_jitterlisp_in0));  \
+  JITTER_END_
+
 /* Compute a tagged boolean, #t iff the given in-argument is a cons . */
 #define JITTERLISP_CONSP_(_jitterlisp_out, _jitterlisp_in0)            \
   JITTER_BEGIN_                                                        \
@@ -544,6 +590,13 @@
   JITTER_BEGIN_                                                           \
     _jitterlisp_out =                                                     \
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_CLOSURE(_jitterlisp_in0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is a vector . */
+#define JITTERLISP_VECTORP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                          \
+    _jitterlisp_out =                                                    \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_VECTOR(_jitterlisp_in0));  \
   JITTER_END_
 
 

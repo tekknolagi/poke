@@ -117,6 +117,8 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 # define INTERNEDSYMBOLATTR   ""
 # define UNINTERNEDSYMBOLATTR ""
 # define UNIQUEATTR           ""
+# define CLOSUREATTR          ""
+# define VECTORATTR           ""
 # define ERRORATTR            ""
 #else
 # define CONSATTR             LIGHTRED
@@ -125,7 +127,8 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 # define INTERNEDSYMBOLATTR   YELLOW ITALIC
 # define UNINTERNEDSYMBOLATTR YELLOW ITALIC UNDERLINE
 # define UNIQUEATTR           LIGHTMAGENTA UNDERLINE ITALIC
-# define CLOSUREATTR          LIGHTCYAN ITALIC
+# define CLOSUREATTR          LIGHTCYAN
+# define VECTORATTR           LIGHTCYAN ITALIC UNDERLINE
 # define ERRORATTR            RED REVERSE
 #endif // #ifdef NOTERMINAL
 
@@ -375,6 +378,24 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print (cp, cps, car);
       jitterlisp_print_cdr (cp, cps, cdr);
       jitterlisp_print_decoration (cp, cps, CONSATTR);
+      jitterlisp_print_char (cp, cps, ')');
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_VECTOR(o))
+    {
+      const struct jitterlisp_vector * const v = JITTERLISP_VECTOR_DECODE(o);
+      jitterlisp_print_decoration (cp, cps, VECTORATTR);
+      jitterlisp_print_string (cp, cps, "#(");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      int i;
+      int element_no = JITTERLISP_FIXNUM_DECODE(v->element_no);
+      for (i = 0; i < element_no; i ++)
+        {
+          jitterlisp_print (cp, cps, v->elements [i]);
+          if (i < (element_no - 1))
+            jitterlisp_print_char (cp, cps, ' ');
+        }
+      jitterlisp_print_decoration (cp, cps, VECTORATTR);
       jitterlisp_print_char (cp, cps, ')');
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }

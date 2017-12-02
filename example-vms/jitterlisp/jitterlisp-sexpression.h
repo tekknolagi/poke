@@ -844,7 +844,7 @@ struct jitterlisp_cons
 
 
 
-/* S-expression representation: closurees.
+/* S-expression representation: closures.
  * ************************************************************************** */
 
 /* Closures are represented boxed, with no header. */
@@ -888,6 +888,48 @@ struct jitterlisp_closure
 
 
 
+/* S-expression representation: vectors.
+ * ************************************************************************** */
+
+/* Vectors are represented boxed as a header pointing to the actual vector
+   elements as a separate heap buffer, not directly accessible by the user. */
+
+#define JITTERLISP_VECTOR_PTAG           0b101
+
+#define JITTERLISP_VECTOR_STAG_BIT_NO    0
+#define JITTERLISP_VECTOR_STAG           0b0
+
+/* A vector header. */
+struct jitterlisp_vector
+{
+  /* How many elements there are. */
+  jitter_uint element_no;
+
+  /* A pointer to the first element. */
+  jitterlisp_object *elements;
+};
+
+/* Vector tag checking, encoding and decoding. */
+#define JITTERLISP_IS_VECTOR(_jitterlisp_tagged_object)  \
+  JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),        \
+                     JITTERLISP_VECTOR_PTAG,             \
+                     JITTERLISP_VECTOR_STAG,             \
+                     JITTERLISP_VECTOR_STAG_BIT_NO)
+#define JITTERLISP_VECTOR_ENCODE(_jitterlisp_untagged_vector)  \
+  JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_vector,       \
+                            JITTERLISP_VECTOR_PTAG,            \
+                            JITTERLISP_VECTOR_STAG,            \
+                            JITTERLISP_VECTOR_STAG_BIT_NO)
+#define JITTERLISP_VECTOR_DECODE(_jitterlisp_tagged_vector)          \
+  ((struct jitterlisp_vector *)                                      \
+   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_vector),      \
+                                   JITTERLISP_VECTOR_PTAG,           \
+                                   JITTERLISP_VECTOR_STAG,           \
+                                   JITTERLISP_VECTOR_STAG_BIT_NO)))
+
+
+
+
 /* Globally named objects.
  * ************************************************************************** */
 
@@ -899,6 +941,7 @@ struct jitterlisp_closure
    This requires them to be GC roots, which will need some work if I switch to a
    moving GC. */
 extern jitterlisp_object jitterlisp_object_begin;
+extern jitterlisp_object jitterlisp_object_define;
 extern jitterlisp_object jitterlisp_object_if;
 extern jitterlisp_object jitterlisp_object_lambda;
 extern jitterlisp_object jitterlisp_object_let;

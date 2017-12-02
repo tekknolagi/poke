@@ -280,6 +280,51 @@ jitterlisp_eval_interpreter_begin (jitterlisp_object forms,
 }
 
 static jitterlisp_object
+jitterlisp_eval_interpreter_define (jitterlisp_object cdr,
+                                    jitterlisp_object env)
+{
+  if (! JITTERLISP_IS_CONS(cdr))
+    jitterlisp_error_cloned ("define not followed by a cons");
+  jitterlisp_object bound_thing = JITTERLISP_EXP_C_A_CAR(cdr);
+  jitterlisp_object after_bound_thing_forms = JITTERLISP_EXP_C_A_CDR(cdr);
+  jitterlisp_object variable;
+
+  /* We support two syntaxes, Scheme-style: (define SYMBOL FORMS...)
+     or (define (FUNCTION-SYMBOL ARGUMENT-SYMBOLS...) FORMS...) . */
+  if (JITTERLISP_IS_SYMBOL(bound_thing))
+    variable = bound_thing;
+  else
+    {
+      if (! jitterlisp_is_list_of_symbols (bound_thing))
+        jitterlisp_error_cloned ("define not followed by cons or "
+                                 "list of symbols");
+      if (JITTERLISP_IS_EMPTY_LIST(bound_thing))
+        jitterlisp_error_cloned ("define followed by empty list");
+
+      /* Translate (define (FUNCTION-SYMBOL ARGUMENT-SYMBOLS...) FORMS...) into
+         (define FUNCTION-SYMBOL (lambda (ARGUMENT-SYMBOLS...) FORMS...) . */
+      variable = jitterlisp_car (bound_thing);
+      jitterlisp_object lambda
+        = jitterlisp_cons (jitterlisp_object_lambda,
+                           jitterlisp_cons (jitterlisp_cdr (bound_thing),
+                                            after_bound_thing_forms));
+      /* The defined forms are evaluated in a sequence: make a singleton list
+         to hold the synthetic lambda. */
+      after_bound_thing_forms = jitterlisp_cons (lambda, JITTERLISP_EMPTY_LIST);
+    }
+  jitterlisp_object new_value
+    = jitterlisp_eval_interpreter_begin (after_bound_thing_forms, env);
+
+  /* Always bind in the global environment, ignoring any binding for variable in
+     env.  This is different from Scheme (and Common-Lisp), even if it behaves
+     the same way at the top level. */
+  struct jitterlisp_symbol *unencoded_variable
+    = JITTERLISP_SYMBOL_DECODE(variable);
+  unencoded_variable->global_value = new_value;
+  return JITTERLISP_NOTHING;
+}
+
+static jitterlisp_object
 jitterlisp_eval_interpreter_if (jitterlisp_object cdr,
                                 jitterlisp_object env)
 {
@@ -510,6 +555,11 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
       JITTERLISP_EVAL_ARGS_1;
       JITTERLISP_BOOLEANP_(res, args [0]);
     }
+  else if (! strcmp (interned_name, "nothing?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_NOTHINGP_(res, args [0]);
+    }
   else if (! strcmp (interned_name, "symbol?"))
     {
       JITTERLISP_EVAL_ARGS_1;
@@ -524,6 +574,11 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
     {
       JITTERLISP_EVAL_ARGS_1;
       JITTERLISP_PROCEDUREP_(res, args [0]);
+    }
+  else if (! strcmp (interned_name, "vector?"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_VECTORP_(res, args [0]);
     }
   /* Arithmetic. */
   else if (! strcmp (interned_name, "+"))
@@ -571,6 +626,12 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
       JITTERLISP_EVAL_ARGS_1;
       JITTERLISP_NOT_(res, args [0]);
     }
+  /* Number comparison. */
+  else if (! strcmp (interned_name, "="))
+    {
+      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EQP_(res, args [0], args [1]);
+    }
   /* Comparison. */
   else if (! strcmp (interned_name, "eq?"))
     {
@@ -608,7 +669,30 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
       JITTERLISP_EVAL_ARGS_TYPED_1(CONS);
       JITTERLISP_CDR_(res, args [0]);
     }
-  /* FIXME: add composed selectors. */
+  /* FIXME: add composed cons selectors. */
+  /* Conses. */
+  else if (! strcmp (interned_name, "make-vector"))
+    {
+      JITTERLISP_EVAL_ARG_TYPED(FIXNUM);
+      JITTERLISP_EVAL_ARG;
+      JITTERLISP_NO_MORE_ARGS;
+      if (JITTERLISP_FIXNUM_DECODE(args [0]) < 0)
+        jitterlisp_error_cloned ("negative-sized vector");
+      JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]);
+    }
+  /* I/O. */
+  else if (! strcmp (interned_name, "display"))
+    {
+      JITTERLISP_EVAL_ARGS_1;
+      jitterlisp_print_to_stream (stdout, args [0]);
+      res = JITTERLISP_NOTHING;
+    }
+  else if (! strcmp (interned_name, "newline"))
+    {
+      JITTERLISP_EVAL_ARGS_0;
+      putchar ('\n');
+      res = JITTERLISP_NOTHING;
+    }
   /* Default. */
   else
     jitterlisp_error_cloned ("unbound primitive");
@@ -651,6 +735,8 @@ jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
     return jitterlisp_eval_interpreter_quote (cdr, env);
   else if (symbol == jitterlisp_object_set_bang)
     return jitterlisp_eval_interpreter_set_bang (cdr, env);
+  else if (symbol == jitterlisp_object_define)
+    return jitterlisp_eval_interpreter_define (cdr, env);
   else if (symbol == jitterlisp_object_while)
     return jitterlisp_eval_interpreter_while (cdr, env);
 

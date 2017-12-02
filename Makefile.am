@@ -1055,8 +1055,10 @@ if JITTER_HAVE_BOEHM_GC
   bin_jitterlisp_boehm_LDFLAGS = $(bin_jitterlisp_LDFLAGS)
 endif # JITTER_HAVE_BOEHM_GC
 
-# Examples for JitterLisp.  There is none yet.
-EXTRA_DIST +=
+# Examples for JitterLisp.
+EXTRA_DIST += \
+  example-vms/jitterlisp/examples/counter.lisp \
+  example-vms/jitterlisp/examples/factorial.lisp
 
 # Other files for JitterLisp.
 EXTRA_DIST += example-vms/jitterlisp/THANKS
