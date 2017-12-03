@@ -1,4 +1,4 @@
-;;; JitterLisp (almost -*- Scheme -*- for Emacs) down-counter example.
+;;; JitterLisp (almost -*- Scheme -*- for Emacs) iterative down-counter.
 
 ;;; Copyright (C) 2017 Luca Saiu
 ;;; Written by Luca Saiu

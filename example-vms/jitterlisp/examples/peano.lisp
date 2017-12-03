@@ -19,7 +19,18 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
-(define (1- n) (- n 1))  ;; For MIT/GNU Scheme
+
+;;;; Compatibility.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; This code is designed to run on JitterLisp and on Scheme as well.
+;;; Since 1- is not standard I define my own.
+
+(define (predecessor n)
+  (- n 1))
+
+
+
 
 ;;;; Peano fundamental operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -118,9 +129,9 @@
 (define (tak x y z)
   (if (<= x y)
       y
-      (tak (tak (1- x) y z)
-           (tak (1- y) z x)
-           (tak (1- z) x y))))
+      (tak (tak (predecessor x) y z)
+           (tak (predecessor y) z x)
+           (tak (predecessor z) x y))))
 
 
 
@@ -138,7 +149,7 @@
 (define (fixnum->peano-acc n a)
   (if (zero? n)
       a
-      (fixnum->peano-acc (1- n) (peano-successor a))))
+      (fixnum->peano-acc (predecessor n) (peano-successor a))))
 (define (fixnum->peano n)
   (fixnum->peano-acc n '()))
 
@@ -151,6 +162,7 @@
 (define (show x)
   (display x)
   (newline))
+
 
 
 
@@ -168,6 +180,6 @@
                                       (fixnum->peano 7))))
 (newline)
 
-;; This is a good way to stress the GC.
-;;(show (tak 14 8 2))
-;;(show (peano->fixnum (peano-tak (fixnum->peano 14) (fixnum->peano 8) (fixnum->peano 2))))
+;; This is a good way of stressing the GC.
+(show (tak 14 8 2))
+(show (peano->fixnum (peano-tak (fixnum->peano 14) (fixnum->peano 8) (fixnum->peano 2))))

@@ -462,7 +462,7 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
     if (! JITTERLISP_IS_EMPTY_LIST(actuals))                          \
       jitterlisp_error_cloned ("too many primitive actuals");         \
   JITTER_END_
-#define JITTERLISP_EVAL_ARG                                           \
+#define JITTERLISP_EVAL_ARG_WITHOUT_CHECKING_TAG                      \
   JITTER_BEGIN_                                                       \
     if (JITTERLISP_IS_EMPTY_LIST(actuals))                            \
       jitterlisp_error_cloned ("not enough primitive actuals");       \
@@ -472,56 +472,44 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
       = jitterlisp_eval_interpreter (jitterlisp_car (actuals), env);  \
     actuals = jitterlisp_cdr (actuals);                               \
   JITTER_END_
-#define JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE)                 \
+#define JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE)                 \
   JITTER_BEGIN_                                                     \
-    JITTERLISP_EVAL_ARG;                                            \
+    JITTERLISP_EVAL_ARG_WITHOUT_CHECKING_TAG;                       \
   if (! JITTER_CONCATENATE_TWO(JITTERLISP_IS_, _JITTERLISP_TYPE)(   \
            args [next_arg_index - 1]))                              \
     jitterlisp_error_cloned ("invalid type for primitive actual");  \
   JITTER_END_
-#define JITTERLISP_EVAL_ARGS_0  \
-  JITTER_BEGIN_                 \
-    JITTERLISP_NO_MORE_ARGS;    \
+#define JITTERLISP_EVAL_ARGS_0()  \
+  JITTER_BEGIN_                   \
+    JITTERLISP_NO_MORE_ARGS;      \
   JITTER_END_
-#define JITTERLISP_EVAL_ARGS_1  \
-  JITTER_BEGIN_                 \
-    JITTERLISP_EVAL_ARG;        \
-    JITTERLISP_NO_MORE_ARGS;    \
+#define JITTERLISP_EVAL_ARGS_1(_JITTERLISP_TYPE0)  \
+  JITTER_BEGIN_                                    \
+    JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE0);        \
+    JITTERLISP_NO_MORE_ARGS;                       \
   JITTER_END_
-#define JITTERLISP_EVAL_ARGS_2  \
-  JITTER_BEGIN_                 \
-    JITTERLISP_EVAL_ARG;        \
-    JITTERLISP_EVAL_ARG;        \
-    JITTERLISP_NO_MORE_ARGS;    \
+#define JITTERLISP_EVAL_ARGS_2(_JITTERLISP_TYPE0, _JITTERLISP_TYPE1)  \
+  JITTER_BEGIN_                                                       \
+    JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE0);                           \
+    JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE1);                           \
+    JITTERLISP_NO_MORE_ARGS;                                          \
   JITTER_END_
-#define JITTERLISP_EVAL_ARGS_3  \
-  JITTER_BEGIN_                 \
-    JITTERLISP_EVAL_ARG;        \
-    JITTERLISP_EVAL_ARG;        \
-    JITTERLISP_EVAL_ARG;        \
-    JITTERLISP_NO_MORE_ARGS;    \
+#define JITTERLISP_EVAL_ARGS_3(_JITTERLISP_TYPE0, _JITTERLISP_TYPE1,  \
+                               _JITTERLISP_TYPE2)                     \
+  JITTER_BEGIN_                                                       \
+    JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE0);                           \
+    JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE1);                           \
+    JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE2);                           \
+    JITTERLISP_NO_MORE_ARGS;                                          \
   JITTER_END_
-
-#define JITTERLISP_EVAL_ARGS_TYPED_1(_JITTERLISP_TYPE1)  \
-  JITTER_BEGIN_                                          \
-    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE1);        \
-    JITTERLISP_NO_MORE_ARGS;                             \
-  JITTER_END_
-#define JITTERLISP_EVAL_ARGS_TYPED_2(_JITTERLISP_TYPE1,  \
-                                     _JITTERLISP_TYPE2)  \
-  JITTER_BEGIN_                                          \
-    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE1);        \
-    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE2);        \
-    JITTERLISP_NO_MORE_ARGS;                             \
-  JITTER_END_
-#define JITTERLISP_EVAL_ARGS_TYPED_3(_JITTERLISP_TYPE1,  \
-                                     _JITTERLISP_TYPE2,  \
-                                     _JITTERLISP_TYPE3)  \
-  JITTER_BEGIN_                                          \
-    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE1);        \
-    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE2);        \
-    JITTERLISP_EVAL_ARG_TYPED(_JITTERLISP_TYPE3);        \
-    JITTERLISP_NO_MORE_ARGS;                             \
+#define JITTERLISP_EVAL_ARGS_4(_JITTERLISP_TYPE0, _JITTERLISP_TYPE1,  \
+                               _JITTERLISP_TYPE2, _JITTERLISP_TYPE3)  \
+  JITTER_BEGIN_                                                       \
+    JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE0);                           \
+    JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE1);                           \
+    JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE2);                           \
+    JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE3);                           \
+    JITTERLISP_NO_MORE_ARGS;                                          \
   JITTER_END_
 
   struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
@@ -537,174 +525,174 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
   /* Type checking. */
   else if (! strcmp (interned_name, "fixnum?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_FIXNUMP_(res, args [0]);
     }
   else if (! strcmp (interned_name, "character?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_CHARACTERP_(res, args [0]);
     }
   else if (! strcmp (interned_name, "null?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_NULLP_(res, args [0]);
     }
   else if (! strcmp (interned_name, "eof?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_EOFP_(res, args [0]);
     }
   else if (! strcmp (interned_name, "boolean?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_BOOLEANP_(res, args [0]);
     }
   else if (! strcmp (interned_name, "nothing?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_NOTHINGP_(res, args [0]);
     }
   else if (! strcmp (interned_name, "symbol?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_SYMBOLP_(res, args [0]);
     }
   else if (! strcmp (interned_name, "cons?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_CONSP_(res, args [0]);
     }
   else if (! strcmp (interned_name, "procedure?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_PROCEDUREP_(res, args [0]);
     }
   else if (! strcmp (interned_name, "vector?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_VECTORP_(res, args [0]);
     }
   /* Arithmetic. */
   else if (! strcmp (interned_name, "+"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
       JITTERLISP_PLUS_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, "-"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
       JITTERLISP_MINUS_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, "*"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
       JITTERLISP_TIMES_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, "/"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
       if (args [1] == JITTERLISP_FIXNUM_ENCODE(0))
         jitterlisp_error_cloned ("division by zero");
       JITTERLISP_DIVIDED_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, "remainder"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
       if (args [1] == JITTERLISP_FIXNUM_ENCODE(0))
         jitterlisp_error_cloned ("remainder of division by zero");
       JITTERLISP_REMAINDER_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, "1+"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_1(FIXNUM);
+      JITTERLISP_EVAL_ARGS_1(FIXNUM);
       JITTERLISP_1PLUS_(res, args [0]);
     }
   else if (! strcmp (interned_name, "1-"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_1(FIXNUM);
+      JITTERLISP_EVAL_ARGS_1(FIXNUM);
       JITTERLISP_1MINUS_(res, args [0]);
     }
   /* Boolean operations. */
   else if (! strcmp (interned_name, "not"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_NOT_(res, args [0]);
     }
   /* Number comparison. */
   else if (! strcmp (interned_name, "="))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
       JITTERLISP_EQP_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, "<>"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
       JITTERLISP_NEQP_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, "<"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
       JITTERLISP_LESSP_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, ">"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
       JITTERLISP_GREATERP_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, ">="))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
       JITTERLISP_NOTLESSP_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, "<="))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_2(FIXNUM, FIXNUM);
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
       JITTERLISP_NOTGREATERP_(res, args [0], args [1]);
     }
   /* Comparison. */
   else if (! strcmp (interned_name, "eq?"))
     {
-      JITTERLISP_EVAL_ARGS_2;
+      JITTERLISP_EVAL_ARGS_2(ANYTHING, ANYTHING);
       JITTERLISP_EQP_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, "neq?"))
     {
-      JITTERLISP_EVAL_ARGS_2;
+      JITTERLISP_EVAL_ARGS_2(ANYTHING, ANYTHING);
       JITTERLISP_NEQP_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, "zero?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_ZEROP_(res, args [0]);
     }
   else if (! strcmp (interned_name, "nzero?"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_NZEROP_(res, args [0]);
     }
   /* Conses. */
   else if (! strcmp (interned_name, "cons"))
     {
-      JITTERLISP_EVAL_ARGS_2;
+      JITTERLISP_EVAL_ARGS_2(ANYTHING, ANYTHING);
       JITTERLISP_CONS_(res, args [0], args [1]);
     }
   else if (! strcmp (interned_name, "car"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_1(CONS);
+      JITTERLISP_EVAL_ARGS_1(CONS);
       JITTERLISP_CAR_(res, args [0]);
     }
   else if (! strcmp (interned_name, "cdr"))
     {
-      JITTERLISP_EVAL_ARGS_TYPED_1(CONS);
+      JITTERLISP_EVAL_ARGS_1(CONS);
       JITTERLISP_CDR_(res, args [0]);
     }
   /* FIXME: add composed cons selectors. */
   /* Conses. */
   else if (! strcmp (interned_name, "make-vector"))
     {
-      JITTERLISP_EVAL_ARG_TYPED(FIXNUM);
-      JITTERLISP_EVAL_ARG;
+      JITTERLISP_EVAL_ARG(FIXNUM);
+      JITTERLISP_EVAL_ARG(ANYTHING);
       JITTERLISP_NO_MORE_ARGS;
       if (JITTERLISP_FIXNUM_DECODE(args [0]) < 0)
         jitterlisp_error_cloned ("negative-sized vector");
@@ -713,13 +701,13 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
   /* I/O. */
   else if (! strcmp (interned_name, "display"))
     {
-      JITTERLISP_EVAL_ARGS_1;
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
       jitterlisp_print_to_stream (stdout, args [0]);
       res = JITTERLISP_NOTHING;
     }
   else if (! strcmp (interned_name, "newline"))
     {
-      JITTERLISP_EVAL_ARGS_0;
+      JITTERLISP_EVAL_ARGS_0();
       putchar ('\n');
       res = JITTERLISP_NOTHING;
     }
@@ -728,15 +716,12 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
     jitterlisp_error_cloned ("unbound primitive");
 
 
+#undef JITTERLISP_EVAL_ARG_WITHOUT_CHECKING_TAG
 #undef JITTERLISP_EVAL_ARG
-#undef JITTERLISP_EVAL_ARG_TYPED
 #undef JITTERLISP_EVAL_ARGS_0
 #undef JITTERLISP_EVAL_ARGS_1
 #undef JITTERLISP_EVAL_ARGS_2
 #undef JITTERLISP_EVAL_ARGS_3
-#undef JITTERLISP_EVAL_ARGS_TYPED_1
-#undef JITTERLISP_EVAL_ARGS_TYPED_2
-#undef JITTERLISP_EVAL_ARGS_TYPED_3
 #undef JITTERLISP_NO_MORE_ARGS
   return res;
 }

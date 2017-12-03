@@ -540,6 +540,18 @@ typedef jitter_uint jitterlisp_object;
 
 
 
+/* S-expression representation: dummy "anything" type.
+ * ************************************************************************** */
+
+/* This dummy tag check succeeds with any object.  It is convenient to have for
+   machine-generated code containing a tag-checking macro, which sometimes need
+   no actual check. */
+#define JITTERLISP_IS_ANYTHING(_jitterlisp_tagged_object)  \
+  true
+
+
+
+
 /* S-expression representation: fixnums.
  * ************************************************************************** */
 
