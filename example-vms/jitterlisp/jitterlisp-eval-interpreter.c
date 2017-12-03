@@ -379,6 +379,8 @@ jitterlisp_eval_interpreter_let_or_let_star (jitterlisp_object cdr,
         jitterlisp_error_cloned ("let or let* binding not a list");
       jitterlisp_object binding_variable
         = JITTERLISP_EXP_C_A_CAR(first_binding);
+      if (! JITTERLISP_IS_SYMBOL(binding_variable))
+        jitterlisp_error_cloned ("let or let* binding variable not a symbol");
       jitterlisp_object binding_forms = JITTERLISP_EXP_C_A_CDR(first_binding);
 
       /* Evaluate the binding forms in the appropriate environment; which one
