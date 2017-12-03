@@ -356,6 +356,64 @@ jitterlisp_eval_interpreter_lambda (jitterlisp_object cdr,
   return jitterlisp_closure (env, formals, body_forms);
 }
 
+static inline jitterlisp_object
+jitterlisp_eval_interpreter_let_or_let_star (jitterlisp_object cdr,
+                                             jitterlisp_object env,
+                                             bool star)
+{
+  /* Bind subforms to C variables. */
+  if (! JITTERLISP_IS_CONS(cdr))
+    jitterlisp_error_cloned ("let or let* not followed by a cons");
+  jitterlisp_object bindings = JITTERLISP_EXP_C_A_CAR(cdr);
+  jitterlisp_object body_forms = JITTERLISP_EXP_C_A_CDR(cdr);
+
+  /* Build an extended environment by evaluating binding forms. */
+  jitterlisp_object body_env = env;
+  while (! JITTERLISP_IS_EMPTY_LIST (bindings))
+    {
+      /* Bind binding subforms to C variables. */
+      if (! JITTERLISP_IS_CONS(bindings))
+        jitterlisp_error_cloned ("let or let* bindings not a list");
+      jitterlisp_object first_binding = JITTERLISP_EXP_C_A_CAR(bindings);
+      if (! JITTERLISP_IS_CONS(first_binding))
+        jitterlisp_error_cloned ("let or let* binding not a list");
+      jitterlisp_object binding_variable
+        = JITTERLISP_EXP_C_A_CAR(first_binding);
+      jitterlisp_object binding_forms = JITTERLISP_EXP_C_A_CDR(first_binding);
+
+      /* Evaluate the binding forms in the appropriate environment; which one
+         depends on whether this is a let or let* block. */
+      jitterlisp_object binding_forms_env
+        = star ? body_env : env;
+      jitterlisp_object binding_result
+        = jitterlisp_eval_interpreter_begin (binding_forms, binding_forms_env);
+
+      /* Add a binding for the variable in the extended environment. */
+      body_env = jitterlisp_environment_bind (body_env, binding_variable,
+                                              binding_result);
+
+      /* Go on with the next binding. */
+      bindings = JITTERLISP_EXP_C_A_CDR(bindings);
+    }
+
+  /* Evaluate the body in the extended environment. */
+  return jitterlisp_eval_interpreter_begin (body_forms, body_env);
+}
+
+static jitterlisp_object
+jitterlisp_eval_interpreter_let (jitterlisp_object cdr,
+                                 jitterlisp_object env)
+{
+  return jitterlisp_eval_interpreter_let_or_let_star (cdr, env, false);
+}
+
+static jitterlisp_object
+jitterlisp_eval_interpreter_let_star (jitterlisp_object cdr,
+                                      jitterlisp_object env)
+{
+  return jitterlisp_eval_interpreter_let_or_let_star (cdr, env, true);
+}
+
 static jitterlisp_object
 jitterlisp_eval_interpreter_quote (jitterlisp_object cdr,
                                    jitterlisp_object env)
@@ -420,7 +478,7 @@ jitterlisp_eval_interpreter_call (jitterlisp_object operator,
     = JITTERLISP_CLOSURE_DECODE(operator_result);
   jitterlisp_object formals = closure->formals;
   jitterlisp_object closure_environment = closure->environment;
-  jitterlisp_object body = closure->body;
+  jitterlisp_object body_forms = closure->body;
 
   /* Evaluate each actual, and bind its formal to it in a new (temporary)
      environment, starting from the closure environment.  We can assume that the
@@ -446,7 +504,7 @@ jitterlisp_eval_interpreter_call (jitterlisp_object operator,
     jitterlisp_error_cloned ("not enough actuals");
 
   /* Evaluate the global body in the environment we have extended. */
-  return jitterlisp_eval_interpreter_begin (body, body_environment);
+  return jitterlisp_eval_interpreter_begin (body_forms, body_environment);
 }
 
 static jitterlisp_object
@@ -742,16 +800,20 @@ jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
      special form thru its helper. */
   if (symbol == jitterlisp_object_begin)
     return jitterlisp_eval_interpreter_begin (cdr, env);
-  if (symbol == jitterlisp_object_if)
+  else if (symbol == jitterlisp_object_define)
+    return jitterlisp_eval_interpreter_define (cdr, env);
+  else if (symbol == jitterlisp_object_if)
     return jitterlisp_eval_interpreter_if (cdr, env);
   else if (symbol == jitterlisp_object_lambda)
     return jitterlisp_eval_interpreter_lambda (cdr, env);
+  else if (symbol == jitterlisp_object_let)
+    return jitterlisp_eval_interpreter_let (cdr, env);
+  else if (symbol == jitterlisp_object_let_star)
+    return jitterlisp_eval_interpreter_let_star (cdr, env);
   else if (symbol == jitterlisp_object_quote)
     return jitterlisp_eval_interpreter_quote (cdr, env);
   else if (symbol == jitterlisp_object_set_bang)
     return jitterlisp_eval_interpreter_set_bang (cdr, env);
-  else if (symbol == jitterlisp_object_define)
-    return jitterlisp_eval_interpreter_define (cdr, env);
   else if (symbol == jitterlisp_object_while)
     return jitterlisp_eval_interpreter_while (cdr, env);
 
