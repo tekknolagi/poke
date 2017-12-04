@@ -333,8 +333,8 @@
           (if (p (car xs))
               (begin
                 (set! res #t)
-                (set! go-on #f)))
-          (set! xs (cdr xs))))
+                (set! go-on #f))
+              (set! xs (cdr xs)))))
     res))
 
 ;; FIXME: rewrite using cond or or when I have them.
@@ -365,8 +365,8 @@
           (if (not (p (car xs)))
               (begin
                 (set! res #f)
-                (set! go-on #f)))
-          (set! xs (cdr xs))))
+                (set! go-on #f))
+              (set! xs (cdr xs)))))
     res))
 
 ;; FIXME: rewrite using cond or and when I have them.
@@ -473,12 +473,12 @@
     (while go-on
       (if (null? xs)
           (set! go-on #f)
-            (if (<= x (car xs))
-                (set! go-on #f)
-                (begin
-                  (set! smaller-elements-reversed
-                        (cons (car xs) smaller-elements-reversed)))
-                (set! xs (cdr xs)))))
+          (if (<= x (car xs))
+              (set! go-on #f)
+              (begin
+                (set! smaller-elements-reversed
+                      (cons (car xs) smaller-elements-reversed))
+                (set! xs (cdr xs))))))
     (append-reversed-iterative smaller-elements-reversed
                                (cons x xs))))
 
@@ -610,3 +610,5 @@
 (display (length-iterative xs)) (newline)
 (display (length-non-tail-recursive xs)) (newline)
 (display (length-tail-recursive xs)) (newline)
+
+;; (define xs (reverse! (iota 10000000)))
