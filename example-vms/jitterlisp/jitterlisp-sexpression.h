@@ -953,6 +953,7 @@ struct jitterlisp_vector
    This requires them to be GC roots, which will need some work if I switch to a
    moving GC. */
 extern jitterlisp_object jitterlisp_object_begin;
+extern jitterlisp_object jitterlisp_object_cond;
 extern jitterlisp_object jitterlisp_object_define;
 extern jitterlisp_object jitterlisp_object_if;
 extern jitterlisp_object jitterlisp_object_lambda;

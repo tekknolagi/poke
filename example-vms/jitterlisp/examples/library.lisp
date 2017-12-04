@@ -19,8 +19,15 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
+
+;;;; Scratch compatibility/testing code.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;(define-macro (my-define n . stuff) (if (symbol? n) `(define ,n ,@stuff) `(define-inlinable ,n ,@stuff)))
 ;;(define-macro (my-define n . stuff) `(define ,n ,@stuff))
+
+
+
 
 ;;;; singleton.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -85,13 +92,13 @@
 
 (define (length-non-tail-recursive xs)
   (if (null? xs)
-    0
-    (1+ (length-non-tail-recursive (cdr xs)))))
+      0
+      (1+ (length-non-tail-recursive (cdr xs)))))
 
 (define (length-tail-recursive-helper xs acc)
   (if (null? xs)
-    acc
-    (length-tail-recursive-helper (cdr xs) (1+ acc))))
+      acc
+      (length-tail-recursive-helper (cdr xs) (1+ acc))))
 (define (length-tail-recursive xs)
   (length-tail-recursive-helper xs 0))
 
@@ -324,28 +331,28 @@
 ;;;; exists?.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; FIXME: rewrite using cond when I have it.  A return form would also be nice
-;; here.
+;; FIXME: a return form would also be nice here.
 (define (exists?-iterative p xs)
   (let ((res #f)
         (go-on #t))
     (while go-on
-      (if (null? xs)
-          (set! go-on #f)
-          (if (p (car xs))
-              (begin
-                (set! res #t)
-                (set! go-on #f))
-              (set! xs (cdr xs)))))
+      (cond ((null? xs)
+             (set! go-on #f))
+            ((p (car xs))
+             (begin
+               (set! res #t)
+               (set! go-on #f)))
+            (#t
+             (set! xs (cdr xs)))))
     res))
 
-;; FIXME: rewrite using cond or or when I have them.
 (define (exists?-tail-recursive p xs)
-  (if (null? xs)
-      #f
-      (if (p (car xs))
-          #t
-          (exists?-tail-recursive p (cdr xs)))))
+  (cond ((null? xs)
+         #f)
+        ((p (car xs))
+         #t)
+        (#t
+         (exists?-tail-recursive p (cdr xs)))))
 
 (define (exists? p xs)
   (exists?-iterative p xs))
@@ -356,28 +363,28 @@
 ;;;; for-all?.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; FIXME: rewrite using cond when I have it.  A return form would also be nice
-;; here.
+;; FIXME: a return form would be nice here.
 (define (for-all?-iterative p xs)
   (let ((res #t)
         (go-on #t))
     (while go-on
-      (if (null? xs)
-          (set! go-on #f)
-          (if (not (p (car xs)))
-              (begin
-                (set! res #f)
-                (set! go-on #f))
-              (set! xs (cdr xs)))))
+      (cond ((null? xs)
+             (set! go-on #f))
+            ((not (p (car xs)))
+             (begin
+               (set! res #f)
+               (set! go-on #f)))
+            (#t
+             (set! xs (cdr xs)))))
     res))
 
-;; FIXME: rewrite using cond or and when I have them.
 (define (for-all?-tail-recursive p xs)
-  (if (null? xs)
-      #t
-      (if (p (car xs))
-          (for-all?-tail-recursive p (cdr xs))
-          #f)))
+  (cond ((null? xs)
+         #t)
+        ((p (car xs))
+         (for-all?-tail-recursive p (cdr xs)))
+        (#t
+         #f)))
 
 (define (for-all? p xs)
   (for-all?-iterative p xs))
@@ -475,46 +482,46 @@
 ;;;; insert.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; FIXME: rewrite with cond when I have it.  A return or break form would also
-;;; be nice here.
+;;; FIXME: a return or break form would be nice here.
 (define (insert-iterative x xs)
   (let ((smaller-elements-reversed '())
         (go-on #t))
     (while go-on
-      (if (null? xs)
-          (set! go-on #f)
-          (if (<= x (car xs))
-              (set! go-on #f)
-              (begin
-                (set! smaller-elements-reversed
-                      (cons (car xs) smaller-elements-reversed))
-                (set! xs (cdr xs))))))
+      (cond ((null? xs)
+             (set! go-on #f))
+            ((<= x (car xs))
+             (set! go-on #f))
+            (#t
+             (begin
+               (set! smaller-elements-reversed
+                     (cons (car xs) smaller-elements-reversed))
+               (set! xs (cdr xs))))))
     (append-reversed-iterative smaller-elements-reversed
                                (cons x xs))))
 
-;;; FIXME: rewrite with cond when I have it.
 (define (insert-tail-recursive-helper x xs smaller-elements-reversed)
-  (if (null? xs)
-      (append-reversed-tail-recursive smaller-elements-reversed
-                                      (singleton x))
-      (if (<= x (car xs))
-          (append-reversed-tail-recursive smaller-elements-reversed
-                                          (cons x xs))
-          (insert-tail-recursive-helper x
-                                        (cdr xs)
-                                        (cons (car xs)
-                                              smaller-elements-reversed)))))
+  (cond ((null? xs)
+         (append-reversed-tail-recursive smaller-elements-reversed
+                                         (singleton x)))
+        ((<= x (car xs))
+         (append-reversed-tail-recursive smaller-elements-reversed
+                                         (cons x xs)))
+        (#t
+         (insert-tail-recursive-helper x
+                                       (cdr xs)
+                                       (cons (car xs)
+                                             smaller-elements-reversed)))))
 (define (insert-tail-recursive x xs)
   (insert-tail-recursive-helper x xs '()))
 
-;;; FIXME: rewrite with cond when I have it.
 (define (insert-non-tail-recursive x xs)
-  (if (null? xs)
-      (singleton x)
-      (if (<= x (car xs))
-          (cons x xs)
-          (cons (car xs)
-                (insert-non-tail-recursive x (cdr xs))))))
+  (cond ((null? xs)
+         (singleton x))
+        ((<= x (car xs))
+         (cons x xs))
+        (#t
+         (cons (car xs)
+               (insert-non-tail-recursive x (cdr xs))))))
 
 (define (insert x xs)
   (insert-iterative x xs))
@@ -540,15 +547,16 @@
   (let ((go-on #t))
     (while go-on
       ;; Here I can still assume that xs is not ().
-      (if (< x (car xs))
-          (begin
-            (insert-as-first! x xs)
-            (set! go-on #f))
-          (if (null? (cdr xs))
-              (begin
-                (insert-as-second! x xs)
-                (set! go-on #f))
-              (set! xs (cdr xs)))))))
+      (cond ((< x (car xs))
+             (begin
+               (insert-as-first! x xs)
+               (set! go-on #f)))
+            ((null? (cdr xs))
+             (begin
+               (insert-as-second! x xs)
+               (set! go-on #f)))
+            (#t
+             (set! xs (cdr xs)))))))
 (define (insert!-iterative x xs)
   (if (null? xs)
       (singleton x)
@@ -557,11 +565,12 @@
         xs)))
 
 (define (insert!-tail-recursive-non-null x xs)
-  (if (< x (car xs))
-      (insert-as-first! x xs)
-      (if (null? (cdr xs))
-          (insert-as-second! x xs)
-          (insert!-tail-recursive-non-null x (cdr xs)))))
+  (cond ((< x (car xs))
+         (insert-as-first! x xs))
+        ((null? (cdr xs))
+         (insert-as-second! x xs))
+        (#t
+         (insert!-tail-recursive-non-null x (cdr xs)))))
 (define (insert!-tail-recursive x xs)
   (if (null? xs)
       (singleton x)
@@ -612,4 +621,4 @@
 ;;;; Scratch.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; (define xs (reverse! (iota 10000000)))
+;;(display (length (reverse! (iota 10000000)))) (newline)

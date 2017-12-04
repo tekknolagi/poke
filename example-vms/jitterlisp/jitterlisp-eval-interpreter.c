@@ -281,6 +281,41 @@ jitterlisp_eval_interpreter_begin (jitterlisp_object forms,
 }
 
 static jitterlisp_object
+jitterlisp_eval_interpreter_cond (jitterlisp_object cdr,
+                                  jitterlisp_object env)
+{
+  /* Check every clause in order. */
+  jitterlisp_object clauses = cdr;
+  while (! JITTERLISP_IS_EMPTY_LIST(clauses))
+    {
+      /* Evaluate the condition of the next clause: if it's non-#f then evaluate
+         the clause forms and return their result.  This is epsilon-style: each
+         cond clause can contain zero or more forms after the condition.*/
+      if (! JITTERLISP_IS_CONS(clauses))
+        jitterlisp_error_cloned ("cond clauses not a list");
+      jitterlisp_object clause = JITTERLISP_EXP_C_A_CAR(clauses);
+      if (! JITTERLISP_IS_CONS(clause))
+        jitterlisp_error_cloned ("cond clause not a non-empty list");
+      /* We don't support Scheme-style else conditions. */
+      jitterlisp_object condition = JITTERLISP_EXP_C_A_CAR(clause);
+      jitterlisp_object condition_result
+        = jitterlisp_eval_interpreter (condition, env);
+      if (! JITTERLISP_IS_FALSE(condition_result))
+        {
+          jitterlisp_object clause_forms = JITTERLISP_EXP_C_A_CDR(clause);
+          return jitterlisp_eval_interpreter_begin (clause_forms, env);
+        }
+
+      /* If arrived here then the condition evaluated to #f.  Advance to the
+         rest of the clause list. */
+      clauses = JITTERLISP_EXP_C_A_CDR(clauses);
+    }
+
+  /* No clause condition evaluated to non-#f. */
+  return JITTERLISP_NOTHING;
+}
+
+static jitterlisp_object
 jitterlisp_eval_interpreter_define (jitterlisp_object cdr,
                                     jitterlisp_object env)
 {
@@ -338,6 +373,9 @@ jitterlisp_eval_interpreter_if (jitterlisp_object cdr,
   jitterlisp_object then = JITTERLISP_EXP_C_A_CAR(after_condition);
   jitterlisp_object else_forms = JITTERLISP_EXP_C_A_CDR(after_condition);
 
+  /* Notice the asymmetry: the then branch is only one form, but the else branch
+     is a list of forms, like in Emacs Lisp and epsilon.  This is also a
+     convenient way of returning #<nothing> for an empty else branch. */
   if (! JITTERLISP_IS_FALSE (jitterlisp_eval_interpreter (condition,
                                                           env)))
     return jitterlisp_eval_interpreter (then, env);
@@ -824,6 +862,8 @@ jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
      special form thru its helper. */
   if (symbol == jitterlisp_object_begin)
     return jitterlisp_eval_interpreter_begin (cdr, env);
+  else if (symbol == jitterlisp_object_cond)
+    return jitterlisp_eval_interpreter_cond (cdr, env);
   else if (symbol == jitterlisp_object_define)
     return jitterlisp_eval_interpreter_define (cdr, env);
   else if (symbol == jitterlisp_object_if)
