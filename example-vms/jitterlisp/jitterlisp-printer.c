@@ -23,13 +23,16 @@
 /* Include the Gnulib header. */
 #include <config.h>
 
+#include "jitterlisp-printer.h"
+
 #include <stdio.h>
 
 #include <jitter/jitter-dynamic-buffer.h>
+#include <jitter/jitter-fatal.h>
 
-#include "jitterlisp-printer.h"
 #include "jitterlisp-settings.h"
 #include "jitterlisp-sexpression.h"
+#include "jitterlisp-ast.h"
 
 
 
@@ -113,25 +116,33 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 //#define NOTERMINAL
 
 #ifdef NOTERMINAL
-# define CONSATTR             ""
-# define CHARACTERATTR        ""
-# define FIXNUMATTR           ""
-# define INTERNEDSYMBOLATTR   ""
-# define UNINTERNEDSYMBOLATTR ""
-# define UNIQUEATTR           ""
-# define CLOSUREATTR          ""
-# define VECTORATTR           ""
-# define ERRORATTR            ""
+# define CONSATTR              ""
+# define CHARACTERATTR         ""
+# define FIXNUMATTR            ""
+# define INTERNEDSYMBOLATTR    ""
+# define UNINTERNEDSYMBOLATTR  ""
+# define UNIQUEATTR            ""
+# define CLOSUREATTR           ""
+# define NONPRIMITIVEMACROATTR ""
+# define PRIMITIVEATTR         ""
+# define PRIMITIVEMACROATTR    ""
+# define VECTORATTR            ""
+# define ASTATTR               ""
+# define ERRORATTR             ""
 #else
-# define CONSATTR             LIGHTRED
-# define CHARACTERATTR        BROWN UNDERLINE ITALIC
-# define FIXNUMATTR           LIGHTGREEN UNDERLINE
-# define INTERNEDSYMBOLATTR   YELLOW ITALIC
-# define UNINTERNEDSYMBOLATTR YELLOW ITALIC UNDERLINE
-# define UNIQUEATTR           LIGHTMAGENTA UNDERLINE ITALIC
-# define CLOSUREATTR          LIGHTCYAN
-# define VECTORATTR           LIGHTCYAN ITALIC UNDERLINE
-# define ERRORATTR            RED REVERSE
+# define CONSATTR              LIGHTRED // LIGHTRED // WHITE //LIGHTRED // YELLOW //LIGHTMAGENTA
+# define CHARACTERATTR         BROWN UNDERLINE ITALIC
+# define FIXNUMATTR            LIGHTCYAN UNDERLINE
+# define INTERNEDSYMBOLATTR    LIGHTGREEN
+# define UNINTERNEDSYMBOLATTR  LIGHTGREEN ITALIC UNDERLINE
+# define UNIQUEATTR            YELLOW UNDERLINE //LIGHTMAGENTA UNDERLINE ITALIC //LIGHTMAGENTA UNDERLINE ITALIC
+# define CLOSUREATTR           LIGHTMAGENTA ITALIC // WHITE
+# define NONPRIMITIVEMACROATTR LIGHTMAGENTA ITALIC UNDERLINE // WHITE
+# define PRIMITIVEATTR         LIGHTMAGENTA
+# define PRIMITIVEMACROATTR    LIGHTMAGENTA UNDERLINE
+# define VECTORATTR            LIGHTRED ITALIC UNDERLINE
+# define ASTATTR               LIGHTMAGENTA ITALIC UNDERLINE
+# define ERRORATTR             RED REVERSE
 #endif // #ifdef NOTERMINAL
 
 
@@ -152,11 +163,12 @@ jitterlisp_print_string (jitterlisp_char_printer_function char_printer,
 }
 
 /* A helper function for jitterlisp_print_long_long .  The argument n is
-   required to be strictly positive. */
+   required to be strictly positive, and can use all the available bits. */
 static void
 jitterlisp_print_long_long_recursive (jitterlisp_char_printer_function cp,
                                       void *cps,
-                                      jitter_long_long n)
+                                      jitter_ulong_long n,
+                                      unsigned radix)
 {
   /* If the number is zero we have nothing more to print.  Notice that this is
      only reached if the original number to print was non-zero, in which case
@@ -167,10 +179,12 @@ jitterlisp_print_long_long_recursive (jitterlisp_char_printer_function cp,
   /* Recursively print every digit but the last one, which is to say the number
      divided by ten, rounded down.  We are going to print the least significant
      digit right after this call, so that it correctly ends up on the right. */
-  jitterlisp_print_long_long_recursive (cp, cps, n / 10);
+  jitterlisp_print_long_long_recursive (cp, cps, n / radix, radix);
 
-  /* Print the least significant digit but the last one. */
-  cp (cps, '0' + n % 10);
+  /* Print the least significant digit. */
+  int digit = n % radix;
+  char character = (digit < 10) ? '0' + digit : 'a' + digit - 10;
+  cp (cps, character);
 }
 
 /* Print the given jitter_long_long signed integer using the given
@@ -178,14 +192,53 @@ jitterlisp_print_long_long_recursive (jitterlisp_char_printer_function cp,
 static void
 jitterlisp_print_long_long (jitterlisp_char_printer_function char_printer,
                             void *char_printer_state,
-                            jitter_long_long n)
+                            jitter_long_long signed_n,
+                            bool signed_,
+                            unsigned radix)
 {
-  /* Print a minus sign, if negative; in that case change n to be positive, so
-     that we can forget about the sign in what follows. */
-  if (n < 0)
+  /* Special case for the NULL pointer: follow the GNU convention rather
+     than printing "0x0" . */
+  if (radix == 16 && ! signed_
+      && signed_n == (jitter_long_long) (jitter_int) NULL)
+    {
+      jitterlisp_print_string (char_printer, char_printer_state, "(nil)");
+      return;
+    }
+
+  /* We will deal with the sign at the very beginning, then forget about it and
+     just work on the number to print as an unsigned quantity. */
+  jitter_ulong_long n;
+
+  /* Print a minus sign, if negative; in either case set n to be the absolute
+     value of signed_n, so that we can forget about the sign in what follows.
+     This works even for the most negative number, since n is unsigned and
+     therefore has one more magnitude bit available than signed_n.
+
+     A little language lawyering to justify this solution:
+     - I'm converting a signed value to an unsigned type of the same rank,
+       which has well-defined behavior (differently from the converse);
+     - I'n not negating a signed quantity, which would be undefined
+       behavior. */
+  n = signed_n;
+  if (signed_ && signed_n < 0)
     {
       char_printer (char_printer_state, '-');
       n = - n;
+    }
+
+  /* Print a radix prefix, unless the prefix is the default. */
+  switch (radix)
+    {
+    case 2:
+      jitterlisp_print_string (char_printer, char_printer_state, "0b"); break;
+    case 8:
+      jitterlisp_print_string (char_printer, char_printer_state, "0o"); break;
+    case 10:
+      break;
+    case 16:
+      jitterlisp_print_string (char_printer, char_printer_state, "0x"); break;
+    default:
+      jitter_fatal ("unsupported radix %u", radix);
     }
 
   /* If the number is zero print a zero digit, and we're done. */
@@ -197,11 +250,25 @@ jitterlisp_print_long_long (jitterlisp_char_printer_function char_printer,
 
   /* The number we have to print if we arrived at this point is strictly
      positive.  Use the recursive helper. */
-  jitterlisp_print_long_long_recursive (char_printer, char_printer_state, n);
+  jitterlisp_print_long_long_recursive (char_printer, char_printer_state,
+                                        n, radix);
 }
 
-/* Print the given character using the given char-printer.  This is defined simply
-   to have a function with similar arguments to jitterlisp_print_string. */
+/* Print the given pointer, as a hexadecimal address, using the given
+   char-printer. */
+static void
+jitterlisp_print_pointer (jitterlisp_char_printer_function char_printer,
+                          void *char_printer_state,
+                          void *p)
+{
+  jitterlisp_print_long_long (char_printer, char_printer_state,
+                              (jitter_uint) p, false,
+                              16);
+}
+
+/* Print the given character using the given char-printer.  This is defined
+   simply to have a function with similar arguments to
+   jitterlisp_print_string. */
 static void
 jitterlisp_print_char (jitterlisp_char_printer_function char_printer,
                        void *char_printer_state,
@@ -296,6 +363,76 @@ jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
     }
 }
 
+/* Print the pointed s-expressions in order starting from the given initial
+   pointer and going on for element_no elements.  Use a single space as a
+   separator before each element, including the first. */
+static void
+jitterlisp_print_subs (jitterlisp_char_printer_function cp, void *cps,
+                       jitterlisp_object *elements, size_t element_no)
+{
+  int i;
+  for (i = 0; i < element_no; i ++)
+    {
+      jitterlisp_print_decoration (cp, cps, ASTATTR);
+      jitterlisp_print_char (cp, cps, ' ');
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print (cp, cps, elements [i]);
+    }
+}
+
+static void
+jitterlisp_print_ast (jitterlisp_char_printer_function cp, void *cps,
+                      struct jitterlisp_ast *ast)
+{
+  jitterlisp_print_decoration (cp, cps, ASTATTR);
+  jitterlisp_print_string (cp, cps, "[");
+  switch (ast->case_)
+    {
+    case jitterlisp_ast_case_literal:
+      jitterlisp_print_string (cp, cps, "literal");
+      break;
+    case jitterlisp_ast_case_variable:
+      jitterlisp_print_string (cp, cps, "variable");
+      break;
+    case jitterlisp_ast_case_define:
+      jitterlisp_print_string (cp, cps, "define");
+      break;
+    case jitterlisp_ast_case_if:
+      jitterlisp_print_string (cp, cps, "if");
+      break;
+    case jitterlisp_ast_case_setb:
+      jitterlisp_print_string (cp, cps, "set!");
+      break;
+    case jitterlisp_ast_case_while:
+      jitterlisp_print_string (cp, cps, "while");
+      break;
+    case jitterlisp_ast_case_primitive:
+      jitterlisp_print_string (cp, cps, "primitive");
+      break;
+    case jitterlisp_ast_case_call:
+      jitterlisp_print_string (cp, cps, "call");
+      break;
+    case jitterlisp_ast_case_lambda:
+      jitterlisp_print_string (cp, cps, "lambda");
+      break;
+    case jitterlisp_ast_case_let:
+      jitterlisp_print_string (cp, cps, "let");
+      break;
+    case jitterlisp_ast_case_sequence:
+      jitterlisp_print_string (cp, cps, "sequence");
+      break;
+    default:
+      jitterlisp_print_string (cp, cps, "invalid]");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      return;
+    }
+  jitterlisp_print_decoration (cp, cps, NOATTR);
+  jitterlisp_print_subs (cp, cps, ast->subs, ast->sub_no);
+  jitterlisp_print_decoration (cp, cps, ASTATTR);
+  jitterlisp_print_string (cp, cps, "]");
+  jitterlisp_print_decoration (cp, cps, NOATTR);
+}
+
 void
 jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
                   jitterlisp_object o)
@@ -304,7 +441,7 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
     {
       jitter_int decoded = JITTERLISP_FIXNUM_DECODE(o);
       jitterlisp_print_decoration (cp, cps, FIXNUMATTR);
-      jitterlisp_print_long_long (cp, cps, decoded);
+      jitterlisp_print_long_long (cp, cps, decoded, true, 10);
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_UNIQUE(o))
@@ -321,7 +458,7 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
           jitterlisp_print_decoration (cp, cps, NOATTR);
           jitterlisp_print_decoration (cp, cps, ERRORATTR);
           jitterlisp_print_string (cp, cps, "#<invalid-unique-object:");
-          jitterlisp_print_long_long (cp, cps, index);
+          jitterlisp_print_long_long (cp, cps, index, true, 10);
           jitterlisp_print_char (cp, cps, '>');
         }
       jitterlisp_print_decoration (cp, cps, NOATTR);
@@ -338,13 +475,27 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       struct jitterlisp_symbol *s = JITTERLISP_SYMBOL_DECODE(o);
       if (s->name_or_NULL != NULL)
         {
+          /* Print an interned symbol. */
           jitterlisp_print_decoration (cp, cps, INTERNEDSYMBOLATTR);
           jitterlisp_print_string (cp, cps, s->name_or_NULL);
         }
+      else if (jitterlisp_settings.print_compact_uninterned_symbols)
+        {
+          /* Print an uninterned symbol in compact notation. */
+          jitterlisp_print_decoration (cp, cps, UNINTERNEDSYMBOLATTR);
+          jitterlisp_print_string (cp, cps, "#<u");
+          jitterlisp_print_long_long (cp, cps,
+                                      (jitter_long_long) s->index,
+                                      false, 10);
+          jitterlisp_print_string (cp, cps, ">");
+        }
       else
         {
+          /* Print an uninterned symbol in the default notation. */
           jitterlisp_print_decoration (cp, cps, UNINTERNEDSYMBOLATTR);
-          jitterlisp_print_string (cp, cps, "#<uninterned-symbol>");
+          jitterlisp_print_string (cp, cps, "#<uninterned:");
+          jitterlisp_print_pointer (cp, cps, s);
+          jitterlisp_print_string (cp, cps, ">");
         }
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
@@ -352,20 +503,60 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
     {
       struct jitterlisp_closure * const closure = JITTERLISP_CLOSURE_DECODE(o);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_string (cp, cps, "#<procedure ");
+      jitterlisp_print_string (cp, cps, "#<closure ");
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print (cp, cps, closure->environment);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_string (cp, cps, " ");
+      jitterlisp_print_char (cp, cps, ' ');
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print (cp, cps, closure->formals);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      /* The body is a form list, so I print it as a cdr.  The cdr printer
-         prepends a space only if the list is not empty, which is what we need
-         in this case as well. */
-      jitterlisp_print_cdr (cp, cps, closure->body);
+      jitterlisp_print_char (cp, cps, ' ');
+      jitterlisp_print (cp, cps, closure->body);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, ">");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_NON_PRIMITIVE_MACRO(o))
+    {
+      struct jitterlisp_closure * const closure
+        = JITTERLISP_NON_PRIMITIVE_MACRO_DECODE(o);
+      jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
+      jitterlisp_print_string (cp, cps, "#<macro ");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print (cp, cps, closure->environment);
+      jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
+      jitterlisp_print_char (cp, cps, ' ');
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print (cp, cps, closure->formals);
+      jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print_char (cp, cps, ' ');
+      jitterlisp_print (cp, cps, closure->body);
+      jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
+      jitterlisp_print_string (cp, cps, ">");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_PRIMITIVE(o))
+    {
+      struct jitterlisp_primitive * const primitive
+        = JITTERLISP_PRIMITIVE_DECODE(o);
+      jitterlisp_print_decoration (cp, cps, PRIMITIVEATTR);
+      jitterlisp_print_string (cp, cps, "#<");
+      jitterlisp_print_long_long (cp, cps, primitive->in_arity, false, 10);
+      jitterlisp_print_string (cp, cps, "-ary primitive ");
+      jitterlisp_print_string (cp, cps, primitive->name);
+      jitterlisp_print_string (cp, cps, ">");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_PRIMITIVE_MACRO(o))
+    {
+      struct jitterlisp_primitive * const primitive
+        = JITTERLISP_PRIMITIVE_MACRO_DECODE(o);
+      jitterlisp_print_decoration (cp, cps, PRIMITIVEMACROATTR);
+      jitterlisp_print_string (cp, cps, "#<primitive macro ");
+      jitterlisp_print_string (cp, cps, primitive->name);
       jitterlisp_print_string (cp, cps, ">");
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
@@ -382,6 +573,11 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_decoration (cp, cps, CONSATTR);
       jitterlisp_print_char (cp, cps, ')');
       jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_AST(o))
+    {
+      struct jitterlisp_ast * const ast = JITTERLISP_AST_DECODE(o);
+      jitterlisp_print_ast (cp, cps, ast);
     }
   else if (JITTERLISP_IS_VECTOR(o))
     {

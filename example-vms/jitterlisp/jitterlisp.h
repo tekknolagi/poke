@@ -30,15 +30,20 @@
 /* Include the other JitterLisp headers, so that the user has to deal with this
    one only. */
 #include "jitterlisp-config.h"
+#include "jitterlisp-constant-strings.h"
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-allocator.h"
+#include "jitterlisp-ast.h"
 #include "jitterlisp-error.h"
 #include "jitterlisp-operations.h"
 #include "jitterlisp-reader.h"
 #include "jitterlisp-run-input.h"
+#include "jitterlisp-primitives.h"
 #include "jitterlisp-printer.h"
 #include "jitterlisp-settings.h"
 #include "jitterlisp-eval.h"
+#include "jitterlisp-macros.h"
+#include "jitterlisp-utility.h"
 
 
 

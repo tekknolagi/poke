@@ -32,13 +32,13 @@
 void
 jitterlisp_initialize (void)
 {
-  fflush (stdout); fflush (stderr); fprintf (stderr, "Initializing...\n"); fflush (stdout); fflush (stderr);
   /* Provide default values for the global settings. */
   jitterlisp_settings_set_default ();
 
   /* Initialize every subsystem. */
   jitterlisp_memory_initialize ();
   jitterlisp_sexpression_initialize ();
+  jitterlisp_primitives_initialize ();
   jitterlisp_error_initialize ();
 
 #ifdef JITTER_HAS_GNU_READLINE
@@ -47,17 +47,15 @@ jitterlisp_initialize (void)
      jitter-readline.c . */
   rl_variable_bind ("blink-matching-paren", "on");
 #endif // #ifdef JITTER_HAS_GNU_READLINE
-  fflush (stdout); fflush (stderr); fprintf (stderr, "...Initialized.\n"); fflush (stdout); fflush (stderr);
 }
 
 void
 jitterlisp_finalize (void)
 {
-  fflush (stdout); fflush (stderr); fprintf (stderr, "Finalizing...\n"); fflush (stdout); fflush (stderr);
   /* Finalize every subsystem, in the opposite order of initialization. */
   jitterlisp_error_finalize ();
+  jitterlisp_primitives_finalize ();
   jitterlisp_sexpression_finalize ();
   jitterlisp_memory_finalize ();
   jitterlisp_settings_finalize (); /* There's a dynamic buffer to finalize. */
-  fflush (stdout); fflush (stderr); fprintf (stderr, "Finalized...\n"); fflush (stdout); fflush (stderr);
 }

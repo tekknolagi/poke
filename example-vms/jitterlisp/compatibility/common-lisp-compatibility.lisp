@@ -34,6 +34,21 @@
 
 
 
+;;;; Scratch.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; This lets me redefine some fundamental functions in CLISP, but is probably a
+;;; bad idea.  It doesn't work on SBCL, even if SBCL has a similar mechanism
+;; (setq CUSTOM:*SUPPRESS-CHECK-REDEFINITION* t)
+;;(setf (ext:package-lock 'common-lisp) nil)
+
+;; (defpackage #:foo (:use :cl) (:export #:bar #:quux))
+;; (in-package #:foo)
+;; (setq *package* #:foo)
+
+
+
+
 ;;;; Scheme-style define.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -111,6 +126,12 @@
 
 (defmacro null? (thing)
   `(null ,thing))
+(defmacro zero? (thing)
+  `(zerop ,thing))
+(defmacro quotient (a b)
+  `(floor ,a ,b))
+(defmacro remainder (a b)
+  `(rem ,a ,b))
 
 
 

@@ -231,6 +231,7 @@ lib_libjitterutility__convenience_la_SOURCES = \
   jitter/jitter-dynamic-buffer.h jitter/jitter-dynamic-buffer.c \
   jitter/jitter-hash.h jitter/jitter-hash.c jitter/jitter-hash-random-table.c \
   jitter/jitter-parse-int.h jitter/jitter-parse-int.c \
+  jitter/jitter-print-binary.h jitter/jitter-print-binary.c \
   jitter/jitter-readline.h jitter/jitter-readline.c \
   jitter/jitter-string.h jitter/jitter-string.c
 
@@ -244,6 +245,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-dynamic-buffer.h \
   jitter/jitter-hash.h \
   jitter/jitter-parse-int.h \
+  jitter/jitter-print-binary.h \
   jitter/jitter-readline.h \
   jitter/jitter-string.h
 
@@ -419,6 +421,7 @@ SOURCES_FOR_LIBJITTER = \
   jitter/jitter-interpreter-private.h \
   jitter/jitter-parser.c jitter/jitter-parser.h \
   jitter/jitter-scanner.c jitter/jitter-scanner.h \
+  jitter/jitter-tagging.c jitter/jitter-tagging.h \
   jitter/jitter-vm.c jitter/jitter-vm.h \
   jitter/jitter-machine-common.S jitter/jitter-machine-common.h \
   jitter/jitter-patch.c jitter/jitter-patch.h \
@@ -445,6 +448,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-patch-in.h \
   jitter/jitter-parser.h \
   jitter/jitter-scanner.h \
+  jitter/jitter-tagging.h \
   jitter/jitter-stack.h \
   jitter/jitter-vm.h
 
@@ -1008,6 +1012,8 @@ EXTRA_PROGRAMS += $(PROGRAMS_JITTERLISP)
 SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-sexpression.c \
   example-vms/jitterlisp/jitterlisp-sexpression.h \
+  example-vms/jitterlisp/jitterlisp-ast.c \
+  example-vms/jitterlisp/jitterlisp-ast.h \
   example-vms/jitterlisp/jitterlisp-allocator.h \
   example-vms/jitterlisp/jitterlisp-allocator.c \
   example-vms/jitterlisp/jitterlisp-error.h \
@@ -1016,8 +1022,12 @@ SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-eval-interpreter.c \
   example-vms/jitterlisp/jitterlisp-eval.h \
   example-vms/jitterlisp/jitterlisp-eval.c \
+  example-vms/jitterlisp/jitterlisp-macros.h \
+  example-vms/jitterlisp/jitterlisp-macros.c \
   example-vms/jitterlisp/jitterlisp-operations.h \
   example-vms/jitterlisp/jitterlisp-operations.c \
+  example-vms/jitterlisp/jitterlisp-primitives.h \
+  example-vms/jitterlisp/jitterlisp-primitives.c \
   example-vms/jitterlisp/jitterlisp-printer.h \
   example-vms/jitterlisp/jitterlisp-printer.c \
   example-vms/jitterlisp/jitterlisp-reader.h \
@@ -1026,10 +1036,39 @@ SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-run-input.c \
   example-vms/jitterlisp/jitterlisp-settings.h \
   example-vms/jitterlisp/jitterlisp-settings.c \
+  example-vms/jitterlisp/jitterlisp-utility.h \
+  example-vms/jitterlisp/jitterlisp-utility.c \
   example-vms/jitterlisp/jitterlisp.c \
   example-vms/jitterlisp/jitterlisp.h \
   example-vms/jitterlisp/jitterlisp-config.h \
+  example-vms/jitterlisp/jitterlisp-constant-strings.h \
+  example-vms/jitterlisp/jitterlisp-constant-strings.c \
   example-vms/jitterlisp/jitterlisp-main.c
+
+BUILT_SOURCES += \
+  example-vms/jitterlisp/jitterlisp-constant-strings.c
+
+# A sed script turning an arbitrary text into a C string literal with proper
+# delimiters and escapes..
+JITTERLISP_SED_STRINGIFY = \
+  's/\\/\\\\/g;s/"/\\"/g;s/^/  "/g;s/$$/\\n"/g'
+
+$(srcdir)/example-vms/jitterlisp/jitterlisp-constant-strings.c: example-vms/jitterlisp/jitterlisp-library.lisp NO-WARRANTY COPYING
+	(echo "/* This C file is machine-generated, and is not the actual source. */"; \
+         echo; \
+         echo "const char *jitterlisp_library_string ="; \
+         cat "$(srcdir)/example-vms/jitterlisp/jitterlisp-library.lisp" \
+          | sed $(JITTERLISP_SED_STRINGIFY); \
+         echo ";"; \
+         echo "const char *jitterlisp_no_warranty ="; \
+         cat "$(srcdir)/NO-WARRANTY" \
+          | sed $(JITTERLISP_SED_STRINGIFY); \
+         echo ";"; \
+         echo "const char *jitterlisp_gpl ="; \
+         cat "$(srcdir)/COPYING" \
+          | sed $(JITTERLISP_SED_STRINGIFY); \
+         echo ";") \
+          > "$@"
 
 # There is only one version for the best dispatching model, as of now.
 bin_jitterlisp_SOURCES = $(SOURCES_FOR_JITTERLISP)
@@ -1055,17 +1094,31 @@ if JITTER_HAVE_BOEHM_GC
   bin_jitterlisp_boehm_LDFLAGS = $(bin_jitterlisp_LDFLAGS)
 endif # JITTER_HAVE_BOEHM_GC
 
+# JitterLisp Lisp library.
+EXTRA_DIST += \
+  example-vms/jitterlisp/jitterlisp-library.lisp
+
 # Examples for JitterLisp.
 EXTRA_DIST += \
-  example-vms/jitterlisp/examples/library.lisp \
   example-vms/jitterlisp/examples/counter-iterative.lisp \
   example-vms/jitterlisp/examples/counter-recursive.lisp \
+  example-vms/jitterlisp/examples/derivative.lisp \
   example-vms/jitterlisp/examples/factorial.lisp \
+  example-vms/jitterlisp/examples/fibo.lisp \
   example-vms/jitterlisp/examples/peano.lisp
 
-# Benchmarking utility files, to compare JitterLisp with production Lisps.
+# Compatibility files for limited JitterLisp compatibility for
+# Common Lisp and Scheme.
 EXTRA_DIST += \
-  example-vms/jitterlisp/examples/common-lisp-compatibility.lisp
+  example-vms/jitterlisp/compatibility/common-lisp-compatibility.lisp \
+  example-vms/jitterlisp/compatibility/gambit-compatibility.scm \
+  example-vms/jitterlisp/compatibility/guile-compatibility.scm \
+  example-vms/jitterlisp/compatibility/mit-gnu-scheme-compatibility.scm \
+  example-vms/jitterlisp/compatibility/racket-compatibility.scm \
+  example-vms/jitterlisp/compatibility/scm-compatibility.scm \
+  example-vms/jitterlisp/compatibility/siod-compatibility.scm \
+  example-vms/jitterlisp/compatibility/sisc-compatibility.scm \
+  example-vms/jitterlisp/compatibility/tinyscheme-compatibility.scm
 
 # Other files for JitterLisp.
 EXTRA_DIST += example-vms/jitterlisp/THANKS

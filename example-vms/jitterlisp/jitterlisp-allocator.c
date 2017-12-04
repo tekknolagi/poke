@@ -1,6 +1,6 @@
 /* Jittery Lisp: heap allocation.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -34,7 +34,7 @@
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-config.h"
 
-/* Include headers from Bohem's GC, if used in this configuration. */
+/* Bohem's GC: include headers if used in this configuration. */
 #ifdef JITTERLISP_BOEHM_GC
 # define GC_THREADS 1
 # include <gc/gc.h>
@@ -76,13 +76,18 @@
 
 
 
-/* The symbol table.
+/* Symbol data structures.
  * ************************************************************************** */
 
 /* A string hash mapping each interned symbol name as a C string into a
    pointer to the unique struct jitterlisp_symbol for the symbol. */
 static struct jitter_hash_table
 jitterlisp_symbol_table;
+
+/* The global counter used for printing uninterned symbols in compact
+   notation. */
+static jitter_uint
+jitterlisp_next_uninterned_symbol_index;
 
 
 
@@ -256,10 +261,10 @@ jitterlisp_add_litter_block (size_t block_size_in_bytes)
 
 #define JITTERLIST_TO_MB(x) ((x) / 1024.0 / 1024.0)
   /* Log, unless this block is the first. */
-  if (! is_this_block_the_first)
-    printf ("New %.1fMB litter block.  The heap is now %.1fMB.\n",
-            JITTERLIST_TO_MB(block_size_in_bytes),
-            JITTERLIST_TO_MB(jitterlisp_litter_heap_size));
+  if (jitterlisp_settings.verbose || ! is_this_block_the_first)
+    fprintf (stderr, "New %.1fMB litter block.  The heap is now %.1fMB.\n",
+             JITTERLIST_TO_MB(block_size_in_bytes),
+             JITTERLIST_TO_MB(jitterlisp_litter_heap_size));
 #undef JITTERLIST_TO_MB
 }
 
@@ -282,22 +287,36 @@ jitterlisp_memory_initialize (void)
 {
   /* Initialize the garbage-collected heap. */
 #if   defined(JITTERLISP_LITTER)
-printf ("Initializing blocks\n");
   /* Initialize the litter block stack and the total heap size. */
   jitter_dynamic_buffer_initialize (& jitterlisp_litter_blocks);
   jitterlisp_litter_heap_size = 0;
 
   /* Make the first litter block. */
   jitterlisp_add_litter_block (JITTERLISP_LITTER_BLOCK_BYTE_NO);
-printf ("Made the first block\n");
+  if (jitterlisp_settings.verbose)
+    fprintf (stderr, "Made the first litter block\n");
 
 #elif defined(JITTERLISP_BOEHM_GC)
-  fflush (stdout); fflush (stderr); fprintf (stderr, "Initializing Boehm GC...\n"); fflush (stdout); fflush (stderr);
+  if (jitterlisp_settings.verbose)
+    fprintf (stderr, "Initializing Boehm GC...\n");
   /* Initialize Boehm's GC. */
   GC_INIT ();
   GC_allow_register_threads ();
 
-  fflush (stdout); fflush (stderr); fprintf (stderr, "...Initialized Boehm GC...\n"); fflush (stdout); fflush (stderr);
+/* Sanity check (based on compile-time constants): fail if the minimum alignment
+   we require is too big.  GC_MALLOC returns pointers aligned to a double
+   machine word, which means that their least significant
+   (JITTER_LG_BYTES_PER_WORD + 1) bits are guaranteed to be zero. */
+  jitter_uint required_zero_bit_mask = JITTERLISP_ALIGNMENT_BIT_MASK;
+  jitter_uint provided_zero_bit_mask
+    = JITTER_BIT_MASK(JITTER_LG_BYTES_PER_WORD + 1);
+  if (required_zero_bit_mask > provided_zero_bit_mask)
+    jitter_fatal ("Alignment requirement not satisfied by GC_MALLOC.  This "
+                  "can be fixed by conditionally using GC_memalign , but the "
+                  "fix is not implemented");
+
+  if (jitterlisp_settings.verbose)
+    fprintf (stderr, "...Initialized Boehm GC...\n");
 
 #else
 # error "impossible or unimplemented"
@@ -307,8 +326,9 @@ printf ("Made the first block\n");
 
   jitterlisp_gc_root_stack_initialize ();
 
-  /* Initialize the symbol table. */
+  /* Initialize the symbol table and the uninterned symbol counter. */
   jitter_hash_initialize (& jitterlisp_symbol_table);
+  jitterlisp_next_uninterned_symbol_index = 0;
 }
 
 /* Forward-declaration. */
@@ -381,6 +401,10 @@ jitterlisp_symbol_make_uninterned (void)
     = JITTERLISP_SYMBOL_UNINTERNED_MAKE_UNINITIALIZED_UNENCODED();
   res->name_or_NULL = NULL;
   res->global_value = JITTERLISP_UNDEFINED;
+  /* FIXME: this increment operation should be performed in a critical section
+     if I add multi-threading support. */
+  res->index = jitterlisp_next_uninterned_symbol_index ++;
+  res->global_constant = false;
   return res;
 }
 
@@ -405,6 +429,8 @@ jitterlisp_symbol_make_interned (const char *name)
       res->name_or_NULL = jitter_xmalloc (strlen (name) + 1);
       strcpy (res->name_or_NULL, name);
       res->global_value = JITTERLISP_UNDEFINED;
+      res->index = 0;
+      res->global_constant = false;
       jitterlisp_push_gc_root (& res->global_value);
       union jitter_word w = { .pointer = (void *) res };
       jitter_string_hash_table_add (& jitterlisp_symbol_table, name, w);
@@ -427,4 +453,43 @@ jitterlisp_destroy_interned_symbol (const union jitter_word w)
   /* Destroy the struct as well.  This is correct, since symbols are allocated
      with malloc. */
   free (symbol);
+}
+
+
+
+
+/* Interned symbol list.
+ * ************************************************************************** */
+
+/* Add a symbol bound in the symbol table to the pointer Lisp list.
+   This function is meant to be used with jitter_hash_for_all_bindings . */
+static void
+jitterlisp_add_binding_to_list (const union jitter_word key,
+                                const union jitter_word value,
+                                void *extra_datum)
+{
+  jitterlisp_object * list_pointer = extra_datum;
+
+  /* We don't need to do anything with the symbol name here: we only care about
+     the value part of the binding.  Encode the symbol, which is stored
+     unencoded in the symbol table. */
+  jitterlisp_object symbol = JITTERLISP_SYMBOL_ENCODE(value.pointer);
+
+  /* Update the pointed list to contain another cons. */
+  * list_pointer = jitterlisp_cons (symbol, * list_pointer);
+}
+
+jitterlisp_object
+jitterlisp_interned_symbols (void)
+{
+  /* FIXME: this will require changes if I switch to a precise-pointer-finding
+     GC.  Pointer to jitterlisp_objects from automatic C variables need to be
+     temporarily marked as roots. */
+
+  /* Add each symbol to a list, and return the list. */
+  jitterlisp_object res = JITTERLISP_EMPTY_LIST;
+  jitter_hash_for_all_bindings (& jitterlisp_symbol_table,
+                                jitterlisp_add_binding_to_list,
+                                & res);
+  return res;
 }

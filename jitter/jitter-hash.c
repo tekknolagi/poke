@@ -1,6 +1,6 @@
 /* Jitter: hash table data structure.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -359,6 +359,33 @@ jitter_hash_table_remove (struct jitter_hash_table *t,
 
 
 
+
+/* Hash iteration.
+ * ************************************************************************** */
+
+void
+jitter_hash_for_all_bindings (const struct jitter_hash_table *t,
+                              jitter_hash_for_all_bindings_function f,
+                              void *extra_datum)
+{
+  /* For each bucket... */
+  int i, j;
+  for (i = 0; i < t->bucket_no; i ++)
+    {
+      /* Do nothing if the bucket is NULL. */
+      struct jitter_hash_bucket * const bucket = t->buckets [i];
+      if (bucket == NULL)
+        continue;
+
+      /* For each binding in the bucket... */
+      struct jitter_hash_binding * const bindings = bucket->bindings;
+      for (j = 0; j < bucket->used_binding_no; j ++)
+        /* ... Call the function provided by the user. */
+        f (bindings [j].key, bindings [j].value, extra_datum);
+    }
+}
+
+
 
 /* Debugging and tuning.
  * ************************************************************************** */

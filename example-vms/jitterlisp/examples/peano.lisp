@@ -1,6 +1,6 @@
 ;;; JitterLisp (almost -*- Scheme -*- for Emacs) test with Peano encoding.
 
-;;; Copyright (C) 2017 Luca Saiu
+;;; Copyright (C) 2017, 2018 Luca Saiu
 ;;; Written by Luca Saiu
 
 ;;; This file is part of the Jittery Lisp language implementation, distributed as
@@ -19,18 +19,6 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
-
-;;;; Compatibility.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; This code is designed to run on JitterLisp and on Scheme as well.
-;;; Since 1- is not standard I define my own.
-
-(define (predecessor n)
-  (- n 1))
-
-
-
 
 ;;;; Peano fundamental operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -80,18 +68,20 @@
            (peano-* p2 (peano-/-acc p1 p2 peano-zero))))
 
 (define (peano-= p1 p2)
-  (if (peano-zero? p1)
-      (peano-zero? p2)
-      (if (peano-zero? p2)
-          #f
-          (peano-= (peano-predecessor p1) (peano-predecessor p2)))))
+  (cond ((peano-zero? p1)
+         (peano-zero? p2))
+        ((peano-zero? p2)
+         #f)
+        (#t
+         (peano-= (peano-predecessor p1) (peano-predecessor p2)))))
 
 (define (peano-< p1 p2)
-  (if (peano-zero? p1)
-      (not (peano-zero? p2))
-      (if (peano-zero? p2)
-          #f
-          (peano-< (peano-predecessor p1) (peano-predecessor p2)))))
+  (cond ((peano-zero? p1)
+         (not (peano-zero? p2)))
+        ((peano-zero? p2)
+         #f)
+        (#t
+         (peano-< (peano-predecessor p1) (peano-predecessor p2)))))
 
 (define (peano-<= p1 p2)
   (if (peano-= p1 p2)
@@ -114,6 +104,17 @@
       (peano-successor peano-zero)
       (peano-* p (peano-fact (peano-predecessor p)))))
 
+(define (peano-fibo p)
+  (if (peano-< p peano-2)
+      p
+      (peano-+ (peano-fibo (peano-- p peano-2))
+               (peano-fibo (peano-- p peano-1)))))
+(define (fibo n)
+  (if (< n 2)
+      n
+      (+ (fibo (- n 2))
+         (fibo (- n 1)))))
+
 (define (peano-expt b e)
   (if (peano-zero? e)
       (peano-successor peano-zero)
@@ -129,9 +130,9 @@
 (define (tak x y z)
   (if (<= x y)
       y
-      (tak (tak (predecessor x) y z)
-           (tak (predecessor y) z x)
-           (tak (predecessor z) x y))))
+      (tak (tak (1- x) y z)
+           (tak (1- y) z x)
+           (tak (1- z) x y))))
 
 
 
@@ -149,9 +150,16 @@
 (define (fixnum->peano-acc n a)
   (if (zero? n)
       a
-      (fixnum->peano-acc (predecessor n) (peano-successor a))))
+      (fixnum->peano-acc (1- n) (peano-successor a))))
 (define (fixnum->peano n)
-  (fixnum->peano-acc n '()))
+  (fixnum->peano-acc n peano-zero))
+
+(define peano-0
+  (fixnum->peano 0))
+(define peano-1
+  (fixnum->peano 1))
+(define peano-2
+  (fixnum->peano 2))
 
 
 

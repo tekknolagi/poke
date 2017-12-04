@@ -413,7 +413,7 @@ jitterlisp_scan (struct jitterlisp_scanner_state *sstate)
                  scanning. */
               s = jitterlisp_scanner_dfa_state_comment;
               break;
-            case '(': case ')': case '.': case '\'': case '`':
+            case '(': case ')': case '\'': case '`':
               /* We recognized a single-character token.  End the token, but
                  advance so as not to see this same character the next time we
                  scan. */
@@ -480,8 +480,7 @@ jitterlisp_scan (struct jitterlisp_scanner_state *sstate)
               /* We found a comment beginning while scanning a complicated
                  token: the token has ended. */
               JITTERLISP_END_OF_TOKEN;
-            case '(': case ')': case '.': case '#':
-            case '\'': case '`': case ',':
+            case '(': case ')': case '#': case '\'': case '`': case ',':
               /* We found a reserved character while scanning a complicated
                  token: the token has ended. */
               JITTERLISP_END_OF_TOKEN;
@@ -652,17 +651,6 @@ jitterlisp_prefix_name_to_symbol_name (const char *prefix_name)
   else
     jitter_fatal ("jitterlisp_prefix_name_to_symbol_name: invalid prefix "
                   "name \"%s\"", prefix_name);
-}
-
-/* FIXME: move. */
-static jitterlisp_object
-jitterlisp_cons (jitterlisp_object car, jitterlisp_object cdr)
-{
-  struct jitterlisp_cons *cons
-    = JITTERLISP_CONS_MAKE_UNINITIALIZED_UNENCODED();
-  cons->car = car;
-  cons->cdr = cdr;
-  return JITTERLISP_CONS_ENCODE(cons);
 }
 
 /* Given a prefix symbol name (such as "quote" or "unquote") and an s-expression

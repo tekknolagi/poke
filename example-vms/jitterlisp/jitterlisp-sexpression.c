@@ -65,7 +65,7 @@ jitterlisp_platform_sanity_check (void)
     jitter_fatal ("this machine doesn't seem to use two's complement");
 
   /* Check that the C implementation sign-extends on signed >> operands. */
-  if (! JITTERLISP_RIGHT_SHIFT_SIGN_EXTENDS)
+  if (! JITTER_RIGHT_SHIFT_SIGN_EXTENDS)
     jitter_fatal ("this compiler doesn't sign-extend on signed >> .  "
                   "You can comment out this fatal error and everything "
                   "should still work, but performance will suffer.  "
@@ -138,27 +138,15 @@ jitterlisp_make_interned (const char *name)
 }
 
 /* Globally named object variables. */
-jitterlisp_object jitterlisp_object_begin;
-jitterlisp_object jitterlisp_object_define;
-jitterlisp_object jitterlisp_object_if;
-jitterlisp_object jitterlisp_object_lambda;
-jitterlisp_object jitterlisp_object_let;
-jitterlisp_object jitterlisp_object_let_star;
-jitterlisp_object jitterlisp_object_quote;
-jitterlisp_object jitterlisp_object_set_bang;
-jitterlisp_object jitterlisp_object_while;
+jitterlisp_object jitterlisp_low_level_macro_args;
+jitterlisp_object jitterlisp_primitive_make_constant;
 
 /* Initialize globally named object variables. */
 static void
 jitterlisp_initialize_globally_named_objects (void)
 {
-  jitterlisp_object_begin = jitterlisp_make_interned ("begin");
-  jitterlisp_object_define = jitterlisp_make_interned ("define");
-  jitterlisp_object_if = jitterlisp_make_interned ("if");
-  jitterlisp_object_lambda = jitterlisp_make_interned ("lambda");
-  jitterlisp_object_let = jitterlisp_make_interned ("let");
-  jitterlisp_object_let_star = jitterlisp_make_interned ("let*");
-  jitterlisp_object_quote = jitterlisp_make_interned ("quote");
-  jitterlisp_object_set_bang = jitterlisp_make_interned ("set!");
-  jitterlisp_object_while = jitterlisp_make_interned ("while");
+  jitterlisp_low_level_macro_args
+    = jitterlisp_make_interned ("low-level-macro-args");
+  jitterlisp_primitive_make_constant
+    = jitterlisp_make_interned ("primitive-make-constant");;
 }

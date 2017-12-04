@@ -37,11 +37,14 @@ void
 jitterlisp_settings_set_default (void)
 {
   jitterlisp_settings.verbose = false;
+  jitterlisp_settings.library = true;
+  jitterlisp_settings.print_nothing_results = false;
+  jitterlisp_settings.print_compact_uninterned_symbols = false;
   jitterlisp_settings.vm = true;
   jitterlisp_settings.colorize = false;
+  jitterlisp_settings.sexps_string = NULL;
   jitter_dynamic_buffer_initialize
      (& jitterlisp_settings.input_file_path_names);
-  jitterlisp_settings.sexps_string = NULL;
   jitterlisp_settings.repl = true;
 }
 

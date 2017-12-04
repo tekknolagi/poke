@@ -47,18 +47,24 @@
 enum jitterlisp_negative_option
   {
     jitterlisp_negative_option_no_verbose = -1,
-    jitterlisp_negative_option_vm = -2,
-    jitterlisp_negative_option_repl = -3,
-    jitterlisp_negative_option_no_colorize = -4
+    jitterlisp_negative_option_library = -2,
+    jitterlisp_negative_option_no_compact_uninterned = -3,
+    jitterlisp_negative_option_omit_nothing = -4,
+    jitterlisp_negative_option_vm = -5,
+    jitterlisp_negative_option_repl = -6,
+    jitterlisp_negative_option_no_colorize = -7
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum jitterlisp_negative_option . */
 enum jitterlisp_long_only_option
   {
-    jitterlisp_long_only_option_no_vm = -5,
-    jitterlisp_long_only_option_no_repl = -6,
-    jitterlisp_long_only_option_dump_version = -7
+    jitterlisp_long_only_option_compact_uninterned = -20,
+    jitterlisp_long_only_option_no_library = -21,
+    jitterlisp_long_only_option_no_omit_nothing = -22,
+    jitterlisp_long_only_option_no_vm = -23,
+    jitterlisp_long_only_option_no_repl = -24,
+    jitterlisp_long_only_option_dump_version = -25
   };
 
 /* Command-line option specification. */
@@ -74,14 +80,23 @@ static struct argp_option jitterlisp_option_specification[] =
     "Run interactively, with a REPL (default)"},
    {"no-batch", '\0', NULL, OPTION_ALIAS },
 
+   /* Interaction options. */
+   {NULL, '\0', NULL, OPTION_DOC, "Interaction options:", 20},
+   {"no-omit-nothing", jitterlisp_long_only_option_no_omit_nothing, NULL, 0,
+    "Show #<nothing> evaluation results" },
+   /* Interaction negative options. */
+   {NULL, '\0', NULL, OPTION_DOC, "", 21},
+   {"omit-nothing", jitterlisp_negative_option_omit_nothing, NULL, 0,
+    "Omit #<nothing> evaluation results (default)"},
+
    /* Command-line s-expression evaluation. */
-   {NULL, '\0', NULL, OPTION_DOC, "Command-line s-expression evaluation:", 20},
+   {NULL, '\0', NULL, OPTION_DOC, "Command-line s-expression evaluation:", 30},
    {"eval", 'e', "SEXPRS", 0,
     "Evaluate the given s-expressions after running the files (if any) "
     "and before running the REPL (unless the REPL is disabled)" },
 
    /* Debugging options. */
-   {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 30},
+   {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 40},
    {"colorize", 'c', NULL, 0,
     "Colorize s-expressions with ANSI terminal escape sequences" },
    {"verbose", 'v', NULL, 0,
@@ -89,8 +104,12 @@ static struct argp_option jitterlisp_option_specification[] =
    {"no-vm", jitterlisp_long_only_option_no_vm, NULL, 0,
     "Use a naïf C interpreter instead of the Jittery VM" },
    {"no-jittery", '\0', NULL, OPTION_ALIAS },
+   {"no-library", jitterlisp_long_only_option_no_library, NULL, 0,
+    "Don't load the Lisp library" },
+   {"compact-uninterned", jitterlisp_long_only_option_compact_uninterned, NULL,
+    0, "Print uninterned symbols in compact notation" },
    /* Debugging negative options. */
-   {NULL, '\0', NULL, OPTION_DOC, "", 31},
+   {NULL, '\0', NULL, OPTION_DOC, "", 41},
    {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
     "Don't colorize s-expressions (default)"},
    {"no-verbose", jitterlisp_negative_option_no_verbose, NULL, 0,
@@ -98,8 +117,12 @@ static struct argp_option jitterlisp_option_specification[] =
    {"vm", jitterlisp_negative_option_vm, NULL, 0,
     "Use the Jittery VM (default)"},
    {"jittery", '\0', NULL, OPTION_ALIAS },
+   {"library", jitterlisp_negative_option_library, NULL, 0,
+    "Load the Lisp library (default)" },
+   {"no-compact-uninterned", jitterlisp_negative_option_no_compact_uninterned,
+    NULL, 0, "Don't print uninterned symbols in compact notation (default)" },
 
-   {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 40},
+   {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 50},
    {"dump-version", jitterlisp_long_only_option_dump_version, NULL, 0,
     "Print the JitterLisp version only, without any surrounding text; this "
     "is convenient for scripts" },
@@ -155,6 +178,16 @@ parse_opt (int key, char *arg, struct argp_state *state)
       sp->repl = true;
       break;
 
+    /* Interaction options. */
+    case jitterlisp_long_only_option_no_omit_nothing:
+      sp->print_nothing_results = true;
+      break;
+
+    /* Interaction negative options. */
+    case jitterlisp_negative_option_omit_nothing:
+      sp->print_nothing_results = false;
+      break;
+
     /* Command-line s-expression evaluation. */
     case 'e':
       sp->sexps_string = arg;
@@ -170,6 +203,12 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case jitterlisp_long_only_option_no_vm:
       sp->vm = false;
       break;
+    case jitterlisp_long_only_option_no_library:
+      sp->library = false;
+      break;
+    case jitterlisp_long_only_option_compact_uninterned:
+      sp->print_compact_uninterned_symbols = true;
+      break;
 
     /* Debugging negative options. */
     case jitterlisp_negative_option_no_colorize:
@@ -180,6 +219,12 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case jitterlisp_negative_option_vm:
       sp->vm = true;
+      break;
+    case jitterlisp_negative_option_library:
+      sp->library = true;
+      break;
+    case jitterlisp_negative_option_no_compact_uninterned:
+      sp->print_compact_uninterned_symbols = false;
       break;
 
     /* Scripting options. */
@@ -203,456 +248,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
 
 
-/* Allocation (very tentative).
- * ************************************************************************** */
-
-struct jitterlisp_cons*
-jitterlisp_make_unencoded_cons (jitterlisp_object a, jitterlisp_object b)
-{
-  struct jitterlisp_cons *res = JITTERLISP_CONS_MAKE_UNINITIALIZED_UNENCODED();
-  res->car = a;
-  res->cdr = b;
-  return res;
-}
-
-
-/* Binary printing.
- * ************************************************************************** */
-
-/* FIXME: move these to a new file under jitter/ after I rebase all the
-   changesets about JitterLisp into something clean.  Changing the history on
-   this might be messy, unless I do it after everything else. */
-
-// FIXME: I might want to keep this around.
-/* A helper function for jitter_print_binary_padded, with the same API, but not
-   printing the "0b" prefix and not printing any "0" digit for u == 0, unless
-   padding requires it. */
-static void
-jitter_print_binary_recursive (FILE *stream, jitter_uint u, int digit_no)
-{
-  /* When the number is zero we have nothing more to print, except if we have to
-     fill at least digit_no digits; in that case we print the approporiate
-     number of zero digits, and we're done.  Notice that the recursive call is
-     on the left, so these padding zeroes correctly end up in the least
-     significant digits of the output. */
-  if (u == 0)
-    {
-      int i;
-      for (i = 0; i < digit_no; i ++)
-        fputc ('0', stream);
-      return;
-    }
-
-  /* Recursively print half the number rounded down, which is to say every
-     binary digit but the least significant, in order. */
-  jitter_print_binary_recursive (stream, u / 2, digit_no - 1);
-
-  /* Print the least significant digit. */
-  fputc ('0' + (u & 1), stream);
-}
-
-// FIXME: I might want to keep this around.
-/* Print the given number in binary to the pointed stream, using at least
-   digit_no binary digits (left-padding with zeroes), and prepending a "0b"
-   prefix. */
-void
-jitter_print_binary_padded (FILE *stream, jitter_uint u, int digit_no)
-{
-  fputs ("0b", stream);
-  jitter_print_binary_recursive (stream, u, digit_no);
-}
-
-// FIXME: I might want to keep this around.
-/* Print the given number in binary to the pointed stream, prepending a "0b"
-   prefix. */
-void
-jitter_print_binary (FILE *stream, jitter_uint u)
-{
-  /* Print a binary number with at least one digit (which may be zero). */
-  jitter_print_binary_padded (stream, u, 1);
-}
-
-
-
-/* Scratch.
- * ************************************************************************** */
-
-__attribute__ ((unused))
-static void
-print (jitterlisp_object o)
-{
-#define WIDTH "020"
-  printf ("* 0x%" WIDTH JITTER_PRIx "  (tag ", o);
-  jitter_print_binary_padded (stdout, JITTERLISP_GET_PTAG(o),
-                              JITTERLISP_PTAG_BIT_NO);
-  printf (") ");
-  if (JITTERLISP_IS_FIXNUM(o))
-    printf ("is a fixnum");
-  else if (JITTERLISP_IS_UNIQUE(o))
-    printf ("is a unique object");
-  else if (JITTERLISP_IS_CHARACTER(o))
-    printf ("is a character");
-  else if (JITTERLISP_IS_SYMBOL(o))
-    printf ("is a symbol");
-  else if (JITTERLISP_IS_CONS(o))
-    printf ("is a cons");
-  else
-    printf ("is unknown");
-  printf ("\n");
-  printf ("  0d%" WIDTH JITTER_PRIu "U\n", o);
-  jitter_int signed_o = o;
-  if (signed_o < 0)
-    printf (" -0d%" WIDTH JITTER_PRIi "\n", - signed_o);
-  else
-    printf ("  0d%" WIDTH JITTER_PRIi "\n", signed_o);
-  printf ("  ");
-  jitter_print_binary_padded (stdout, o, JITTER_BITS_PER_WORD);
-  printf ("\n");
-  printf ("  "); jitterlisp_print_to_stream (stdout, o); printf ("\n");
-#undef WIDTH
-}
-
-__attribute__ ((noreturn, noinline, noclone, cold, unused))
-static void
-type_error (void)
-{
-  jitter_fatal ("type error");
-}
-
-#define type_error()                             \
-  do                                             \
-    {                                            \
-      /*goto * jitterlisp_error_handler_register;*/  \
-      type_error ();                             \
-    }                                            \
-  while (false)
-
-#define JITTERLISP_REQUIRE_TAG(_jitterlisp_object, _jitterlisp_tag)     \
-  do                                                                    \
-    {                                                                   \
-      if (__builtin_expect (! JITTERLISP_HAS_TAG((_jitterlisp_object),  \
-                                                 (_jitterlisp_tag)),    \
-                            false))                                     \
-        {                                                               \
-          type_error ();                                                \
-        }                                                               \
-    }                                                                   \
-  while (false)
-
-#define JITTERLISP_REQUIRE_TYPE(_jitterlisp_object, _jitterlisp_TYPE)    \
-  do                                                                     \
-    {                                                                    \
-      if (__builtin_expect (                                             \
-            ! JITTER_CONCATENATE_TWO(JITTERLISP_IS_, _jitterlisp_TYPE)(  \
-                 (_jitterlisp_object)),                                  \
-            false))                                                      \
-        {                                                                \
-          type_error ();                                                 \
-        }                                                                \
-    }                                                                    \
-  while (false)
-
-
-jitterlisp_object
-jitterlisp_fixnum_plus (jitterlisp_object a, jitterlisp_object b)
-{
-  return JITTERLISP_EXP_FF_F_PLUS(a, b);
-}
-
-jitterlisp_object
-jitterlisp_fixnum_uminus (jitterlisp_object a)
-{
-  return JITTERLISP_EXP_F_F_MINUS(a);
-}
-
-jitterlisp_object
-jitterlisp_fixnum_minus (jitterlisp_object a, jitterlisp_object b)
-{
-  return JITTERLISP_EXP_FF_F_MINUS(a, b);
-}
-
-jitterlisp_object
-jitterlisp_fixnum_times (jitterlisp_object a, jitterlisp_object b)
-{
-  return JITTERLISP_EXP_FF_F_TIMES(a, b);
-}
-
-jitterlisp_object
-jitterlisp_fixnum_divided (jitterlisp_object a, jitterlisp_object b)
-{
-  return JITTERLISP_EXP_FF_F_DIVIDED(a, b);
-}
-
-jitterlisp_object
-jitterlisp_fixnum_remainder (jitterlisp_object a, jitterlisp_object b)
-{
-  return JITTERLISP_EXP_FF_F_REMAINDER(a, b);
-}
-
-jitterlisp_object
-jitterlisp_fixnum_less (jitterlisp_object a, jitterlisp_object b)
-{
-  return JITTERLISP_EXP_FF_B_LESS(a, b);
-}
-
-jitterlisp_object
-jitterlisp_fixnum_notgreater (jitterlisp_object a, jitterlisp_object b)
-{
-  return JITTERLISP_EXP_FF_B_NOTGREATER(a, b);
-}
-
-bool
-jitterlisp_is_unique (jitterlisp_object a)
-{
-  return JITTERLISP_IS_UNIQUE(a);
-}
-
-bool
-jitterlisp_is_character (jitterlisp_object a)
-{
-  return JITTERLISP_IS_CHARACTER(a);
-}
-
-bool
-jitterlisp_is_empty_list (jitterlisp_object a)
-{
-  return JITTERLISP_IS_EMPTY_LIST(a);
-}
-
-bool
-jitterlisp_is_boolean (jitterlisp_object a)
-{
-  return JITTERLISP_IS_BOOLEAN(a);
-}
-
-bool
-jitterlisp_is_false (jitterlisp_object a)
-{
-  return JITTERLISP_IS_FALSE(a);
-}
-
-bool
-jitterlisp_is_fixnum (jitterlisp_object a)
-{
-  return JITTERLISP_IS_FIXNUM(a);
-}
-
-int
-jitterlisp_decode_character (jitterlisp_object a)
-{
-  return JITTERLISP_CHARACTER_DECODE(a);
-}
-
-jitterlisp_object
-jitterlisp_encode_boolean (bool b)
-{
-  return JITTERLISP_BOOLEAN_ENCODE(b);
-}
-
-bool
-jitterlisp_decode_boolean (jitterlisp_object a)
-{
-  return JITTERLISP_BOOLEAN_DECODE(a);
-}
-
-jitterlisp_object
-jitterlisp_plus_of_constants (void)
-{
-  jitterlisp_object a = JITTERLISP_FIXNUM_ENCODE(40);
-  jitterlisp_object b = JITTERLISP_FIXNUM_ENCODE(2);
-  return JITTERLISP_EXP_FF_F_PLUS(a, b);
-}
-
-jitterlisp_object
-jitterlisp_cons (jitterlisp_object a, jitterlisp_object b)
-{
-  struct jitterlisp_cons *c = JITTERLISP_CONS_MAKE_UNINITIALIZED_UNENCODED();
-  c->car = a;
-  c->cdr = b;
-  return JITTERLISP_CONS_ENCODE(c);
-}
-
-jitterlisp_object
-jitterlisp_symbol (char *name)
-{
-  return JITTERLISP_SYMBOL_ENCODE(jitterlisp_symbol_make_interned (name));
-}
-
-jitterlisp_object
-jitterlisp_uninterned_symbol (void)
-{
-  return JITTERLISP_SYMBOL_ENCODE(jitterlisp_symbol_make_uninterned ());
-}
-
-jitterlisp_object
-jitterlisp_car_unsafe (jitterlisp_object a)
-{
-  return JITTERLISP_CONS_DECODE(a)->car;
-}
-
-jitterlisp_object
-jitterlisp_cdr_unsafe (jitterlisp_object a)
-{
-  return JITTERLISP_CONS_DECODE(a)->cdr;
-}
-
-jitterlisp_object
-jitterlisp_car (jitterlisp_object a)
-{
-  JITTERLISP_REQUIRE_TYPE(a, CONS);
-
-  return jitterlisp_car_unsafe (a);
-}
-
-jitterlisp_object
-jitterlisp_cdr (jitterlisp_object a)
-{
-  JITTERLISP_REQUIRE_TYPE(a, CONS);
-
-  return jitterlisp_cdr_unsafe (a);
-}
-
-jitterlisp_object
-jitterlisp_cadddr (jitterlisp_object a)
-{
-  return jitterlisp_car (jitterlisp_cdr (jitterlisp_cdr (jitterlisp_cdr (a))));
-}
-
-void
-jitterlisp_require_fixnum (jitterlisp_object a)
-{
-  JITTERLISP_REQUIRE_TYPE(a, FIXNUM);
-}
-
-jitterlisp_object
-jitterlisp_nullp (jitterlisp_object a)
-{
-  return JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_CONS(a));
-}
-
-jitterlisp_object
-jitterlisp_iota (jitterlisp_object limit)
-{
-  jitterlisp_object res = JITTERLISP_EMPTY_LIST;
-
-  int i;
-  for (i = JITTERLISP_FIXNUM_DECODE(limit) - 1; i >= 0; i --)
-    res = jitterlisp_cons (JITTERLISP_FIXNUM_ENCODE(i), res);
-  return res;
-}
-
-jitter_uint
-jitterlisp_two_tags (jitterlisp_object a, jitterlisp_object b)
-{
-  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
-  return (tag_a << JITTERLISP_PTAG_BIT_NO) | tag_b;
-}
-
-typedef
-jitterlisp_object (*jitterlisp_two_arity_operator) (jitterlisp_object,
-                                                    jitterlisp_object);
-typedef
-jitterlisp_object (*jitterlisp_one_arity_operator) (jitterlisp_object);
-
-jitter_uint
-jitterlisp_two_tag_dispatch_unary
-  (jitterlisp_object a, jitterlisp_one_arity_operator *functions)
-{
-  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
-  return functions [tag_a] (a);
-}
-
-jitter_uint
-jitterlisp_two_tag_dispatch_2d
-  (jitterlisp_object a, jitterlisp_object b,
-   jitterlisp_two_arity_operator **functions)
-{
-  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
-  return functions [tag_a] [tag_b] (a, b);
-}
-
-jitter_uint
-jitterlisp_two_tag_dispatch_2d_one_known_dimenstion
-  (jitterlisp_object a, jitterlisp_object b,
-   const jitterlisp_two_arity_operator functions[][JITTERLISP_PTAG_BIT_NO])
-{
-  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
-  return functions [tag_a] [tag_b] (a, b);
-}
-
-jitter_uint
-jitterlisp_two_tag_dispatch_1d
-  (jitterlisp_object a, jitterlisp_object b,
-   const jitterlisp_two_arity_operator functions[])
-{
-  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
-  return functions [(tag_a << JITTERLISP_PTAG_BIT_NO) | tag_b] (a, b);
-}
-
-jitter_uint
-jitterlisp_two_tag_dispatch_1d_alt
-  (jitterlisp_object a, jitterlisp_object b,
-   const jitterlisp_two_arity_operator functions[])
-{
-  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
-  return (* (functions + ((tag_a * JITTERLISP_PTAG_NO) | tag_b))) (a, b);
-}
-
-jitter_uint
-jitterlisp_two_tag_dispatch_1d_alt2
-  (jitterlisp_object a, jitterlisp_object b,
-   const jitterlisp_two_arity_operator functions[])
-{
-  jitter_uint tag_a = JITTERLISP_GET_PTAG(a);
-  jitter_uint tag_b = JITTERLISP_GET_PTAG(b);
-  jitter_uint offset
-    = ((tag_a << JITTERLISP_PTAG_BIT_NO
-        | tag_b)
-       << JITTERLISP_PTAG_BIT_NO);
-  return ((* ((jitterlisp_two_arity_operator *)
-             ((char *) functions) + offset))
-          (a, b));
-}
-
-jitter_uint
-jitterlisp_factorial (jitterlisp_object a)
-{
-  JITTERLISP_REQUIRE_TYPE(a, FIXNUM);
-
-  jitter_int untagged_a = JITTERLISP_FIXNUM_DECODE (a);
-  jitter_int untagged_res = 1;
-  jitter_int i;
-  for (i = 2; i <= untagged_a; i ++)
-    untagged_res *= i;
-
-  return JITTERLISP_FIXNUM_ENCODE(untagged_res);
-}
-
-jitterlisp_object
-jitterlisp_last (jitterlisp_object a)
-{
-  jitterlisp_object candidate_last_cons = a;
-  do
-    {
-      JITTERLISP_REQUIRE_TYPE(candidate_last_cons, CONS);
-
-      jitterlisp_object cdr = JITTERLISP_CONS_DECODE(candidate_last_cons)->cdr;
-      if (JITTERLISP_IS_EMPTY_LIST(cdr))
-        return JITTERLISP_CONS_DECODE(candidate_last_cons)->car;
-      else
-        candidate_last_cons = cdr;
-    }
-  while (true);
-}
-
-
-
-
 /* Main function.
  * ************************************************************************** */
 
@@ -670,7 +265,7 @@ main (int argc, char **argv)
   argp_parse (& argp, argc, argv, 0, 0, & jitterlisp_settings);
   struct jitterlisp_settings * const sp = & jitterlisp_settings;
 
-  /* Run input files and s-expressions from the command-line; halting at the
+  /* Run input files and s-expressions from the command-line, halting at the
      first error; still free the resources before exiting, even in case of
      error.
      Rationale: this level of attention to memory leaks would not be justified
@@ -681,6 +276,10 @@ main (int argc, char **argv)
   int return_code = EXIT_SUCCESS;
   JITTERLISP_HANDLE_ERRORS(
     {
+      /* Run the library, unless disabled. */
+      if (sp->library)
+        jitterlisp_run_library ();
+
       /* Run the input files. */
       jitterlisp_run_from_input_files ();
 

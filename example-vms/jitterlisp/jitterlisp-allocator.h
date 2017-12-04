@@ -28,6 +28,7 @@
 #include <jitter/jitter-hash.h>
 
 #include "jitterlisp-sexpression.h"
+#include "jitterlisp-ast.h"
 
 
 /* Alignment.
@@ -44,7 +45,7 @@
    and compute an object size which keeps alignment into account.  Object sizes
    are compile-time constants in most cases. */
 #define JITTERLISP_ALIGNMENT_BIT_MASK  \
-  JITTERLISP_PTAG_BIT_MASK
+  JITTER_BIT_MASK(JITTERLISP_INITIAL_POINTER_ZERO_BIT_NO)
 
 /* Expand to the smallest multiple of (1 << JITTERLISP_TAG_BIT_NO) which is
    greater than or equal to the given size. */
@@ -154,21 +155,64 @@ jitterlisp_symbol_make_interned (const char *name)
 
 
 
+/* Non-primitive macro allocation.
+ * ************************************************************************** */
+
+/* Expand to an rvalue of type struct jitterlisp_closure * whose evaluation
+   points to a just allocated and uninitialized closure. */
+#define JITTERLISP_NON_PRIMITIVE_MACRO_MAKE_UNINITIALIZED_UNENCODED()  \
+  JITTERLISP_CLOSURE_MAKE_UNINITIALIZED_UNENCODED()
+
+
+
+
+
+/* AST (low-level) allocation.
+ * ************************************************************************** */
+
+/* High-level functions for allocating already initialized ASTs are provided in
+   jitterlisp-ast.h . */
+
+/* Expand to an rvalue of type struct jitterlisp_ast * whose evaluation points
+   to a just allocated AST with the given number of subs, completely
+   uninitialized. */
+#define JITTERLISP_AST_MAKE_UNINITIALIZED_UNENCODED(_jitterlisp_sub_no)  \
+  ((struct jitterlisp_ast*)                                              \
+   (jitterlisp_allocate                                                  \
+       (JITTERLISP_ALIGNED_SIZE(sizeof (struct jitterlisp_ast)           \
+                                + (sizeof (jitterlisp_object)            \
+                                   * (_jitterlisp_sub_no))))))
+
+
+
+
 /* Fallback allocation.
  * ************************************************************************** */
 
 /* This is a slow fallback allocation facility, for objects whose size is only
-   known at run time.  FIXME: for most heap-allocated objects, such as conses,
-   some other facility should be provided, based on CPP macros. */
+   known at run time.  For commonly occurring heap-allocated objects, such as
+   conses, some other facility is, based on CPP macros. */
 
 /* Return an unencoded pointer to a buffer of uninitialized memory with the
    given size.
 
    The size must be a multiple of the minimum required alignment in bytes (see
-   the "Alignment" section above), but this is not checked for. */
+   the "Alignment" section above), but this is not checked for: calling this
+   with an incorrectly aligned size may lead to subtle bugs. */
 char *
 jitterlisp_allocate (size_t size_in_bytes)
   __attribute__ ((returns_nonnull, malloc));
+
+
+
+
+/* Interned symbol list.
+ * ************************************************************************** */
+
+/* Return a fresh list containing all the interned symbols which currently
+   exist, in an unspecified order. */
+jitterlisp_object
+jitterlisp_interned_symbols (void);
 
 
 
@@ -177,9 +221,9 @@ jitterlisp_allocate (size_t size_in_bytes)
  * ************************************************************************** */
 
 /* The functions here are not for the user to call directly.  The user is
-   supposed to initialize and finalize every JitterLisp subsystem at the same
-   time by calling jitterlisp_initialize and jitterlisp_finalize , which in
-   their turn will call these functions as needed. */
+   supposed to initialize and finalize every JitterLisp subsystem by calling
+   jitterlisp_initialize and jitterlisp_finalize , which in their turn will call
+   these functions in the appropriate order. */
 
 /* Initialize the memory subsystem.  It's forbidden to heap-allocate any Lisp
    object until this function has been called. */
