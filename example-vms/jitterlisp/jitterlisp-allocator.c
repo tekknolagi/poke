@@ -114,7 +114,7 @@ jitterlisp_unregister_current_thread (void)
 /* Explicit GC root registration.
  * ************************************************************************** */
 
-#warning "export the public part of this.  Add comments."
+//#warning "export the public part of this.  Add comments."
 
 struct jitterlisp_gc_root
 {
@@ -222,37 +222,45 @@ struct jitterlisp_litter_block
 static struct jitter_dynamic_buffer
 jitterlisp_litter_blocks;
 
+/* The total heap size in bytes, mostly for debugging and logging.  This is kept
+   as a separate global for efficiency, but the same information could be
+   recovered from jitterlisp_litter_blocks . */
+static size_t
+jitterlisp_litter_heap_size;
+
 /* Make a large block from which we will allocate, without ever releasing
    individual objects, and add it to the litter block stack.  Set allocation
    pointer, heap beginning and limit to refer to the new block.  Any previous
    existing block is kept as well, and objects from one block are allowed to
    point to objects from another. */
 static void
-jitterlisp_add_litter_block (void)
+jitterlisp_add_litter_block (size_t block_size_in_bytes)
 {
   /* Set up the allocation pointer and its limit. */
   litter_allocator_pointer
     = litter_heap_beginning
-    = jitter_xmalloc (JITTERLISP_LITTER_BLOCK_BYTE_NO);
-  litter_allocator_limit = (litter_allocator_pointer
-                            + JITTERLISP_LITTER_BLOCK_BYTE_NO);
+    = jitter_xmalloc (block_size_in_bytes);
+  litter_allocator_limit = (litter_allocator_pointer + block_size_in_bytes);
 
   /* Add information about it to the stack. */
   struct jitterlisp_litter_block block;
   block.beginning = litter_heap_beginning;
-  block.size_in_bytes = JITTERLISP_LITTER_BLOCK_BYTE_NO;
+  block.size_in_bytes = block_size_in_bytes;
   jitter_dynamic_buffer_push (& jitterlisp_litter_blocks,
                               & block,
                               sizeof (struct jitterlisp_litter_block));
 
+  /* Update the total heap size. */
+  bool is_this_block_the_first = jitterlisp_litter_heap_size == 0;
+  jitterlisp_litter_heap_size += block_size_in_bytes;
+
+#define JITTERLIST_TO_MB(x) ((x) / 1024.0 / 1024.0)
   /* Log, unless this block is the first. */
-  size_t block_no =
-    jitterlisp_litter_blocks.used_size
-    / sizeof (struct jitterlisp_litter_block);
-  if (block_no > 1)
-    printf ("New litter block.  %i bocks, %.1fMB heap.\n",
-            (int) block_no,
-            JITTERLISP_LITTER_BLOCK_BYTE_NO / 1024.0 / 1024.0 * block_no);
+  if (! is_this_block_the_first)
+    printf ("New %.1fMB litter block.  The heap is now %.1fMB.\n",
+            JITTERLIST_TO_MB(block_size_in_bytes),
+            JITTERLIST_TO_MB(jitterlisp_litter_heap_size));
+#undef JITTERLIST_TO_MB
 }
 
 static void
@@ -275,11 +283,12 @@ jitterlisp_memory_initialize (void)
   /* Initialize the garbage-collected heap. */
 #if   defined(JITTERLISP_LITTER)
 printf ("Initializing blocks\n");
-  /* Initialize the litter block stack. */
+  /* Initialize the litter block stack and the total heap size. */
   jitter_dynamic_buffer_initialize (& jitterlisp_litter_blocks);
+  jitterlisp_litter_heap_size = 0;
 
   /* Make the first litter block. */
-  jitterlisp_add_litter_block ();
+  jitterlisp_add_litter_block (JITTERLISP_LITTER_BLOCK_BYTE_NO);
 printf ("Made the first block\n");
 
 #elif defined(JITTERLISP_BOEHM_GC)
@@ -347,13 +356,13 @@ jitterlisp_allocate (size_t size_in_bytes)
   litter_allocator_pointer += size_in_bytes;
   if (__builtin_expect (litter_allocator_pointer > litter_allocator_limit,
                         false))
-    jitterlisp_add_litter_block ();
-  /* printf ("After allocating %luB the next allocation pointer is %p, "
-          "whose misalignment is %lu\n",
-          (unsigned long) size_in_bytes,
-          litter_allocator_pointer,
-          ((unsigned long) litter_allocator_pointer) & JITTERLISP_ALIGNMENT_BIT_MASK
-          );*/
+    {
+      size_t new_block_size = JITTERLISP_LITTER_BLOCK_BYTE_NO;
+      if (new_block_size < size_in_bytes)
+        new_block_size = size_in_bytes;
+      jitterlisp_add_litter_block (new_block_size);
+      return jitterlisp_allocate (size_in_bytes);
+    }
   return res;
 
 #elif defined(JITTERLISP_BOEHM_GC)

@@ -196,11 +196,12 @@ jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
        env_rest != JITTERLISP_EMPTY_LIST;
        env_rest = JITTERLISP_EXP_C_A_CDR(env_rest))
     {
+      jitterlisp_object useless __attribute__ ((unused));
       jitterlisp_object next_cons = JITTERLISP_EXP_C_A_CAR(env_rest);
       jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
       if (next_name == name)
         {
-          JITTERLISP_SET_CDR_(next_cons, new_value);
+          JITTERLISP_SET_CDR_(useless, next_cons, new_value);
           return;
         }
     }
@@ -598,6 +599,11 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
       JITTERLISP_EVAL_ARGS_1(ANYTHING);
       JITTERLISP_NULLP_(res, args [0]);
     }
+  else if (! strcmp (interned_name, "nnull?"))
+    {
+      JITTERLISP_EVAL_ARGS_1(ANYTHING);
+      JITTERLISP_NNULLP_(res, args [0]);
+    }
   else if (! strcmp (interned_name, "eof?"))
     {
       JITTERLISP_EVAL_ARGS_1(ANYTHING);
@@ -746,6 +752,16 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
     {
       JITTERLISP_EVAL_ARGS_1(CONS);
       JITTERLISP_CDR_(res, args [0]);
+    }
+  else if (! strcmp (interned_name, "set-car!"))
+    {
+      JITTERLISP_EVAL_ARGS_2(CONS, ANYTHING);
+      JITTERLISP_SET_CAR_(res, args [0], args [1]);
+    }
+  else if (! strcmp (interned_name, "set-cdr!"))
+    {
+      JITTERLISP_EVAL_ARGS_2(CONS, ANYTHING);
+      JITTERLISP_SET_CDR_(res, args [0], args [1]);
     }
   /* FIXME: add composed cons selectors. */
   /* Conses. */

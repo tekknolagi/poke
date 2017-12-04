@@ -431,17 +431,23 @@
     (_jitterlisp_out) = _jitterlisp_tmp->cdr;              \
   JITTER_END_
 
-#define JITTERLISP_SET_CAR_(_jitterlisp_cons, _jitterlisp_new_car)  \
-  JITTER_BEGIN_                                                     \
-    struct jitterlisp_cons *_jitterlisp_tmp                         \
-      = JITTERLISP_CONS_DECODE(_jitterlisp_cons);                   \
-    _jitterlisp_tmp->car = (_jitterlisp_new_car);                   \
+#define JITTERLISP_SET_CAR_(_jitterlisp_out,       \
+                            _jitterlisp_cons,      \
+                            _jitterlisp_new_car)   \
+  JITTER_BEGIN_                                    \
+    struct jitterlisp_cons *_jitterlisp_tmp        \
+      = JITTERLISP_CONS_DECODE(_jitterlisp_cons);  \
+    _jitterlisp_tmp->car = (_jitterlisp_new_car);  \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;        \
   JITTER_END_
-#define JITTERLISP_SET_CDR_(_jitterlisp_cons, _jitterlisp_new_cdr)  \
-  JITTER_BEGIN_                                                     \
-    struct jitterlisp_cons *_jitterlisp_tmp                         \
-      = JITTERLISP_CONS_DECODE(_jitterlisp_cons);                   \
-    _jitterlisp_tmp->cdr = (_jitterlisp_new_cdr);                   \
+#define JITTERLISP_SET_CDR_(_jitterlisp_out,       \
+                            _jitterlisp_cons,      \
+                            _jitterlisp_new_cdr)   \
+  JITTER_BEGIN_                                    \
+    struct jitterlisp_cons *_jitterlisp_tmp        \
+      = JITTERLISP_CONS_DECODE(_jitterlisp_cons);  \
+    _jitterlisp_tmp->cdr = (_jitterlisp_new_cdr);  \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;        \
   JITTER_END_
 
 
@@ -551,6 +557,13 @@
   JITTER_BEGIN_                                                              \
     _jitterlisp_out =                                                        \
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_EMPTY_LIST(_jitterlisp_in0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is not () . */
+#define JITTERLISP_NNULLP_(_jitterlisp_out, _jitterlisp_in0)                   \
+  JITTER_BEGIN_                                                                \
+    _jitterlisp_out =                                                          \
+      JITTERLISP_BOOLEAN_ENCODE(! JITTERLISP_IS_EMPTY_LIST(_jitterlisp_in0));  \
   JITTER_END_
 
 /* Compute a tagged boolean, #t iff the given in-argument is a fixnum . */
