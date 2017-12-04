@@ -202,8 +202,13 @@ jitterlisp_print_long_long (jitterlisp_char_printer_function char_printer,
   /* Print a minus sign, if negative; in either case set n to be the absolute
      value of signed_n, so that we can forget about the sign in what follows.
      This works even for the most negative number, since n is unsigned and
-     therefore has one more magnitude bit available than signed_n.  Notice that
-     I don't negate a signed quantity, which would be undefined behavior. */
+     therefore has one more magnitude bit available than signed_n.
+
+     A little language lawyering to justify this solution:
+     - I'm converting a signed value to an unsigned type of the same rank,
+       which has well-defined behavior (differently from the converse);
+     - I'n not negating a signed quantity, which would be undefined
+       behavior. */
   n = signed_n;
   if (signed_ && signed_n < 0)
     {
