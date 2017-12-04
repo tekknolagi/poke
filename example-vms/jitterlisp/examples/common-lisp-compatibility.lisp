@@ -23,7 +23,7 @@
 ;;;; Introduction.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; This is a very simple and limited wrapper providing JitterLisp style
+;;; This is a very simple and limited wrapper providing JitterLisp-style
 ;;; (which tends to be Scheme-style) syntax, so that JitterLisp code can
 ;;; be run on top of a Common Lisp system.
 
