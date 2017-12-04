@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 #include <jitter/jitter-dynamic-buffer.h>
+#include <jitter/jitter-fatal.h>
 
 #include "jitterlisp-printer.h"
 #include "jitterlisp-settings.h"
@@ -152,11 +153,12 @@ jitterlisp_print_string (jitterlisp_char_printer_function char_printer,
 }
 
 /* A helper function for jitterlisp_print_long_long .  The argument n is
-   required to be strictly positive. */
+   required to be strictly positive, and can use all the available bits. */
 static void
 jitterlisp_print_long_long_recursive (jitterlisp_char_printer_function cp,
                                       void *cps,
-                                      jitter_long_long n)
+                                      jitter_ulong_long n,
+                                      unsigned radix)
 {
   /* If the number is zero we have nothing more to print.  Notice that this is
      only reached if the original number to print was non-zero, in which case
@@ -167,10 +169,12 @@ jitterlisp_print_long_long_recursive (jitterlisp_char_printer_function cp,
   /* Recursively print every digit but the last one, which is to say the number
      divided by ten, rounded down.  We are going to print the least significant
      digit right after this call, so that it correctly ends up on the right. */
-  jitterlisp_print_long_long_recursive (cp, cps, n / 10);
+  jitterlisp_print_long_long_recursive (cp, cps, n / radix, radix);
 
-  /* Print the least significant digit but the last one. */
-  cp (cps, '0' + n % 10);
+  /* Print the least significant digit. */
+  int digit = n % radix;
+  char character = (digit < 10) ? '0' + digit : 'a' + digit - 10;
+  cp (cps, character);
 }
 
 /* Print the given jitter_long_long signed integer using the given
@@ -178,14 +182,40 @@ jitterlisp_print_long_long_recursive (jitterlisp_char_printer_function cp,
 static void
 jitterlisp_print_long_long (jitterlisp_char_printer_function char_printer,
                             void *char_printer_state,
-                            jitter_long_long n)
+                            jitter_long_long signed_n,
+                            bool signed_,
+                            unsigned radix)
 {
+  /* We will deal with the sign at the very beginning, then forget about it and
+     just work on the number to print as an unsigned quantity. */
+  jitter_ulong_long n;
+
   /* Print a minus sign, if negative; in that case change n to be positive, so
      that we can forget about the sign in what follows. */
-  if (n < 0)
+  if (signed_ && signed_n < 0)
     {
       char_printer (char_printer_state, '-');
-      n = - n;
+      n = - signed_n;
+    }
+  else
+    n = signed_n;
+
+  /* Print a radix prefix, unless the prefix is the default. */
+  switch (radix)
+    {
+    case 2:
+      jitterlisp_print_string (char_printer, char_printer_state, "0b");
+      break;
+    case 8:
+      jitterlisp_print_string (char_printer, char_printer_state, "0o");
+      break;
+    case 10:
+      break;
+    case 16:
+      jitterlisp_print_string (char_printer, char_printer_state, "0x");
+      break;
+    default:
+      jitter_fatal ("unsupported radix %u", radix);
     }
 
   /* If the number is zero print a zero digit, and we're done. */
@@ -197,11 +227,25 @@ jitterlisp_print_long_long (jitterlisp_char_printer_function char_printer,
 
   /* The number we have to print if we arrived at this point is strictly
      positive.  Use the recursive helper. */
-  jitterlisp_print_long_long_recursive (char_printer, char_printer_state, n);
+  jitterlisp_print_long_long_recursive (char_printer, char_printer_state,
+                                        n, radix);
 }
 
-/* Print the given character using the given char-printer.  This is defined simply
-   to have a function with similar arguments to jitterlisp_print_string. */
+/* Print the given pointer, as a hexadecimal address, using the given
+   char-printer. */
+static void
+jitterlisp_print_pointer (jitterlisp_char_printer_function char_printer,
+                          void *char_printer_state,
+                          void *p)
+{
+  jitterlisp_print_long_long (char_printer, char_printer_state,
+                              (jitter_uint) p, false,
+                              16);
+}
+
+/* Print the given character using the given char-printer.  This is defined
+   simply to have a function with similar arguments to
+   jitterlisp_print_string. */
 static void
 jitterlisp_print_char (jitterlisp_char_printer_function char_printer,
                        void *char_printer_state,
@@ -304,7 +348,7 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
     {
       jitter_int decoded = JITTERLISP_FIXNUM_DECODE(o);
       jitterlisp_print_decoration (cp, cps, FIXNUMATTR);
-      jitterlisp_print_long_long (cp, cps, decoded);
+      jitterlisp_print_long_long (cp, cps, decoded, true, 10);
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_UNIQUE(o))
@@ -321,7 +365,7 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
           jitterlisp_print_decoration (cp, cps, NOATTR);
           jitterlisp_print_decoration (cp, cps, ERRORATTR);
           jitterlisp_print_string (cp, cps, "#<invalid-unique-object:");
-          jitterlisp_print_long_long (cp, cps, index);
+          jitterlisp_print_long_long (cp, cps, index, true, 10);
           jitterlisp_print_char (cp, cps, '>');
         }
       jitterlisp_print_decoration (cp, cps, NOATTR);
@@ -344,7 +388,9 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       else
         {
           jitterlisp_print_decoration (cp, cps, UNINTERNEDSYMBOLATTR);
-          jitterlisp_print_string (cp, cps, "#<uninterned-symbol>");
+          jitterlisp_print_string (cp, cps, "#<uninterned-symbol at ");
+          jitterlisp_print_pointer (cp, cps, s);
+          jitterlisp_print_string (cp, cps, ">");
         }
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
