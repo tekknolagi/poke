@@ -186,6 +186,15 @@ jitterlisp_print_long_long (jitterlisp_char_printer_function char_printer,
                             bool signed_,
                             unsigned radix)
 {
+  /* Special case for the NULL pointer: follow the GNU convention rather
+     than printing "0x0" . */
+  if (radix == 16 && ! signed_
+      && signed_n == (jitter_long_long) (jitter_int) NULL)
+    {
+      jitterlisp_print_string (char_printer, char_printer_state, "(nil)");
+      return;
+    }
+
   /* We will deal with the sign at the very beginning, then forget about it and
      just work on the number to print as an unsigned quantity. */
   jitter_ulong_long n;
