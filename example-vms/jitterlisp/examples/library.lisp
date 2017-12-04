@@ -19,6 +19,8 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
+;;(define-macro (my-define n . stuff) (if (symbol? n) `(define ,n ,@stuff) `(define-inlinable ,n ,@stuff)))
+;;(define-macro (my-define n . stuff) `(define ,n ,@stuff))
 
 ;;;; singleton.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -448,10 +450,18 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (iota-iterative n)
-  (range-iterative 0 (1- n)))
+  (let ((res '()))
+    (while (> n 0)
+      (set! n (1- n))
+      (set! res (cons n res)))
+    res))
 
+(define (iota-tail-recursive-helper n acc)
+  (if (< n 0)
+      acc
+      (iota-tail-recursive-helper (1- n) (cons n acc))))
 (define (iota-tail-recursive n)
-  (range-tail-recursive 0 (1- n)))
+  (iota-tail-recursive-helper (1- n) '()))
 
 (define (iota-non-tail-recursive n)
   (range-non-tail-recursive 0 (1- n)))
@@ -599,16 +609,7 @@
 
 
 
-;;;; Main.
+;;;; Scratch.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(display 'foo)
-(newline)
-
-(define xs '(1 2 3))
-
-(display (length-iterative xs)) (newline)
-(display (length-non-tail-recursive xs)) (newline)
-(display (length-tail-recursive xs)) (newline)
 
 ;; (define xs (reverse! (iota 10000000)))
