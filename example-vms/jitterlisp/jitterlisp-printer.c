@@ -220,16 +220,13 @@ jitterlisp_print_long_long (jitterlisp_char_printer_function char_printer,
   switch (radix)
     {
     case 2:
-      jitterlisp_print_string (char_printer, char_printer_state, "0b");
-      break;
+      jitterlisp_print_string (char_printer, char_printer_state, "0b"); break;
     case 8:
-      jitterlisp_print_string (char_printer, char_printer_state, "0o");
-      break;
+      jitterlisp_print_string (char_printer, char_printer_state, "0o"); break;
     case 10:
       break;
     case 16:
-      jitterlisp_print_string (char_printer, char_printer_state, "0x");
-      break;
+      jitterlisp_print_string (char_printer, char_printer_state, "0x"); break;
     default:
       jitter_fatal ("unsupported radix %u", radix);
     }
