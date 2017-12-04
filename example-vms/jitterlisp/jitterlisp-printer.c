@@ -199,15 +199,17 @@ jitterlisp_print_long_long (jitterlisp_char_printer_function char_printer,
      just work on the number to print as an unsigned quantity. */
   jitter_ulong_long n;
 
-  /* Print a minus sign, if negative; in that case change n to be positive, so
-     that we can forget about the sign in what follows. */
+  /* Print a minus sign, if negative; in either case set n to be the absolute
+     value of signed_n, so that we can forget about the sign in what follows.
+     This works even for the most negative number, since n is unsigned and
+     therefore has one more magnitude bit available than signed_n.  Notice that
+     I don't negate a signed quantity, which would be undefined behavior. */
+  n = signed_n;
   if (signed_ && signed_n < 0)
     {
       char_printer (char_printer_state, '-');
-      n = - signed_n;
+      n = - n;
     }
-  else
-    n = signed_n;
 
   /* Print a radix prefix, unless the prefix is the default. */
   switch (radix)
