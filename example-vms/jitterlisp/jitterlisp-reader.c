@@ -413,7 +413,7 @@ jitterlisp_scan (struct jitterlisp_scanner_state *sstate)
                  scanning. */
               s = jitterlisp_scanner_dfa_state_comment;
               break;
-            case '(': case ')': case '.': case '\'': case '`':
+            case '(': case ')': case '\'': case '`':
               /* We recognized a single-character token.  End the token, but
                  advance so as not to see this same character the next time we
                  scan. */
@@ -480,8 +480,7 @@ jitterlisp_scan (struct jitterlisp_scanner_state *sstate)
               /* We found a comment beginning while scanning a complicated
                  token: the token has ended. */
               JITTERLISP_END_OF_TOKEN;
-            case '(': case ')': case '.': case '#':
-            case '\'': case '`': case ',':
+            case '(': case ')': case '#': case '\'': case '`': case ',':
               /* We found a reserved character while scanning a complicated
                  token: the token has ended. */
               JITTERLISP_END_OF_TOKEN;
