@@ -503,7 +503,6 @@
                 (insert-as-second! x xs)
                 (set! go-on #f))
               (set! xs (cdr xs)))))))
-
 (define (insert!-iterative x xs)
   (if (null? xs)
       (singleton x)
