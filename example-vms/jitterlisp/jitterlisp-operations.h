@@ -472,6 +472,23 @@
 
 
 
+/* Symbol operations.
+ * ************************************************************************** */
+
+// FIXME: comment.
+
+#define JITTERLISP_GENSYM_(_jitterlisp_out)                           \
+  JITTER_BEGIN_                                                       \
+    struct jitterlisp_symbol *_jitterlisp_tmp                         \
+      = JITTERLISP_SYMBOL_UNINTERNED_MAKE_UNINITIALIZED_UNENCODED();  \
+    _jitterlisp_tmp->name_or_NULL = NULL;                             \
+    _jitterlisp_tmp->global_value = JITTERLISP_UNDEFINED;             \
+    (_jitterlisp_out) = JITTERLISP_SYMBOL_ENCODE(_jitterlisp_tmp);    \
+  JITTER_END_
+
+
+
+
 /* Vector operations.
  * ************************************************************************** */
 

@@ -764,7 +764,13 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
       JITTERLISP_SET_CDR_(res, args [0], args [1]);
     }
   /* FIXME: add composed cons selectors. */
-  /* Conses. */
+  /* Symbols. */
+  else if (! strcmp (interned_name, "gensym"))
+    {
+      JITTERLISP_NO_MORE_ARGS;
+      JITTERLISP_GENSYM_(res);
+    }
+  /* Vectors. */
   else if (! strcmp (interned_name, "make-vector"))
     {
       JITTERLISP_EVAL_ARG(FIXNUM);
