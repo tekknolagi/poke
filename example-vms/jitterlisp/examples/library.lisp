@@ -20,7 +20,7 @@
 ;;; along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-;;;; Singleton.
+;;;; singleton.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (singleton x)
@@ -232,6 +232,42 @@
 
 (define (append! xs ys)
   (append!-iterative xs ys))
+
+
+
+
+;;;; list-copy.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; These return a shallow-copy of the given list: only the spine is
+;;; duplicated.
+
+(define (list-copy-iterative xs)
+  (if (null? xs)
+      '()
+      (let* ((res (cons (car xs) #f))
+             (last-cons res)
+             (new-cons #f))
+        (set! xs (cdr xs))
+        (while (not (null? xs))
+          (set! new-cons (cons (car xs) #f))
+          (set-cdr! last-cons new-cons)
+          (set! last-cons new-cons)
+          (set! xs (cdr xs)))
+        (set-cdr! last-cons '())
+        res)))
+
+(define (list-copy-tail-recursive xs)
+  (reverse!-tail-recursive (reverse-tail-recursive xs)))
+
+(define (list-copy-non-tail-recursive xs)
+  (if (null? xs)
+      '()
+      (cons (car xs)
+            (list-copy-non-tail-recursive (cdr xs)))))
+
+(define (list-copy xs)
+  (list-copy-iterative xs))
 
 
 
