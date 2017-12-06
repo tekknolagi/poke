@@ -1061,7 +1061,6 @@ EXTRA_DIST += \
 
 # Examples for JitterLisp.
 EXTRA_DIST += \
-  example-vms/jitterlisp/examples/library.lisp \
   example-vms/jitterlisp/examples/counter-iterative.lisp \
   example-vms/jitterlisp/examples/counter-recursive.lisp \
   example-vms/jitterlisp/examples/factorial.lisp \
