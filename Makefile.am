@@ -1055,6 +1055,10 @@ if JITTER_HAVE_BOEHM_GC
   bin_jitterlisp_boehm_LDFLAGS = $(bin_jitterlisp_LDFLAGS)
 endif # JITTER_HAVE_BOEHM_GC
 
+# JitterLisp Lisp library.
+EXTRA_DIST += \
+  example-vms/jitterlisp/jitterlisp-library.lisp
+
 # Examples for JitterLisp.
 EXTRA_DIST += \
   example-vms/jitterlisp/examples/library.lisp \
@@ -1063,9 +1067,18 @@ EXTRA_DIST += \
   example-vms/jitterlisp/examples/factorial.lisp \
   example-vms/jitterlisp/examples/peano.lisp
 
-# Benchmarking utility files, to compare JitterLisp with production Lisps.
+# Compatibility files for limited JitterLisp compatibility for
+# Common Lisp and Scheme.
 EXTRA_DIST += \
-  example-vms/jitterlisp/examples/common-lisp-compatibility.lisp
+  example-vms/jitterlisp/compatibility/common-lisp-compatibility.lisp \
+  example-vms/jitterlisp/compatibility/gambit-compatibility.scm \
+  example-vms/jitterlisp/compatibility/guile-compatibility.scm \
+  example-vms/jitterlisp/compatibility/mit-gnu-scheme-compatibility.scm \
+  example-vms/jitterlisp/compatibility/racket-compatibility.scm \
+  example-vms/jitterlisp/compatibility/scm-compatibility.scm \
+  example-vms/jitterlisp/compatibility/siod-compatibility.scm \
+  example-vms/jitterlisp/compatibility/sisc-compatibility.scm \
+  example-vms/jitterlisp/compatibility/tinyscheme-compatibility.scm
 
 # Other files for JitterLisp.
 EXTRA_DIST += example-vms/jitterlisp/THANKS
