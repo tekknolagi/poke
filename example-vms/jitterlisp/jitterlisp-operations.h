@@ -340,6 +340,12 @@
       = JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_in0, _jitterlisp_in1);         \
   JITTER_END_
 
+#define JITTERLISP_QUOTIENT_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1) \
+  JITTER_BEGIN_                                                                \
+    _jitterlisp_out                                                            \
+      = JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_in0, _jitterlisp_in1);         \
+  JITTER_END_
+
 #define JITTERLISP_REMAINDER_(_jitterlisp_out, _jitterlisp_in0,           \
                               _jitterlisp_in1)                            \
   JITTER_BEGIN_                                                           \

@@ -20,12 +20,273 @@
 ;;; along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-;;;; Scratch compatibility/testing code.
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Error handling.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;(define-macro (my-define n . stuff) (if (symbol? n) `(define ,n ,@stuff) `(define-inlinable ,n ,@stuff)))
-;;(define-macro (my-define n . stuff) `(define ,n ,@stuff))
+
 
+(define (error message)
+  (display (cons 'error: message))
+  (newline)
+  fail-by-looking-at-an-unbound-variable)
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Arithmetic library.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; Parity: even? and odd?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (even? n)
+  (zero? (remainder n 2)))
+
+(define (odd? n)
+  (not (zero? (remainder n 2))))
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Quasiquoting and macros.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; quasiquote-procedure.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Define temporary list functions of a few different arities.
+(define (list0)         '())
+(define (list1 x)       (cons x '()))
+(define (list2 x y)     (cons x (cons y '())))
+(define (list3 x y z)   (cons x (cons y (cons z '()))))
+(define (list4 x y z t) (cons x (cons y (cons z (cons t '())))))
+
+(define (list? xs)
+  (cond ((null? xs)
+         #t)
+        ((cons? xs)
+         (list? (cdr xs)))
+        (#t
+         #f)))
+
+(define (qq-append xs ys)
+  (if (list? xs)
+      (append xs ys)
+      (error '(unquote-splicing argument evaluates to non-list))))
+
+(define (qq-atom x)
+  ;; `',x
+  (list2 'quote
+         x))
+
+(define (qq-recursive x depth)
+  (if (cons? x)
+      (qq-recursive-cons (car x) (cdr x) depth)
+      (qq-atom x)))
+
+;;; ~/r6rs.pdf, §11.17 "Quasiquotation".
+
+(define (qq-recursive-cons x-car x-cdr depth)
+  (cond ((eq? x-car 'quasiquote)
+         ;;`(list 'quasiquote ,(qq-recursive (car x-cdr) (1+ depth)))
+         (list3 'list2
+                ''quasiquote
+                (qq-recursive (car x-cdr) (1+ depth))))
+        ((eq? x-car 'unquote)
+         ;; FIXME: decide what to do with (cdr x-cdr).
+         (if (zero? depth)
+             (car x-cdr)
+             ;; `(cons 'unquote ,(qq-recursive x-cdr (1- depth)))
+             (list3 'cons
+                    ''unquote
+                    (qq-recursive x-cdr (1- depth)))))
+        ((eq? x-car 'unquote-splicing)
+         ;; FIXME: decide what to do with (cdr x-cdr).  This case is
+         ;; probably different from the one above.  Look at R7RS as well.
+         (if (zero? depth)
+             (begin
+               ;; There are several possibilities in this case.
+               ;; FIXME: consider them, including returning (car x-cdr).
+               (error '(invalid context for unquote-splicing)))
+             (begin
+               ;; `(cons 'unquote-splicing ,(qq-recursive x-cdr (1- depth)))
+               (list3 'cons
+                      ''unquote-splicing
+                      (qq-recursive x-cdr (1- depth))))))
+        (#t
+         ;;`(append ,(qq-recursive-as-car x-car depth)
+         ;;         ,(qq-recursive x-cdr depth))
+         (list3 'append ;; no qq-append here: qq-recursive-as-car returns a list.
+                (qq-recursive-as-car x-car depth)
+                (qq-recursive x-cdr depth)))))
+
+;;; Return an s-expression evaluating to a singleton list containing the
+;;; given object.
+(define (qq-sigleton-expression expression)
+  (list2 'list1
+         expression))
+
+;;; Return an s-expression evaluating to something equivalent to a variadic
+;;; call to the list function of the given arguments.
+(define (qq-variadic-list-expression args)
+  (if (null? args)
+      ''()
+      ;;`(cons ,(car args) ,(qq-variadic-list-expression (cdr args)))))
+      (list3 'cons
+             (car args)
+             (qq-variadic-list-expression (cdr args)))))
+
+;;; Same as qq-variadic-list-expression but for a variadic append.
+(define (qq-variadic-append-expression args)
+  (if (null? args)
+      ''()
+      ;;`(append ,(car args) ,(qq-variadic-append-expression (cdr args)))))
+      (list3 'qq-append
+             (car args)
+             (qq-variadic-append-expression (cdr args)))))
+
+;;; The car of a quasiquoted cons expands to a *list*, to be combined
+;;; to the expansion of the cdr by appending, not consing.  This allows
+;;; for simpler handling of unquote-splicing; when not splicing we just
+;;; generate a singleton list.
+(define (qq-recursive-as-car x depth)
+  (if (cons? x)
+      (qq-recursive-cons-as-car (car x) (cdr x) depth)
+      ;; `(list ,(qq-atom x))
+      (qq-sigleton-expression (qq-atom x))))
+
+;;; Expand a cons which is the car of a bigger quasiquoted s-expression;
+;;; therefore, expand to a list as qq-recursive-as-car does.
+(define (qq-recursive-cons-as-car x-car x-cdr depth)
+  (cond ((eq? x-car 'quasiquote)
+         ;; (qq-sigleton-expression `(cons 'quasiquote ,(qq-recursive x-cdr (1+ depth))))
+         (qq-sigleton-expression (list3 'cons
+                                        ''quasiquote
+                                        (qq-recursive x-cdr (1+ depth)))))
+        ((eq? x-car 'unquote)
+         (if (zero? depth)
+             (qq-variadic-list-expression x-cdr)
+             ;; `(list (cons 'unquote ,(qq-recursive x-cdr (1- depth))))
+             (list2 'list1
+                    (list3 'cons
+                           ''unquote
+                           (qq-recursive x-cdr (1- depth))))))
+        ((eq? x-car 'unquote-splicing)
+         (if (zero? depth)
+             (qq-variadic-append-expression x-cdr)
+             ;;`(list (cons 'unquote-splicing ,(qq-recursive x-cdr (1- depth))))
+             (list2 'list1
+                    (list3 'cons
+                           ''unquote-splicing
+                           (qq-recursive x-cdr (1- depth))))))
+        (#t
+         ;;`(list (append ,(qq-recursive-as-car x-car depth)
+         ;;               ,(qq-recursive x-cdr depth))))
+         (list2 'list1
+                (list3 'append
+                       (qq-recursive-as-car x-car depth)
+                       (qq-recursive x-cdr depth))))))
+
+;;; The function called from C.
+(define (quasiquote-procedure x)
+  (qq-recursive x 0))
+
+
+
+
+;;;; destructuring-bind-procedure.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Rationale: Every low-level macro has exactly *one* formal parameter, always
+;;; named low-level-macro-args and bound to the entire macro call cdr.  Thru
+;;; destructuring-bind we can turn convenient high-level macros with named
+;;; formals into low-level macros, by binding each formal to a
+;;; low-level-macro-args component.
+;;;
+;;; The mapping from high-level to low-level macros is epsilon-style; at least,
+;;; I designed it the first time for epsilon.  I wouldn't be very surprised if
+;;; somebody had the same idea before, which may be the reason why
+;;; destructuring-bind exists in Common Lisp -- I discovered it after devising
+;;; my own mechanism, which originally had a different name but behaved
+;;; identically.
+;;; Update: the answer may be in http://www.lispworks.com/documentation/HyperSpec/Issues/iss130_w.htm
+;;; I've discovered Emacs Lisp's seq-let , less powerful but conceptually very
+;;; similar, only now in 2017.
+
+;;; Return the result of destructuring-bind with the given formal template bound
+;;; to low-level-macro-args or some sub-component of it.  The result is code,
+;;; not executed by this function: of course we cannot do that until we have an
+;;; actual value for low-level-macro-args .
+(define (destructuring-bind-recursive formals-template
+                                      component
+                                      body-forms)
+  (cond ((null? formals-template)
+         ;; There is nothing to bind in the template.  Return code to check
+         ;; that there are also no actuals, and then either proceeds or fails.
+         `(if (null? ,component)
+              (begin
+                ,@body-forms)
+              (error `(destructuring-bind: excess actuals: ,,component))))
+        ((symbol? formals-template)
+         ;; The macro template is dotted, or this is a recursive call on a
+         ;; template car: in either case bind one variable to every actual.
+         `(let ((,formals-template ,component))
+            ,@body-forms))
+        ((cons? formals-template)
+         ;; Bind both the car and the cdr.  For efficiency's sake name the two
+         ;; sub-components in the generated code.
+         (let ((car-name (gensym))
+               (cdr-name (gensym)))
+           `(let ((,car-name (car ,component))
+                  (,cdr-name (cdr ,component)))
+              ,(destructuring-bind-recursive
+                  (car formals-template)
+                  car-name
+                  ;; The inner quasiquoting serves to make a (singleton) list of
+                  ;; the body forms.
+                  `(,(destructuring-bind-recursive (cdr formals-template)
+                                                   cdr-name
+                                                   body-forms))))))
+        ((vector? formals-template)
+         (error `(vector ,formals-template in macro formals template)))
+        (#t
+         ;; The template is, hopefully, something which can be compared with eq?
+         ;; .  Return code checking that it's equal to the actual and in that
+         ;; case proceeds without binding anything.
+         `(if (eq? ,formals-template ,component)
+              (begin
+                ,@body-forms)
+              (error `(non-matching template argument: ,formals-template
+                                    ,component))))))
+
+;;; The args argument represents "actuals" in a symbolic form; their values
+;;; may not necessarily be known yet.
+;;; Example:
+;;; (destructuring-bind-procedure
+;;;   '(a b)
+;;;   'some-arguments
+;;;   '((display a) (display b)))
+;;; This would return code binding a and b as local variable to the car and
+;;; cadr of some-arguments, assumed to be bound, and display them.
+(define (destructuring-bind-procedure formals-template args body-forms)
+  (destructuring-bind-recursive formals-template args body-forms))
+
+;; FIXME: check that the formals-template doesn't require non-linear bindings.
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; List library.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
@@ -277,6 +538,32 @@
 
 (define (list-copy xs)
   (list-copy-iterative xs))
+
+
+
+
+;;;; map!.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (map!-iterative f xs)
+  (let ((res xs))
+    (while (not (null? xs))
+      (set-car! xs (f (car xs)))
+      (set! xs (cdr xs)))
+    res))
+
+(define (map!-tail-recursive-helper f xs)
+  (if (null? xs)
+      'done
+      (begin
+        (set-car! xs (f (car xs)))
+        (map!-tail-recursive-helper f (cdr xs)))))
+(define (map!-tail-recursive f xs)
+  (map!-tail-recursive-helper f xs)
+  xs)
+
+(define (map! f xs)
+  (map!-iterative f xs))
 
 
 
@@ -618,7 +905,121 @@
 
 
 
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Higher order.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; identity.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (identity x)
+  x)
+
+
+
+
+;;;; compose.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (compose f g)
+  (lambda (x) (f (g x))))
+
+(define (compose-eta f g x)
+  (f (g x)))
+
+
+
+
+;;;; iterate.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (iterate-iterative-post f n)
+  (lambda (x)
+    (let ((n n))
+      (while (> n 0)
+        (set! x (f x))
+        (set! n (1- n)))
+      x)))
+
+(define (iterate-iterative-pre f n)
+  (let ((res identity))
+    (while (> n 0)
+      (set! res (compose res f))
+      (set! n (1- n)))
+    res))
+
+(define (iterate-eta f n x)
+  (if (zero? n)
+      x
+      (iterate-eta f (1- n) (f x))))
+(define (iterate-tail-recursive-post f n)
+  (lambda (x) (iterate-eta f n x)))
+
+;; This, surprisingly, seems even faster than iterate-iterative (at least on the
+;; naïf JitterLisp interpreter).
+(define (iterate-squaring-pre f n)
+  ;; This uses the same idea of exponentiation by squaring; the advantage here
+  ;; is the very small number of built closures, only O(lg n).  Recursion depth
+  ;; is also logarithmic, so non-tail calls are not a problem here.
+  (cond ((zero? n)
+         identity)
+        ((= n 1)
+         ;; An important case to optimize, in order to avoid compositions
+         ;; between f and the identity, which would be executed many times
+         ;; when the iterated function is eventually called.
+         f)
+        ((even? n)
+         (let ((f^n/2 (iterate-squaring-pre f (quotient n 2))))
+           (compose f^n/2 f^n/2)))
+        (#t
+         (compose f (iterate-squaring-pre f (1- n))))))
+
+(define (iterate-squaring-eta f n x)
+  ;; This uses the same idea of exponentiation by squaring; the advantage here
+  ;; is the very small number of built closures, only O(lg n).
+  (cond ((zero? n)
+         x)
+        ((even? n)
+         (iterate-squaring-eta (compose f f) (quotient n 2) x))
+        (#t
+         (iterate-squaring-eta (compose f f) (quotient n 2) (f x)))))
+(define (iterate-squaring-post f n)
+  (lambda (x) (iterate-squaring-eta f n x)))
+
+(define (iterate-tail-recursive-pre-helper f n acc)
+  (if (zero? n)
+      acc
+      (iterate-tail-recursive-pre-helper f (1- n) (compose acc f))))
+(define (iterate-tail-recursive-pre f n)
+  (iterate-tail-recursive-pre-helper f n identity))
+
+(define (iterate f n)
+  (iterate-squaring-pre f n))
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Scratch.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;(display (length (reverse! (iota 10000000)))) (newline)
+;; (define n 10000000)
+;; ;; (display (length (reverse! (iota n)))) (newline)
+;; ;;(define f (iterate-squaring-post (lambda (x) (1+ x)) n))
+;; (display '(computing f)) (newline)
+;; (define f (iterate-squaring-pre (lambda (x) (1+ x)) n))
+;; (display '(using f twice)) (newline)
+;; ;;(define f (iterate-iterative (lambda (x) (1+ x)) n))
+;; (display (f 0)) (newline)
+;; (display (f 0)) (newline)
+;; (display 'done) (newline)
+
+(define q (destructuring-bind-procedure '(a b) 'args '((display #t))))
+(display q)
+(newline)
+(display (make-vector 10 #f))
+(newline)
+(display (make-vector 10 7))
+(newline)

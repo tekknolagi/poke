@@ -124,14 +124,14 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 # define VECTORATTR           ""
 # define ERRORATTR            ""
 #else
-# define CONSATTR             LIGHTRED
+# define CONSATTR             LIGHTRED // LIGHTRED // WHITE //LIGHTRED // YELLOW //LIGHTMAGENTA
 # define CHARACTERATTR        BROWN UNDERLINE ITALIC
-# define FIXNUMATTR           LIGHTGREEN UNDERLINE
-# define INTERNEDSYMBOLATTR   YELLOW ITALIC
-# define UNINTERNEDSYMBOLATTR YELLOW ITALIC UNDERLINE
-# define UNIQUEATTR           LIGHTMAGENTA UNDERLINE ITALIC
-# define CLOSUREATTR          LIGHTCYAN
-# define VECTORATTR           LIGHTCYAN ITALIC UNDERLINE
+# define FIXNUMATTR           LIGHTCYAN UNDERLINE
+# define INTERNEDSYMBOLATTR   LIGHTGREEN
+# define UNINTERNEDSYMBOLATTR LIGHTGREEN ITALIC UNDERLINE
+# define UNIQUEATTR           LIGHTMAGENTA UNDERLINE ITALIC //YELLOW UNDERLINE ITALIC //LIGHTMAGENTA UNDERLINE ITALIC
+# define CLOSUREATTR          LIGHTMAGENTA // WHITE
+# define VECTORATTR           LIGHTRED ITALIC UNDERLINE
 # define ERRORATTR            RED REVERSE
 #endif // #ifdef NOTERMINAL
 
@@ -401,7 +401,7 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       else
         {
           jitterlisp_print_decoration (cp, cps, UNINTERNEDSYMBOLATTR);
-          jitterlisp_print_string (cp, cps, "#<uninterned-symbol at ");
+          jitterlisp_print_string (cp, cps, "#<uninterned:");
           jitterlisp_print_pointer (cp, cps, s);
           jitterlisp_print_string (cp, cps, ">");
         }

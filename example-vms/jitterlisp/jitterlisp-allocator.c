@@ -34,7 +34,7 @@
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-config.h"
 
-/* Include headers from Bohem's GC, if used in this configuration. */
+/* Bohem's GC: include headers if used in this configuration. */
 #ifdef JITTERLISP_BOEHM_GC
 # define GC_THREADS 1
 # include <gc/gc.h>
@@ -296,6 +296,18 @@ printf ("Made the first block\n");
   /* Initialize Boehm's GC. */
   GC_INIT ();
   GC_allow_register_threads ();
+
+/* Sanity check (based on compile-time constants): fail if the minimum alignment
+   we require is too big.  GC_MALLOC returns pointers aligned to a double
+   machine word, which means that their least significant
+   (JITTER_LG_BYTES_PER_WORD + 1) bits are guaranteed to be zero. */
+  jitter_uint required_zero_bit_mask = JITTERLISP_ALIGNMENT_BIT_MASK;
+  jitter_uint provided_zero_bit_mask
+    = JITTERLISP_BIT_MASK(JITTER_LG_BYTES_PER_WORD + 1);
+  if (required_zero_bit_mask > provided_zero_bit_mask)
+    jitter_fatal ("Alignment requirement not satisfied by GC_MALLOC.  This "
+                  "can be fixed by conditionally using GC_memalign , but the "
+                  "fix is not implemented");
 
   fflush (stdout); fflush (stderr); fprintf (stderr, "...Initialized Boehm GC...\n"); fflush (stdout); fflush (stderr);
 

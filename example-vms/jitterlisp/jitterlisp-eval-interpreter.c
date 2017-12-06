@@ -62,6 +62,52 @@ jitterlisp_cons (jitterlisp_object car, jitterlisp_object cdr)
   return res;
 }
 
+__attribute__ ((unused))
+static inline jitterlisp_object
+jitterlisp_list_0 (void)
+{
+  return JITTERLISP_EMPTY_LIST;
+}
+
+__attribute__ ((unused))
+static inline jitterlisp_object
+jitterlisp_list_1 (jitterlisp_object a)
+{
+  return jitterlisp_cons (a, jitterlisp_list_0 ());
+}
+
+__attribute__ ((unused))
+static inline jitterlisp_object
+jitterlisp_list_2 (jitterlisp_object a, jitterlisp_object b)
+{
+  return jitterlisp_cons (a, jitterlisp_list_1 (b));
+}
+
+__attribute__ ((unused))
+static inline jitterlisp_object
+jitterlisp_list_3 (jitterlisp_object a, jitterlisp_object b,
+                   jitterlisp_object c)
+{
+  return jitterlisp_cons (a, jitterlisp_list_2 (b, c));
+}
+
+__attribute__ ((unused))
+static inline jitterlisp_object
+jitterlisp_list_4 (jitterlisp_object a, jitterlisp_object b,
+                   jitterlisp_object c, jitterlisp_object d)
+{
+  return jitterlisp_cons (a, jitterlisp_list_3 (b, c, d));
+}
+
+__attribute__ ((unused))
+static inline jitterlisp_object
+jitterlisp_list_5 (jitterlisp_object a, jitterlisp_object b,
+                   jitterlisp_object c, jitterlisp_object d,
+                   jitterlisp_object e)
+{
+  return jitterlisp_cons (a, jitterlisp_list_4 (b, c, d, e));
+}
+
 /* Return the encoded car of the given encoded cons, tag-checking. */
 static inline jitterlisp_object
 jitterlisp_car (jitterlisp_object cons)
@@ -154,7 +200,10 @@ jitterlisp_environment_lookup (jitterlisp_object env, jitterlisp_object name)
   struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
   jitterlisp_object res = unencoded_name->global_value;
   if (JITTERLISP_IS_UNDEFINED(res))
-    jitterlisp_error_cloned ("unbound variable");
+    {
+      printf ("About "); jitterlisp_print_to_stream (stdout, name); printf ("\n"); // FIXME: add to the error message
+      jitterlisp_error_cloned ("unbound variable");
+    }
   else
     return res;
 }
@@ -559,24 +608,52 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
 #define JITTERLISP_NO_MORE_ARGS                                       \
   JITTER_BEGIN_                                                       \
     if (! JITTERLISP_IS_EMPTY_LIST(actuals))                          \
-      jitterlisp_error_cloned ("too many primitive actuals");         \
+      {                                                               \
+        /* FIXME: integrate printing in jitterlisp_error_cloned. */   \
+        printf ("About ");                                            \
+        jitterlisp_print_to_stream (stdout, name);                    \
+        printf (": ");                                                \
+        jitterlisp_error_cloned ("too many primitive actuals");       \
+      }                                                               \
   JITTER_END_
 #define JITTERLISP_EVAL_ARG_WITHOUT_CHECKING_TAG                      \
   JITTER_BEGIN_                                                       \
     if (JITTERLISP_IS_EMPTY_LIST(actuals))                            \
-      jitterlisp_error_cloned ("not enough primitive actuals");       \
+      {                                                               \
+        /* FIXME: integrate printing in jitterlisp_error_cloned. */   \
+        printf ("About ");                                            \
+        jitterlisp_print_to_stream (stdout, name);                    \
+        printf (": ");                                                \
+        jitterlisp_error_cloned ("not enough primitive actuals");     \
+      }                                                               \
     if (! JITTERLISP_IS_CONS(actuals))                                \
-      jitterlisp_error_cloned ("primitive actuals not a list");       \
+      {                                                               \
+        /* FIXME: integrate printing in jitterlisp_error_cloned. */   \
+        printf ("About actuals ");                                    \
+        jitterlisp_print_to_stream (stdout, actuals);                 \
+        printf (" for ");                                             \
+        jitterlisp_print_to_stream (stdout, name);                    \
+        printf (": ");                                                \
+        jitterlisp_error_cloned ("primitive actuals not a list");     \
+      }                                                               \
     args [next_arg_index ++]                                          \
       = jitterlisp_eval_interpreter (jitterlisp_car (actuals), env);  \
     actuals = jitterlisp_cdr (actuals);                               \
   JITTER_END_
 #define JITTERLISP_EVAL_ARG(_JITTERLISP_TYPE)                 \
-  JITTER_BEGIN_                                                     \
-    JITTERLISP_EVAL_ARG_WITHOUT_CHECKING_TAG;                       \
-  if (! JITTER_CONCATENATE_TWO(JITTERLISP_IS_, _JITTERLISP_TYPE)(   \
-           args [next_arg_index - 1]))                              \
-    jitterlisp_error_cloned ("invalid type for primitive actual");  \
+  JITTER_BEGIN_                                                       \
+    JITTERLISP_EVAL_ARG_WITHOUT_CHECKING_TAG;                         \
+  if (! JITTER_CONCATENATE_TWO(JITTERLISP_IS_, _JITTERLISP_TYPE)(     \
+           args [next_arg_index - 1]))                                \
+    {                                                                 \
+      /* FIXME: integrate printing in jitterlisp_error_cloned. */     \
+      printf ("About ");                                              \
+      jitterlisp_print_to_stream (stdout, name);                      \
+      printf("'s %i-th (0-based) actual ", next_arg_index - 1);       \
+      jitterlisp_print_to_stream (stdout, args [next_arg_index - 1]); \
+      printf (":\n");                                                 \
+      jitterlisp_error_cloned ("invalid type for primitive actual");  \
+    }                                                                 \
   JITTER_END_
 #define JITTERLISP_EVAL_ARGS_0()  \
   JITTER_BEGIN_                   \
@@ -700,6 +777,13 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
         jitterlisp_error_cloned ("division by zero");
       JITTERLISP_DIVIDED_(res, args [0], args [1]);
     }
+  else if (! strcmp (interned_name, "quotient"))
+    {
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
+      if (args [1] == JITTERLISP_FIXNUM_ENCODE(0))
+        jitterlisp_error_cloned ("quotient of division by zero");
+      JITTERLISP_QUOTIENT_(res, args [0], args [1]);
+    }
   else if (! strcmp (interned_name, "remainder"))
     {
       JITTERLISP_EVAL_ARGS_2(FIXNUM, FIXNUM);
@@ -805,15 +889,13 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
   /* Symbols. */
   else if (! strcmp (interned_name, "gensym"))
     {
-      JITTERLISP_NO_MORE_ARGS;
+      JITTERLISP_EVAL_ARGS_0();
       JITTERLISP_GENSYM_(res);
     }
   /* Vectors. */
   else if (! strcmp (interned_name, "make-vector"))
     {
-      JITTERLISP_EVAL_ARG(FIXNUM);
-      JITTERLISP_EVAL_ARG(ANYTHING);
-      JITTERLISP_NO_MORE_ARGS;
+      JITTERLISP_EVAL_ARGS_2(FIXNUM, ANYTHING);
       if (JITTERLISP_FIXNUM_DECODE(args [0]) < 0)
         jitterlisp_error_cloned ("negative-sized vector");
       JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]);
@@ -831,10 +913,31 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
       putchar ('\n');
       res = JITTERLISP_NOTHING;
     }
+  /* Read. */
+  else if (! strcmp (interned_name, "read"))
+    {
+      JITTERLISP_EVAL_ARGS_0();
+      res = jitterlisp_read_readline_one ("> ");
+    }
+  /* Experimental. */
+  else if (! strcmp (interned_name, "current-environment"))
+    {
+      JITTERLISP_EVAL_ARGS_0();
+      res = env;
+    }
+  else if (! strcmp (interned_name, "eval"))
+    {
+      JITTERLISP_EVAL_ARGS_2(ANYTHING, ANYTHING);
+      // FIXME: this doesn't check the environment format, and is therefore
+      // unsafe.
+      res = jitterlisp_eval_interpreter (args [0], args [1]);
+    }
   /* Default. */
   else
-    jitterlisp_error_cloned ("unbound primitive");
-
+    {
+      printf ("About %s\n", interned_name); // FIXME: add to the error message
+      jitterlisp_error_cloned ("unbound primitive");
+    }
 
 #undef JITTERLISP_EVAL_ARG_WITHOUT_CHECKING_TAG
 #undef JITTERLISP_EVAL_ARG
@@ -846,6 +949,28 @@ jitterlisp_eval_interpreter_primitive (jitterlisp_object name,
   return res;
 }
 
+static jitterlisp_object
+jitterlisp_eval_interpreter_quasiquote (jitterlisp_object cdr,
+                                        jitterlisp_object env)
+{
+  if (! JITTERLISP_IS_CONS(cdr))
+    jitterlisp_error_cloned ("quasiquote arguments not a cons");
+  if (! JITTERLISP_IS_EMPTY_LIST(JITTERLISP_EXP_C_A_CDR(cdr)))
+    jitterlisp_error_cloned ("more than one quasiquote arguments");
+  jitterlisp_object arg = JITTERLISP_EXP_C_A_CAR(cdr);
+
+  /* qq_call will be (quasiquote-procedure (quote arg)) . */
+  // This is certainly optimizable.
+  jitterlisp_object qq_name = jitterlisp_object_quasiquote_procedure;
+  jitterlisp_object quote_name = jitterlisp_object_quote;
+  jitterlisp_object qq_call
+    = jitterlisp_list_2 (qq_name,
+                         jitterlisp_list_2 (quote_name,
+                                            arg));
+  jitterlisp_object expansion
+    = jitterlisp_eval_interpreter (qq_call, env);
+  return jitterlisp_eval_interpreter (expansion, env);
+}
 
 static jitterlisp_object
 jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
@@ -874,6 +999,8 @@ jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
     return jitterlisp_eval_interpreter_let (cdr, env);
   else if (symbol == jitterlisp_object_let_star)
     return jitterlisp_eval_interpreter_let_star (cdr, env);
+  else if (symbol == jitterlisp_object_quasiquote)
+    return jitterlisp_eval_interpreter_quasiquote (cdr, env);
   else if (symbol == jitterlisp_object_quote)
     return jitterlisp_eval_interpreter_quote (cdr, env);
   else if (symbol == jitterlisp_object_set_bang)
