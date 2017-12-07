@@ -232,8 +232,8 @@ jitterlisp_environment_has (jitterlisp_object env, jitterlisp_object name)
 }
 
 /* Destructively update the first binding for the given name in the given
-   non-global environment, setting it to the given new value.  If the name is
-   not bound in the non-global environment then modify the global binding. */
+   non-global environment, or the global binding if no non-global environment
+   exists.  Error out if the name is not bound. */
 static void
 jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
                             jitterlisp_object new_value)
@@ -256,9 +256,15 @@ jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
     }
 
   /* ...The symbol is not bound in the given local environment.  Change its
-     global binding. */
+     global binding if one exists, or fail. */
   struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
-  unencoded_name->global_value = new_value;
+  if (! JITTERLISP_IS_UNDEFINED(unencoded_name->global_value))
+    unencoded_name->global_value = new_value;
+  else
+    {
+      printf ("About "); jitterlisp_print_to_stream (stdout, name); printf ("\n"); // FIXME: add to the error message
+      jitterlisp_error_cloned ("set! on unbound variable");
+    }
 }
 
 
