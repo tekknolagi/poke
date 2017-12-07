@@ -306,6 +306,38 @@
 
 
 
+;;;; replicate.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (replicate-iterative n x)
+  (let ((res '()))
+    (while (> n 0)
+      (set! res (cons x res))
+      (set! n (1- n)))
+    res))
+
+(define (replicate-tail-recursive-helper n x acc)
+  (if (zero? n)
+      acc
+      (replicate-tail-recursive-helper (1- n) x (cons x acc))))
+(define (replicate-tail-recursive n x)
+  (replicate-tail-recursive-helper n x '()))
+
+(define (replicate-non-tail-recursive n x)
+  (if (zero? n)
+      '()
+      (cons x (replicate-non-tail-recursive (1- n) x))))
+
+(define (replicate n x)
+  (replicate-iterative n x))
+
+;; Just an alias.
+(define (make-list n x)
+  (replicate n x))
+
+
+
+
 ;;;; last-cons.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -549,6 +581,131 @@
 
 
 
+;;;; take, take-reversed.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; A break or return form would be useful here.
+(define (take-reversed-iterative n xs)
+  (let ((res '())
+        (go-on #t))
+    (while go-on
+      (cond ((null? xs)
+             (set! go-on #f))
+            ((zero? n)
+             (set! go-on #f))
+            (#t
+             (set! res (cons (car xs) res))
+             (set! xs (cdr xs))
+             (set! n (1- n)))))
+    res))
+(define (take-iterative n xs)
+  (reverse!-iterative (take-reversed-iterative n xs)))
+
+(define (take-tail-recursive n xs)
+  (reverse! (take-reversed-tail-recursive n xs)))
+
+(define (take-non-tail-recursive n xs)
+  (cond ((zero? n)
+         '())
+        ((null? xs)
+         '())
+        (#t
+         (cons (car xs) (take-non-tail-recursive (1- n) (cdr xs))))))
+
+(define (take-reversed-tail-recursive-helper n xs acc)
+  (cond ((zero? n)
+         acc)
+        ((null? xs)
+         acc)
+        (#t
+         (take-reversed-tail-recursive-helper (1- n)
+                                              (cdr xs)
+                                              (cons (car xs) acc)))))
+(define (take-reversed-tail-recursive n xs)
+  (take-reversed-tail-recursive-helper n xs '()))
+
+(define (take-reversed n xs)
+  (take-reversed-iterative n xs))
+
+(define (take n xs)
+  (take-iterative n xs))
+
+
+
+
+;;;; take!
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; A break or return form would be useful here.
+(define (take!-iterative n xs)
+  (if (zero? n)
+      '()
+      (let ((rest xs)
+            (go-on #t))
+        (while go-on
+          (cond ((= n 1)
+                 (if (null? rest)
+                     'do-nothing
+                     (set-cdr! rest '()))
+                 (set! go-on #f))
+                ((null? rest)
+                 (set! go-on #f))
+                (#t
+                 (set! rest (cdr rest))
+                 (set! n (1- n)))))
+        xs)))
+
+(define (take!-tail-recursive-helper n xs)
+  (cond ((= n 1)
+         (if (null? xs)
+             'do-nothing
+             (set-cdr! xs '())))
+        ((null? xs))
+        (#t
+         (take!-tail-recursive-helper (1- n) (cdr xs)))))
+(define (take!-tail-recursive n xs)
+  (if (zero? n)
+      '()
+      (begin
+        (take!-tail-recursive-helper n xs)
+        xs)))
+
+(define (take! n xs)
+  (take!-iterative n xs))
+
+
+
+
+;;;; drop.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; A break or return form would be useful here.
+(define (drop-iterative n xs)
+  (let ((go-on #t))
+    (while go-on
+      (cond ((null? xs)
+             (set! go-on #f))
+            ((zero? n)
+             (set! go-on #f))
+            (#t
+             (set! xs (cdr xs))
+             (set! n (1- n)))))
+    xs))
+
+(define (drop-tail-recursive n xs)
+  (cond ((zero? n)
+         xs)
+        ((null? xs)
+         '())
+        (#t
+         (drop-tail-recursive (1- n) (cdr xs)))))
+
+(define (drop n xs)
+  (drop-iterative n xs))
+
+
+
+
 ;;;; map!.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -770,6 +927,12 @@
 (define (iota n)
   (iota-iterative n))
 
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Sorting.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
