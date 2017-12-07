@@ -571,9 +571,10 @@ jitterlisp_eval_interpreter_while (jitterlisp_object cdr,
    a pointer to local storage as argument; that prevents GCC from compiling the
    call as a sibling call optimization, which in itself is a very minor loss.
    However having the body of this function inlined in
-   jitterlisp_eval_interpreter_call (as of GCC 8, Early October 2017 snapshot)
-   would prevent sibling call compilation in the case of *closure* calls,
-   leaking stack space in an unacceptable way for deeply nested tail calls. */
+   jitterlisp_eval_interpreter_call would prevent sibling call compilation in
+   the case of *closure* calls as well, leaking stack space in an unacceptable
+   way for deeply nested tail calls.
+   Tested with a GCC 8 snapshot from early October 2017. */
 __attribute__ ((noinline))
 static jitterlisp_object
 jitterlisp_eval_interpreter_call_primitive (jitterlisp_object primitive,
