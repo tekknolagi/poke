@@ -900,6 +900,91 @@ struct jitterlisp_closure
 
 
 
+/* S-expression representation: primitives.
+ * ************************************************************************** */
+
+/* Primitives are represented boxed. */
+
+#define JITTERLISP_PRIMITIVE_PTAG           0b110
+
+#define JITTERLISP_PRIMITIVE_STAG_BIT_NO    0
+#define JITTERLISP_PRIMITIVE_STAG           0b0
+
+/* How many arguments a primitive can take, as a maximum. */
+#define JITTERLISP_PRIMITIVE_MAX_IN_ARITY   4
+
+/* Primitives are call-by-value (therefore they all behave as procedures: if and
+   or , for example, cannot be primitives) and have a fixed in-arity, which in
+   interpreted code must be checked at call time.  Primitives, like procedures,
+   always return exactly one result, which may be #<nothing> . */
+
+/* A primitive C function takes as its only argument an initial pointer to a C
+   array of already evaluated actual arguments.  The primitive function checks
+   the actual argument types (when needed), but not their number. */
+typedef jitterlisp_object (*jitterlisp_primitive_function)
+(const jitterlisp_object *evaluated_actuals);
+
+/* A primitive descriptor.  Primitives descriptors are all global constants and
+   don't live on the garbage-collected heap.  They don't need to be GC roots as
+   they don't point to other Lisp objects. */
+struct jitterlisp_primitive
+{
+  /* The primitive Lisp name as a C string. */
+  char *name;
+
+  /* How many arguments the primitive takes. */
+  jitter_uint in_arity;
+
+  /* A C function implementing the primitive. */
+  jitterlisp_primitive_function function;
+
+  /* /\* A C function pointer of the appropriate in-arity. *\/ */
+  /* union */
+  /* { */
+  /*   /\* A function pointer per in-arity.  Which one is valid of course depends on */
+  /*      in_arity. *\/ */
+  /*   jitterlisp_primitive_function_0 function_0; */
+  /*   jitterlisp_primitive_function_1 function_1; */
+  /*   jitterlisp_primitive_function_2 function_2; */
+  /*   jitterlisp_primitive_function_3 function_3; */
+  /*   jitterlisp_primitive_function_4 function_4; */
+  /* }; */
+};
+
+/* Primitive tag checking, encoding and decoding. */
+#define JITTERLISP_IS_PRIMITIVE(_jitterlisp_tagged_object)  \
+  JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),           \
+                     JITTERLISP_PRIMITIVE_PTAG,             \
+                     JITTERLISP_PRIMITIVE_STAG,             \
+                     JITTERLISP_PRIMITIVE_STAG_BIT_NO)
+#define JITTERLISP_PRIMITIVE_ENCODE(_jitterlisp_untagged_primitive)  \
+  JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_primitive,          \
+                            JITTERLISP_PRIMITIVE_PTAG,               \
+                            JITTERLISP_PRIMITIVE_STAG,               \
+                            JITTERLISP_PRIMITIVE_STAG_BIT_NO)
+#define JITTERLISP_PRIMITIVE_DECODE(_jitterlisp_tagged_primitive)       \
+  ((struct jitterlisp_primitive *)                                      \
+   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_primitive),      \
+                                   JITTERLISP_PRIMITIVE_PTAG,           \
+                                   JITTERLISP_PRIMITIVE_STAG,           \
+                                   JITTERLISP_PRIMITIVE_STAG_BIT_NO)))
+
+
+
+
+/* S-expression representation: procedures.
+ * ************************************************************************** */
+
+/* A "procedure" doesn't exist as a separate tag: a procedure is simply either a
+   closure or a primitive; from the user's point of view they are
+   interchangeable. */
+#define JITTERLISP_IS_PROCEDURE(_jitterlisp_tagged_object)  \
+  (JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)         \
+   || JITTERLISP_IS_PRIMITIVE(_jitterlisp_tagged_object))
+
+
+
+
 /* S-expression representation: vectors.
  * ************************************************************************** */
 
@@ -954,6 +1039,7 @@ struct jitterlisp_vector
    moving GC. */
 extern jitterlisp_object jitterlisp_object_begin;
 extern jitterlisp_object jitterlisp_object_cond;
+extern jitterlisp_object jitterlisp_object_current_environment;
 extern jitterlisp_object jitterlisp_object_define;
 extern jitterlisp_object jitterlisp_object_if;
 extern jitterlisp_object jitterlisp_object_lambda;
@@ -962,7 +1048,7 @@ extern jitterlisp_object jitterlisp_object_let_star;
 extern jitterlisp_object jitterlisp_object_quasiquote;
 extern jitterlisp_object jitterlisp_object_quasiquote_procedure;
 extern jitterlisp_object jitterlisp_object_quote;
-extern jitterlisp_object jitterlisp_object_set_bang;
+extern jitterlisp_object jitterlisp_object_setb;
 extern jitterlisp_object jitterlisp_object_while;
 
 

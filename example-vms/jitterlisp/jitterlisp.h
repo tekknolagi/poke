@@ -36,6 +36,7 @@
 #include "jitterlisp-operations.h"
 #include "jitterlisp-reader.h"
 #include "jitterlisp-run-input.h"
+#include "jitterlisp-primitives.h"
 #include "jitterlisp-printer.h"
 #include "jitterlisp-settings.h"
 #include "jitterlisp-eval.h"

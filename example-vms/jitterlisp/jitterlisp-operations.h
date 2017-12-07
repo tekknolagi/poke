@@ -341,14 +341,13 @@
   JITTER_END_
 
 #define JITTERLISP_QUOTIENT_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1) \
-  JITTER_BEGIN_                                                                \
-    _jitterlisp_out                                                            \
-      = JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_in0, _jitterlisp_in1);         \
-  JITTER_END_
+  JITTERLISP_DIVIDED_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)
 
 #define JITTERLISP_REMAINDER_(_jitterlisp_out, _jitterlisp_in0,           \
                               _jitterlisp_in1)                            \
   JITTER_BEGIN_                                                           \
+    if (_jitterlisp_in1 == JITTERLISP_FIXNUM_ENCODE(0))                   \
+      jitterlisp_error_cloned ("remainder of division by zero");          \
     _jitterlisp_out                                                       \
       = JITTERLISP_EXP_FF_F_REMAINDER(_jitterlisp_in0, _jitterlisp_in1);  \
   JITTER_END_
@@ -437,18 +436,18 @@
     (_jitterlisp_out) = _jitterlisp_tmp->cdr;              \
   JITTER_END_
 
-#define JITTERLISP_SET_CAR_(_jitterlisp_out,       \
-                            _jitterlisp_cons,      \
-                            _jitterlisp_new_car)   \
+#define JITTERLISP_SET_CARB_(_jitterlisp_out,      \
+                             _jitterlisp_cons,     \
+                             _jitterlisp_new_car)  \
   JITTER_BEGIN_                                    \
     struct jitterlisp_cons *_jitterlisp_tmp        \
       = JITTERLISP_CONS_DECODE(_jitterlisp_cons);  \
     _jitterlisp_tmp->car = (_jitterlisp_new_car);  \
     (_jitterlisp_out) = JITTERLISP_NOTHING;        \
   JITTER_END_
-#define JITTERLISP_SET_CDR_(_jitterlisp_out,       \
-                            _jitterlisp_cons,      \
-                            _jitterlisp_new_cdr)   \
+#define JITTERLISP_SET_CDRB_(_jitterlisp_out,      \
+                             _jitterlisp_cons,     \
+                             _jitterlisp_new_cdr)  \
   JITTER_BEGIN_                                    \
     struct jitterlisp_cons *_jitterlisp_tmp        \
       = JITTERLISP_CONS_DECODE(_jitterlisp_cons);  \
@@ -648,10 +647,10 @@
   JITTER_END_
 
 /* Compute a tagged boolean, #t iff the given in-argument is a closure . */
-#define JITTERLISP_PROCEDUREP_(_jitterlisp_out, _jitterlisp_in0)          \
-  JITTER_BEGIN_                                                           \
-    _jitterlisp_out =                                                     \
-      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_CLOSURE(_jitterlisp_in0));  \
+#define JITTERLISP_PROCEDUREP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                             \
+    _jitterlisp_out =                                                       \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_PROCEDURE(_jitterlisp_in0));  \
   JITTER_END_
 
 /* Compute a tagged boolean, #t iff the given in-argument is a vector . */
@@ -659,6 +658,42 @@
   JITTER_BEGIN_                                                          \
     _jitterlisp_out =                                                    \
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_VECTOR(_jitterlisp_in0));  \
+  JITTER_END_
+
+
+
+
+/* I/O operations.
+ * ************************************************************************** */
+
+#define JITTERLISP_DISPLAY_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTER_BEGIN_                                                \
+    jitterlisp_print_to_stream (stdout, _jitterlisp_in0);      \
+    _jitterlisp_out = JITTERLISP_NOTHING;                      \
+  JITTER_END_
+
+#define JITTERLISP_NEWLINE_(_jitterlisp_out)  \
+  JITTER_BEGIN_                               \
+    putchar ('\n');                           \
+    _jitterlisp_out = JITTERLISP_NOTHING;     \
+  JITTER_END_
+
+#define JITTERLISP_READ_(_jitterlisp_out)                   \
+  JITTER_BEGIN_                                             \
+    putchar ('\n');                                         \
+    _jitterlisp_out = jitterlisp_read_readline_one ("> ");  \
+  JITTER_END_
+
+
+
+
+/* Interpretation operations.
+ * ************************************************************************** */
+
+/* Eval the given expression in the given non-global environment. */
+#define JITTERLISP_EVAL_(_jitterlisp_out, _jitterlisp_in0,  _jitterlisp_in1)  \
+  JITTER_BEGIN_                                                               \
+    jitterlisp_error_cloned ("eval operation unimplemented");                 \
   JITTER_END_
 
 

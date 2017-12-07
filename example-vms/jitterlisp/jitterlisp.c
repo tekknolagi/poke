@@ -39,6 +39,7 @@ jitterlisp_initialize (void)
   /* Initialize every subsystem. */
   jitterlisp_memory_initialize ();
   jitterlisp_sexpression_initialize ();
+  jitterlisp_primitives_initialize ();
   jitterlisp_error_initialize ();
 
 #ifdef JITTER_HAS_GNU_READLINE
@@ -56,6 +57,7 @@ jitterlisp_finalize (void)
   fflush (stdout); fflush (stderr); fprintf (stderr, "Finalizing...\n"); fflush (stdout); fflush (stderr);
   /* Finalize every subsystem, in the opposite order of initialization. */
   jitterlisp_error_finalize ();
+  jitterlisp_primitives_finalize ();
   jitterlisp_sexpression_finalize ();
   jitterlisp_memory_finalize ();
   jitterlisp_settings_finalize (); /* There's a dynamic buffer to finalize. */

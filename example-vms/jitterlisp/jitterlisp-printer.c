@@ -121,6 +121,7 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 # define UNINTERNEDSYMBOLATTR ""
 # define UNIQUEATTR           ""
 # define CLOSUREATTR          ""
+# define PRIMITIVEATTR        ""
 # define VECTORATTR           ""
 # define ERRORATTR            ""
 #else
@@ -131,6 +132,7 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 # define UNINTERNEDSYMBOLATTR LIGHTGREEN ITALIC UNDERLINE
 # define UNIQUEATTR           LIGHTMAGENTA UNDERLINE ITALIC //YELLOW UNDERLINE ITALIC //LIGHTMAGENTA UNDERLINE ITALIC
 # define CLOSUREATTR          LIGHTMAGENTA // WHITE
+# define PRIMITIVEATTR        LIGHTMAGENTA ITALIC UNDERLINE
 # define VECTORATTR           LIGHTRED ITALIC UNDERLINE
 # define ERRORATTR            RED REVERSE
 #endif // #ifdef NOTERMINAL
@@ -411,7 +413,7 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
     {
       struct jitterlisp_closure * const closure = JITTERLISP_CLOSURE_DECODE(o);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_string (cp, cps, "#<procedure ");
+      jitterlisp_print_string (cp, cps, "#<closure ");
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print (cp, cps, closure->environment);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
@@ -425,6 +427,17 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
          in this case as well. */
       jitterlisp_print_cdr (cp, cps, closure->body);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, ">");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_PRIMITIVE(o))
+    {
+      struct jitterlisp_primitive * const primitive = JITTERLISP_PRIMITIVE_DECODE(o);
+      jitterlisp_print_decoration (cp, cps, PRIMITIVEATTR);
+      jitterlisp_print_string (cp, cps, "#<");
+      jitterlisp_print_long_long (cp, cps, primitive->in_arity, false, 10);
+      jitterlisp_print_string (cp, cps, "-ary primitive ");
+      jitterlisp_print_string (cp, cps, primitive->name);
       jitterlisp_print_string (cp, cps, ">");
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }

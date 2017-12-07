@@ -173,7 +173,7 @@ jitterlisp_repl (void)
               jitterlisp_print_to_stream (stdout, form);
               if (! JITTERLISP_IS_NOTHING (result))
                 {
-                  printf (" ==> ");
+                  printf ("\n  ==>\n  ");
                   jitterlisp_print_to_stream (stdout, result);
                 }
               printf ("\n");

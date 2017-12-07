@@ -37,7 +37,7 @@
 
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Arithmetic library.
+;;;; Arithmetic and number library.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -50,6 +50,13 @@
 
 (define (odd? n)
   (not (zero? (remainder n 2))))
+
+;;;; number?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (number? n)
+  (fixnum? n)) ;; There is only one number type right now.
+
 
 
 
@@ -1016,10 +1023,25 @@
 ;; (display (f 0)) (newline)
 ;; (display 'done) (newline)
 
-(define q (destructuring-bind-procedure '(a b) 'args '((display #t))))
-(display q)
-(newline)
-(display (make-vector 10 #f))
-(newline)
-(display (make-vector 10 7))
-(newline)
+;; (define q (destructuring-bind-procedure '(a b) 'args '((display #t))))
+;; (display q)
+;; (newline)
+;; (display (make-vector 10 #f))
+;; (newline)
+;; (display (make-vector 10 7))
+;; (newline)
+
+;; FIXME: make this short-circuit and variadic once I have macros.
+(define (or a b) (if a #t b))
+
+(define (derivative exp x)
+  (cond ((symbol? exp)
+         (if (eq? x exp)
+             1
+             0))
+        ((or (eq? (car exp) '+)
+             (eq? (car exp) '-))
+         `(,(car exp) ,@(map (lambda (an-exp) (derivative an-exp x))
+                             (cdr exp))))
+        (#t
+         (error 'unimplemented))))

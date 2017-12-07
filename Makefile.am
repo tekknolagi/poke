@@ -1018,6 +1018,8 @@ SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-eval.c \
   example-vms/jitterlisp/jitterlisp-operations.h \
   example-vms/jitterlisp/jitterlisp-operations.c \
+  example-vms/jitterlisp/jitterlisp-primitives.h \
+  example-vms/jitterlisp/jitterlisp-primitives.c \
   example-vms/jitterlisp/jitterlisp-printer.h \
   example-vms/jitterlisp/jitterlisp-printer.c \
   example-vms/jitterlisp/jitterlisp-reader.h \

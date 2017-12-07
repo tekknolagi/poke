@@ -177,9 +177,9 @@ jitterlisp_allocate (size_t size_in_bytes)
  * ************************************************************************** */
 
 /* The functions here are not for the user to call directly.  The user is
-   supposed to initialize and finalize every JitterLisp subsystem at the same
-   time by calling jitterlisp_initialize and jitterlisp_finalize , which in
-   their turn will call these functions as needed. */
+   supposed to initialize and finalize every JitterLisp subsystem by calling
+   jitterlisp_initialize and jitterlisp_finalize , which in their turn will call
+   these functions in the appropriate order. */
 
 /* Initialize the memory subsystem.  It's forbidden to heap-allocate any Lisp
    object until this function has been called. */
