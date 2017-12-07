@@ -164,6 +164,24 @@
 
 
 
+/* Primitive descriptor definition instrastructure.
+ * ************************************************************************** */
+
+/* Expand to a constant initializer for a struct jitterlisp_primitive including
+   the given Lisp name, the given in-arity and the given suffix for a C
+   function. */
+#define JITTERLISP_PRIMITIVE_STRUCT_(_jitterlisp_lisp_name,        \
+                                     _jitterlisp_in_arity,         \
+                                     _jitterlisp_name_suffix)      \
+  {                                                                \
+    (_jitterlisp_lisp_name),                                       \
+    ((jitter_uint) (_jitterlisp_in_arity)),                        \
+    JITTERLISP_PRIMITIVE_C_FUNCTION_NAME(_jitterlisp_name_suffix)  \
+  }
+
+
+
+
 /* Primitive function definitions.
  * ************************************************************************** */
 
@@ -265,25 +283,10 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(eval, ANYTHING, ANYTHING,
 
 
 
-/* Primitive descriptor definition instrastructure.
- * ************************************************************************** */
-
-#define JITTERLISP_PRIMITIVE_STRUCT_(_jitterlisp_lisp_name,        \
-                                     _jitterlisp_in_arity,         \
-                                     _jitterlisp_name_suffix)      \
-  {                                                                \
-    (_jitterlisp_lisp_name),                                       \
-    ((jitter_uint) (_jitterlisp_in_arity)),                        \
-    JITTERLISP_PRIMITIVE_C_FUNCTION_NAME(_jitterlisp_name_suffix)  \
-  }
-
-
-
-
 /* Primitive descriptor definitions.
  * ************************************************************************** */
 
-/* Define every primitive descriptor. */
+/* Define every primitive descriptor in a global constant array. */
 static const struct jitterlisp_primitive
 jitterlisp_primitives []
   = {
@@ -340,7 +343,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_STRUCT_("eval", 2, eval)
     };
 
-/* How many primitive descriptrs there are. */
+/* How many primitive descriptors there are. */
 static const size_t
 jitterlisp_primitive_no
   = sizeof (jitterlisp_primitives) / sizeof (struct jitterlisp_primitive);
@@ -379,7 +382,6 @@ jitterlisp_primitives_initialize (void)
   int i;
   for (i = 0; i < jitterlisp_primitive_no; i ++)
     {
-      printf ("Making the symbol %s for a primitive\n", jitterlisp_primitives [i].name);
       struct jitterlisp_symbol *symbol_object
         = jitterlisp_symbol_make_interned (jitterlisp_primitives [i].name);
       symbol_object->global_value
