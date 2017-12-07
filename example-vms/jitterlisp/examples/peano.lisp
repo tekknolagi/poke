@@ -20,18 +20,6 @@
 ;;; along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-;;;; Compatibility.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; This code is designed to run on JitterLisp and on Scheme as well.
-;;; Since 1- is not standard I define my own.
-
-(define (predecessor n)
-  (- n 1))
-
-
-
-
 ;;;; Peano fundamental operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -80,18 +68,20 @@
            (peano-* p2 (peano-/-acc p1 p2 peano-zero))))
 
 (define (peano-= p1 p2)
-  (if (peano-zero? p1)
-      (peano-zero? p2)
-      (if (peano-zero? p2)
-          #f
-          (peano-= (peano-predecessor p1) (peano-predecessor p2)))))
+  (cond ((peano-zero? p1)
+         (peano-zero? p2))
+        ((peano-zero? p2)
+         #f)
+        (#t
+         (peano-= (peano-predecessor p1) (peano-predecessor p2)))))
 
 (define (peano-< p1 p2)
-  (if (peano-zero? p1)
-      (not (peano-zero? p2))
-      (if (peano-zero? p2)
-          #f
-          (peano-< (peano-predecessor p1) (peano-predecessor p2)))))
+  (cond ((peano-zero? p1)
+         (not (peano-zero? p2)))
+        ((peano-zero? p2)
+         #f)
+        (#t
+         (peano-< (peano-predecessor p1) (peano-predecessor p2)))))
 
 (define (peano-<= p1 p2)
   (if (peano-= p1 p2)
@@ -129,9 +119,9 @@
 (define (tak x y z)
   (if (<= x y)
       y
-      (tak (tak (predecessor x) y z)
-           (tak (predecessor y) z x)
-           (tak (predecessor z) x y))))
+      (tak (tak (1- x) y z)
+           (tak (1- y) z x)
+           (tak (1- z) x y))))
 
 
 
@@ -149,9 +139,9 @@
 (define (fixnum->peano-acc n a)
   (if (zero? n)
       a
-      (fixnum->peano-acc (predecessor n) (peano-successor a))))
+      (fixnum->peano-acc (1- n) (peano-successor a))))
 (define (fixnum->peano n)
-  (fixnum->peano-acc n '()))
+  (fixnum->peano-acc n peano-zero))
 
 
 
