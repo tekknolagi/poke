@@ -29,7 +29,7 @@
 
 
 (define (error message)
-  (display (cons 'error: message))
+  (display (cons 'error: (cons message '())))
   (newline)
   fail-by-looking-at-an-unbound-variable)
 
@@ -287,6 +287,52 @@
   (destructuring-bind-recursive formals-template args body-forms))
 
 ;; FIXME: check that the formals-template doesn't require non-linear bindings.
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Conses.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; Composed selectors.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Length 2.
+(define (caar x) (car (car x)))
+(define (cadr x) (car (cdr x)))
+(define (cdar x) (cdr (car x)))
+(define (cddr x) (cdr (cdr x)))
+
+;; Length 3.
+(define (caaar x) (car (caar x)))
+(define (caadr x) (car (cadr x)))
+(define (cadar x) (car (cdar x)))
+(define (caddr x) (car (cddr x)))
+(define (cdaar x) (cdr (caar x)))
+(define (cdadr x) (cdr (cadr x)))
+(define (cddar x) (cdr (cdar x)))
+(define (cdddr x) (cdr (cddr x)))
+
+;; Length 4.
+(define (caaaar x) (car (caaar x)))
+(define (caaadr x) (car (caadr x)))
+(define (caadar x) (car (cadar x)))
+(define (caaddr x) (car (caddr x)))
+(define (cadaar x) (car (cdaar x)))
+(define (cadadr x) (car (cdadr x)))
+(define (caddar x) (car (cddar x)))
+(define (cadddr x) (car (cdddr x)))
+(define (cdaaar x) (cdr (caaar x)))
+(define (cdaadr x) (cdr (caadr x)))
+(define (cdadar x) (cdr (cadar x)))
+(define (cdaddr x) (cdr (caddr x)))
+(define (cddaar x) (cdr (cdaar x)))
+(define (cddadr x) (cdr (cdadr x)))
+(define (cdddar x) (cdr (cddar x)))
+(define (cddddr x) (cdr (cdddr x)))
 
 
 
@@ -841,6 +887,50 @@
   (for-all?-iterative p xs))
 
 
+;;;; filter, filter-reversed.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (filter-reversed-iterative p xs)
+  (let ((res '()))
+    (while (not (null? xs))
+      (if (p (car xs))
+          (set! res (cons (car xs) res))
+          'do-nothing)
+      (set! xs (cdr xs)))
+    res))
+
+(define (filter-iterative p xs)
+  (reverse!-iterative (filter-reversed-iterative p xs)))
+
+(define (filter-non-tail-recursive p xs)
+  (cond ((null? xs)
+         '())
+        ((p (car xs))
+         (cons (car xs) (filter-non-tail-recursive p (cdr xs))))
+        (#t
+         (filter-non-tail-recursive p (cdr xs)))))
+
+(define (filter-reversed-tail-recursive-helper p xs acc)
+  (cond ((null? xs)
+         acc)
+        ((p (car xs))
+         (filter-reversed-tail-recursive-helper p (cdr xs) (cons (car xs) acc)))
+        (#t
+         (filter-reversed-tail-recursive-helper p (cdr xs) acc))))
+(define (filter-reversed-tail-recursive p xs)
+  (filter-reversed-tail-recursive-helper p xs '()))
+
+(define (filter-tail-recursive p xs)
+  (reverse!-tail-recursive (filter-reversed-tail-recursive p xs)))
+
+(define (filter-reversed p xs)
+  (filter-reversed-tail-recursive p xs))
+
+(define (filter p xs)
+  (filter-tail-recursive p xs))
+
+
+
 
 
 ;;;; range-reversed.
@@ -1197,14 +1287,3 @@
 ;; FIXME: make this short-circuit and variadic once I have macros.
 (define (or a b) (if a #t b))
 
-(define (derivative exp x)
-  (cond ((symbol? exp)
-         (if (eq? x exp)
-             1
-             0))
-        ((or (eq? (car exp) '+)
-             (eq? (car exp) '-))
-         `(,(car exp) ,@(map (lambda (an-exp) (derivative an-exp x))
-                             (cdr exp))))
-        (#t
-         (error 'unimplemented))))
