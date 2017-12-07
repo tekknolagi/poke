@@ -336,6 +336,8 @@
 
 #define JITTERLISP_DIVIDED_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1) \
   JITTER_BEGIN_                                                                \
+    if (_jitterlisp_in1 == JITTERLISP_FIXNUM_ENCODE(0))                        \
+      jitterlisp_error_cloned ("division by zero");                            \
     _jitterlisp_out                                                            \
       = JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_in0, _jitterlisp_in1);         \
   JITTER_END_
