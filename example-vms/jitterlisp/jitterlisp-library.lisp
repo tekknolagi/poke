@@ -752,6 +752,63 @@
 
 
 
+;;;; alist functions.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (alist? x)
+  (cond ((null? x)
+         #t)
+        ((non-cons? x)
+         #f)
+        ((cons? (car x))
+         (alist? (cdr x)))
+        (#t
+         #f)))
+
+(define (assq key alist)
+  (cond ((null? alist)
+         #f)
+        ((eq? (caar alist) key)
+         (car alist))
+        (#t
+         (assq key (cdr alist)))))
+
+(define (rassq value alist)
+  (cond ((null? alist)
+         #f)
+        ((eq? (cdar alist) value)
+         (car alist))
+        (#t
+         (rassq value (cdr alist)))))
+
+(define (del-assq object alist)
+  (cond ((null? alist)
+         '())
+        ((eq? (caar alist) object)
+         (del-assq object (cdr alist)))
+        (#t
+         (cons (car alist) (del-assq object (cdr alist))))))
+
+;; FIXME: implement del-assq! .
+
+(define (alist-copy alist)
+  (let ((res '())
+        (first-cons #f))
+    (while (non-null? alist)
+      (set! first-cons (car alist))
+      (set! res (cons (cons (car first-cons) (cdr first-cons)) res))
+      (set! alist (cdr alist)))
+    (reverse! res)))
+
+(define (alist-get key alist)
+  (let ((a-cons (assq key alist)))
+    (if (cons? a-cons)
+        (cdr a-cons)
+        (error `(alist-get: key ,key not found in alist ,alist)))))
+
+
+
+
 ;;;; map!.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1287,3 +1344,50 @@
 ;; FIXME: make this short-circuit and variadic once I have macros.
 (define (or a b) (if a #t b))
 
+(define macro-table
+  '())
+(define (define-as-macro symbol low-level-macro)
+  (set! macro-table
+        (cons (cons symbol low-level-macro)
+              (del-assq symbol macro-table))))
+
+(define (macro-name? symbol)
+  (if (assq symbol macro-table)
+      #t
+      #f))
+
+(define (macro-lookup symbol)
+  (let ((a-cons (assq symbol macro-table)))
+    (if a-cons
+        (cdr a-cons)
+        (error `(unbound macro name ,symbol)))))
+
+(define (macroexpand sexp)
+  (cond ((symbol? sexp)
+         `(VARIABLE ,sexp))
+        ((non-cons? sexp)
+         `(LITERAL ,sexp))
+        (#t
+         (macroexpand-cons (car sexp) (cdr sexp)))))
+
+(define (macroexpand-cons rator rands)
+  (cond ((non-symbol? rator)
+         `(CALL ,(macroexpand rator)
+                ,@(map macroexpand rands)))
+        ((eq? rator 'set!)
+         `(SET! ,(car rands)
+                ,(macroexpand `(begin ,@(cdr rands)))))
+        ((eq? rator 'begin)
+         (macroexpand-begin rands))
+        (#t
+         `(CALL (VARIABLE ,rator)
+                ,@(map macroexpand rands)))))
+
+(define (macroexpand-begin forms)
+  (cond ((null? forms)
+         `(LITERAL ,(begin)))
+        ((null? (cdr forms))
+         (macroexpand (car forms)))
+        (#t
+         `(SEQUENCE ,(macroexpand (car forms))
+                    ,(macroexpand-begin (cdr forms))))))

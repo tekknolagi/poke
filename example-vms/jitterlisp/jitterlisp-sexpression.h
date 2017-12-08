@@ -905,7 +905,7 @@ struct jitterlisp_closure
 
 /* Primitives are represented boxed. */
 
-#define JITTERLISP_PRIMITIVE_PTAG           0b110
+#define JITTERLISP_PRIMITIVE_PTAG           0b101
 
 #define JITTERLISP_PRIMITIVE_STAG_BIT_NO    0
 #define JITTERLISP_PRIMITIVE_STAG           0b0
@@ -975,9 +975,10 @@ struct jitterlisp_primitive
 /* S-expression representation: procedures.
  * ************************************************************************** */
 
-/* A "procedure" doesn't exist as a separate tag: a procedure is simply either a
-   closure or a primitive; from the user's point of view they are
-   interchangeable. */
+/* "Procedures" don't exist as objects with a tag of their own: a procedure is
+   either a closure or a primitive.  Of course they are implemented differently
+   but from the user's point of view they are interchangeable, which is why
+   this type checking is useful. */
 #define JITTERLISP_IS_PROCEDURE(_jitterlisp_tagged_object)  \
   (JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)         \
    || JITTERLISP_IS_PRIMITIVE(_jitterlisp_tagged_object))
@@ -991,7 +992,7 @@ struct jitterlisp_primitive
 /* Vectors are represented boxed as a header pointing to the actual vector
    elements as a separate heap buffer, not directly accessible by the user. */
 
-#define JITTERLISP_VECTOR_PTAG           0b101
+#define JITTERLISP_VECTOR_PTAG           0b110
 
 #define JITTERLISP_VECTOR_STAG_BIT_NO    0
 #define JITTERLISP_VECTOR_STAG           0b0
@@ -1023,6 +1024,100 @@ struct jitterlisp_vector
                                    JITTERLISP_VECTOR_PTAG,           \
                                    JITTERLISP_VECTOR_STAG,           \
                                    JITTERLISP_VECTOR_STAG_BIT_NO)))
+
+
+
+
+/* [FIXME: tentative] S-expression representation: ASTs.
+ * ************************************************************************** */
+
+// FIXME: support "extended" types sharing tags at the cost of having a header.
+
+/* FIXME: comment */
+
+#define JITTERLISP_AST_PTAG           0b111
+
+#define JITTERLISP_AST_STAG_BIT_NO    0
+#define JITTERLISP_AST_STAG           0b0
+
+/* The AST case as an expression case identifier. */
+enum jitterlisp_ast_case
+  {
+    /* Literal constant.  Exactly one sub, any s-expression. */
+    jitterlisp_ast_case_literal,
+
+    /* Variable.  Exactly one sub, a symbol. */
+    jitterlisp_ast_case_variable,
+
+    /* Two-way conditional.  Exactly three subs, ASTs. */
+    jitterlisp_ast_case_if,
+
+    /* Variable assignment.  Exactly two subs, a symbol and an AST. */
+    jitterlisp_ast_case_setb,
+
+    /* While loop.  Exactly two subs, a guard AST and a body AST. */
+    jitterlisp_ast_case_while,
+
+    /* Primitive call.  At least one sub, the primitive name as a symbol,
+       then one AST per actual. */
+    jitterlisp_ast_case_primitive,
+
+    /* Procedure call.  At least one sub, the operand as an AST, then one AST
+       per actual. */
+    jitterlisp_ast_case_call,
+
+    /* Procedure abstraction.  One symbol sub per argument followed by one
+       AST for the body. */
+    jitterlisp_ast_case_lambda,
+
+    /* Parallel-binding let.  Two subs per binding (a symbol for the variable,
+       an AST for the bound expression, alternated in this order) followed by
+       one AST for the body. */
+    jitterlisp_ast_case_let,
+
+    /* Sequence.  Exactly two AST subs. */
+    jitterlisp_ast_case_sequence,
+
+    /* Current-environment form.  No subs. */
+    jitterlisp_ast_case_current_environment
+  };
+
+/* An AST data structure.  The structure definition itself seems lax, but
+   operations on ASTs are designed to only build syntactically valid ASTs,
+   and fail otherwise.  This eliminates the need for safety checks at
+   interpretation. */
+struct jitterlisp_AST
+{
+  /* What case this AST represents. */
+  enum jitterlisp_ast_case case_;
+
+  /* How many sub-components this AST has.  This is kept correct even for cases
+     with a fixed number of subs. */
+  jitter_uint sub_no;
+
+  /* A pointer to this AST's sub-components, which are element_no.  Some
+     sub-components may be other ASTs and others may be different Lisp object,
+     according to the case. */
+  jitterlisp_object *subs;
+};
+
+/* AST tag checking, encoding and decoding. */
+#define JITTERLISP_IS_AST(_jitterlisp_tagged_object)  \
+  JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),        \
+                     JITTERLISP_AST_PTAG,             \
+                     JITTERLISP_AST_STAG,             \
+                     JITTERLISP_AST_STAG_BIT_NO)
+#define JITTERLISP_AST_ENCODE(_jitterlisp_untagged_AST)  \
+  JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_AST,       \
+                            JITTERLISP_AST_PTAG,            \
+                            JITTERLISP_AST_STAG,            \
+                            JITTERLISP_AST_STAG_BIT_NO)
+#define JITTERLISP_AST_DECODE(_jitterlisp_tagged_AST)          \
+  ((struct jitterlisp_AST *)                                      \
+   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_AST),      \
+                                   JITTERLISP_AST_PTAG,           \
+                                   JITTERLISP_AST_STAG,           \
+                                   JITTERLISP_AST_STAG_BIT_NO)))
 
 
 
