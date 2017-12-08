@@ -71,9 +71,19 @@
 (define (normalize-arity-* normalized-rands)
   (normalize-arity-associative '* 1 normalized-rands))
 (define (normalize-arity-- normalized-rands)
-  (normalize-arity-anti-associative '- 0 '+ normalized-rands))
+  (let ((normalized-rands-length (length normalized-rands)))
+    (cond ((= normalized-rands-length 1)
+           `(negate ,@normalized-rands))
+          ((= normalized-rands-length 2)
+           (if (eq? (car normalized-rands) 0)
+               `(negate ,(cadr normalized-rands))
+               (normalize-arity-anti-associative '- 0 '+ normalized-rands)))
+          (#t
+           (normalize-arity-anti-associative '- 0 '+ normalized-rands)))))
 (define (normalize-arity-/ normalized-rands)
-  (normalize-arity-anti-associative '/ 1 '* normalized-rands))
+  (if (= (length normalized-rands) 1)
+      `(/ 1 ,@normalized-rands)
+      (normalize-arity-anti-associative '/ 1 '* normalized-rands)))
 
 (define (normalize-arity-associative rator neutral normalized-rands)
   (let ((length (length normalized-rands)))
@@ -131,6 +141,8 @@
              (eq? (car exp) '-))
          `(,(car exp) ,(derivative-recursive (cadr exp) x)
                       ,(derivative-recursive (caddr exp) x)))
+        ((eq? (car exp) 'negate)
+         `(negate ,(derivative-recursive (cadr exp) x)))
         ((eq? (car exp) '*)
          `(+ (* ,(derivative-recursive (cadr exp) x)
                 ,(caddr exp))
@@ -165,6 +177,10 @@
 
 ;;;; Unnormalization.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; This is a syntactically recursive process, by its nature extremely crude.
+;; Producing a simple expression from an arbitrarily obfuscated one is a nice
+;; optimization problem, out of scope for this example.
 
 (define (associative-rator? rator)
   (cond ((eq? rator '+)
@@ -293,10 +309,35 @@
           (#t
            `(,rator ,joined-number ,@non-numbers)))))
 
+(define (without-negate exp)
+  (cond ((number? exp)
+         exp)
+        ((symbol? exp)
+         exp)
+        ((eq? (car exp) 'negate)
+         (let ((cadr-simplified (without-negate (cadr exp))))
+           (if (number? cadr-simplified)
+               (- 0 cadr-simplified)
+               `(- ,cadr-simplified))))
+        (#t
+         `(,(car exp) ,@(map without-negate (cdr exp))))))
+
 (define (unnormalize exp)
   (let* ((exp-1 (unnormalize-wrt-associativity exp))
-         (exp-2 (unnormalize-wrt-commutativity exp-1)))
-    exp-2))
+         (exp-2 (unnormalize-wrt-commutativity exp-1))
+         (exp-3 (without-negate exp-2)))
+    exp-3))
+
+
+
+
+;;;; Simplification.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; An expression is made simpler, usually, by first normalizing it (which
+;; introduces negate operators) and then unnormalizing it.
+(define (simplify exp)
+  (unnormalize (normalize exp)))
 
 
 
@@ -305,7 +346,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (derivative exp x)
-  (derivative-recursive (normalize exp) x))
+  (derivative-recursive (normalize (simplify exp)) x))
 
 
 
@@ -318,20 +359,19 @@
   (newline)
   (let ((exp (read)))
     (if (not (eof? exp))
-        (begin
-        (display `(the derivative of ,exp))
-        (newline)
-        (display `(which is to say the derivative of ,(normalize exp)))
-        (newline)
-        (display '(is:))
-        (newline)
-        (let ((dexp/dx (derivative exp 'x)))
-          (display dexp/dx)
+        (let* ((exp-simplified (simplify exp))
+               (exp-simplified-normalized (normalize exp-simplified)))
+          (display `(the derivative of ,exp is:))
           (newline)
-          (display `(which is to say:))
-          (newline)
-          (display (unnormalize dexp/dx))
-          (newline)
-          (newline)
-          (newline)
-          (derivative-repl))))))
+          ;; (display `((which is to say the derivative of ,exp-simplified-normalized is:)))
+          ;; (newline)
+          (let* ((dexp/dx (derivative exp 'x))
+                 (dexp/dx-simplified (simplify dexp/dx)))
+            ;; (display dexp/dx)
+            ;; (newline)
+            ;; (display `(which is to say:))
+            ;; (newline)
+            (display dexp/dx-simplified)
+            (newline)
+            (newline)
+            (derivative-repl))))))
