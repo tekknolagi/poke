@@ -35,7 +35,8 @@
 /* Run s-expressions parsed from a C string.
  * ************************************************************************** */
 
-/* Parse s-expressions from the pointed string and run each of them. */
+/* Parse s-expressions from the pointed string and run each of them.  Print the
+   last result unless it's #<nothing> . */
 void
 jitterlisp_run_from_string (const char *string)
   __attribute__ ((nonnull (1)));

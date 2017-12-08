@@ -38,18 +38,22 @@
  * ************************************************************************** */
 
 /* Keep reading and evaluating every s-expression from the given reader state
-   until the reader returns #<eof>, then destroy the reader state.  In case
-   of errors free the resources correctly and propagate. */
-static void
+   until the reader returns #<eof>, then destroy the reader state.  In case of
+   errors free the resources correctly and propagate; otherwise return the
+   result of the last form. */
+static jitterlisp_object
 jitterlisp_run_and_destroy_reader_state (struct jitterlisp_reader_state *rstate)
 {
+  /* The initialization of res is necessary for the case where the string
+     contains no forms. */
+  jitterlisp_object res = JITTERLISP_NOTHING;
   bool success = true;
   JITTERLISP_HANDLE_ERRORS(
     {
       /* Read and execute until #<eof> or until the first error. */
       jitterlisp_object form;
       while (! JITTERLISP_IS_EOF (form = jitterlisp_read (rstate)))
-        jitterlisp_eval_globally (form);
+        res = jitterlisp_eval_globally (form);
     },
     {
       /* If we arrived here there was an error. */
@@ -59,9 +63,12 @@ jitterlisp_run_and_destroy_reader_state (struct jitterlisp_reader_state *rstate)
   /* Free the resources in either case, success or error. */
   jitterlisp_destroy_reader_state (rstate);
 
-  /* If we failed propagate the error outside. */
+  /* If we failed propagate the error outside, otherwise return the result of
+     the last form. */
   if (! success)
     jitterlisp_reerror ();
+  else
+    return res;
 }
 
 
@@ -76,7 +83,13 @@ jitterlisp_run_from_string (const char *string)
   printf ("Running from string \"%s\"...\n", string);
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_string_reader_state (string);
-  jitterlisp_run_and_destroy_reader_state (rstate);
+  jitterlisp_object result
+    = jitterlisp_run_and_destroy_reader_state (rstate);
+  if (! JITTERLISP_IS_NOTHING(result))
+    {
+      jitterlisp_print_to_stream (stdout, result);
+      printf ("\n");
+    }
   printf ("...Done running from string \"%s\".\n", string);
 }
 
