@@ -194,8 +194,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(characterp, ANYTHING,
   { JITTERLISP_CHARACTERP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(nullp, ANYTHING,
   { JITTERLISP_NULLP_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(nnullp, ANYTHING,
-  { JITTERLISP_NNULLP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(non_nullp, ANYTHING,
+  { JITTERLISP_NON_NULLP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(eofp, ANYTHING,
   { JITTERLISP_EOFP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(booleanp, ANYTHING,
@@ -204,8 +204,12 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(nothingp, ANYTHING,
   { JITTERLISP_NOTHINGP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(symbolp, ANYTHING,
   { JITTERLISP_SYMBOLP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(non_symbolp, ANYTHING,
+  { JITTERLISP_NON_SYMBOLP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(consp, ANYTHING,
   { JITTERLISP_CONSP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(non_consp, ANYTHING,
+  { JITTERLISP_NON_CONSP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(procedurep, ANYTHING,
   { JITTERLISP_PROCEDUREP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(vectorp, ANYTHING,
@@ -294,12 +298,14 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_STRUCT_("fixnum?", 1, fixnump),
       JITTERLISP_PRIMITIVE_STRUCT_("character?", 1, characterp),
       JITTERLISP_PRIMITIVE_STRUCT_("null?", 1, nullp),
-      JITTERLISP_PRIMITIVE_STRUCT_("nnull?", 1, nnullp),
+      JITTERLISP_PRIMITIVE_STRUCT_("non-null?", 1, non_nullp),
       JITTERLISP_PRIMITIVE_STRUCT_("eof?", 1, eofp),
       JITTERLISP_PRIMITIVE_STRUCT_("boolean?", 1, booleanp),
       JITTERLISP_PRIMITIVE_STRUCT_("nothing?", 1, nothingp),
       JITTERLISP_PRIMITIVE_STRUCT_("symbol?", 1, symbolp),
+      JITTERLISP_PRIMITIVE_STRUCT_("non-symbol?", 1, non_symbolp),
       JITTERLISP_PRIMITIVE_STRUCT_("cons?", 1, consp),
+      JITTERLISP_PRIMITIVE_STRUCT_("non-cons?", 1, non_consp),
       JITTERLISP_PRIMITIVE_STRUCT_("procedure?", 1, procedurep),
       JITTERLISP_PRIMITIVE_STRUCT_("vector?", 1, vectorp),
       /* Arithmetic. */

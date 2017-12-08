@@ -107,7 +107,9 @@
    others with respect to tagging, even more if the fixnum tag is zero.
    Signedness does not matter for sum and subtraction on a two's complement
    machine, so we can avoid casting to and from a signed integer. */
-#if JITTERLISP_FIXNUM_PTAG == 0
+#if (JITTERLISP_TAG(JITTERLISP_FIXNUM_PTAG,               \
+                    JITTERLISP_FIXNUM_STAG,               \
+                    JITTERLISP_FIXNUM_STAG_BIT_NO) == 0)
 # define JITTERLISP_EXP_FF_F_PLUS_OR_MINUS(_jitterlisp_infix,            \
                                            _jitterlisp_tagged_fixnum_a,  \
                                            _jitterlisp_tagged_fixnum_b)  \
@@ -118,7 +120,7 @@
        JITTERLISP_FIXNUM_PTAG,                                           \
        JITTERLISP_FIXNUM_STAG,                                           \
        JITTERLISP_FIXNUM_STAG_BIT_NO)
-#else // JITTERLISP_FIXNUM_PTAG != 0
+#else // fixnum tag non-zero
 # define JITTERLISP_EXP_FF_F_PLUS_OR_MINUS(_jitterlisp_infix,            \
                                            _jitterlisp_tagged_fixnum_a,  \
                                            _jitterlisp_tagged_fixnum_b)  \
@@ -134,7 +136,7 @@
        JITTERLISP_FIXNUM_PTAG,                                           \
        JITTERLISP_FIXNUM_STAG,                                           \
        JITTERLISP_FIXNUM_STAG_BIT_NO)
-#endif // #if JITTERLISP_FIXNUM_PTAG == 0
+#endif // #if fixnum tag is zero
 
 /* Expression oprations on fixnums. */
 #define JITTERLISP_EXP_FF_F_PLUS(_jitterlisp_tagged_fixnum_a,     \
@@ -584,7 +586,7 @@
   JITTER_END_
 
 /* Compute a tagged boolean, #t iff the given in-argument is not () . */
-#define JITTERLISP_NNULLP_(_jitterlisp_out, _jitterlisp_in0)                   \
+#define JITTERLISP_NON_NULLP_(_jitterlisp_out, _jitterlisp_in0)                \
   JITTER_BEGIN_                                                                \
     _jitterlisp_out =                                                          \
       JITTERLISP_BOOLEAN_ENCODE(! JITTERLISP_IS_EMPTY_LIST(_jitterlisp_in0));  \
@@ -640,12 +642,24 @@
     _jitterlisp_out =                                                  \
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_CONS(_jitterlisp_in0));  \
   JITTER_END_
+/* Compute a tagged boolean, #t iff the given in-argument is not a cons . */
+#define JITTERLISP_NON_CONSP_(_jitterlisp_out, _jitterlisp_in0)          \
+  JITTER_BEGIN_                                                          \
+    _jitterlisp_out =                                                    \
+      JITTERLISP_BOOLEAN_ENCODE(! JITTERLISP_IS_CONS(_jitterlisp_in0));  \
+  JITTER_END_
 
 /* Compute a tagged boolean, #t iff the given in-argument is a symbol . */
 #define JITTERLISP_SYMBOLP_(_jitterlisp_out, _jitterlisp_in0)            \
   JITTER_BEGIN_                                                          \
     _jitterlisp_out =                                                    \
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_SYMBOL(_jitterlisp_in0));  \
+  JITTER_END_
+/* Compute a tagged boolean, #t iff the given in-argument is not a symbol . */
+#define JITTERLISP_NON_SYMBOLP_(_jitterlisp_out, _jitterlisp_in0)          \
+  JITTER_BEGIN_                                                            \
+    _jitterlisp_out =                                                      \
+      JITTERLISP_BOOLEAN_ENCODE(! JITTERLISP_IS_SYMBOL(_jitterlisp_in0));  \
   JITTER_END_
 
 /* Compute a tagged boolean, #t iff the given in-argument is a closure . */
