@@ -44,8 +44,9 @@
 static jitterlisp_object
 jitterlisp_run_and_destroy_reader_state (struct jitterlisp_reader_state *rstate)
 {
-  /* The initialization of res is necessary for the case where the string
-     contains no forms. */
+  /* The initialization of res is necessary for the case where the input
+     contains no forms and therefore jitterlisp_eval_globally is never
+     called. */
   jitterlisp_object res = JITTERLISP_NOTHING;
   bool success = true;
   JITTERLISP_HANDLE_ERRORS(
