@@ -696,7 +696,6 @@
 
 #define JITTERLISP_READ_(_jitterlisp_out)                   \
   JITTER_BEGIN_                                             \
-    putchar ('\n');                                         \
     _jitterlisp_out = jitterlisp_read_readline_one ("> ");  \
   JITTER_END_
 
