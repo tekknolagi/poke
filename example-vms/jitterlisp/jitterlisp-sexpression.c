@@ -145,7 +145,8 @@ jitterlisp_object jitterlisp_object_current_environment;
 jitterlisp_object jitterlisp_object_if;
 jitterlisp_object jitterlisp_object_lambda;
 jitterlisp_object jitterlisp_object_let;
-jitterlisp_object jitterlisp_object_let_star;
+jitterlisp_object jitterlisp_object_letrec;
+jitterlisp_object jitterlisp_object_letstar;
 jitterlisp_object jitterlisp_object_quasiquote;
 jitterlisp_object jitterlisp_object_quasiquote_procedure;
 jitterlisp_object jitterlisp_object_quote;
@@ -164,7 +165,8 @@ jitterlisp_initialize_globally_named_objects (void)
   jitterlisp_object_if = jitterlisp_make_interned ("if");
   jitterlisp_object_lambda = jitterlisp_make_interned ("lambda");
   jitterlisp_object_let = jitterlisp_make_interned ("let");
-  jitterlisp_object_let_star = jitterlisp_make_interned ("let*");
+  jitterlisp_object_letrec = jitterlisp_make_interned ("letrec");
+  jitterlisp_object_letstar = jitterlisp_make_interned ("let*");
   jitterlisp_object_quasiquote = jitterlisp_make_interned ("quasiquote");
   jitterlisp_object_quasiquote_procedure
     = jitterlisp_make_interned ("quasiquote-procedure");

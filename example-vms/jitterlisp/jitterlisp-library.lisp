@@ -1350,12 +1350,10 @@
   (set! macro-table
         (cons (cons symbol low-level-macro)
               (del-assq symbol macro-table))))
-
 (define (macro-name? symbol)
   (if (assq symbol macro-table)
       #t
       #f))
-
 (define (macro-lookup symbol)
   (let ((a-cons (assq symbol macro-table)))
     (if a-cons

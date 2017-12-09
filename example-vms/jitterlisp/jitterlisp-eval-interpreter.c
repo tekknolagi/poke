@@ -26,6 +26,7 @@
 
 #include <jitter/jitter-cpp.h>
 #include <jitter/jitter-dynamic-buffer.h>
+#include <jitter/jitter-fatal.h>
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-string.h> // for jitter_clone_string: possibly to remove.
 
@@ -461,43 +462,110 @@ jitterlisp_eval_interpreter_lambda (jitterlisp_object cdr,
   return jitterlisp_closure (env, formals, body_forms);
 }
 
+enum jitterlisp_let_kind
+  {
+    jitterlisp_let_kind_ordinary,
+    jitterlisp_let_kind_star,
+    jitterlisp_let_kind_rec
+  };
+
 static inline jitterlisp_object
-jitterlisp_eval_interpreter_let_or_let_star (jitterlisp_object cdr,
-                                             jitterlisp_object env,
-                                             bool star)
+jitterlisp_eval_interpreter_let_variant (jitterlisp_object cdr,
+                                         jitterlisp_object env,
+                                         const enum jitterlisp_let_kind kind)
 {
   /* Bind subforms to C variables. */
   if (! JITTERLISP_IS_CONS(cdr))
-    jitterlisp_error_cloned ("let or let* not followed by a cons");
+    jitterlisp_error_cloned ("let/let*/letrec not followed by a cons");
   jitterlisp_object bindings = JITTERLISP_EXP_C_A_CAR(cdr);
   jitterlisp_object body_forms = JITTERLISP_EXP_C_A_CDR(cdr);
 
-  /* Build an extended environment by evaluating binding forms. */
+  /* Use an extended environment, which will be added to incrementally in the
+     case of let and let*, or filled right now with temporary bindings for every
+     bound variable in the case of letrec . */
   jitterlisp_object body_env = env;
+  if (kind == jitterlisp_let_kind_rec)
+    {
+      jitterlisp_object bindings_rest = bindings;
+      while (! JITTERLISP_IS_EMPTY_LIST (bindings_rest))
+        {
+          if (! JITTERLISP_IS_CONS(bindings_rest))
+            jitterlisp_error_cloned ("letrec bindings not a list");
+          jitterlisp_object binding = JITTERLISP_EXP_C_A_CAR(bindings_rest);
+          if (! JITTERLISP_IS_CONS(bindings_rest))
+            jitterlisp_error_cloned ("letrec binding not a list");
+          jitterlisp_object variable = JITTERLISP_EXP_C_A_CAR(binding);
+
+          /* Add a temporary binding, non-destructively.  The bound value
+             is temporary and will be overridden by the actual variable
+             definition below. */
+          body_env = jitterlisp_environment_bind (body_env, variable,
+                                                  JITTERLISP_NOTHING);
+
+          bindings_rest = JITTERLISP_EXP_C_A_CDR(bindings_rest);
+        }
+    }
+
+  /* Evalate each variable binding and add to the environment. */
   while (! JITTERLISP_IS_EMPTY_LIST (bindings))
     {
       /* Bind binding subforms to C variables. */
-      if (! JITTERLISP_IS_CONS(bindings))
-        jitterlisp_error_cloned ("let or let* bindings not a list");
+      if (kind != jitterlisp_let_kind_rec /* Already traversed for letrec . */
+          && ! JITTERLISP_IS_CONS(bindings))
+        jitterlisp_error_cloned ("let/let* bindings not a list");
       jitterlisp_object first_binding = JITTERLISP_EXP_C_A_CAR(bindings);
-      if (! JITTERLISP_IS_CONS(first_binding))
-        jitterlisp_error_cloned ("let or let* binding not a list");
+      if (kind != jitterlisp_let_kind_rec /* Already traversed for letrec . */
+          && ! JITTERLISP_IS_CONS(first_binding))
+        jitterlisp_error_cloned ("let/let* binding not a list");
       jitterlisp_object binding_variable
         = JITTERLISP_EXP_C_A_CAR(first_binding);
       if (! JITTERLISP_IS_SYMBOL(binding_variable))
-        jitterlisp_error_cloned ("let or let* binding variable not a symbol");
+        jitterlisp_error_cloned ("let/let*/letrec binding variable not a symbol");
       jitterlisp_object binding_forms = JITTERLISP_EXP_C_A_CDR(first_binding);
 
-      /* Evaluate the binding forms in the appropriate environment; which one
-         depends on whether this is a let or let* block. */
-      jitterlisp_object binding_forms_env
-        = star ? body_env : env;
+      /* Evaluate the binding forms in the appropriate environment; which
+         environemnt that is depends on the let kind. */
+      jitterlisp_object binding_forms_env;
+      switch (kind)
+        {
+        case jitterlisp_let_kind_ordinary:
+          /* Use the environment which was active out of the block, with
+             no bound variables visible. */
+          binding_forms_env = env;
+          break;
+        case jitterlisp_let_kind_star:
+        case jitterlisp_let_kind_rec:
+          /* Use the same environment we are going to use for the body.
+             In the case of let* this will only have the *previous*
+             bindings already visible; in the case of letrec every binding
+             is aready there, even if the values may change. */
+          binding_forms_env = body_env;
+          break;
+        default:
+          jitter_fatal ("invalid let kind");
+        }
       jitterlisp_object binding_result
         = jitterlisp_eval_interpreter_begin (binding_forms, binding_forms_env);
 
-      /* Add a binding for the variable in the extended environment. */
-      body_env = jitterlisp_environment_bind (body_env, binding_variable,
-                                              binding_result);
+      /* Bind the variable in the extended environment, according to the let
+         kind. */
+      switch (kind)
+        {
+        case jitterlisp_let_kind_ordinary:
+        case jitterlisp_let_kind_star:
+          /* Extend the environment for the body with a new binding. */
+          body_env = jitterlisp_environment_bind (body_env, binding_variable,
+                                                  binding_result);
+          break;
+        case jitterlisp_let_kind_rec:
+          /* Destructively update the existing environment, which is the same
+             for bound expressions and the body. */
+          jitterlisp_environment_set (body_env, binding_variable,
+                                      binding_result);
+          break;
+        default:
+          jitter_fatal ("invalid let kind");
+        }
 
       /* Go on with the next binding. */
       bindings = JITTERLISP_EXP_C_A_CDR(bindings);
@@ -511,14 +579,24 @@ static jitterlisp_object
 jitterlisp_eval_interpreter_let (jitterlisp_object cdr,
                                  jitterlisp_object env)
 {
-  return jitterlisp_eval_interpreter_let_or_let_star (cdr, env, false);
+  return jitterlisp_eval_interpreter_let_variant (cdr, env,
+                                                  jitterlisp_let_kind_ordinary);
 }
 
 static jitterlisp_object
-jitterlisp_eval_interpreter_let_star (jitterlisp_object cdr,
-                                      jitterlisp_object env)
+jitterlisp_eval_interpreter_letrec (jitterlisp_object cdr,
+                                    jitterlisp_object env)
 {
-  return jitterlisp_eval_interpreter_let_or_let_star (cdr, env, true);
+  return jitterlisp_eval_interpreter_let_variant (cdr, env,
+                                                  jitterlisp_let_kind_rec);
+}
+
+static jitterlisp_object
+jitterlisp_eval_interpreter_letstar (jitterlisp_object cdr,
+                                     jitterlisp_object env)
+{
+  return jitterlisp_eval_interpreter_let_variant (cdr, env,
+                                                  jitterlisp_let_kind_star);
 }
 
 static jitterlisp_object
@@ -741,8 +819,10 @@ jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
     return jitterlisp_eval_interpreter_lambda (cdr, env);
   else if (symbol == jitterlisp_object_let)
     return jitterlisp_eval_interpreter_let (cdr, env);
-  else if (symbol == jitterlisp_object_let_star)
-    return jitterlisp_eval_interpreter_let_star (cdr, env);
+  else if (symbol == jitterlisp_object_letrec)
+    return jitterlisp_eval_interpreter_letrec (cdr, env);
+  else if (symbol == jitterlisp_object_letstar)
+    return jitterlisp_eval_interpreter_letstar (cdr, env);
   else if (symbol == jitterlisp_object_quasiquote)
     return jitterlisp_eval_interpreter_quasiquote (cdr, env);
   else if (symbol == jitterlisp_object_quote)
