@@ -220,7 +220,7 @@ main (int argc, char **argv)
   argp_parse (& argp, argc, argv, 0, 0, & jitterlisp_settings);
   struct jitterlisp_settings * const sp = & jitterlisp_settings;
 
-  /* Run input files and s-expressions from the command-line; halting at the
+  /* Run input files and s-expressions from the command-line, halting at the
      first error; still free the resources before exiting, even in case of
      error.
      Rationale: this level of attention to memory leaks would not be justified
