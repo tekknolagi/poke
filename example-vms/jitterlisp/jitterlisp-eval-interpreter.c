@@ -462,10 +462,16 @@ jitterlisp_eval_interpreter_lambda (jitterlisp_object cdr,
   return jitterlisp_closure (env, formals, body_forms);
 }
 
+/* What kind of semantics should be adopted for evaluating a block. */
 enum jitterlisp_let_kind
   {
+    /* Ordinary Scheme-style (non-named) let . */
     jitterlisp_let_kind_ordinary,
+
+    /* Scheme-style let* . */
     jitterlisp_let_kind_star,
+
+    /* Scheme-style letrec . */
     jitterlisp_let_kind_rec
   };
 
@@ -500,7 +506,7 @@ jitterlisp_eval_interpreter_let_variant (jitterlisp_object cdr,
              is temporary and will be overridden by the actual variable
              definition below. */
           body_env = jitterlisp_environment_bind (body_env, variable,
-                                                  JITTERLISP_NOTHING);
+                                                  JITTERLISP_UNDEFINED);
 
           bindings_rest = JITTERLISP_EXP_C_A_CDR(bindings_rest);
         }
