@@ -76,14 +76,6 @@
 (define (list3 x y z)   (cons x (cons y (cons z '()))))
 (define (list4 x y z t) (cons x (cons y (cons z (cons t '())))))
 
-(define (list? xs)
-  (cond ((null? xs)
-         #t)
-        ((cons? xs)
-         (list? (cdr xs)))
-        (#t
-         #f)))
-
 (define (qq-append xs ys)
   (if (list? xs)
       (append xs ys)
@@ -348,6 +340,37 @@
 
 (define (singleton x)
   (cons x '()))
+
+
+
+
+;;;; list?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; FIXME: a return statement would be nice here.
+(define (list?-iterative xs)
+  (let ((go-on #t)
+        (res #t))
+    (while go-on
+      (cond ((null? xs)
+             (set! go-on #f))
+            ((non-cons? xs)
+             (set! res #f)
+             (set! go-on #f))
+            (#t
+             (set! xs (cdr xs)))))
+    res))
+
+(define (list?-tail-recursive xs)
+  (cond ((null? xs)
+         #t)
+        ((cons? xs)
+         (list?-tail-recursive (cdr xs)))
+        (#t
+         #f)))
+
+(define (list? xs)
+  (list?-iterative xs))
 
 
 
