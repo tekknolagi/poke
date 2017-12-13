@@ -357,28 +357,6 @@ jitterlisp_primitive_no
 
 
 
-/* Primitive descriptor allocation.
- * ************************************************************************** */
-
-/* /\* Return a fresh primitive object, unencoded.  This is a static function, since */
-/*    only initialization code ever needs to see this. *\/ */
-/* struct jitterlisp_primitive * */
-/* jitterlisp_make_primitive (const char *lisp_name, */
-/*                            jitter_uint in_arity, */
-/*                            jitterlisp_primitive_function function) */
-/* { */
-/*   struct jitterlisp_primitive *res */
-/*     = jitter_xmalloc (sizeof (struct jitterlisp_primitive)); */
-/*   res->name = lisp_name; */
-/*   res->in_arity = in_arity; */
-/*   res->function = function; */
-
-/*   return res; */
-/* } */
-
-
-
-
 /* Initialization and finalization of the primitives subsystem.
  * ************************************************************************** */
 
