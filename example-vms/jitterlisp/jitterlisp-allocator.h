@@ -44,7 +44,7 @@
    and compute an object size which keeps alignment into account.  Object sizes
    are compile-time constants in most cases. */
 #define JITTERLISP_ALIGNMENT_BIT_MASK  \
-  JITTERLISP_PTAG_BIT_MASK  // FIXME: is this enough with my tagging system?
+  JITTERLISP_BIT_MASK(JITTERLISP_INITIAL_POINTER_ZERO_BIT_NO)
 
 /* Expand to the smallest multiple of (1 << JITTERLISP_TAG_BIT_NO) which is
    greater than or equal to the given size. */

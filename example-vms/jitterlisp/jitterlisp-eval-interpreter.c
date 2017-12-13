@@ -271,6 +271,76 @@ jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
 
 
 
+/* Macroexpansion.
+ * ************************************************************************** */
+
+/* Forward-declaration: jitterlisp_macroexpand and
+   jitterlisp_macroexpand_multiple are mutually recursive in an indirect way. */
+static jitterlisp_object
+jitterlisp_macroexpand_multiple (jitterlisp_object os);
+
+static jitterlisp_object
+jitterlisp_macroexpand_literal (jitterlisp_object o)
+{
+  return o;
+}
+
+static jitterlisp_object
+jitterlisp_macroexpand_variable (jitterlisp_object o)
+{
+  return o;
+}
+
+static jitterlisp_object
+jitterlisp_macroexpand_cons (jitterlisp_object car, jitterlisp_object cdr)
+{
+  return jitterlisp_cons (car,
+                          jitterlisp_macroexpand_multiple (cdr)); // FIXME: do it for real.
+}
+
+static jitterlisp_object
+jitterlisp_macroexpand (jitterlisp_object o)
+{
+  if (JITTERLISP_IS_SYMBOL(o))
+    return jitterlisp_macroexpand_variable (o);
+  else if (JITTERLISP_IS_CONS(o))
+    return jitterlisp_macroexpand_cons (JITTERLISP_EXP_C_A_CAR(o),
+                                        JITTERLISP_EXP_C_A_CDR(o));
+  else
+    return jitterlisp_macroexpand_literal (o);
+}
+
+static jitterlisp_object
+jitterlisp_macroexpand_multiple (jitterlisp_object os)
+{
+  /* This logic is slightly more complex than the obvious recursive alternative,
+     but uses constant stack space and doesn't use any temporary heap data
+     structure. */
+  jitterlisp_object res;
+  jitterlisp_object *res_restp = & res;
+  while (! JITTERLISP_IS_EMPTY_LIST(os))
+    {
+      if (! JITTERLISP_IS_CONS(os))
+        {
+          printf ("About "); // FIXME: integrate with the error function
+          jitterlisp_print_to_stream (stdout, os);
+          jitterlisp_error_cloned ("jitterlisp_macroexpand_multiple: non-list "
+                                   "argument");
+        }
+      jitterlisp_object car = JITTERLISP_EXP_C_A_CAR(os);
+      jitterlisp_object macroexpanded_car = jitterlisp_macroexpand (car);
+      * res_restp = jitterlisp_cons (macroexpanded_car, JITTERLISP_UNDEFINED);
+      res_restp = & JITTERLISP_EXP_C_A_CDR(* res_restp);
+
+      os = JITTERLISP_EXP_C_A_CDR(os);
+    }
+  * res_restp = JITTERLISP_EMPTY_LIST;
+  return res;
+}
+
+
+
+
 /* Non-Jittery interpreter helpers.
  * ************************************************************************** */
 
@@ -748,7 +818,8 @@ jitterlisp_eval_interpreter_call_closure (jitterlisp_object closure,
 /* Evaluate the given operator and operands in the given environment, and return
    the result of their application.  This is different from the conventional
    apply function used in Scheme meta-circular interpreters in that the operands
-   are pre-evaluated into a list; the advantage is avoiding a temporary list. */
+   (and operator) are not pre-evaluated here; the advantage is avoiding a
+   temporary list. */
 static jitterlisp_object
 jitterlisp_eval_interpreter_call (jitterlisp_object operator,
                                   jitterlisp_object actuals,
@@ -813,6 +884,10 @@ jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
      special form thru its helper. */
   if (symbol == jitterlisp_object_begin)
     return jitterlisp_eval_interpreter_begin (cdr, env);
+  else if (symbol == jitterlisp_object_call)
+    return jitterlisp_eval_interpreter_call (jitterlisp_car (cdr),
+                                             jitterlisp_cdr (cdr),
+                                             env);
   else if (symbol == jitterlisp_object_cond)
     return jitterlisp_eval_interpreter_cond (cdr, env);
   else if (symbol == jitterlisp_object_current_environment)
@@ -852,8 +927,16 @@ jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
  * ************************************************************************** */
 
 static jitterlisp_object
-jitterlisp_eval_interpreter (jitterlisp_object form, jitterlisp_object env)
+jitterlisp_eval_interpreter (jitterlisp_object original_form,
+                             jitterlisp_object env)
 {
+  jitterlisp_object form = jitterlisp_macroexpand (original_form);
+  printf ("Macroexpanded\n  ");
+  jitterlisp_print_to_stream (stdout, original_form);
+  printf ("\ninto\n  ");
+  jitterlisp_print_to_stream (stdout, form);
+  printf ("\n");
+
   if (jitterlisp_is_self_evaluating (form))
     return form;
 
