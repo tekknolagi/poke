@@ -23,14 +23,16 @@
 /* Include the Gnulib header. */
 #include <config.h>
 
+#include "jitterlisp-printer.h"
+
 #include <stdio.h>
 
 #include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-fatal.h>
 
-#include "jitterlisp-printer.h"
 #include "jitterlisp-settings.h"
 #include "jitterlisp-sexpression.h"
+#include "jitterlisp-ast.h"
 
 
 
@@ -114,27 +116,33 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 //#define NOTERMINAL
 
 #ifdef NOTERMINAL
-# define CONSATTR             ""
-# define CHARACTERATTR        ""
-# define FIXNUMATTR           ""
-# define INTERNEDSYMBOLATTR   ""
-# define UNINTERNEDSYMBOLATTR ""
-# define UNIQUEATTR           ""
-# define CLOSUREATTR          ""
-# define PRIMITIVEATTR        ""
-# define VECTORATTR           ""
-# define ERRORATTR            ""
+# define CONSATTR              ""
+# define CHARACTERATTR         ""
+# define FIXNUMATTR            ""
+# define INTERNEDSYMBOLATTR    ""
+# define UNINTERNEDSYMBOLATTR  ""
+# define UNIQUEATTR            ""
+# define CLOSUREATTR           ""
+# define NONPRIMITIVEMACROATTR ""
+# define PRIMITIVEATTR         ""
+# define PRIMITIVEMACROATTR    ""
+# define VECTORATTR            ""
+# define ASTATTR               ""
+# define ERRORATTR             ""
 #else
-# define CONSATTR             LIGHTRED // LIGHTRED // WHITE //LIGHTRED // YELLOW //LIGHTMAGENTA
-# define CHARACTERATTR        BROWN UNDERLINE ITALIC
-# define FIXNUMATTR           LIGHTCYAN UNDERLINE
-# define INTERNEDSYMBOLATTR   LIGHTGREEN
-# define UNINTERNEDSYMBOLATTR LIGHTGREEN ITALIC UNDERLINE
-# define UNIQUEATTR           LIGHTMAGENTA UNDERLINE ITALIC //YELLOW UNDERLINE ITALIC //LIGHTMAGENTA UNDERLINE ITALIC
-# define CLOSUREATTR          LIGHTMAGENTA // WHITE
-# define PRIMITIVEATTR        LIGHTMAGENTA ITALIC UNDERLINE
-# define VECTORATTR           LIGHTRED ITALIC UNDERLINE
-# define ERRORATTR            RED REVERSE
+# define CONSATTR              LIGHTRED // LIGHTRED // WHITE //LIGHTRED // YELLOW //LIGHTMAGENTA
+# define CHARACTERATTR         BROWN UNDERLINE ITALIC
+# define FIXNUMATTR            LIGHTCYAN UNDERLINE
+# define INTERNEDSYMBOLATTR    LIGHTGREEN
+# define UNINTERNEDSYMBOLATTR  LIGHTGREEN ITALIC UNDERLINE
+# define UNIQUEATTR            LIGHTMAGENTA UNDERLINE //YELLOW UNDERLINE ITALIC //LIGHTMAGENTA UNDERLINE ITALIC
+# define CLOSUREATTR           LIGHTMAGENTA ITALIC // WHITE
+# define NONPRIMITIVEMACROATTR LIGHTMAGENTA ITALIC UNDERLINE // WHITE
+# define PRIMITIVEATTR         LIGHTMAGENTA
+# define PRIMITIVEMACROATTR    LIGHTMAGENTA UNDERLINE
+# define VECTORATTR            LIGHTRED ITALIC UNDERLINE
+# define ASTATTR               LIGHTMAGENTA ITALIC UNDERLINE
+# define ERRORATTR             RED REVERSE
 #endif // #ifdef NOTERMINAL
 
 
@@ -355,6 +363,79 @@ jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
     }
 }
 
+/* Print the pointed s-expressions in order starting from the given initial
+   pointer and going on for element_no elements.  Use a single space as a
+   separator before each element, including the first. */
+static void
+jitterlisp_print_subs (jitterlisp_char_printer_function cp, void *cps,
+                       jitterlisp_object *elements, size_t element_no)
+{
+  int i;
+  for (i = 0; i < element_no; i ++)
+    {
+      jitterlisp_print_decoration (cp, cps, ASTATTR);
+      jitterlisp_print_char (cp, cps, ' ');
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print (cp, cps, elements [i]);
+    }
+}
+
+static void
+jitterlisp_print_ast (jitterlisp_char_printer_function cp, void *cps,
+                      struct jitterlisp_ast *ast)
+{
+  jitterlisp_print_decoration (cp, cps, ASTATTR);
+  jitterlisp_print_string (cp, cps, "[");
+  switch (ast->case_)
+    {
+    case jitterlisp_ast_case_literal:
+      jitterlisp_print_string (cp, cps, "literal");
+      break;
+    case jitterlisp_ast_case_variable:
+      jitterlisp_print_string (cp, cps, "variable");
+      break;
+    case jitterlisp_ast_case_define:
+      jitterlisp_print_string (cp, cps, "define");
+      break;
+    case jitterlisp_ast_case_if:
+      jitterlisp_print_string (cp, cps, "if");
+      break;
+    case jitterlisp_ast_case_setb:
+      jitterlisp_print_string (cp, cps, "set!");
+      break;
+    case jitterlisp_ast_case_while:
+      jitterlisp_print_string (cp, cps, "while");
+      break;
+    case jitterlisp_ast_case_primitive:
+      jitterlisp_print_string (cp, cps, "primitive");
+      break;
+    case jitterlisp_ast_case_call:
+      jitterlisp_print_string (cp, cps, "call");
+      break;
+    case jitterlisp_ast_case_lambda:
+      jitterlisp_print_string (cp, cps, "lambda");
+      break;
+    case jitterlisp_ast_case_let:
+      jitterlisp_print_string (cp, cps, "let");
+      break;
+    case jitterlisp_ast_case_sequence:
+      jitterlisp_print_string (cp, cps, "sequence");
+      break;
+    case jitterlisp_ast_case_current_environment:
+      jitterlisp_print_string (cp, cps, "current-environment");
+      break;
+    default:
+      jitterlisp_print_string (cp, cps, "invalid]");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      return;
+    }
+  jitterlisp_print_decoration (cp, cps, NOATTR);
+  jitterlisp_print_subs (cp, cps, ast->subs, ast->sub_no);
+  jitterlisp_print_decoration (cp, cps, ASTATTR);
+  jitterlisp_print_string (cp, cps, "]");
+  jitterlisp_print_decoration (cp, cps, NOATTR);
+}
+
 void
 jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
                   jitterlisp_object o)
@@ -417,26 +498,55 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print (cp, cps, closure->environment);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_string (cp, cps, " ");
+      jitterlisp_print_char (cp, cps, ' ');
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print (cp, cps, closure->formals);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      /* The body is a form list, so I print it as a cdr.  The cdr printer
-         prepends a space only if the list is not empty, which is what we need
-         in this case as well. */
-      jitterlisp_print_cdr (cp, cps, closure->body);
+      jitterlisp_print_char (cp, cps, ' ');
+      jitterlisp_print (cp, cps, closure->body);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, ">");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_NON_PRIMITIVE_MACRO(o))
+    {
+      struct jitterlisp_closure * const closure
+        = JITTERLISP_NON_PRIMITIVE_MACRO_DECODE(o);
+      jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
+      jitterlisp_print_string (cp, cps, "#<macro ");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print (cp, cps, closure->environment);
+      jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
+      jitterlisp_print_char (cp, cps, ' ');
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print (cp, cps, closure->formals);
+      jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print_char (cp, cps, ' ');
+      jitterlisp_print (cp, cps, closure->body);
+      jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
       jitterlisp_print_string (cp, cps, ">");
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_PRIMITIVE(o))
     {
-      struct jitterlisp_primitive * const primitive = JITTERLISP_PRIMITIVE_DECODE(o);
+      struct jitterlisp_primitive * const primitive
+        = JITTERLISP_PRIMITIVE_DECODE(o);
       jitterlisp_print_decoration (cp, cps, PRIMITIVEATTR);
       jitterlisp_print_string (cp, cps, "#<");
       jitterlisp_print_long_long (cp, cps, primitive->in_arity, false, 10);
       jitterlisp_print_string (cp, cps, "-ary primitive ");
+      jitterlisp_print_string (cp, cps, primitive->name);
+      jitterlisp_print_string (cp, cps, ">");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_PRIMITIVE_MACRO(o))
+    {
+      struct jitterlisp_primitive * const primitive
+        = JITTERLISP_PRIMITIVE_MACRO_DECODE(o);
+      jitterlisp_print_decoration (cp, cps, PRIMITIVEMACROATTR);
+      jitterlisp_print_string (cp, cps, "#<primitive macro ");
       jitterlisp_print_string (cp, cps, primitive->name);
       jitterlisp_print_string (cp, cps, ">");
       jitterlisp_print_decoration (cp, cps, NOATTR);
@@ -454,6 +564,11 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_decoration (cp, cps, CONSATTR);
       jitterlisp_print_char (cp, cps, ')');
       jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_AST(o))
+    {
+      struct jitterlisp_ast * const ast = JITTERLISP_AST_DECODE(o);
+      jitterlisp_print_ast (cp, cps, ast);
     }
   else if (JITTERLISP_IS_VECTOR(o))
     {

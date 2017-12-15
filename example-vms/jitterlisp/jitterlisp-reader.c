@@ -653,17 +653,6 @@ jitterlisp_prefix_name_to_symbol_name (const char *prefix_name)
                   "name \"%s\"", prefix_name);
 }
 
-/* FIXME: move. */
-static jitterlisp_object
-jitterlisp_cons (jitterlisp_object car, jitterlisp_object cdr)
-{
-  struct jitterlisp_cons *cons
-    = JITTERLISP_CONS_MAKE_UNINITIALIZED_UNENCODED();
-  cons->car = car;
-  cons->cdr = cdr;
-  return JITTERLISP_CONS_ENCODE(cons);
-}
-
 /* Given a prefix symbol name (such as "quote" or "unquote") and an s-expression
    (such as foo) return the s-expression obtained by prefixing the named prefix
    to the given s-expression (such as (quote foo) or (unquote foo)).

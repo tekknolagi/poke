@@ -32,6 +32,7 @@
 #include "jitterlisp-config.h"
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-allocator.h"
+#include "jitterlisp-ast.h"
 #include "jitterlisp-error.h"
 #include "jitterlisp-operations.h"
 #include "jitterlisp-reader.h"
@@ -40,6 +41,8 @@
 #include "jitterlisp-printer.h"
 #include "jitterlisp-settings.h"
 #include "jitterlisp-eval.h"
+#include "jitterlisp-macros.h"
+#include "jitterlisp-utility.h"
 
 
 

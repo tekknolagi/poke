@@ -28,6 +28,7 @@
 #include <jitter/jitter-cpp.h>
 
 #include "jitterlisp.h"
+#include "jitterlisp-ast.h"
 
 
 
@@ -161,6 +162,23 @@
                                  },                                            \
                                  _jitterlisp_body_statement)
 
+/* Expand to a C function definition for a primitive macro function.  This is
+   simpler than JITTERLISP_PRIMITIVE_FUNCTION_?_ because primitive macros always
+   have two argument without type restriction, and can be built as simple
+   wrappers given only the C name. */
+#define JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(_jitterlisp_name_suffix)      \
+  JITTERLISP_PRIMITIVE_FUNCTION_(                                          \
+     _jitterlisp_name_suffix,                                              \
+     {                                                                     \
+       JITTERLISP_CHECK_TYPE(ANYTHING);                                    \
+       JITTERLISP_CHECK_TYPE(ANYTHING);                                    \
+     },                                                                    \
+     {                                                                     \
+       res = JITTER_CONCATENATE_TWO(jitterlisp_primitive_macro_function_,  \
+                                    _jitterlisp_name_suffix)               \
+                (args [0], args [1]);                                      \
+     })
+
 
 
 
@@ -169,15 +187,42 @@
 
 /* Expand to a constant initializer for a struct jitterlisp_primitive including
    the given Lisp name, the given in-arity and the given suffix for a C
-   function. */
-#define JITTERLISP_PRIMITIVE_STRUCT_(_jitterlisp_lisp_name,        \
-                                     _jitterlisp_in_arity,         \
-                                     _jitterlisp_name_suffix)      \
+   function.  The generated descriptor is for a primitive procedure iff
+   _jitterlisp_procedure is non-false. */
+#define JITTERLISP_PRIMITIVE_PROCEDURE_OR_MACRO_STRUCT_(           \
+           _jitterlisp_lisp_name,                                  \
+           _jitterlisp_in_arity,                                   \
+           _jitterlisp_name_suffix,                                \
+           _jitterlisp_procedure)                                  \
   {                                                                \
     (_jitterlisp_lisp_name),                                       \
     ((jitter_uint) (_jitterlisp_in_arity)),                        \
+    (_jitterlisp_procedure),                                       \
     JITTERLISP_PRIMITIVE_C_FUNCTION_NAME(_jitterlisp_name_suffix)  \
   }
+
+/* Like JITTERLISP_PRIMITIVE_PROCEDURE_OR_MACRO_STRUCT_ without the
+   _jitterlisp_procedure argument, always expanding to a primitive procedure
+   descriptor. */
+#define JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_(_jitterlisp_lisp_name,    \
+                                               _jitterlisp_in_arity,     \
+                                               _jitterlisp_name_suffix)  \
+  JITTERLISP_PRIMITIVE_PROCEDURE_OR_MACRO_STRUCT_(                       \
+     _jitterlisp_lisp_name,                                              \
+     _jitterlisp_in_arity,                                               \
+     _jitterlisp_name_suffix,                                            \
+     true)
+
+/* Like JITTERLISP_PRIMITIVE_PROCEDURE_OR_MACRO_STRUCT_ without the
+   _jitterlisp_procedure or _jitterlisp_in_arity argument, always expanding to a
+   primitive macro descriptor. */
+#define JITTERLISP_PRIMITIVE_MACRO_STRUCT_(_jitterlisp_lisp_name,    \
+                                           _jitterlisp_name_suffix)  \
+  JITTERLISP_PRIMITIVE_PROCEDURE_OR_MACRO_STRUCT_(                   \
+     _jitterlisp_lisp_name,                                          \
+     2,                                                              \
+     _jitterlisp_name_suffix,                                        \
+     false)
 
 
 
@@ -249,8 +294,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(notless, FIXNUM, FIXNUM,
   { JITTERLISP_NOTLESSP_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(zerop, FIXNUM,
   { JITTERLISP_ZEROP_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(nzerop, FIXNUM,
-  { JITTERLISP_NZEROP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(non_zerop, FIXNUM,
+  { JITTERLISP_NON_ZEROP_(res, args [0]); })
 /* Comparison. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(eqp, ANYTHING, ANYTHING,
   { JITTERLISP_EQP_(res, args [0], args [1]); })
@@ -284,6 +329,19 @@ JITTERLISP_PRIMITIVE_FUNCTION_0_(read,
 JITTERLISP_PRIMITIVE_FUNCTION_2_(eval, ANYTHING, ANYTHING,
   { JITTERLISP_EVAL_(res, args [0], args [1]); })
 
+/* Primitive macro functions. */
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(define)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(if)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(cond)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(setb)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(while)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(primitive)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(call)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(lambda)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(let)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(begin)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(quote)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(current_environment)
 
 
 
@@ -291,62 +349,76 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(eval, ANYTHING, ANYTHING,
  * ************************************************************************** */
 
 /* Define every primitive descriptor in a global constant array. */
-static const struct jitterlisp_primitive
+static struct jitterlisp_primitive
 jitterlisp_primitives []
   = {
       /* Type checking. */
-      JITTERLISP_PRIMITIVE_STRUCT_("fixnum?", 1, fixnump),
-      JITTERLISP_PRIMITIVE_STRUCT_("character?", 1, characterp),
-      JITTERLISP_PRIMITIVE_STRUCT_("null?", 1, nullp),
-      JITTERLISP_PRIMITIVE_STRUCT_("non-null?", 1, non_nullp),
-      JITTERLISP_PRIMITIVE_STRUCT_("eof?", 1, eofp),
-      JITTERLISP_PRIMITIVE_STRUCT_("boolean?", 1, booleanp),
-      JITTERLISP_PRIMITIVE_STRUCT_("nothing?", 1, nothingp),
-      JITTERLISP_PRIMITIVE_STRUCT_("symbol?", 1, symbolp),
-      JITTERLISP_PRIMITIVE_STRUCT_("non-symbol?", 1, non_symbolp),
-      JITTERLISP_PRIMITIVE_STRUCT_("cons?", 1, consp),
-      JITTERLISP_PRIMITIVE_STRUCT_("non-cons?", 1, non_consp),
-      JITTERLISP_PRIMITIVE_STRUCT_("procedure?", 1, procedurep),
-      JITTERLISP_PRIMITIVE_STRUCT_("vector?", 1, vectorp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("fixnum?", 1, fixnump),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("character?", 1, characterp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("null?", 1, nullp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-null?", 1, non_nullp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("eof?", 1, eofp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("boolean?", 1, booleanp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("nothing?", 1, nothingp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("symbol?", 1, symbolp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-symbol?", 1, non_symbolp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("cons?", 1, consp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-cons?", 1, non_consp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("procedure?", 1, procedurep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("vector?", 1, vectorp),
       /* Arithmetic. */
-      JITTERLISP_PRIMITIVE_STRUCT_("+", 2, plus),
-      JITTERLISP_PRIMITIVE_STRUCT_("-", 2, minus),
-      JITTERLISP_PRIMITIVE_STRUCT_("*", 2, times),
-      JITTERLISP_PRIMITIVE_STRUCT_("/", 2, divided),
-      JITTERLISP_PRIMITIVE_STRUCT_("quotient", 2, quotient),
-      JITTERLISP_PRIMITIVE_STRUCT_("remainder", 2, remainder),
-      JITTERLISP_PRIMITIVE_STRUCT_("1+", 1, one_plus),
-      JITTERLISP_PRIMITIVE_STRUCT_("1-", 1, one_minus),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("+", 2, plus),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("-", 2, minus),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("*", 2, times),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("/", 2, divided),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("quotient", 2, quotient),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("remainder", 2, remainder),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("1+", 1, one_plus),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("1-", 1, one_minus),
       /* Boolean operations. */
-      JITTERLISP_PRIMITIVE_STRUCT_("not", 1, not),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("not", 1, not),
       /* Number comparison. */
-      JITTERLISP_PRIMITIVE_STRUCT_("=", 2, equals),
-      JITTERLISP_PRIMITIVE_STRUCT_("<>", 2, different),
-      JITTERLISP_PRIMITIVE_STRUCT_("<", 2, less),
-      JITTERLISP_PRIMITIVE_STRUCT_("<=", 2, notgreater),
-      JITTERLISP_PRIMITIVE_STRUCT_(">", 2, greater),
-      JITTERLISP_PRIMITIVE_STRUCT_(">=", 2, notless),
-      JITTERLISP_PRIMITIVE_STRUCT_("zero?", 1, zerop),
-      JITTERLISP_PRIMITIVE_STRUCT_("nzero?", 1, nzerop),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("=", 2, equals),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("<>", 2, different),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("<", 2, less),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("<=", 2, notgreater),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_(">", 2, greater),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_(">=", 2, notless),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("zero?", 1, zerop),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-zero?", 1, non_zerop),
       /* Comparison. */
-      JITTERLISP_PRIMITIVE_STRUCT_("eq?", 2, eqp),
-      JITTERLISP_PRIMITIVE_STRUCT_("neq?", 2, neqp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("eq?", 2, eqp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("neq?", 2, neqp),
       /* Cons operations. */
-      JITTERLISP_PRIMITIVE_STRUCT_("cons", 2, cons),
-      JITTERLISP_PRIMITIVE_STRUCT_("car", 1, car),
-      JITTERLISP_PRIMITIVE_STRUCT_("cdr", 1, cdr),
-      JITTERLISP_PRIMITIVE_STRUCT_("set-car!", 2, set_car_b),
-      JITTERLISP_PRIMITIVE_STRUCT_("set-cdr!", 2, set_cdr_b),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("cons", 2, cons),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("car", 1, car),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("cdr", 1, cdr),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("set-car!", 2, set_car_b),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("set-cdr!", 2, set_cdr_b),
       /* Symbol operations. */
-      JITTERLISP_PRIMITIVE_STRUCT_("gensym", 0, gensym),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("gensym", 0, gensym),
       /* Vector operations. */
-      JITTERLISP_PRIMITIVE_STRUCT_("make-vector", 2, make_vector),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */
-      JITTERLISP_PRIMITIVE_STRUCT_("display", 1, display),
-      JITTERLISP_PRIMITIVE_STRUCT_("newline", 0, newline),
-      JITTERLISP_PRIMITIVE_STRUCT_("read", 0, read),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("display", 1, display),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("newline", 0, newline),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("read", 0, read),
       /* Interpretation operations. */
-      JITTERLISP_PRIMITIVE_STRUCT_("eval", 2, eval)
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("eval", 2, eval),
+
+      /* Primitive macros */
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("define", define),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("if", if),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("cond", cond),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("set!", setb),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("while", while),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("primitive", primitive),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("call", call),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("lambda", lambda),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("let", let),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("begin", begin),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("quote", quote),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("current-environment", current_environment)
     };
 
 /* How many primitive descriptors there are. */
@@ -368,8 +440,12 @@ jitterlisp_primitives_initialize (void)
     {
       struct jitterlisp_symbol *symbol_object
         = jitterlisp_symbol_make_interned (jitterlisp_primitives [i].name);
-      symbol_object->global_value
-        = JITTERLISP_PRIMITIVE_ENCODE(jitterlisp_primitives + i);
+      struct jitterlisp_primitive *descriptor = jitterlisp_primitives + i;
+      jitterlisp_object encoded_descriptor
+        = (descriptor->procedure
+           ? JITTERLISP_PRIMITIVE_ENCODE(descriptor)
+           : JITTERLISP_PRIMITIVE_MACRO_ENCODE(descriptor));
+      symbol_object->global_value = encoded_descriptor;
     }
 }
 

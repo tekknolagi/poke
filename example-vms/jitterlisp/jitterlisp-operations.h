@@ -565,7 +565,7 @@
 
 /* Compute a tagged boolean, #t iff the given argument is different from the
    fixnum zero. */
-#define JITTERLISP_NZEROP_(_jitterlisp_out, _jitterlisp_in0)      \
+#define JITTERLISP_NON_ZEROP_(_jitterlisp_out, _jitterlisp_in0)   \
   JITTER_BEGIN_                                                   \
     _jitterlisp_out =                                             \
       JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                 \
@@ -708,7 +708,7 @@
 /* Eval the given expression in the given non-global environment. */
 #define JITTERLISP_EVAL_(_jitterlisp_out, _jitterlisp_in0,  _jitterlisp_in1)  \
   JITTER_BEGIN_                                                               \
-    jitterlisp_error_cloned ("eval operation unimplemented");                 \
+    jitterlisp_error_cloned ("eval operation temporarily disabled");          \
   JITTER_END_
 
 

@@ -23,6 +23,8 @@
 #ifndef JITTERLISP_SEXPRESSION_H_
 #define JITTERLISP_SEXPRESSION_H_
 
+#include <stdbool.h>
+
 /* We need the jitter_int and jitter_uint types. */
 #include <jitter/jitter.h>
 
@@ -874,16 +876,16 @@ struct jitterlisp_cons
 #define JITTERLISP_CLOSURE_STAG_BIT_NO    3
 #define JITTERLISP_CLOSURE_STAG           0b011
 
-/* A closure datum.  The exact list of fields will probably change. */
+/* A closure datum. */
 struct jitterlisp_closure
 {
   /* The non-global environment, as an a-list. */
   jitterlisp_object environment;
 
-  /* The function formal arguments as a list of symbols. */
+  /* The procedure formal arguments as a list of distinct symbols. */
   jitterlisp_object formals;
 
-  /* The function body as a form list. */
+  /* The procedure body as an AST. */
   jitterlisp_object body;
 };
 
@@ -927,14 +929,16 @@ struct jitterlisp_closure
    always return exactly one result, which may be #<nothing> . */
 
 /* A primitive C function takes as its only argument an initial pointer to a C
-   array of already evaluated actual arguments.  The primitive function checks
-   the actual argument types (when needed), but not their number. */
+   array of already evaluated actual arguments, and returns the result which is
+   always exactly one.  The primitive function checks the actual argument types
+   (when needed), but not their number. */
 typedef jitterlisp_object (*jitterlisp_primitive_function)
 (const jitterlisp_object *evaluated_actuals);
 
-/* A primitive descriptor.  Primitives descriptors are all global constants and
-   don't live on the garbage-collected heap.  They don't need to be GC roots as
-   they don't point to other Lisp objects. */
+/* A primitive descriptor, used for both primitive procedures and primitive
+   macros.  Primitives descriptors are all global constants and don't live on
+   the garbage-collected heap.  They don't need to be GC roots as they don't
+   point to other Lisp objects. */
 struct jitterlisp_primitive
 {
   /* The primitive Lisp name as a C string. */
@@ -943,20 +947,12 @@ struct jitterlisp_primitive
   /* How many arguments the primitive takes. */
   jitter_uint in_arity;
 
-  /* A C function implementing the primitive. */
-  jitterlisp_primitive_function function;
+  /* Non-false iff the descriptor is for a primitive procedure rather than a
+     primitive macro. */
+  bool procedure;
 
-  /* /\* A C function pointer of the appropriate in-arity. *\/ */
-  /* union */
-  /* { */
-  /*   /\* A function pointer per in-arity.  Which one is valid of course depends on */
-  /*      in_arity. *\/ */
-  /*   jitterlisp_primitive_function_0 function_0; */
-  /*   jitterlisp_primitive_function_1 function_1; */
-  /*   jitterlisp_primitive_function_2 function_2; */
-  /*   jitterlisp_primitive_function_3 function_3; */
-  /*   jitterlisp_primitive_function_4 function_4; */
-  /* }; */
+  /* A C function implementing the primitive procedure or primitive macro. */
+  jitterlisp_primitive_function function;
 };
 
 /* Primitive tag checking, encoding and decoding. */
@@ -1106,6 +1102,17 @@ struct jitterlisp_vector
 
 
 
+/* [FIXME: tentative] Macros.
+ * ************************************************************************** */
+
+/* A macro is either a primitive macro or a non-primitive macro. */
+#define JITTERLISP_IS_MACRO(_jitterlisp_tagged_object)               \
+  (JITTERLISP_IS_PRIMITIVE_MACRO(_jitterlisp_tagged_object)          \
+   || JITTERLISP_IS_NON_PRIMITIVE_MACRO(_jitterlisp_tagged_object))
+
+
+
+
 /* [FIXME: tentative] S-expression representation: ASTs.
  * ************************************************************************** */
 
@@ -1118,66 +1125,9 @@ struct jitterlisp_vector
 #define JITTERLISP_AST_STAG_BIT_NO    3
 #define JITTERLISP_AST_STAG           0b111
 
-/* The AST case as an expression case identifier. */
-enum jitterlisp_ast_case
-  {
-    /* Literal constant.  Exactly one sub, any s-expression. */
-    jitterlisp_ast_case_literal,
-
-    /* Variable.  Exactly one sub, a symbol. */
-    jitterlisp_ast_case_variable,
-
-    /* Two-way conditional.  Exactly three subs, ASTs. */
-    jitterlisp_ast_case_if,
-
-    /* Variable assignment.  Exactly two subs, a symbol and an AST. */
-    jitterlisp_ast_case_setb,
-
-    /* While loop.  Exactly two subs, a guard AST and a body AST. */
-    jitterlisp_ast_case_while,
-
-    /* Primitive call.  At least one sub, the primitive name as a symbol,
-       then one AST per actual. */
-    jitterlisp_ast_case_primitive,
-
-    /* Procedure call.  At least one sub, the operand as an AST, then one AST
-       per actual. */
-    jitterlisp_ast_case_call,
-
-    /* Procedure abstraction.  One symbol sub per argument followed by one
-       AST for the body. */
-    jitterlisp_ast_case_lambda,
-
-    /* Parallel-binding let.  Two subs per binding (a symbol for the variable,
-       an AST for the bound expression, alternated in this order) followed by
-       one AST for the body. */
-    jitterlisp_ast_case_let,
-
-    /* Sequence.  Exactly two AST subs. */
-    jitterlisp_ast_case_sequence,
-
-    /* Current-environment form.  No subs. */
-    jitterlisp_ast_case_current_environment
-  };
-
-/* An AST data structure.  The structure definition itself seems lax, but
-   operations on ASTs are designed to only build syntactically valid ASTs,
-   and fail otherwise.  This eliminates the need for safety checks at
-   interpretation. */
-struct jitterlisp_AST
-{
-  /* What case this AST represents. */
-  enum jitterlisp_ast_case case_;
-
-  /* How many sub-components this AST has.  This is kept correct even for cases
-     with a fixed number of subs. */
-  jitter_uint sub_no;
-
-  /* A pointer to this AST's sub-components, which are element_no.  Some
-     sub-components may be other ASTs and others may be different Lisp object,
-     according to the case. */
-  jitterlisp_object *subs;
-};
+/* Just a declaration for the AST data structure.  Its definition is in
+   jitterlisp-ast.h . */
+struct jitterlisp_ast;
 
 /* AST tag checking, encoding and decoding. */
 #define JITTERLISP_IS_AST(_jitterlisp_tagged_object)  \
@@ -1190,8 +1140,8 @@ struct jitterlisp_AST
                             JITTERLISP_AST_PTAG,            \
                             JITTERLISP_AST_STAG,            \
                             JITTERLISP_AST_STAG_BIT_NO)
-#define JITTERLISP_AST_DECODE(_jitterlisp_tagged_AST)          \
-  ((struct jitterlisp_AST *)                                      \
+#define JITTERLISP_AST_DECODE(_jitterlisp_tagged_AST)             \
+  ((struct jitterlisp_ast *)                                      \
    (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_AST),      \
                                    JITTERLISP_AST_PTAG,           \
                                    JITTERLISP_AST_STAG,           \

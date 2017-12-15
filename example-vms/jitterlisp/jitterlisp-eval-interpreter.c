@@ -22,46 +22,42 @@
 
 #include "jitterlisp-eval-interpreter.h"
 
-#include <string.h>  // For strcmp .  FIXME: Probably not needed in the end.
-
-#include <jitter/jitter-cpp.h>
-#include <jitter/jitter-dynamic-buffer.h>
-#include <jitter/jitter-fatal.h>
-#include <jitter/jitter-malloc.h>
-#include <jitter/jitter-string.h> // for jitter_clone_string: possibly to remove.
+#include <jitter/jitter-fatal.h> // FIXME: remove unless needed in the end.
 
 #include "jitterlisp.h"
 
 
+/* Non-Jittery interpreter: temporary main interpreter with the wrong API.
+ * ************************************************************************** */
+jitterlisp_object
+jitterlisp_eval_interpreter_____ (jitterlisp_object unexpanded_form,
+                             jitterlisp_object env)
+{
+  printf ("Macroexpanding ");
+  jitterlisp_print_to_stream (stdout, unexpanded_form);
+  printf ("...\n");
+  // FIXME: this is wrong: it should be done elsewhere.
+  jitterlisp_object form = jitterlisp_macroexpand (unexpanded_form, env);
+  printf ("...into ");
+  jitterlisp_print_to_stream (stdout, form);
+  printf ("\n");
+
+  if (! JITTERLISP_IS_AST(form))
+    {
+      printf ("About "); // FIXME: add to the error message
+      jitterlisp_print_to_stream (stdout, form);
+      printf (":\n");
+      jitterlisp_error_cloned ("evaluating non-AST object");
+    }
+  else
+    return jitterlisp_eval_interpreter_ast (form, env);
+}
+
+
+
+
 /* Interpreter utility.
  * ************************************************************************** */
-
-/* Return non-false iff the given argument is a list of symbols, possibly
-   empty. */
-static bool
-jitterlisp_is_list_of_symbols (jitterlisp_object o)
-{
-  while (! JITTERLISP_IS_EMPTY_LIST (o))
-    {
-      if (! JITTERLISP_IS_CONS (o))
-        return false;
-      jitterlisp_object car = JITTERLISP_EXP_C_A_CAR(o);
-      jitterlisp_object cdr = JITTERLISP_EXP_C_A_CDR(o);
-      if (! JITTERLISP_IS_SYMBOL (car))
-        return false;
-      o = cdr;
-    }
-  return true;
-}
-
-/* Return a fresh cons of the given car and cdr. */
-static inline jitterlisp_object
-jitterlisp_cons (jitterlisp_object car, jitterlisp_object cdr)
-{
-  jitterlisp_object res;
-  JITTERLISP_CONS_(res, car, cdr);
-  return res;
-}
 
 __attribute__ ((unused))
 static inline jitterlisp_object
@@ -109,26 +105,6 @@ jitterlisp_list_5 (jitterlisp_object a, jitterlisp_object b,
   return jitterlisp_cons (a, jitterlisp_list_4 (b, c, d, e));
 }
 
-/* Return the encoded car of the given encoded cons, tag-checking. */
-static inline jitterlisp_object
-jitterlisp_car (jitterlisp_object cons)
-{
-  if (! JITTERLISP_IS_CONS(cons))
-    jitterlisp_error_cloned ("car of non-cons");
-  else
-    return JITTERLISP_EXP_C_A_CAR(cons);
-}
-
-/* Return the encoded cdr of the given encoded cons, tag-checking. */
-static inline jitterlisp_object
-jitterlisp_cdr (jitterlisp_object cons)
-{
-  if (! JITTERLISP_IS_CONS(cons))
-    jitterlisp_error_cloned ("cdr of non-cons");
-  else
-    return JITTERLISP_EXP_C_A_CDR(cons);
-}
-
 /* Return a fresh closure with the given components. */
 static jitterlisp_object
 jitterlisp_closure (jitterlisp_object environment,
@@ -146,207 +122,8 @@ jitterlisp_closure (jitterlisp_object environment,
 
 
 
-/* Environments.
- * ************************************************************************** */
-
-/* This data structure holds a binding from variable to value representing a
-   non-global environment.  Non-global means local (procedure arguments, let)
-   plus non-local (locals from outer static contexts) variables.  Global
-   variables are handled differently, with a value directly stored in the symbol
-   data structure.  Non-global bindings have precedence over global bindings.
-
-   Variables are encoding as symbols and compared by identity.  This
-   functionality is for this compilation unit's internal use, not exported in a
-   header: the VM implementation will need something similar but not identical,
-   and I still have to figure out the details.
-
-   This is an ordinary a-list implemented as an s-expression; set! modifies it
-   destructively.  An inefficient but very simple solution. */
-
-/* The empty non-global environment. */
-static const jitterlisp_object
-jitterlisp_empty_environment = JITTERLISP_EMPTY_LIST;
-
-/* Return an expanded non-global environment, sharing structure with the given
-   one, binding the given name to the given value.  The given environment is
-   not modified. */
-static jitterlisp_object
-jitterlisp_environment_bind (jitterlisp_object env, jitterlisp_object name,
-                             jitterlisp_object value)
-{
-  return jitterlisp_cons (jitterlisp_cons (name, value), env);
-}
-
-/* Return the value bound to the given name in the local environment and,
-   failing that, in the global environment.  Error out if the name is not bound
-   in the global environment either. */
-static jitterlisp_object
-jitterlisp_environment_lookup (jitterlisp_object env, jitterlisp_object name)
-{
-  /* First look for a binding in the local environment, which is to say look
-     for the first cons in env whose car is equal-by-identity to name... */
-  jitterlisp_object env_rest;
-  for (env_rest = env;
-       env_rest != JITTERLISP_EMPTY_LIST;
-       env_rest = JITTERLISP_EXP_C_A_CDR(env_rest))
-    {
-      jitterlisp_object next_cons = JITTERLISP_EXP_C_A_CAR(env_rest);
-      jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
-      if (next_name == name)
-        return JITTERLISP_EXP_C_A_CDR(next_cons);
-    }
-
-  /* ...The symbol is not bound in the given local environment.  Look it up as a
-     global. */
-  struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
-  jitterlisp_object res = unencoded_name->global_value;
-  if (JITTERLISP_IS_UNDEFINED(res))
-    {
-      printf ("About "); jitterlisp_print_to_stream (stdout, name); printf ("\n"); // FIXME: add to the error message
-      jitterlisp_error_cloned ("unbound variable");
-    }
-  else
-    return res;
-}
-
-/* Return non-false iff the given environment is bound to the given name. */
-static bool
-jitterlisp_environment_has (jitterlisp_object env, jitterlisp_object name)
-{
-  /* First look for a binding in the local environment, which is to say look
-     for the first cons in env whose car is equal-by-identity to name... */
-  jitterlisp_object env_rest;
-  for (env_rest = env;
-       env_rest != JITTERLISP_EMPTY_LIST;
-       env_rest = JITTERLISP_EXP_C_A_CDR(env_rest))
-    {
-      jitterlisp_object next_cons = JITTERLISP_EXP_C_A_CAR(env_rest);
-      jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
-      if (next_name == name)
-        return true;
-    }
-
-  /* ...The symbol is not bound in the given local environment.  Look it up as a
-     global. */
-  struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
-  return ! JITTERLISP_IS_UNDEFINED(unencoded_name->global_value);
-}
-
-/* Destructively update the first binding for the given name in the given
-   non-global environment, or the global binding if no non-global environment
-   exists.  Error out if the name is not bound. */
-static void
-jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
-                            jitterlisp_object new_value)
-{
-  /* First look for a binding in the local environment, which is to say look
-     for the first cons in env whose car is equal-by-identity to name... */
-  jitterlisp_object env_rest;
-  for (env_rest = env;
-       env_rest != JITTERLISP_EMPTY_LIST;
-       env_rest = JITTERLISP_EXP_C_A_CDR(env_rest))
-    {
-      jitterlisp_object useless __attribute__ ((unused));
-      jitterlisp_object next_cons = JITTERLISP_EXP_C_A_CAR(env_rest);
-      jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
-      if (next_name == name)
-        {
-          JITTERLISP_SET_CDRB_(useless, next_cons, new_value);
-          return;
-        }
-    }
-
-  /* ...The symbol is not bound in the given local environment.  Change its
-     global binding if one exists, or fail. */
-  struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
-  if (! JITTERLISP_IS_UNDEFINED(unencoded_name->global_value))
-    unencoded_name->global_value = new_value;
-  else
-    {
-      printf ("About "); jitterlisp_print_to_stream (stdout, name); printf ("\n"); // FIXME: add to the error message
-      jitterlisp_error_cloned ("set! on unbound variable");
-    }
-}
-
-
-
-
-/* Macroexpansion.
- * ************************************************************************** */
-
-/* Forward-declaration: jitterlisp_macroexpand and
-   jitterlisp_macroexpand_multiple are mutually recursive in an indirect way. */
-static jitterlisp_object
-jitterlisp_macroexpand_multiple (jitterlisp_object os);
-
-static jitterlisp_object
-jitterlisp_macroexpand_literal (jitterlisp_object o)
-{
-  return o;
-}
-
-static jitterlisp_object
-jitterlisp_macroexpand_variable (jitterlisp_object o)
-{
-  return o;
-}
-
-static jitterlisp_object
-jitterlisp_macroexpand_cons (jitterlisp_object car, jitterlisp_object cdr)
-{
-  return jitterlisp_cons (car,
-                          jitterlisp_macroexpand_multiple (cdr)); // FIXME: do it for real.
-}
-
-static jitterlisp_object
-jitterlisp_macroexpand (jitterlisp_object o)
-{
-  if (JITTERLISP_IS_SYMBOL(o))
-    return jitterlisp_macroexpand_variable (o);
-  else if (JITTERLISP_IS_CONS(o))
-    return jitterlisp_macroexpand_cons (JITTERLISP_EXP_C_A_CAR(o),
-                                        JITTERLISP_EXP_C_A_CDR(o));
-  else
-    return jitterlisp_macroexpand_literal (o);
-}
-
-static jitterlisp_object
-jitterlisp_macroexpand_multiple (jitterlisp_object os)
-{
-  /* This logic is slightly more complex than the obvious recursive alternative,
-     but uses constant stack space and doesn't use any temporary heap data
-     structure. */
-  jitterlisp_object res;
-  jitterlisp_object *res_restp = & res;
-  while (! JITTERLISP_IS_EMPTY_LIST(os))
-    {
-      if (! JITTERLISP_IS_CONS(os))
-        {
-          printf ("About "); // FIXME: integrate with the error function
-          jitterlisp_print_to_stream (stdout, os);
-          jitterlisp_error_cloned ("jitterlisp_macroexpand_multiple: non-list "
-                                   "argument");
-        }
-      jitterlisp_object car = JITTERLISP_EXP_C_A_CAR(os);
-      jitterlisp_object macroexpanded_car = jitterlisp_macroexpand (car);
-      * res_restp = jitterlisp_cons (macroexpanded_car, JITTERLISP_UNDEFINED);
-      res_restp = & JITTERLISP_EXP_C_A_CDR(* res_restp);
-
-      os = JITTERLISP_EXP_C_A_CDR(os);
-    }
-  * res_restp = JITTERLISP_EMPTY_LIST;
-  return res;
-}
-
-
-
-
 /* Non-Jittery interpreter helpers.
  * ************************************************************************** */
-
-/* Forward-declaration: eval the given form in the given local environment. */
-static jitterlisp_object
-jitterlisp_eval_interpreter (jitterlisp_object form, jitterlisp_object env);
 
 /* Return non-false iff the given object is self-evaluating. */
 static bool
@@ -720,7 +497,12 @@ jitterlisp_eval_interpreter_while (jitterlisp_object cdr,
   return JITTERLISP_NOTHING;
 }
 
-/* The noinline attribute is important here: this function invokes a primitive C
+/* Evaluate the given operands in the given environment, and return the result
+   of the application of the given (already evaluated) primitive to them.  This
+   is different from the conventional apply function used in Scheme interpreters
+   in that the operands are not already evaluated; the advantage is avoiding a
+   temporary list.
+   The noinline attribute is important here: this function invokes a primitive C
    function in what would syntactically look like a tail context, but passing it
    a pointer to local storage as argument; that prevents GCC from compiling the
    call as a sibling call optimization, which in itself is a very minor loss.
@@ -732,7 +514,7 @@ jitterlisp_eval_interpreter_while (jitterlisp_object cdr,
 __attribute__ ((noinline))
 static jitterlisp_object
 jitterlisp_eval_interpreter_call_primitive (jitterlisp_object primitive,
-                                            jitterlisp_object actuals,
+                                            jitterlisp_object unevaluated_actuals,
                                             jitterlisp_object env)
 {
   /* Keep the primitive fields into local C variables. */
@@ -741,21 +523,21 @@ jitterlisp_eval_interpreter_call_primitive (jitterlisp_object primitive,
   jitter_uint in_arity = untagged_primitive->in_arity;
   jitterlisp_primitive_function function = untagged_primitive->function;
 
-  /* Evaluate actuals into a temporary array.  The array will remain allocated
-     until the primitive function returns: primitive calls do not happen in a C
-     tail context, which should not be a problem. */
+  /* Evaluate unevaluated_actuals into a temporary array.  The array will remain
+     allocated until the primitive function returns: primitive calls do not
+     happen in a C tail context, which should not be a problem. */
   jitterlisp_object actual_results [JITTERLISP_PRIMITIVE_MAX_IN_ARITY];
   int next_actual_index = 0;
-  while (! JITTERLISP_IS_EMPTY_LIST(actuals))
+  while (! JITTERLISP_IS_EMPTY_LIST(unevaluated_actuals))
     {
-      if (! JITTERLISP_IS_CONS(actuals))
+      if (! JITTERLISP_IS_CONS(unevaluated_actuals))
         jitterlisp_error_cloned ("primitive call actuals not a list");
-      jitterlisp_object actual = JITTERLISP_EXP_C_A_CAR(actuals);
+      jitterlisp_object actual = JITTERLISP_EXP_C_A_CAR(unevaluated_actuals);
       jitterlisp_object actual_result
         = jitterlisp_eval_interpreter (actual, env);
       actual_results [next_actual_index ++] = actual_result;
 
-      actuals = JITTERLISP_EXP_C_A_CDR(actuals);
+      unevaluated_actuals = JITTERLISP_EXP_C_A_CDR(unevaluated_actuals);
     }
 
   /* Check whether the in-arity has been respected. */
@@ -771,13 +553,14 @@ jitterlisp_eval_interpreter_call_primitive (jitterlisp_object primitive,
   return function (actual_results);
 }
 
-/* Evaluate the given operator and operands in the given environment, and return
-   the result of their application.  This is different from the conventional
-   apply function used in Scheme interpreters in that the operator and operands
-   are not already evaluated; the advantage is avoiding a temporary list. */
+/* Evaluate the given operands in the given environment, and return the result
+   of the application of the given (already evaluated) closure to them.  This is
+   different from the conventional apply function used in Scheme interpreters in
+   that the operands are not already evaluated; the advantage is avoiding a
+   temporary list. */
 static jitterlisp_object
 jitterlisp_eval_interpreter_call_closure (jitterlisp_object closure,
-                                          jitterlisp_object actuals,
+                                          jitterlisp_object unevaluated_actuals,
                                           jitterlisp_object env)
 {
   /* Keep the closure fields into local C variables. */
@@ -791,21 +574,21 @@ jitterlisp_eval_interpreter_call_closure (jitterlisp_object closure,
      environment, starting from the closure environment.  We can assume that the
      environment is an a-list and omit tag checks. */
   jitterlisp_object body_environment = closure_environment;
-  while (! JITTERLISP_IS_EMPTY_LIST(actuals))
+  while (! JITTERLISP_IS_EMPTY_LIST(unevaluated_actuals))
     {
-      if (! JITTERLISP_IS_CONS(actuals))
+      if (! JITTERLISP_IS_CONS(unevaluated_actuals))
         jitterlisp_error_cloned ("closure call actuals not a list");
       if (JITTERLISP_IS_EMPTY_LIST(formals))
         jitterlisp_error_cloned ("too many closure call actuals");
       jitterlisp_object formal = JITTERLISP_EXP_C_A_CAR(formals);
-      jitterlisp_object actual = JITTERLISP_EXP_C_A_CAR(actuals);
+      jitterlisp_object actual = JITTERLISP_EXP_C_A_CAR(unevaluated_actuals);
       jitterlisp_object actual_result
         = jitterlisp_eval_interpreter (actual, env);
       body_environment
         = jitterlisp_environment_bind (body_environment, formal, actual_result);
 
       formals = JITTERLISP_EXP_C_A_CDR(formals);
-      actuals = JITTERLISP_EXP_C_A_CDR(actuals);
+      unevaluated_actuals = JITTERLISP_EXP_C_A_CDR(unevaluated_actuals);
     }
 
   if (! JITTERLISP_IS_EMPTY_LIST(formals))
@@ -813,6 +596,31 @@ jitterlisp_eval_interpreter_call_closure (jitterlisp_object closure,
 
   /* Evaluate the global body in the environment we have extended. */
   return jitterlisp_eval_interpreter_begin (body_forms, body_environment);
+}
+
+/* Call the given operator, already evaluated into either a primitive or a
+   closure, with the given operands still to evaluate in the given environment.
+   Return the result. */
+static jitterlisp_object
+jitterlisp_eval_interpreter_call_evaluated_operator
+   (jitterlisp_object evaluated_operator,
+    jitterlisp_object unevaluated_actuals,
+    jitterlisp_object env)
+{
+  /* In either case the actuals have not been evaluated yet. */
+  if (JITTERLISP_IS_CLOSURE(evaluated_operator))
+    return jitterlisp_eval_interpreter_call_closure (evaluated_operator,
+                                                     unevaluated_actuals,
+                                                     env);
+  else if (JITTERLISP_IS_PRIMITIVE(evaluated_operator))
+    return jitterlisp_eval_interpreter_call_primitive (evaluated_operator,
+                                                       unevaluated_actuals,
+                                                       env);
+  else
+    {
+      printf ("About "); jitterlisp_print_to_stream (stdout, evaluated_operator); printf ("\n"); // FIXME: add to the error message
+      jitterlisp_error_cloned ("call: non-closure non-primitive operator");
+    }
 }
 
 /* Evaluate the given operator and operands in the given environment, and return
@@ -829,21 +637,9 @@ jitterlisp_eval_interpreter_call (jitterlisp_object operator,
      either a closure or a primitive. */
   jitterlisp_object operator_result
     = jitterlisp_eval_interpreter (operator, env);
-
-  /* In either case the actuals have not been evaluated yet. */
-  if (JITTERLISP_IS_CLOSURE(operator_result))
-    return jitterlisp_eval_interpreter_call_closure (operator_result,
-                                                     actuals,
-                                                     env);
-  else if (JITTERLISP_IS_PRIMITIVE(operator_result))
-    return jitterlisp_eval_interpreter_call_primitive (operator_result,
-                                                       actuals,
-                                                       env);
-  else
-    {
-      printf ("About "); jitterlisp_print_to_stream (stdout, operator_result); printf ("\n"); // FIXME: add to the error message
-      jitterlisp_error_cloned ("call: non-closure non-primitive operator");
-    }
+  return jitterlisp_eval_interpreter_call_evaluated_operator (operator_result,
+                                                              actuals,
+                                                              env);
 }
 
 static jitterlisp_object
@@ -926,11 +722,11 @@ jitterlisp_eval_interpreter_cons_of_symbol (jitterlisp_object symbol,
 /* Non-Jittery interpreter: main function.
  * ************************************************************************** */
 
-static jitterlisp_object
-jitterlisp_eval_interpreter (jitterlisp_object original_form,
+jitterlisp_object
+jitterlisp_eval_interpreter___ (jitterlisp_object original_form,
                              jitterlisp_object env)
 {
-  jitterlisp_object form = jitterlisp_macroexpand (original_form);
+  jitterlisp_object form = jitterlisp_macroexpand (original_form, env);
   printf ("Macroexpanded\n  ");
   jitterlisp_print_to_stream (stdout, original_form);
   printf ("\ninto\n  ");
@@ -959,11 +755,260 @@ jitterlisp_eval_interpreter (jitterlisp_object original_form,
 
 
 
+/* Non-Jittery interpreter: AST evaluation helpers for primitives and closures.
+ * ************************************************************************** */
+
+/* Return the evaluation of the given primitive on the given (of course still
+   unevaluated) operand ASTs.  Assume that the rator argument is an encoded
+   primitive, and that rand_asts is a C array of operand_no elements. */
+static inline jitterlisp_object
+jitterlisp_eval_interpreter_ast_primitive (jitterlisp_object rator,
+                                           const jitterlisp_object *rand_asts,
+                                           size_t rand_no,
+                                           jitterlisp_object env)
+{
+  /* FIXME: this, and likely this C function signature as well, will need to
+     change with an exact-pointer-finding GC.
+     Evaluate primitive actuals into a temporary array which is large enough for
+     the actuals of any primitive.  Don't bother initializing the elements we
+     don't actually use.  If the AST has been built correctly the primitive
+     in-arity is correct, so we don't need to check it now at run time. */
+  jitterlisp_object values [JITTERLISP_PRIMITIVE_MAX_IN_ARITY];
+  int i;
+  for (i = 0; i < rand_no; i ++)
+    values [i] = jitterlisp_eval_interpreter_ast (rand_asts [i], env);
+
+  return JITTERLISP_PRIMITIVE_DECODE(rator)->function (values);
+}
+
+/* Return the result of the given call in the given environment.  The operator
+   is an AST, still to evaluate, and the operands are tagged ASTs in the given
+   number; the operator comes first in the array.  The operator may evaluate to
+   a primitive, a closure, or something else, in which case this function errors
+   out cleanly. */
+static inline jitterlisp_object
+jitterlisp_eval_interpreter_ast_call
+   (const jitterlisp_object *rator_and_rand_asts,
+    size_t rator_and_rand_no,
+    jitterlisp_object env)
+{
+  /* First evaluate the operator. */
+  jitterlisp_object rator_value
+    = jitterlisp_eval_interpreter_ast (rator_and_rand_asts [0], env);
+
+  /* Check the operator tag.  If it's a primitive use the primitive helper
+     function (but checking in-arity first, as this hasn't been checked at AST
+     construction time), otherwise evaluate the operands into an extended
+     environment and use eval. */
+  if (JITTERLISP_IS_PRIMITIVE(rator_value))
+    {
+      const int expected_in_arity_plus_1
+        = JITTERLISP_PRIMITIVE_DECODE(rator_value)->in_arity + 1;
+      if (expected_in_arity_plus_1 < rator_and_rand_no)
+        {
+          printf ("About "); // FIXME: add to the error message
+          jitterlisp_print_to_stream (stdout, rator_value);
+          printf (":\n");
+          jitterlisp_error_cloned ("primitive call: too many actuals");
+        }
+      else if (expected_in_arity_plus_1 > rator_and_rand_no)
+        {
+          printf ("About "); // FIXME: add to the error message
+          jitterlisp_print_to_stream (stdout, rator_value);
+          printf (":\n");
+          jitterlisp_error_cloned ("primitive call: not enough actuals");
+        }
+
+      return jitterlisp_eval_interpreter_ast_primitive (rator_value,
+                                                        rator_and_rand_asts + 1,
+                                                        rator_and_rand_no - 1,
+                                                        env);
+    }
+  if (! JITTERLISP_IS_CLOSURE(rator_value))
+    {
+      printf ("About "); // FIXME: add to the error message
+      jitterlisp_print_to_stream (stdout, rator_value);
+      printf (":\n");
+      jitterlisp_error_cloned ("call: non-primitive non-closure operator");
+    }
+
+  /* If we arrived here the operator is a closure.  Evaluate actuals binding
+     them to the closure formals, in order, starting from the closure
+     environment.  Unfortunately we have to check the arity at run time,
+     differently from the primitive case. */
+  struct jitterlisp_closure *closure = JITTERLISP_CLOSURE_DECODE(rator_value);
+  jitterlisp_object formals = closure->formals;
+  jitterlisp_object body_env = closure->environment;
+  int i;
+  for (i = 1; i < rator_and_rand_no; i ++)
+    {
+      if (JITTERLISP_IS_EMPTY_LIST(formals))
+        jitterlisp_error_cloned ("call: too many actuals");
+
+      jitterlisp_object rand_value =
+        jitterlisp_eval_interpreter_ast (rator_and_rand_asts [i], env);
+      jitterlisp_object formal = JITTERLISP_EXP_C_A_CAR(formals);
+      body_env = jitterlisp_environment_bind (body_env, formal, rand_value);
+
+      formals = JITTERLISP_EXP_C_A_CDR(formals);
+    }
+  if (! JITTERLISP_IS_EMPTY_LIST(formals))
+    jitterlisp_error_cloned ("call: not enough actuals");
+
+  /* Return the evaluation of the closure body in the extended closure
+     environment. */
+  jitterlisp_object body_ast = closure->body;
+  return jitterlisp_eval_interpreter_ast (body_ast, body_env);
+}
+
+
+
+
+/* Non-Jittery interpreter: AST evaluation.
+ * ************************************************************************** */
+
+jitterlisp_object
+jitterlisp_eval_interpreter_ast (jitterlisp_object o,
+                                 jitterlisp_object env)
+{
+  /* No need to validate o: if it comes from macroexpansion it's definitely an
+     encoded AST, and its subs are well-formed as well. */
+  const struct jitterlisp_ast *ast = JITTERLISP_AST_DECODE(o);
+  const jitter_uint sub_no = ast->sub_no;
+  const jitterlisp_object * const subs = ast->subs;
+  /*
+  printf ("jitterlisp_eval_interpreter_ast (case %i, %i subs): ",
+          (int) ast->case_, (int) sub_no);
+  jitterlisp_print_to_stream (stdout, JITTERLISP_AST_ENCODE(ast));
+  printf ("\n");
+  */
+  switch (ast->case_)
+    {
+    case jitterlisp_ast_case_literal:
+      return subs [0];
+
+    case jitterlisp_ast_case_variable:
+      return jitterlisp_environment_lookup (env, subs [0]);
+
+    case jitterlisp_ast_case_define:
+      {
+        struct jitterlisp_symbol *unencoded_variable
+          = JITTERLISP_SYMBOL_DECODE(subs [0]);
+        jitterlisp_object defined_value
+          = jitterlisp_eval_interpreter_ast (subs [1], env);
+        unencoded_variable->global_value = defined_value;
+        return JITTERLISP_NOTHING;
+      }
+
+    case jitterlisp_ast_case_if:
+      {
+        jitterlisp_object condition_result
+          = jitterlisp_eval_interpreter_ast (subs [0], env);
+        jitterlisp_object branch
+          = (JITTERLISP_IS_FALSE(condition_result)
+             ? subs [2]
+             : subs [1]);
+        return jitterlisp_eval_interpreter_ast (branch, env);
+      }
+
+    case jitterlisp_ast_case_setb:
+      {
+        jitterlisp_object bound_value
+          = jitterlisp_eval_interpreter_ast (subs [1], env);
+        jitterlisp_environment_set (env, subs [0], bound_value);
+        return JITTERLISP_NOTHING;
+      }
+
+    case jitterlisp_ast_case_while:
+      {
+        const jitterlisp_object guard = subs [0];
+        const jitterlisp_object body = subs [1];
+        while (! JITTERLISP_IS_FALSE (jitterlisp_eval_interpreter_ast (guard,
+                                                                       env)))
+          jitterlisp_eval_interpreter_ast (body, env);
+        return JITTERLISP_NOTHING;
+      }
+
+    case jitterlisp_ast_case_primitive:
+      return jitterlisp_eval_interpreter_ast_primitive (subs [0],
+                                                        subs + 1,
+                                                        sub_no - 1,
+                                                        env);
+
+    case jitterlisp_ast_case_call:
+      return jitterlisp_eval_interpreter_ast_call (subs, sub_no, env);
+
+    case jitterlisp_ast_case_lambda:
+      {
+        /* Notice that the lambda formals are already stored as a list of
+           symbols in the AST, differently from other AST cases; that is an
+           optimization to make this closure initialization faster. */
+        jitterlisp_object res;
+        JITTERLISP_CLOSURE_(res, env, subs [0], subs [1]);
+        return res;
+      }
+
+    case jitterlisp_ast_case_let:
+      {
+        /* Evaluate each binding in env, but at the same time build another
+           environment equal to env extended it with the new bindings. */
+        jitterlisp_object body_env = env;
+        int i;
+        const int binding_no = sub_no - 1;
+        for (i = 0; i < binding_no; i += 2)
+          {
+            jitterlisp_object bound_value =
+              jitterlisp_eval_interpreter_ast (subs [i + 1], env);
+            body_env
+              = jitterlisp_environment_bind (body_env, subs [i], bound_value);
+          }
+
+        /* Evaluate the body in the extended environment. */
+        return jitterlisp_eval_interpreter_ast (subs [sub_no - 1], body_env);
+      }
+
+    case jitterlisp_ast_case_sequence:
+      jitterlisp_eval_interpreter_ast (subs [0], env);
+      return jitterlisp_eval_interpreter_ast (subs [1],env);
+
+    case jitterlisp_ast_case_current_environment:
+      return env;
+
+    default:
+      printf ("About "); // FIXME: add to the error message
+      jitterlisp_print_to_stream (stdout, o);
+      printf (":\n");
+      jitterlisp_error_cloned ("eval: invalid or unimplemented AST case");
+    }
+}
+
+
+
+
 /* Non-Jittery interpreter: user API.
  * ************************************************************************** */
 
 jitterlisp_object
-jitterlisp_eval_globally_interpreter (jitterlisp_object form)
+jitterlisp_eval_globally_interpreter (jitterlisp_object unexpanded_form)
 {
-  return jitterlisp_eval_interpreter (form, jitterlisp_empty_environment);
+  return jitterlisp_eval_interpreter (unexpanded_form,
+                                      jitterlisp_empty_environment);
+}
+
+jitterlisp_object
+jitterlisp_eval_interpreter (jitterlisp_object unexpanded_form,
+                             jitterlisp_object env)
+{
+  /*
+  printf ("Macroexpanding ");
+  jitterlisp_print_to_stream (stdout, unexpanded_form);
+  printf ("...\n");
+  */
+  jitterlisp_object ast = jitterlisp_macroexpand (unexpanded_form, env);
+  /*
+  printf ("...into ");
+  jitterlisp_print_to_stream (stdout, form);
+  printf ("\n");
+  */
+  return jitterlisp_eval_interpreter_ast (ast, env);
 }

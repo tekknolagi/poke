@@ -28,6 +28,7 @@
 #include <jitter/jitter-hash.h>
 
 #include "jitterlisp-sexpression.h"
+#include "jitterlisp-ast.h"
 
 
 /* Alignment.
@@ -150,6 +151,22 @@ jitterlisp_symbol_make_interned (const char *name)
   ((struct jitterlisp_vector*)                            \
    (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(       \
                             struct jitterlisp_vector))))
+
+
+
+
+/* AST (low-level) allocation.
+ * ************************************************************************** */
+
+/* High-level functions for allocating already initialized ASTs are provided in
+   jitterlisp-ast.h . */
+
+/* Expand to an rvalue of type struct jitterlisp_ast * whose evaluation points
+   to a just allocated AST, completely uninitialized. */
+#define JITTERLISP_AST_MAKE_UNINITIALIZED_UNENCODED()  \
+  ((struct jitterlisp_ast*)                            \
+   (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(    \
+                            struct jitterlisp_ast))))
 
 
 

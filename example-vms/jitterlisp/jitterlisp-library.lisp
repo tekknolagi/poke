@@ -1269,6 +1269,12 @@
 (define (compose-eta f g x)
   (f (g x)))
 
+(define (square-function f)
+  (lambda (x) (f (f x))))
+
+(define (square-function-eta f x)
+  (f (f x)))
+
 
 
 
@@ -1297,8 +1303,8 @@
 (define (iterate-tail-recursive-post f n)
   (lambda (x) (iterate-eta f n x)))
 
-;; This, surprisingly, seems even faster than iterate-iterative (at least on the
-;; naïf JitterLisp interpreter).
+;; This builds a function which is even faster than the iterative versions (at
+;; least on the naïf JitterLisp interpreter).
 (define (iterate-squaring-pre f n)
   ;; This uses the same idea of exponentiation by squaring; the advantage here
   ;; is the very small number of built closures, only O(lg n).  Recursion depth
@@ -1312,7 +1318,7 @@
          f)
         ((even? n)
          (let ((f^n/2 (iterate-squaring-pre f (quotient n 2))))
-           (compose f^n/2 f^n/2)))
+           (square-function f^n/2)))
         (#t
          (compose f (iterate-squaring-pre f (1- n))))))
 
@@ -1322,9 +1328,9 @@
   (cond ((zero? n)
          x)
         ((even? n)
-         (iterate-squaring-eta (compose f f) (quotient n 2) x))
+         (iterate-squaring-eta (square-function f) (quotient n 2) x))
         (#t
-         (iterate-squaring-eta (compose f f) (quotient n 2) (f x)))))
+         (iterate-squaring-eta (square-function f) (quotient n 2) (f x)))))
 (define (iterate-squaring-post f n)
   (lambda (x) (iterate-squaring-eta f n x)))
 
@@ -1366,49 +1372,3 @@
 
 ;; FIXME: make this short-circuit and variadic once I have macros.
 (define (or a b) (if a #t b))
-
-(define macro-table
-  '())
-(define (define-as-macro symbol low-level-macro)
-  (set! macro-table
-        (cons (cons symbol low-level-macro)
-              (del-assq symbol macro-table))))
-(define (macro-name? symbol)
-  (if (assq symbol macro-table)
-      #t
-      #f))
-(define (macro-lookup symbol)
-  (let ((a-cons (assq symbol macro-table)))
-    (if a-cons
-        (cdr a-cons)
-        (error `(unbound macro name ,symbol)))))
-
-(define (macroexpand sexp)
-  (cond ((symbol? sexp)
-         `(VARIABLE ,sexp))
-        ((non-cons? sexp)
-         `(LITERAL ,sexp))
-        (#t
-         (macroexpand-cons (car sexp) (cdr sexp)))))
-
-(define (macroexpand-cons rator rands)
-  (cond ((non-symbol? rator)
-         `(CALL ,(macroexpand rator)
-                ,@(map macroexpand rands)))
-        ((eq? rator 'set!)
-         `(SET! ,(car rands)
-                ,(macroexpand `(begin ,@(cdr rands)))))
-        ((eq? rator 'begin)
-         (macroexpand-begin rands))
-        (#t
-         `(CALL (VARIABLE ,rator)
-                ,@(map macroexpand rands)))))
-
-(define (macroexpand-begin forms)
-  (cond ((null? forms)
-         `(LITERAL ,(begin)))
-        ((null? (cdr forms))
-         (macroexpand (car forms)))
-        (#t
-         `(SEQUENCE ,(macroexpand (car forms))
-                    ,(macroexpand-begin (cdr forms))))))
