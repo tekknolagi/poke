@@ -120,6 +120,7 @@ jitterlisp_macroexpand_macro_call (jitterlisp_object macro,
         = jitterlisp_environment_bind (expansion_env,
                                        jitterlisp_low_level_macro_args,
                                        cdr);
+      /* Evaluate the macro body in the extended environment. */
       /*
       printf ("About to eval the macro body ");
       jitterlisp_print_to_stream (stdout, macro_ast); printf ("\n");
@@ -137,6 +138,8 @@ jitterlisp_macroexpand_macro_call (jitterlisp_object macro,
       printf ("\n");
       */
       //jitterlisp_error_cloned ("macroexpanding non-primitive macro call: unimplemented");
+      /* The result can be any Lisp object, which may need to be macroexpanded
+         in its turn. */
       return jitterlisp_macroexpand (first_result, env);
     }
   else
@@ -182,13 +185,8 @@ jitterlisp_macroexpand (jitterlisp_object o,
                         jitterlisp_object env)
 {
   if (JITTERLISP_IS_AST(o))
-    {
-      /* FIXME: is this case necessary?  Is it desirable? */
-      printf ("[Trivially macroexpanding the AST ");
-      jitterlisp_print_to_stream (stdout, o);
-      printf ("]\n");
-      return o;
-    }
+    /* This is already an AST: there is nothing more to expand. */
+    return o;
   else if (JITTERLISP_IS_SYMBOL(o))
     return jitterlisp_ast_make_variable (o);
   else if (JITTERLISP_IS_CONS(o))

@@ -32,10 +32,9 @@
  * ************************************************************************** */
 
 /* Return the macroexpansion of the given s-expression in the given
-   environment. */
+   expansion-time environment.  The result will be a tagged AST. */
 jitterlisp_object
-jitterlisp_macroexpand (jitterlisp_object o,
-                        jitterlisp_object env);
+jitterlisp_macroexpand (jitterlisp_object o, jitterlisp_object env);
 
 
 
