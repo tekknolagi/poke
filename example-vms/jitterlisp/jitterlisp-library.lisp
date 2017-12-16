@@ -964,6 +964,80 @@
 
 
 
+;;;; fold-left.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (fold-left-iterative f x xs)
+  (while (non-null? xs)
+    (set! x (f x (car xs)))
+    (set! xs (cdr xs)))
+  x)
+
+(define (fold-left-iterative-reversed-f reversed-f x xs)
+  (while (non-null? xs)
+    (set! x (reversed-f (car xs) x))
+    (set! xs (cdr xs)))
+  x)
+
+(define (fold-left-tail-recursive f x xs)
+  (if (null? xs)
+      x
+      (fold-left-tail-recursive f
+                                (f x (car xs))
+                                (cdr xs))))
+
+(define (fold-left-tail-recursive-reversed-f reversed-f x xs)
+  (if (null? xs)
+      x
+      (fold-left-tail-recursive-reversed-f reversed-f
+                                           (reversed-f (car xs) x)
+                                           (cdr xs))))
+
+(define (fold-left f x xs)
+  (fold-left-iterative f x xs))
+
+
+
+
+;;;; fold-right.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (fold-right-iterative f xs y)
+  (fold-left-iterative-reversed-f f
+                                  y
+                                  (reverse-iterative xs)))
+
+(define (fold-right-tail-recursive f xs y)
+  (fold-left-tail-recursive-reversed-f f
+                                       y
+                                       (reverse-tail-recursive xs)))
+
+(define (fold-right-non-tail-recursive f xs y)
+  (if (null? xs)
+      y
+      (f (car xs)
+         (fold-right-non-tail-recursive f (cdr xs) y))))
+
+(define (fold-right f xs y)
+  (fold-right-iterative f xs y))
+
+
+
+
+;;;; fold-right!.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (fold-right!-iterative f xs y)
+  (fold-left-iterative-reversed-f f
+                                  y
+                                  (reverse!-iterative xs)))
+
+(define (fold-right! f xs y)
+  (fold-right!-iterative f xs y))
+
+
+
+
 ;;;; exists?.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
