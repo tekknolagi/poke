@@ -75,10 +75,7 @@ enum jitterlisp_ast_case
     jitterlisp_ast_case_let,
 
     /* Sequence.  Exactly two AST subs. */
-    jitterlisp_ast_case_sequence,
-
-    /* Current-environment form.  No subs. */
-    jitterlisp_ast_case_current_environment
+    jitterlisp_ast_case_sequence
   };
 
 /* An AST data structure.  The structure definition itself seems lax, but
@@ -143,7 +140,5 @@ jitterlisp_ast_make_let (jitterlisp_object bound_symbols,
 jitterlisp_object
 jitterlisp_ast_make_sequence (jitterlisp_object ast_0,
                               jitterlisp_object ast_1);
-jitterlisp_object
-jitterlisp_ast_make_current_environment (void);
 
 #endif // #ifndef JITTERLISP_AST_H_

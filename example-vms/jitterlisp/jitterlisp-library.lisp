@@ -110,7 +110,7 @@
 
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Quasiquoting and macros.
+;;;; Quasiquoting.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -257,133 +257,16 @@
 ;;; low-level-macro-args is bound to all of the arguments of quasiquote , and we
 ;;; want to fail if those arguments are not a singleton list.  If the arguments
 ;;; are a singleton list we just call quasiquote-procedure on their car.
-(define-low-level-macro quasiquote
-  (cond ((null? low-level-macro-args)
-         (error '(quasiquote with zero arguments)))
-        ((non-cons? low-level-macro-args)
-         (error '(quasiquote arguments not a list)))
-        ((non-null? (cdr low-level-macro-args))
-         (error '(quasiquote arguments more than one or not a list)))
-        (#t
-         (quasiquote-procedure (car low-level-macro-args)))))
-
-
-
-
-;;;; destructuring-bind-procedure.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; Rationale: Every low-level macro has exactly *one* formal parameter, always
-;;; named low-level-macro-args and bound to the entire macro call cdr.  Thru
-;;; destructuring-bind we can turn convenient high-level macros with named
-;;; formals into low-level macros, by binding each formal to a
-;;; low-level-macro-args component.
-;;;
-;;; The mapping from high-level to low-level macros is epsilon-style; at least,
-;;; I designed it the first time for epsilon.  I wouldn't be very surprised if
-;;; somebody had the same idea before, which may be the reason why
-;;; destructuring-bind exists in Common Lisp -- I discovered it after devising
-;;; my own mechanism, which originally had a different name but behaved
-;;; identically.
-;;; Update: the answer may be in http://www.lispworks.com/documentation/HyperSpec/Issues/iss130_w.htm
-;;; I've discovered Emacs Lisp's seq-let , less powerful but conceptually very
-;;; similar, only now in 2017.
-
-;;; Return the result of destructuring-bind with the given formal template bound
-;;; to low-level-macro-args or some sub-component of it.  The result is code,
-;;; not executed by this function: of course we cannot do that until we have an
-;;; actual value for low-level-macro-args .
-(define (destructuring-bind-recursive formals-template
-                                      component
-                                      body-forms)
-  (cond ((null? formals-template)
-         ;; There is nothing to bind in the template.  Return code to check
-         ;; that there are also no actuals, and then either proceeds or fails.
-         `(if (null? ,component)
-              (begin
-                ,@body-forms)
-              (error `(destructuring-bind: excess actuals: ,,component))))
-        ((symbol? formals-template)
-         ;; The macro template is dotted, or this is a recursive call on a
-         ;; template car: in either case bind one variable to every actual.
-         `(let ((,formals-template ,component))
-            ,@body-forms))
-        ((cons? formals-template)
-         ;; Bind both the car and the cdr.  For efficiency's sake name the two
-         ;; sub-components in the generated code.
-         (let ((car-name (gensym))
-               (cdr-name (gensym)))
-           `(let ((,car-name (car ,component))
-                  (,cdr-name (cdr ,component)))
-              ,(destructuring-bind-recursive
-                  (car formals-template)
-                  car-name
-                  ;; The inner quasiquoting serves to make a (singleton) list of
-                  ;; the body forms.
-                  `(,(destructuring-bind-recursive (cdr formals-template)
-                                                   cdr-name
-                                                   body-forms))))))
-        ((vector? formals-template)
-         (error `(vector ,formals-template in macro formals template)))
-        (#t
-         ;; The template is, hopefully, something which can be compared with eq?
-         ;; .  Return code checking that it's equal to the actual and in that
-         ;; case proceeds without binding anything.
-         `(if (eq? ,formals-template ,component)
-              (begin
-                ,@body-forms)
-              (error `(non-matching template argument: ,formals-template
-                                    ,component))))))
-
-;;; The args argument represents "actuals" in a symbolic form; their values
-;;; may not necessarily be known yet.
-;;; Example:
-;;; (destructuring-bind-procedure
-;;;   '(a b)
-;;;   'some-arguments
-;;;   '((display a) (display b)))
-;;; This would return code binding a and b as local variable to the car and
-;;; cadr of some-arguments, assumed to be bound, and display them.
-(define (destructuring-bind-procedure formals-template args body-forms)
-  (destructuring-bind-recursive formals-template args body-forms))
-
-;; FIXME: check that the formals-template doesn't require non-linear bindings.
-
-
-
-
-;;;; destructuring-bind.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; This will be convenient to define high-level macros on top of low-level
-;;; macros, by destructuring the one low-level macro argument.
-
-;;; Arguments: template structure . body-forms Evaluate structure and locally
-;;; bind its components with the variables in the template; return the result of
-;;; evaluating the body forms with the bindings visible.
-(define-low-level-macro destructuring-bind
-  (let ((template (car low-level-macro-args))
-        (structure (cadr low-level-macro-args))
-        (body-forms (cddr low-level-macro-args)))
-    (destructuring-bind-procedure template structure body-forms)))
-
-
-
-
-;;;; High-level macros.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; Arguments: (name . formals) . body
-;;; Scheme-style, where formals can be an improper list.
-(define-low-level-macro define-macro
-  (let ((defined-thing (car low-level-macro-args))
-        (macro-body-forms (cdr low-level-macro-args)))
-    (let ((macro-name (car defined-thing))
-          (macro-formals (cdr defined-thing)))
-      `(define-low-level-macro ,macro-name
-         (destructuring-bind ,macro-formals
-                             low-level-macro-args
-                             ,@macro-body-forms)))))
+(define quasiquote
+  (low-level-macro
+    (cond ((null? low-level-macro-args)
+           (error '(quasiquote with zero arguments)))
+          ((non-cons? low-level-macro-args)
+           (error '(quasiquote arguments not a list)))
+          ((non-null? (cdr low-level-macro-args))
+           (error '(quasiquote arguments more than one or not a list)))
+          (#t
+           (quasiquote-procedure (car low-level-macro-args))))))
 
 
 
@@ -919,6 +802,149 @@
 
 
 
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; High-level macros.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; At this point I have a good implementation for the fundamental list
+;;; procedures, which lets me use quasiquoting in macros.
+
+
+
+;;;; destructuring-bind-procedure.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Rationale: Every low-level macro has exactly *one* formal parameter, always
+;;; named low-level-macro-args and bound to the entire macro call cdr.  Thru
+;;; destructuring-bind we can turn convenient high-level macros with named
+;;; formals into low-level macros, by binding each formal to a
+;;; low-level-macro-args component.
+;;;
+;;; The mapping from high-level to low-level macros is epsilon-style; at least,
+;;; I designed it the first time for epsilon.  I wouldn't be very surprised if
+;;; somebody had the same idea before, which may be the reason why
+;;; destructuring-bind exists in Common Lisp -- I discovered it after devising
+;;; my own mechanism, which originally had a different name but behaved
+;;; identically.
+;;; Update: the answer may be in http://www.lispworks.com/documentation/HyperSpec/Issues/iss130_w.htm
+;;; I've discovered Emacs Lisp's seq-let , less powerful but conceptually very
+;;; similar, only now in 2017.
+
+;;; Return the result of destructuring-bind with the given formal template bound
+;;; to low-level-macro-args or some sub-component of it.  The result is code,
+;;; not executed by this function: of course we cannot do that until we have an
+;;; actual value for low-level-macro-args .
+(define (destructuring-bind-recursive formals-template
+                                      component
+                                      body-forms)
+  (cond ((null? formals-template)
+         ;; There is nothing to bind in the template.  Return code to check
+         ;; that there are also no actuals, and then either proceeds or fails.
+         `(if (null? ,component)
+              (begin
+                ,@body-forms)
+              (error `(destructuring-bind: excess actuals: ,,component))))
+        ((symbol? formals-template)
+         ;; The macro template is dotted, or this is a recursive call on a
+         ;; template car: in either case bind one variable to every actual.
+         `(let ((,formals-template ,component))
+            ,@body-forms))
+        ((cons? formals-template)
+         ;; Bind both the car and the cdr.  For efficiency's sake name the two
+         ;; sub-components in the generated code.
+         (let ((car-name (gensym))
+               (cdr-name (gensym)))
+           `(let ((,car-name (car ,component))
+                  (,cdr-name (cdr ,component)))
+              ,(destructuring-bind-recursive
+                  (car formals-template)
+                  car-name
+                  ;; The inner quasiquoting serves to make a (singleton) list of
+                  ;; the body forms.
+                  `(,(destructuring-bind-recursive (cdr formals-template)
+                                                   cdr-name
+                                                   body-forms))))))
+        ((vector? formals-template)
+         (error `(vector ,formals-template in macro formals template)))
+        (#t
+         ;; The template is, hopefully, something which can be compared with eq?
+         ;; .  Return code checking that it's equal to the actual and in that
+         ;; case proceeds without binding anything.
+         `(if (eq? ,formals-template ,component)
+              (begin
+                ,@body-forms)
+              (error `(non-matching template argument: ,formals-template
+                                    ,component))))))
+
+;;; The args argument represents "actuals" in a symbolic form; their values
+;;; may not necessarily be known yet.
+;;; Example:
+;;; (destructuring-bind-procedure
+;;;   '(a b)
+;;;   'some-arguments
+;;;   '((display a) (display b)))
+;;; This would return code binding a and b as local variable to the car and
+;;; cadr of some-arguments, assumed to be bound, and display them.
+(define (destructuring-bind-procedure formals-template args body-forms)
+  (destructuring-bind-recursive formals-template args body-forms))
+
+;; FIXME: check that the formals-template doesn't require non-linear bindings.
+
+
+
+
+;;;; destructuring-bind.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; This will be convenient to define high-level macros on top of low-level
+;;; macros, by destructuring the one low-level macro argument.
+
+;;; Arguments: template structure . body-forms Evaluate structure and locally
+;;; bind its components with the variables in the template; return the result of
+;;; evaluating the body forms with the bindings visible.
+(define destructuring-bind
+  (low-level-macro
+    (let ((template (car low-level-macro-args))
+          (structure (cadr low-level-macro-args))
+          (body-forms (cddr low-level-macro-args)))
+      (destructuring-bind-procedure template structure body-forms))))
+
+
+
+
+;;;; High-level macros.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Expand to a form evaluating to a high-level macro.
+;;; Arguments: formals . body-forms
+;;; Scheme-style, where formals can be an improper list; however there is no
+;;; macro name here.
+(define macro
+  (low-level-macro
+    (let ((macro-formals (car low-level-macro-args))
+          (macro-body-forms (cdr low-level-macro-args)))
+      `(low-level-macro
+         (destructuring-bind ,macro-formals
+                             low-level-macro-args
+                             ,@macro-body-forms)))))
+
+;;; Globally define a high-level named macro.
+;;; Arguments: (name . formals) . body-forms
+;;; Scheme-style, where formals can be an improper list.
+(define define-macro
+  (macro ((macro-name . macro-formals) . macro-body-forms)
+    `(define ,macro-name
+       (macro ,macro-formals ,@macro-body-forms))))
+
+;;; High-level macros are now usable.
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; More advanced list library.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;; alist functions.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1832,6 +1858,12 @@
          `(primitive primordial-/
                      ,(car operands)
                      (* ,@(cdr operands))))))
+
+
+
+
+;;;; Variadic list operations.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define previous-append append)
 

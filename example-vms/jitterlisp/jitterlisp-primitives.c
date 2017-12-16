@@ -350,7 +350,7 @@ JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(let)
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(begin)
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(quote)
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(undefined)
-JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(define_low_level_macro)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(low_level_macro)
 
 
 
@@ -432,8 +432,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("begin", begin),
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("quote", quote),
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("undefined", undefined),
-      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("define-low-level-macro",
-                                         define_low_level_macro)
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("low-level-macro", low_level_macro)
     };
 
 /* How many primitive descriptors there are. */

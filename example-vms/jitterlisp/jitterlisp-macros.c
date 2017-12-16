@@ -487,23 +487,13 @@ jitterlisp_primitive_macro_function_undefined (jitterlisp_object cdr,
   return jitterlisp_ast_make_literal (JITTERLISP_UNDEFINED);
 }
 
-jitterlisp_object
-jitterlisp_primitive_macro_function_define_low_level_macro
-   (jitterlisp_object cdr,
-    jitterlisp_object env)
+/* Return a new macro closure for the given body in the given environment.
+   This returns a macro object, not an AST. */
+static jitterlisp_object
+jitterlisp_make_macro (jitterlisp_object body_forms, jitterlisp_object env)
 {
-  /* Bind the macro name and the macro body into C variables and macroexpand the
-     macro body.  Notice that there are no formals low-level macros always have
-     exactly one formal named low-level-macro-args , to be bound to the entire
-     macro call cdr. */
-  if (! JITTERLISP_IS_CONS(cdr))
-    jitterlisp_error_cloned ("define-low-level-macro: invalid cdr");
-  jitterlisp_object macro_name = JITTERLISP_EXP_C_A_CAR(cdr);
-  if (! JITTERLISP_IS_SYMBOL (macro_name))
-    jitterlisp_error_cloned ("define-low-level-macro: non-symbol macro name");
-  jitterlisp_object body_forms = JITTERLISP_EXP_C_A_CDR(cdr);
-  jitterlisp_object body_ast
-    = jitterlisp_macroexpand_begin (body_forms, env);
+  /* Expand tehe body in the (expansion time) environment. */
+  jitterlisp_object body_ast = jitterlisp_macroexpand_begin (body_forms, env);
 
   /* Make a macro object.  Notice that the formals are not actually used
      (non-primitive macros always have exactly one formal with the fixed name
@@ -513,9 +503,15 @@ jitterlisp_primitive_macro_function_define_low_level_macro
   jitterlisp_object macro;
   JITTERLISP_NON_PRIMITIVE_MACRO_(macro, env, macro_formals, body_ast);
 
-  /* Bind the macro object to the macro name in the global environment. */
-  JITTERLISP_SYMBOL_DECODE(macro_name)->global_value = macro;
+  /* Return the macro. */
+  return macro;
+}
 
-  /* Return a useless statement. */
-  return jitterlisp_macroexpand_begin (JITTERLISP_EMPTY_LIST, env);
+jitterlisp_object
+jitterlisp_primitive_macro_function_low_level_macro (jitterlisp_object cdr,
+                                                     jitterlisp_object env)
+{
+  /* Return am AST evaluating to the macro.  Since the macro object is built
+     now, at expansion time, the AST will simply be a literal. */
+  return jitterlisp_ast_make_literal (jitterlisp_make_macro (cdr, env));
 }

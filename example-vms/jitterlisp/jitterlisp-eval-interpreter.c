@@ -981,9 +981,6 @@ jitterlisp_eval_interpreter_ast (jitterlisp_object o,
       jitterlisp_eval_interpreter_ast (subs [0], env);
       return jitterlisp_eval_interpreter_ast (subs [1],env);
 
-    case jitterlisp_ast_case_current_environment:
-      return env;
-
     default:
       printf ("About "); // FIXME: add to the error message
       jitterlisp_print_to_stream (stdout, o);

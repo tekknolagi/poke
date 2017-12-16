@@ -87,8 +87,8 @@ jitterlisp_object
 jitterlisp_primitive_macro_function_undefined (jitterlisp_object cdr,
                                                jitterlisp_object env);
 jitterlisp_object
-jitterlisp_primitive_macro_function_define_low_level_macro
-   (jitterlisp_object cdr,
+jitterlisp_primitive_macro_function_low_level_macro
+   (jitterlisp_object cdr, /* Args: . body-forms */
     jitterlisp_object env);
 
 #endif // #ifndef JITTERLISP_MACROS_H_

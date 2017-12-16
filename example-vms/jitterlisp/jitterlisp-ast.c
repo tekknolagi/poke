@@ -224,10 +224,3 @@ jitterlisp_ast_make_sequence (jitterlisp_object ast_0,
   subs [1] = ast_1;
   return res;
 }
-
-jitterlisp_object
-jitterlisp_ast_make_current_environment (void)
-{
-  JITTERLISP_MAKE_LOCALS_(jitterlisp_ast_case_current_environment, 0);
-  return res;
-}

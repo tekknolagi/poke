@@ -421,9 +421,6 @@ jitterlisp_print_ast (jitterlisp_char_printer_function cp, void *cps,
     case jitterlisp_ast_case_sequence:
       jitterlisp_print_string (cp, cps, "sequence");
       break;
-    case jitterlisp_ast_case_current_environment:
-      jitterlisp_print_string (cp, cps, "current-environment");
-      break;
     default:
       jitterlisp_print_string (cp, cps, "invalid]");
       jitterlisp_print_decoration (cp, cps, NOATTR);
