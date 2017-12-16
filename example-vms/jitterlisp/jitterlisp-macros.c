@@ -387,10 +387,18 @@ jitterlisp_bindings_get_bound_variables (jitterlisp_object bindings)
 
   jitterlisp_object binding = JITTERLISP_EXP_C_A_CAR(bindings);
   if (! JITTERLISP_IS_CONS(binding))
-    jitterlisp_error_cloned ("let: non-list binding");
+    {
+      printf ("About "); // FIXME: integrate with the error function
+      jitterlisp_print_to_stream (stdout, binding);
+      jitterlisp_error_cloned ("let: non-list binding");
+    }
   jitterlisp_object bound_symbol = JITTERLISP_EXP_C_A_CAR(binding);
   if (! JITTERLISP_IS_SYMBOL(bound_symbol))
-    jitterlisp_error_cloned ("let: non-symbol bound variable");
+    {
+      printf ("About "); // FIXME: integrate with the error function
+      jitterlisp_print_to_stream (stdout, bound_symbol);
+      jitterlisp_error_cloned ("let: non-symbol bound variable");
+    }
 
   jitterlisp_object cdr_bindings = JITTERLISP_EXP_C_A_CDR (bindings);
   jitterlisp_object cdr_bound_variables

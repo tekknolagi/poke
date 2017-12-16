@@ -182,15 +182,13 @@ jitterlisp_repl (void)
           jitterlisp_object form = jitterlisp_read (rstate);
           if (JITTERLISP_IS_EOF (form))
             goto out;
-          else
+
+          jitterlisp_object result = jitterlisp_eval_globally (form);
+          if (jitterlisp_settings.print_nothing_results
+              || ! JITTERLISP_IS_NOTHING (result))
             {
-              jitterlisp_object result = jitterlisp_eval_globally (form);
-              if (jitterlisp_settings.print_nothing_results
-                  || ! JITTERLISP_IS_NOTHING (result))
-                {
-                  jitterlisp_print_to_stream (stdout, result);
-                  printf ("\n");
-                }
+              jitterlisp_print_to_stream (stdout, result);
+              printf ("\n");
             }
         },
         {
