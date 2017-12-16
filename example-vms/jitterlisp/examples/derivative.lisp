@@ -272,9 +272,9 @@
 
 (define (rator->procedure rator)
   (cond ((eq? rator '+)
-         +)
+         (lambda (x y) (+ x y)))
         ((eq? rator '*)
-         *)
+         (lambda (x y) (* x y)))
         (#t
          (error `(rator->procedure: invalid rator ,rator)))))
 
