@@ -289,7 +289,11 @@ jitterlisp_primitive_macro_function_setb (jitterlisp_object cdr,
     jitterlisp_error_cloned ("set!: invalid cdr");
   jitterlisp_object variable = JITTERLISP_EXP_C_A_CAR (cdr);
   if (! JITTERLISP_IS_SYMBOL (variable))
-    jitterlisp_error_cloned ("set!: non-symbol variable name");
+    {
+      printf ("About "); // FIXME: integrate with the error function
+      jitterlisp_print_to_stream (stdout, variable);
+      jitterlisp_error_cloned ("set!: non-symbol variable name");
+    }
   jitterlisp_object forms = JITTERLISP_EXP_C_A_CDR (cdr);
 
   return jitterlisp_ast_make_setb
@@ -321,7 +325,11 @@ jitterlisp_primitive_macro_function_primitive (jitterlisp_object cdr,
     jitterlisp_error_cloned ("primitive: invalid cdr");
   jitterlisp_object primitive_name = jitterlisp_car (cdr);
   if (! JITTERLISP_IS_SYMBOL (primitive_name))
-    jitterlisp_error_cloned ("primitive: non-symbol primitive name");
+    {
+      printf ("About "); // FIXME: integrate with the error function
+      jitterlisp_print_to_stream (stdout, primitive_name);
+      jitterlisp_error_cloned ("primitive: non-symbol primitive name");
+    }
   jitterlisp_object primitive
     = JITTERLISP_SYMBOL_DECODE(primitive_name)->global_value;
   if (! JITTERLISP_IS_PRIMITIVE (primitive))

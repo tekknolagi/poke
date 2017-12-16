@@ -95,9 +95,11 @@
              * _jitterlisp_next_arg))                                       \
       {                                                                     \
         /* FIXME: integrate into jitter_error_cloned. */                    \
-        printf ("About the %i-th (0-based) actual for %s:\n",               \
+        printf ("About the %i-th (0-based) actual for %s  ",                \
                 (int) (_jitterlisp_next_arg - args),                        \
                 _jitterlisp_the_name_suffix);                               \
+        jitterlisp_print_to_stream (stdout, * _jitterlisp_next_arg);        \
+        printf (":\n");                                                     \
         jitterlisp_error_cloned ("invalid type argument for primitive");    \
       }                                                                     \
     /* Increment the next-argumnent pointer so that the next type check */  \
@@ -280,6 +282,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(one_plus, FIXNUM,
   { JITTERLISP_1PLUS_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(one_minus, FIXNUM,
   { JITTERLISP_1MINUS_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(negate, FIXNUM,
+  { JITTERLISP_NEGATE_(res, args [0]); })
 /* Boolean operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(not, ANYTHING,
   { JITTERLISP_NOT_(res, args [0]); })
@@ -383,6 +387,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("remainder", 2, remainder),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("1+", 1, one_plus),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("1-", 1, one_minus),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("negate", 1, negate),
       /* Boolean operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("not", 1, not),
       /* Number comparison. */

@@ -368,6 +368,11 @@
       = JITTERLISP_EXP_FF_F_MINUS(_jitterlisp_in0,               \
                                   JITTERLISP_FIXNUM_ENCODE(1));  \
   JITTER_END_
+#define JITTERLISP_NEGATE_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTER_BEGIN_                                               \
+    _jitterlisp_out                                           \
+      = JITTERLISP_EXP_F_F_MINUS(_jitterlisp_in0);            \
+  JITTER_END_
 
 
 

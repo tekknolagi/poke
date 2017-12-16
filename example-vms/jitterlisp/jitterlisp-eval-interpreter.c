@@ -1009,7 +1009,6 @@ jitterlisp_object
 jitterlisp_eval_interpreter (jitterlisp_object unexpanded_form,
                              jitterlisp_object env)
 {
-
   printf ("Macroexpanding ");
   jitterlisp_print_to_stream (stdout, unexpanded_form);
   printf ("...\n");

@@ -1545,3 +1545,68 @@
   (let ((discriminand-variable (gensym)))
     `(let ((,discriminand-variable ,discriminand))
        (case-variable ,discriminand-variable ,@clauses))))
+
+
+;;;; Variadic arithmetic.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Keep primordial operations with different names.
+(define primordial-+ +)
+(define primordial-- -)
+(define primordial-* *)
+(define primordial-/ /)
+
+;;; Reuse primordial names for variadic macros expanding to calls.
+
+;; FIXME: nested quasiquoting is already difficult to handle here.  I can do the
+;; same thing more simply with higher-order procedures, using simple macro
+;; wrappers on top of fold-left and fold-right.
+(define-macro (define-right-nested-variadic-extension operator original-name
+                neutral original-is-primitive)
+  (let ((operands-name (gensym))
+        (possibly-primitive (if original-is-primitive '(primitive) '())))
+    `(define-macro (,operator . ,operands-name)
+       (cond ((null? ,operands-name)
+              ,neutral)
+             ((null? (cdr ,operands-name))
+              (car ,operands-name))
+             (#t
+              `(,@',possibly-primitive
+                       ,',original-name
+                       ,(car ,operands-name)
+                       (,',operator ,@(cdr ,operands-name))))))))
+
+(define-macro (define-associative-variadic-extension operator
+                original-name neutral original-is-primitive)
+  `(define-right-nested-variadic-extension ,operator ,original-name
+     ,neutral ,original-is-primitive))
+
+(define-associative-variadic-extension + primordial-+ 0 #t)
+(define-associative-variadic-extension * primordial-* 1 #t)
+
+(define-macro (- . operands)
+  (cond ((null? operands)
+         (error '(-: no arguments)))
+        ((null? (cdr operands))
+         `(primitive negate ,@operands))
+        (#t
+         `(primitive primordial--
+                     ,(car operands)
+                     (+ ,@(cdr operands))))))
+
+(define-macro (/ . operands)
+  (cond ((null? operands)
+         (error '(/: no arguments)))
+        ((null? (cdr operands))
+         `(primitive primordial-/ 1 ,@operands))
+        (#t
+         `(primitive primordial-/
+                     ,(car operands)
+                     (* ,@(cdr operands))))))
+
+(define previous-append append)
+
+;; FIXME: rename the append operator above in quasiquoting functions before
+;; renaming this to append.
+;; Calls in code which is already in AST form will be affected otherwise.
+(define-right-nested-variadic-extension variadic-append previous-append () #f)
