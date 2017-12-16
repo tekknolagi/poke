@@ -37,6 +37,11 @@ struct jitterlisp_settings
   /* Non-false iff the output needs to be verbose. */
   bool verbose;
 
+  /* If false don't print #<nothing> when it's the result of an evaluation to be
+     printed.  This doesn't suppress explicit printing of values, for example by
+     the display procedure. */
+  bool print_nothing_results;
+
   /* Non-false iff we are to uses the Jittery VM, and not a naïf interpreter. */
   bool vm;
 

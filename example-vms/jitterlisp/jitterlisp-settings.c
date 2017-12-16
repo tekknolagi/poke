@@ -37,6 +37,7 @@ void
 jitterlisp_settings_set_default (void)
 {
   jitterlisp_settings.verbose = false;
+  jitterlisp_settings.print_nothing_results = false;
   jitterlisp_settings.vm = true;
   jitterlisp_settings.colorize = false;
   jitter_dynamic_buffer_initialize

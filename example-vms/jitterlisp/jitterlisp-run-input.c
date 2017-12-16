@@ -185,7 +185,8 @@ jitterlisp_repl (void)
               jitterlisp_object result = jitterlisp_eval_globally (form);
               printf ("  ");
               jitterlisp_print_to_stream (stdout, form);
-              if (! JITTERLISP_IS_NOTHING (result))
+              if (jitterlisp_settings.print_nothing_results
+                  || ! JITTERLISP_IS_NOTHING (result))
                 {
                   printf ("\n  ==>\n  ");
                   jitterlisp_print_to_stream (stdout, result);

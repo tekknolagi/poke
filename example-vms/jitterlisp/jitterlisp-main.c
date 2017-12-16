@@ -47,18 +47,20 @@
 enum jitterlisp_negative_option
   {
     jitterlisp_negative_option_no_verbose = -1,
-    jitterlisp_negative_option_vm = -2,
-    jitterlisp_negative_option_repl = -3,
-    jitterlisp_negative_option_no_colorize = -4
+    jitterlisp_negative_option_omit_nothing = -2,
+    jitterlisp_negative_option_vm = -3,
+    jitterlisp_negative_option_repl = -4,
+    jitterlisp_negative_option_no_colorize = -5
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum jitterlisp_negative_option . */
 enum jitterlisp_long_only_option
   {
-    jitterlisp_long_only_option_no_vm = -5,
-    jitterlisp_long_only_option_no_repl = -6,
-    jitterlisp_long_only_option_dump_version = -7
+    jitterlisp_long_only_option_no_omit_nothing = -6,
+    jitterlisp_long_only_option_no_vm = -7,
+    jitterlisp_long_only_option_no_repl = -8,
+    jitterlisp_long_only_option_dump_version = -9
   };
 
 /* Command-line option specification. */
@@ -74,14 +76,23 @@ static struct argp_option jitterlisp_option_specification[] =
     "Run interactively, with a REPL (default)"},
    {"no-batch", '\0', NULL, OPTION_ALIAS },
 
+   /* Interaction options. */
+   {NULL, '\0', NULL, OPTION_DOC, "Interaction options:", 20},
+   {"no-omit-nothing", jitterlisp_long_only_option_no_omit_nothing, NULL, 0,
+    "Show #<nothing> evaluation results" },
+   /* Interaction negative options. */
+   {NULL, '\0', NULL, OPTION_DOC, "", 21},
+   {"omit-nothing", jitterlisp_negative_option_omit_nothing, NULL, 0,
+    "Omit #<nothing> evaluation results (default)"},
+
    /* Command-line s-expression evaluation. */
-   {NULL, '\0', NULL, OPTION_DOC, "Command-line s-expression evaluation:", 20},
+   {NULL, '\0', NULL, OPTION_DOC, "Command-line s-expression evaluation:", 30},
    {"eval", 'e', "SEXPRS", 0,
     "Evaluate the given s-expressions after running the files (if any) "
     "and before running the REPL (unless the REPL is disabled)" },
 
    /* Debugging options. */
-   {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 30},
+   {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 40},
    {"colorize", 'c', NULL, 0,
     "Colorize s-expressions with ANSI terminal escape sequences" },
    {"verbose", 'v', NULL, 0,
@@ -90,7 +101,7 @@ static struct argp_option jitterlisp_option_specification[] =
     "Use a naïf C interpreter instead of the Jittery VM" },
    {"no-jittery", '\0', NULL, OPTION_ALIAS },
    /* Debugging negative options. */
-   {NULL, '\0', NULL, OPTION_DOC, "", 31},
+   {NULL, '\0', NULL, OPTION_DOC, "", 41},
    {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
     "Don't colorize s-expressions (default)"},
    {"no-verbose", jitterlisp_negative_option_no_verbose, NULL, 0,
@@ -99,7 +110,7 @@ static struct argp_option jitterlisp_option_specification[] =
     "Use the Jittery VM (default)"},
    {"jittery", '\0', NULL, OPTION_ALIAS },
 
-   {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 40},
+   {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 50},
    {"dump-version", jitterlisp_long_only_option_dump_version, NULL, 0,
     "Print the JitterLisp version only, without any surrounding text; this "
     "is convenient for scripts" },
@@ -153,6 +164,16 @@ parse_opt (int key, char *arg, struct argp_state *state)
     /* File negative options. */
     case jitterlisp_negative_option_repl:
       sp->repl = true;
+      break;
+
+    /* Interaction options. */
+    case jitterlisp_long_only_option_no_omit_nothing:
+      sp->print_nothing_results = true;
+      break;
+
+    /* Interaction negative options. */
+    case jitterlisp_negative_option_omit_nothing:
+      sp->print_nothing_results = false;
       break;
 
     /* Command-line s-expression evaluation. */
