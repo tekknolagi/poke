@@ -187,14 +187,15 @@ jitterlisp_symbol_make_interned (const char *name)
  * ************************************************************************** */
 
 /* This is a slow fallback allocation facility, for objects whose size is only
-   known at run time.  FIXME: for most heap-allocated objects, such as conses,
-   some other facility should be provided, based on CPP macros. */
+   known at run time.  For commonly occurring heap-allocated objects, such as
+   conses, some other facility is, based on CPP macros. */
 
 /* Return an unencoded pointer to a buffer of uninitialized memory with the
    given size.
 
    The size must be a multiple of the minimum required alignment in bytes (see
-   the "Alignment" section above), but this is not checked for. */
+   the "Alignment" section above), but this is not checked for: calling this
+   with an incorrectly aligned size may lead to subtle bugs. */
 char *
 jitterlisp_allocate (size_t size_in_bytes)
   __attribute__ ((returns_nonnull, malloc));

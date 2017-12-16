@@ -46,7 +46,8 @@ static jitterlisp_object*
 jitterlisp_make_subs (size_t sub_no)
 {
   return ((jitterlisp_object *)
-          jitterlisp_allocate (sub_no * sizeof (jitterlisp_object)));
+          jitterlisp_allocate
+             (JITTERLISP_ALIGNED_SIZE(sub_no * sizeof (jitterlisp_object))));
 }
 
 /* Expand to an unprotected sequence of C declarations and statements declaring
