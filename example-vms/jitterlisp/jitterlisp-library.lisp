@@ -673,6 +673,92 @@
 
 
 
+;;;; flatten-reversed.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (flatten-reversed-iterative list-of-lists)
+  (let ((res '()))
+    (while (non-null? list-of-lists)
+      (set! res (append-iterative (car list-of-lists) res))
+      (set! list-of-lists (cdr list-of-lists)))
+    res))
+
+(define (flatten-reversed-tail-recursive-helper reversed-list acc)
+  (if (null? reversed-list)
+      acc
+      (flatten-reversed-tail-recursive-helper
+          (cdr reversed-list)
+          (append-tail-recursive (car reversed-list) acc))))
+(define (flatten-reversed-tail-recursive reversed-list)
+  (flatten-reversed-tail-recursive-helper reversed-list '()))
+
+(define (flatten-reversed reversed-list)
+  (flatten-reversed-iterative reversed-list))
+
+
+
+
+;;;; flatten-reversed!.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (flatten-reversed!-iterative list-of-lists)
+  (let ((res '()))
+    (while (non-null? list-of-lists)
+      (set! res (append!-iterative (car list-of-lists) res))
+      (set! list-of-lists (cdr list-of-lists)))
+    res))
+
+(define (flatten-reversed! list-of-lists)
+  (flatten-reversed!-iterative list-of-lists))
+
+
+
+
+;;;; flatten.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (flatten-iterative list-of-lists)
+  (flatten-reversed-iterative (reverse-iterative list-of-lists)))
+
+(define (flatten-tail-recursive list-of-lists)
+  (flatten-reversed-tail-recursive (reverse-tail-recursive list-of-lists)))
+
+(define (flatten-non-tail-recursive list-of-lists)
+  (if (null? list-of-lists)
+      '()
+      (append-non-tail-recursive
+          (car list-of-lists)
+          (flatten-non-tail-recursive (cdr list-of-lists)))))
+
+(define (flatten list-of-lists)
+  (flatten-iterative list-of-lists))
+
+
+
+
+;;;; flatten!.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (flatten!-iterative list-of-lists)
+  (flatten-reversed!-iterative (reverse!-iterative list-of-lists)))
+
+(define (flatten!-tail-recursive list-of-lists)
+  (flatten-reversed-tail-recursive (reverse!-tail-recursive list-of-lists)))
+
+(define (flatten!-non-tail-recursive list-of-lists)
+  (if (null? list-of-lists)
+      '()
+      ;; I don't have an append!-non-tail-recursive, as it doesn't seem very
+      ;; reasonable.
+      (append! (car list-of-lists)
+               (flatten!-non-tail-recursive (cdr list-of-lists)))))
+
+(define (flatten! list-of-lists)
+  (flatten!-iterative list-of-lists))
+
+
+
+
 ;;;; list-copy.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1673,6 +1759,19 @@
          ,@body-forms
          (set! ,list-name (primitive cdr ,list-name)))
        ,@result-forms)))
+
+(define-macro (do bindings (end-condition . result-forms) . body-forms)
+  `(let (,@(map (lambda (binding)
+                  `(,(car binding) ,(cadr binding)))
+               bindings))
+     (while (primitive not ,end-condition)
+       ,@body-forms
+       ,@(flatten (map (lambda (binding)
+                         (if (null? (cddr binding))
+                             '()
+                             `((set! ,(car binding) ,@(cddr binding)))))
+                       bindings)))
+     ,@result-forms))
 
 
 
