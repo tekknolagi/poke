@@ -471,7 +471,7 @@
 
 (define (last-cons-iterative xs)
   (if (null? xs)
-      (error)
+      (error '(last-cons-iterative: () argument))
       (begin
         (while (not (null? (cdr xs)))
           (set! xs (cdr xs)))
@@ -1598,7 +1598,7 @@
 
 
 
-;;;; High-level syntax: case.
+;;;; High-level syntax: case form.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; FIXME: use let-macro
@@ -1620,6 +1620,62 @@
     `(let ((,discriminand-variable ,discriminand))
        (case-variable ,discriminand-variable ,@clauses))))
 
+
+
+
+;;;; High-level syntax: sequencing forms.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-macro (begin1 first-form . more-forms)
+  (let ((result-variable (gensym)))
+    `(let ((,result-variable ,first-form))
+       ,@more-forms
+       ,result-variable)))
+
+(define-macro (begin2 first-form second-form . more-forms)
+  (let ((result-variable (gensym)))
+    `(begin
+       ,first-form
+       (let ((,result-variable ,second-form))
+         ,@more-forms
+         ,result-variable))))
+
+
+
+
+;;;; High-level syntax: looping forms.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-macro (dotimes (variable limit . result-forms) . body-forms)
+  (let ((limit-name (gensym)))
+    `(let ((,limit-name ,limit)
+           (,variable 0))
+       (while (primitive < ,variable ,limit-name)
+         ,@body-forms
+         (set! ,variable (primitive 1+ ,variable)))
+       ,@result-forms)))
+
+(define-macro (dotimesdown (variable times . result-forms) . body-forms)
+  (let ((times-name (gensym)))
+    `(let ((,variable ,times))
+       (while (primitive > ,variable 0)
+         (set! ,variable (primitive 1- ,variable))
+         ,@body-forms)
+       ,@result-forms)))
+
+(define-macro (dolist (variable list . result-forms) . body-forms)
+  (let ((list-name (gensym)))
+    `(let ((,list-name ,list)
+           ;; This is currently faster than binding ,variable inside the loop.
+           (,variable (undefined)))
+       (while (primitive non-null? ,list-name)
+         (set! ,variable (primitive car ,list-name))
+         ,@body-forms
+         (set! ,list-name (primitive cdr ,list-name)))
+       ,@result-forms)))
+
+
+
 
 ;;;; Variadic arithmetic.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
