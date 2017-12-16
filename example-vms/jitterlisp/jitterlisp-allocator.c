@@ -256,10 +256,10 @@ jitterlisp_add_litter_block (size_t block_size_in_bytes)
 
 #define JITTERLIST_TO_MB(x) ((x) / 1024.0 / 1024.0)
   /* Log, unless this block is the first. */
-  if (! is_this_block_the_first)
-    printf ("New %.1fMB litter block.  The heap is now %.1fMB.\n",
-            JITTERLIST_TO_MB(block_size_in_bytes),
-            JITTERLIST_TO_MB(jitterlisp_litter_heap_size));
+  if (jitterlisp_settings.verbose || ! is_this_block_the_first)
+    fprintf (stderr, "New %.1fMB litter block.  The heap is now %.1fMB.\n",
+             JITTERLIST_TO_MB(block_size_in_bytes),
+             JITTERLIST_TO_MB(jitterlisp_litter_heap_size));
 #undef JITTERLIST_TO_MB
 }
 
@@ -282,17 +282,18 @@ jitterlisp_memory_initialize (void)
 {
   /* Initialize the garbage-collected heap. */
 #if   defined(JITTERLISP_LITTER)
-printf ("Initializing blocks\n");
   /* Initialize the litter block stack and the total heap size. */
   jitter_dynamic_buffer_initialize (& jitterlisp_litter_blocks);
   jitterlisp_litter_heap_size = 0;
 
   /* Make the first litter block. */
   jitterlisp_add_litter_block (JITTERLISP_LITTER_BLOCK_BYTE_NO);
-printf ("Made the first block\n");
+  if (jitterlisp_settings.verbose)
+    fprintf (stderr, "Made the first litter block\n");
 
 #elif defined(JITTERLISP_BOEHM_GC)
-  fflush (stdout); fflush (stderr); fprintf (stderr, "Initializing Boehm GC...\n"); fflush (stdout); fflush (stderr);
+  if (jitterlisp_settings.verbose)
+    fprintf (stderr, "Initializing Boehm GC...\n");
   /* Initialize Boehm's GC. */
   GC_INIT ();
   GC_allow_register_threads ();
@@ -309,7 +310,8 @@ printf ("Made the first block\n");
                   "can be fixed by conditionally using GC_memalign , but the "
                   "fix is not implemented");
 
-  fflush (stdout); fflush (stderr); fprintf (stderr, "...Initialized Boehm GC...\n"); fflush (stdout); fflush (stderr);
+  if (jitterlisp_settings.verbose)
+    fprintf (stderr, "...Initialized Boehm GC...\n");
 
 #else
 # error "impossible or unimplemented"

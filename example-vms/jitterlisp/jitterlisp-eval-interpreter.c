@@ -1009,12 +1009,18 @@ jitterlisp_object
 jitterlisp_eval_interpreter (jitterlisp_object unexpanded_form,
                              jitterlisp_object env)
 {
-  printf ("Macroexpanding ");
-  jitterlisp_print_to_stream (stdout, unexpanded_form);
-  printf ("...\n");
+  if (jitterlisp_settings.verbose)
+    {
+      printf ("Macroexpanding ");
+      jitterlisp_print_to_stream (stdout, unexpanded_form);
+      printf ("...\n");
+    }
   jitterlisp_object ast = jitterlisp_macroexpand (unexpanded_form, env);
-  printf ("...into ");
-  jitterlisp_print_to_stream (stdout, ast);
-  printf ("\n");
+  if (jitterlisp_settings.verbose)
+    {
+      printf ("...into ");
+      jitterlisp_print_to_stream (stdout, ast);
+      printf ("\n");
+    }
   return jitterlisp_eval_interpreter_ast (ast, env);
 }

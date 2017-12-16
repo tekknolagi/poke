@@ -81,7 +81,8 @@ jitterlisp_run_and_destroy_reader_state (struct jitterlisp_reader_state *rstate)
 void
 jitterlisp_run_from_string (const char *string)
 {
-  printf ("Running from string \"%s\"...\n", string);
+  if (jitterlisp_settings.verbose)
+    printf ("Running from string \"%s\"...\n", string);
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_string_reader_state (string);
   jitterlisp_object result
@@ -92,7 +93,8 @@ jitterlisp_run_from_string (const char *string)
       jitterlisp_print_to_stream (stdout, result);
       printf ("\n");
     }
-  printf ("...Done running from string \"%s\".\n", string);
+  if (jitterlisp_settings.verbose)
+    printf ("...Done running from string \"%s\".\n", string);
 }
 
 
@@ -104,11 +106,9 @@ jitterlisp_run_from_string (const char *string)
 void
 jitterlisp_run_from_stream (FILE *input)
 {
-  printf ("Running from stream %p...\n", input);
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_stream_reader_state (input);
   jitterlisp_run_and_destroy_reader_state (rstate);
-  printf ("...Done running from stream %p.\n", input);
 }
 
 
@@ -120,7 +120,8 @@ jitterlisp_run_from_stream (FILE *input)
 void
 jitterlisp_run_from_named_file (const char *path_name)
 {
-  printf ("Running from file \"%s\"...\n", path_name);
+  if (jitterlisp_settings.verbose)
+    printf ("Running from file \"%s\"...\n", path_name);
 
   /* Open an input stream. */
   FILE *in;
@@ -136,13 +137,13 @@ jitterlisp_run_from_named_file (const char *path_name)
 
   /* Close the input stream. */
   fclose (in);
-  printf ("...Done running from file \"%s\".\n", path_name);
+  if (jitterlisp_settings.verbose)
+    printf ("...Done running from file \"%s\".\n", path_name);
 }
 
 void
 jitterlisp_run_from_input_files (void)
 {
-  printf ("Running from input files...\n");
   size_t input_file_path_name_no
     = (jitterlisp_settings.input_file_path_names.used_size
        / sizeof (char *));
@@ -152,7 +153,6 @@ jitterlisp_run_from_input_files (void)
   int i;
   for (i = 0; i < input_file_path_name_no; i ++)
     jitterlisp_run_from_named_file (input_file_path_names [i]);
-  printf ("...Done running from input files.\n");
 }
 
 
@@ -164,7 +164,8 @@ jitterlisp_run_from_input_files (void)
 void
 jitterlisp_repl (void)
 {
-  printf ("Running the REPL...\n");
+  if (jitterlisp_settings.verbose)
+    printf ("Running the REPL...\n");
 
   /* Make a readline reader state.  It will be used to read every form
      from the REPL, even in case of parse errors. */
@@ -184,15 +185,12 @@ jitterlisp_repl (void)
           else
             {
               jitterlisp_object result = jitterlisp_eval_globally (form);
-              printf ("  ");
-              jitterlisp_print_to_stream (stdout, form);
               if (jitterlisp_settings.print_nothing_results
                   || ! JITTERLISP_IS_NOTHING (result))
                 {
-                  printf ("\n  ==>\n  ");
                   jitterlisp_print_to_stream (stdout, result);
+                  printf ("\n");
                 }
-              printf ("\n");
             }
         },
         {
@@ -206,5 +204,6 @@ jitterlisp_repl (void)
  out:
   jitterlisp_destroy_reader_state (rstate);
 
-  printf ("...Done running the REPL.\n");
+  if (jitterlisp_settings.verbose)
+    printf ("...Done running the REPL.\n");
 }
