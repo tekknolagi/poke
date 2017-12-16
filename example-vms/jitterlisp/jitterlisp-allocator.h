@@ -152,6 +152,18 @@ jitterlisp_symbol_make_interned (const char *name)
    (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(       \
                             struct jitterlisp_vector))))
 
+
+
+
+/* Non-primitive macro allocation.
+ * ************************************************************************** */
+
+/* Expand to an rvalue of type struct jitterlisp_closure * whose evaluation
+   points to a just allocated and uninitialized closure. */
+#define JITTERLISP_NON_PRIMITIVE_MACRO_MAKE_UNINITIALIZED_UNENCODED()  \
+  JITTERLISP_CLOSURE_MAKE_UNINITIALIZED_UNENCODED()
+
+
 
 
 

@@ -153,6 +153,7 @@ jitterlisp_object jitterlisp_object_quasiquote_procedure;
 jitterlisp_object jitterlisp_object_quote;
 jitterlisp_object jitterlisp_object_setb;
 jitterlisp_object jitterlisp_object_while;
+jitterlisp_object jitterlisp_low_level_macro_args;
 
 /* Initialize globally named object variables. */
 static void
@@ -175,4 +176,6 @@ jitterlisp_initialize_globally_named_objects (void)
   jitterlisp_object_quote = jitterlisp_make_interned ("quote");
   jitterlisp_object_setb = jitterlisp_make_interned ("set!");
   jitterlisp_object_while = jitterlisp_make_interned ("while");
+  jitterlisp_low_level_macro_args
+    = jitterlisp_make_interned ("low-level-macro-args");
 }

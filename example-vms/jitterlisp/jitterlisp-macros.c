@@ -23,6 +23,7 @@
 #include "jitterlisp-macros.h"
 
 #include "jitterlisp.h"
+#include "jitterlisp-eval-interpreter.h" // FIXME: use the generic interpreter instead?
 
 
 /* Macroexpansion utility.
@@ -59,6 +60,35 @@ jitterlisp_macroexpand_multiple (jitterlisp_object os,
   return res;
 }
 
+/* Return the expansion of the given list of forms as a sequence.  This is what
+   the primitive macro begin does and the same code is used whenever a form
+   sequence is allowed, for example in a lambda body. */
+static jitterlisp_object
+jitterlisp_macroexpand_begin (jitterlisp_object forms,
+                              jitterlisp_object env)
+{
+  /* Zero-form body. */
+  if (JITTERLISP_IS_EMPTY_LIST(forms))
+    return jitterlisp_ast_make_literal (JITTERLISP_NOTHING);
+
+  /* Ill-formed body. */
+  if (! JITTERLISP_IS_CONS(forms))
+    jitterlisp_error_cloned ("begin: non-list body");
+
+  /* At this point we have to look inside the cons. */
+  jitterlisp_object first = JITTERLISP_EXP_C_A_CAR(forms);
+  jitterlisp_object rest = JITTERLISP_EXP_C_A_CDR(forms);
+
+  /* One-form body. */
+  if (JITTERLISP_IS_EMPTY_LIST(rest))
+    return jitterlisp_macroexpand (first, env);
+
+  /* Multiple-form body. */
+  return jitterlisp_ast_make_sequence
+            (jitterlisp_macroexpand (first, env),
+             jitterlisp_macroexpand_begin (rest, env));
+}
+
 static jitterlisp_object
 jitterlisp_macroexpand_macro_call (jitterlisp_object macro,
                                    jitterlisp_object cdr,
@@ -76,8 +106,38 @@ jitterlisp_macroexpand_macro_call (jitterlisp_object macro,
     }
   else if (JITTERLISP_IS_NON_PRIMITIVE_MACRO(macro))
     {
-      //struct jitterlisp_closure *c = JITTERLISP_NON_PRIMITIVE_MACRO_DECODE(macro);
-    jitterlisp_error_cloned ("macroexpanding non-primitive macro call: unimplemented");
+      struct jitterlisp_closure *macro_closure
+        = JITTERLISP_NON_PRIMITIVE_MACRO_DECODE(macro);
+      jitterlisp_object expansion_env = macro_closure->environment;
+      /* We can ignore macro formals: low-level macros only have one formal
+         with the fixed name low-level-macro-args . */
+      jitterlisp_object macro_ast = macro_closure->body;
+
+      /* Bind the macro call cdr to the one formal.  Notice that the cdr is not
+         expanded or evaluated in any way: it's the macro's job to do that as
+         needed. */
+      expansion_env
+        = jitterlisp_environment_bind (expansion_env,
+                                       jitterlisp_low_level_macro_args,
+                                       cdr);
+      /*
+      printf ("About to eval the macro body ");
+      jitterlisp_print_to_stream (stdout, macro_ast); printf ("\n");
+      printf (" in the environment ");
+      jitterlisp_print_to_stream (stdout, expansion_env); printf ("\n");
+      printf ("\n");
+      */
+      jitterlisp_object first_result
+        = jitterlisp_eval_interpreter_ast (macro_ast, expansion_env);
+      /*
+      printf ("Macroexpanding the call to ");
+      jitterlisp_print_to_stream (stdout, macro); printf ("\n");
+      printf (" yielded ");
+      jitterlisp_print_to_stream (stdout, result); printf ("\n");
+      printf ("\n");
+      */
+      //jitterlisp_error_cloned ("macroexpanding non-primitive macro call: unimplemented");
+      return jitterlisp_macroexpand (first_result, env);
     }
   else
     jitterlisp_error_cloned ("macroexpanding macro call to non-macro");
@@ -122,8 +182,13 @@ jitterlisp_macroexpand (jitterlisp_object o,
                         jitterlisp_object env)
 {
   if (JITTERLISP_IS_AST(o))
-    /* FIXME: is this case necessary?  Is it desirable? */
-    return o;
+    {
+      /* FIXME: is this case necessary?  Is it desirable? */
+      printf ("[Trivially macroexpanding the AST ");
+      jitterlisp_print_to_stream (stdout, o);
+      printf ("]\n");
+      return o;
+    }
   else if (JITTERLISP_IS_SYMBOL(o))
     return jitterlisp_ast_make_variable (o);
   else if (JITTERLISP_IS_CONS(o))
@@ -142,15 +207,14 @@ jitterlisp_object
 jitterlisp_primitive_macro_function_define (jitterlisp_object cdr,
                                             jitterlisp_object env)
 {
-  if (! JITTERLISP_IS_CONS (cdr))
+  if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("define: invalid cdr");
 
   jitterlisp_object defined_thing = JITTERLISP_EXP_C_A_CAR (cdr);
   if (JITTERLISP_IS_SYMBOL(defined_thing))
     {
       jitterlisp_object body
-        = jitterlisp_primitive_macro_function_begin
-             (JITTERLISP_EXP_C_A_CDR (cdr), env);
+        = jitterlisp_macroexpand_begin (JITTERLISP_EXP_C_A_CDR (cdr), env);
       return jitterlisp_ast_make_define (defined_thing, body);
     }
   else if (JITTERLISP_IS_CONS(defined_thing))
@@ -173,9 +237,9 @@ jitterlisp_object
 jitterlisp_primitive_macro_function_if (jitterlisp_object cdr,
                                         jitterlisp_object env)
 {
-  if (! JITTERLISP_IS_CONS (cdr))
+  if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("if: invalid cdr");
-  if (! JITTERLISP_IS_CONS (JITTERLISP_EXP_C_A_CDR (cdr)))
+  if (! JITTERLISP_IS_CONS(JITTERLISP_EXP_C_A_CDR (cdr)))
     jitterlisp_error_cloned ("if: invalid cddr");
 
   jitterlisp_object condition = JITTERLISP_EXP_C_A_CAR (cdr);
@@ -185,8 +249,7 @@ jitterlisp_primitive_macro_function_if (jitterlisp_object cdr,
   return jitterlisp_ast_make_if
             (jitterlisp_macroexpand (condition, env),
              jitterlisp_macroexpand (then_branch, env),
-             jitterlisp_primitive_macro_function_begin (else_branch_forms,
-                                                        env));
+             jitterlisp_macroexpand_begin (else_branch_forms, env));
 }
 
 jitterlisp_object
@@ -196,23 +259,23 @@ jitterlisp_primitive_macro_function_cond (jitterlisp_object cdr,
   jitterlisp_object clauses = cdr;
 
   /* A no-clause cons expands to a no-form begin. */
-  if (JITTERLISP_IS_EMPTY_LIST (clauses))
-    return jitterlisp_primitive_macro_function_begin (clauses, env);
+  if (JITTERLISP_IS_EMPTY_LIST(clauses))
+    return jitterlisp_macroexpand_begin (clauses, env);
 
-  if (! JITTERLISP_IS_CONS (clauses))
+  if (! JITTERLISP_IS_CONS(clauses))
     jitterlisp_error_cloned ("cond: non-list clauses");
 
   /* There is at least one clause.  Expand to an if with another cond in the
      else branch. */
   jitterlisp_object clause = JITTERLISP_EXP_C_A_CAR (cdr);
-  if (! JITTERLISP_IS_CONS (clause))
+  if (! JITTERLISP_IS_CONS(clause))
     jitterlisp_error_cloned ("cond: non-list clause");
   jitterlisp_object condition = JITTERLISP_EXP_C_A_CAR (clause);
   jitterlisp_object clause_body = JITTERLISP_EXP_C_A_CDR (clause);
   jitterlisp_object more_clauses = JITTERLISP_EXP_C_A_CDR (clauses);
   return jitterlisp_ast_make_if
             (jitterlisp_macroexpand (condition, env),
-             jitterlisp_primitive_macro_function_begin (clause_body, env),
+             jitterlisp_macroexpand_begin (clause_body, env),
              jitterlisp_primitive_macro_function_cond (more_clauses,
                                                        env));
 }
@@ -222,7 +285,7 @@ jitterlisp_primitive_macro_function_setb (jitterlisp_object cdr,
                                           jitterlisp_object env)
 {
   // FIXME: move validation to AST construction?
-  if (! JITTERLISP_IS_CONS (cdr))
+  if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("set!: invalid cdr");
   jitterlisp_object variable = JITTERLISP_EXP_C_A_CAR (cdr);
   if (! JITTERLISP_IS_SYMBOL (variable))
@@ -231,14 +294,14 @@ jitterlisp_primitive_macro_function_setb (jitterlisp_object cdr,
 
   return jitterlisp_ast_make_setb
             (variable,
-             jitterlisp_primitive_macro_function_begin (forms, env));
+             jitterlisp_macroexpand_begin (forms, env));
 }
 
 jitterlisp_object
 jitterlisp_primitive_macro_function_while (jitterlisp_object cdr,
                                            jitterlisp_object env)
 {
-  if (! JITTERLISP_IS_CONS (cdr))
+  if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("while: invalid cdr");
 
   jitterlisp_object guard = JITTERLISP_EXP_C_A_CAR (cdr);
@@ -246,7 +309,7 @@ jitterlisp_primitive_macro_function_while (jitterlisp_object cdr,
 
   return jitterlisp_ast_make_while
             (jitterlisp_macroexpand (guard, env),
-             jitterlisp_primitive_macro_function_begin (body_forms, env));
+             jitterlisp_macroexpand_begin (body_forms, env));
 }
 
 jitterlisp_object
@@ -254,7 +317,7 @@ jitterlisp_primitive_macro_function_primitive (jitterlisp_object cdr,
                                                jitterlisp_object env)
 {
   // FIXME: move validation to AST construction?
-  if (! JITTERLISP_IS_CONS (cdr))
+  if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("primitive: invalid cdr");
   jitterlisp_object primitive_name = jitterlisp_car (cdr);
   if (! JITTERLISP_IS_SYMBOL (primitive_name))
@@ -277,7 +340,7 @@ jitterlisp_object
 jitterlisp_primitive_macro_function_call (jitterlisp_object cdr,
                                           jitterlisp_object env)
 {
-  if (! JITTERLISP_IS_CONS (cdr))
+  if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("call: invalid cdr");
   jitterlisp_object operator = JITTERLISP_EXP_C_A_CAR (cdr);
   jitterlisp_object operands = JITTERLISP_EXP_C_A_CDR (cdr);
@@ -290,13 +353,13 @@ jitterlisp_object
 jitterlisp_primitive_macro_function_lambda (jitterlisp_object cdr,
                                             jitterlisp_object env)
 {
-  if (! JITTERLISP_IS_CONS (cdr))
+  if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("lambda: invalid cdr");
   jitterlisp_object formals = JITTERLISP_EXP_C_A_CAR(cdr);
   jitterlisp_object body_forms = JITTERLISP_EXP_C_A_CDR(cdr);
   return jitterlisp_ast_make_lambda
             (formals,
-             jitterlisp_primitive_macro_function_begin (body_forms, env));
+             jitterlisp_macroexpand_begin (body_forms, env));
 }
 
 /* Given a list encoding let bindings return the list of bound symbols in order,
@@ -341,8 +404,7 @@ jitterlisp_bindings_get_bound_asts (jitterlisp_object bindings,
 
   jitterlisp_object binding = JITTERLISP_EXP_C_A_CAR(bindings);
   jitterlisp_object bound_forms = JITTERLISP_EXP_C_A_CDR(binding);
-  jitterlisp_object bound_ast
-    = jitterlisp_primitive_macro_function_begin (bound_forms, env);
+  jitterlisp_object bound_ast = jitterlisp_macroexpand_begin (bound_forms, env);
 
   jitterlisp_object cdr_bindings = JITTERLISP_EXP_C_A_CDR (bindings);
   jitterlisp_object cdr_bound_asts
@@ -369,45 +431,30 @@ jitterlisp_primitive_macro_function_let (jitterlisp_object cdr,
     = jitterlisp_bindings_get_bound_asts (bindings, env);
 
   /* Expand the body as well, and I have every component for the let AST. */
-  jitterlisp_object body_ast
-    = jitterlisp_primitive_macro_function_begin (body_forms, env);
+  jitterlisp_object body_ast = jitterlisp_macroexpand_begin (body_forms, env);
 
-  return jitterlisp_ast_make_let (bound_symbols, bound_asts, body_ast);
+  /* Optimization: if there are zero bindings just return the body AST,
+     without wrapping it in a useless let shell. */
+  if (JITTERLISP_IS_EMPTY_LIST(bound_symbols))
+    return body_ast;
+  else
+    return jitterlisp_ast_make_let (bound_symbols, bound_asts, body_ast);
 }
 
 jitterlisp_object
 jitterlisp_primitive_macro_function_begin (jitterlisp_object cdr,
                                            jitterlisp_object env)
 {
-  /* Zero-form body. */
-  if (JITTERLISP_IS_EMPTY_LIST(cdr))
-    return jitterlisp_ast_make_literal (JITTERLISP_NOTHING);
-
-  /* Ill-formed body. */
-  if (! JITTERLISP_IS_CONS(cdr))
-    jitterlisp_error_cloned ("begin: non-list body");
-
-  /* At this point we have to look inside the cons. */
-  jitterlisp_object first = JITTERLISP_EXP_C_A_CAR(cdr);
-  jitterlisp_object rest = JITTERLISP_EXP_C_A_CDR(cdr);
-
-  /* One-form body. */
-  if (JITTERLISP_IS_EMPTY_LIST(rest))
-    return jitterlisp_macroexpand (first, env);
-
-  /* Multiple-form body. */
-  return jitterlisp_ast_make_sequence
-            (jitterlisp_macroexpand (first, env),
-             jitterlisp_primitive_macro_function_begin (rest, env));
+  return jitterlisp_macroexpand_begin (cdr, env);
 }
 
 jitterlisp_object
 jitterlisp_primitive_macro_function_quote (jitterlisp_object cdr,
                                            jitterlisp_object env)
 {
-  if (! JITTERLISP_IS_CONS (cdr))
+  if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("quote: invalid cdr");
-  if (! JITTERLISP_IS_EMPTY_LIST (JITTERLISP_EXP_C_A_CDR(cdr)))
+  if (! JITTERLISP_IS_EMPTY_LIST(JITTERLISP_EXP_C_A_CDR(cdr)))
     jitterlisp_error_cloned ("quote: invalid cddr");
 
   jitterlisp_object literal = JITTERLISP_EXP_C_A_CAR(cdr);
@@ -415,9 +462,44 @@ jitterlisp_primitive_macro_function_quote (jitterlisp_object cdr,
 }
 
 jitterlisp_object
-jitterlisp_primitive_macro_function_current_environment (jitterlisp_object cdr,
-                                                         jitterlisp_object env)
+jitterlisp_primitive_macro_function_undefined (jitterlisp_object cdr,
+                                               jitterlisp_object env)
 {
-  return jitterlisp_ast_make_current_environment ();
+  if (! JITTERLISP_IS_EMPTY_LIST(cdr))
+    jitterlisp_error_cloned ("undefined: non-null cdr");
+
+  return jitterlisp_ast_make_literal (JITTERLISP_UNDEFINED);
 }
 
+jitterlisp_object
+jitterlisp_primitive_macro_function_define_low_level_macro
+   (jitterlisp_object cdr,
+    jitterlisp_object env)
+{
+  /* Bind the macro name and the macro body into C variables and macroexpand the
+     macro body.  Notice that there are no formals low-level macros always have
+     exactly one formal named low-level-macro-args , to be bound to the entire
+     macro call cdr. */
+  if (! JITTERLISP_IS_CONS(cdr))
+    jitterlisp_error_cloned ("define-low-level-macro: invalid cdr");
+  jitterlisp_object macro_name = JITTERLISP_EXP_C_A_CAR(cdr);
+  if (! JITTERLISP_IS_SYMBOL (macro_name))
+    jitterlisp_error_cloned ("define-low-level-macro: non-symbol macro name");
+  jitterlisp_object body_forms = JITTERLISP_EXP_C_A_CDR(cdr);
+  jitterlisp_object body_ast
+    = jitterlisp_macroexpand_begin (body_forms, env);
+
+  /* Make a macro object.  Notice that the formals are not actually used
+     (non-primitive macros always have exactly one formal with the fixed name
+     low_level_macro_args , therefore there is no need to store it explicity):
+     to avoid the formals being used by mistake I define them as a non-list. */
+  jitterlisp_object macro_formals = JITTERLISP_NOTHING;
+  jitterlisp_object macro;
+  JITTERLISP_NON_PRIMITIVE_MACRO_(macro, env, macro_formals, body_ast);
+
+  /* Bind the macro object to the macro name in the global environment. */
+  JITTERLISP_SYMBOL_DECODE(macro_name)->global_value = macro;
+
+  /* Return a useless statement. */
+  return jitterlisp_macroexpand_begin (JITTERLISP_EMPTY_LIST, env);
+}

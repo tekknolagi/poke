@@ -193,7 +193,7 @@ jitterlisp_ast_make_let (jitterlisp_object bound_symbols,
                          jitterlisp_object bound_asts,
                          jitterlisp_object body_ast)
 {
-  jitterlisp_validate_symbols (bound_symbols);
+  jitterlisp_validate_distinct_symbols (bound_symbols);
   jitterlisp_validate_asts (bound_asts);
   jitterlisp_validate_ast (body_ast);
   size_t bound_symbol_no = jitterlisp_length (bound_symbols);

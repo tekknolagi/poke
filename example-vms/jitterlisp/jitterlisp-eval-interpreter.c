@@ -760,8 +760,18 @@ jitterlisp_eval_interpreter___ (jitterlisp_object original_form,
 
 /* Return the evaluation of the given primitive on the given (of course still
    unevaluated) operand ASTs.  Assume that the rator argument is an encoded
-   primitive, and that rand_asts is a C array of operand_no elements. */
-static inline jitterlisp_object
+   primitive, and that rand_asts is a C array of operand_no elements.
+   The noinline attribute is important here: this function invokes a primitive C
+   function in what would syntactically look like a tail context, but passing it
+   a pointer to local storage as argument; that prevents GCC from compiling the
+   call as a sibling call optimization, which in itself is a very minor loss.
+   However having the body of this function inlined in
+   jitterlisp_eval_interpreter_call would prevent sibling call compilation in
+   the case of *closure* calls as well, leaking stack space in an unacceptable
+   way for deeply nested tail calls.
+   Tested with a GCC 8 snapshot from early October 2017. */
+__attribute__ ((noinline))
+static jitterlisp_object
 jitterlisp_eval_interpreter_ast_primitive (jitterlisp_object rator,
                                            const jitterlisp_object *rand_asts,
                                            size_t rand_no,
@@ -999,16 +1009,13 @@ jitterlisp_object
 jitterlisp_eval_interpreter (jitterlisp_object unexpanded_form,
                              jitterlisp_object env)
 {
-  /*
+
   printf ("Macroexpanding ");
   jitterlisp_print_to_stream (stdout, unexpanded_form);
   printf ("...\n");
-  */
   jitterlisp_object ast = jitterlisp_macroexpand (unexpanded_form, env);
-  /*
   printf ("...into ");
-  jitterlisp_print_to_stream (stdout, form);
+  jitterlisp_print_to_stream (stdout, ast);
   printf ("\n");
-  */
   return jitterlisp_eval_interpreter_ast (ast, env);
 }

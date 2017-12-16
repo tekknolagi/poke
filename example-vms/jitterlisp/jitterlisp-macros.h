@@ -84,7 +84,11 @@ jitterlisp_object
 jitterlisp_primitive_macro_function_quote (jitterlisp_object cdr,
                                            jitterlisp_object env);
 jitterlisp_object
-jitterlisp_primitive_macro_function_current_environment (jitterlisp_object cdr,
-                                                         jitterlisp_object env);
+jitterlisp_primitive_macro_function_undefined (jitterlisp_object cdr,
+                                               jitterlisp_object env);
+jitterlisp_object
+jitterlisp_primitive_macro_function_define_low_level_macro
+   (jitterlisp_object cdr,
+    jitterlisp_object env);
 
 #endif // #ifndef JITTERLISP_MACROS_H_

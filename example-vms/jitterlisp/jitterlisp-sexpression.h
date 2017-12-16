@@ -1185,7 +1185,7 @@ extern jitterlisp_object jitterlisp_object_quasiquote_procedure;
 extern jitterlisp_object jitterlisp_object_quote;
 extern jitterlisp_object jitterlisp_object_setb;
 extern jitterlisp_object jitterlisp_object_while;
-
+extern jitterlisp_object jitterlisp_low_level_macro_args;
 
 
 

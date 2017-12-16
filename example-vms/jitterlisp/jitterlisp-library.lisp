@@ -61,6 +61,55 @@
 
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Conses.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; Composed cons selectors.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; I define these early because some composed selectors are used within the
+;;; implementation of high-level macros.
+
+;; Length 2.
+(define (caar x) (car (car x)))
+(define (cadr x) (car (cdr x)))
+(define (cdar x) (cdr (car x)))
+(define (cddr x) (cdr (cdr x)))
+
+;; Length 3.
+(define (caaar x) (car (caar x)))
+(define (caadr x) (car (cadr x)))
+(define (cadar x) (car (cdar x)))
+(define (caddr x) (car (cddr x)))
+(define (cdaar x) (cdr (caar x)))
+(define (cdadr x) (cdr (cadr x)))
+(define (cddar x) (cdr (cdar x)))
+(define (cdddr x) (cdr (cddr x)))
+
+;; Length 4.
+(define (caaaar x) (car (caaar x)))
+(define (caaadr x) (car (caadr x)))
+(define (caadar x) (car (cadar x)))
+(define (caaddr x) (car (caddr x)))
+(define (cadaar x) (car (cdaar x)))
+(define (cadadr x) (car (cdadr x)))
+(define (caddar x) (car (cddar x)))
+(define (cadddr x) (car (cdddr x)))
+(define (cdaaar x) (cdr (caaar x)))
+(define (cdaadr x) (cdr (caadr x)))
+(define (cdadar x) (cdr (cadar x)))
+(define (cdaddr x) (cdr (caddr x)))
+(define (cddaar x) (cdr (cdaar x)))
+(define (cddadr x) (cdr (cdadr x)))
+(define (cdddar x) (cdr (cddar x)))
+(define (cddddr x) (cdr (cdddr x)))
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Quasiquoting and macros.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -194,12 +243,32 @@
                        (qq-recursive-as-car x-car depth)
                        (qq-recursive x-cdr depth))))))
 
-;;; The function called from C.
+;;; Quasiquoting as a procedure.
 (define (quasiquote-procedure x)
   (qq-recursive x 0))
 
+
 
 
+;;;; quasiquote.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Now we can finally define quasiquote as a (low-level) macro.  It is trivial:
+;;; low-level-macro-args is bound to all of the arguments of quasiquote , and we
+;;; want to fail if those arguments are not a singleton list.  If the arguments
+;;; are a singleton list we just call quasiquote-procedure on their car.
+(define-low-level-macro quasiquote
+  (cond ((null? low-level-macro-args)
+         (error '(quasiquote with zero arguments)))
+        ((non-cons? low-level-macro-args)
+         (error '(quasiquote arguments not a list)))
+        ((non-null? (cdr low-level-macro-args))
+         (error '(quasiquote arguments more than one or not a list)))
+        (#t
+         (quasiquote-procedure (car low-level-macro-args)))))
+
+
+
 
 ;;;; destructuring-bind-procedure.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -283,48 +352,38 @@
 
 
 
+;;;; destructuring-bind.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Conses.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; This will be convenient to define high-level macros on top of low-level
+;;; macros, by destructuring the one low-level macro argument.
+
+;;; Arguments: template structure . body-forms Evaluate structure and locally
+;;; bind its components with the variables in the template; return the result of
+;;; evaluating the body forms with the bindings visible.
+(define-low-level-macro destructuring-bind
+  (let ((template (car low-level-macro-args))
+        (structure (cadr low-level-macro-args))
+        (body-forms (cddr low-level-macro-args)))
+    (destructuring-bind-procedure template structure body-forms)))
+
 
 
 
-;;;; Composed selectors.
+;;;; High-level macros.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Length 2.
-(define (caar x) (car (car x)))
-(define (cadr x) (car (cdr x)))
-(define (cdar x) (cdr (car x)))
-(define (cddr x) (cdr (cdr x)))
-
-;; Length 3.
-(define (caaar x) (car (caar x)))
-(define (caadr x) (car (cadr x)))
-(define (cadar x) (car (cdar x)))
-(define (caddr x) (car (cddr x)))
-(define (cdaar x) (cdr (caar x)))
-(define (cdadr x) (cdr (cadr x)))
-(define (cddar x) (cdr (cdar x)))
-(define (cdddr x) (cdr (cddr x)))
-
-;; Length 4.
-(define (caaaar x) (car (caaar x)))
-(define (caaadr x) (car (caadr x)))
-(define (caadar x) (car (cadar x)))
-(define (caaddr x) (car (caddr x)))
-(define (cadaar x) (car (cdaar x)))
-(define (cadadr x) (car (cdadr x)))
-(define (caddar x) (car (cddar x)))
-(define (cadddr x) (car (cdddr x)))
-(define (cdaaar x) (cdr (caaar x)))
-(define (cdaadr x) (cdr (caadr x)))
-(define (cdadar x) (cdr (cadar x)))
-(define (cdaddr x) (cdr (caddr x)))
-(define (cddaar x) (cdr (cdaar x)))
-(define (cddadr x) (cdr (cdadr x)))
-(define (cdddar x) (cdr (cddar x)))
-(define (cddddr x) (cdr (cdddr x)))
+;;; Arguments: (name . formals) . body
+;;; Scheme-style, where formals can be an improper list.
+(define-low-level-macro define-macro
+  (let ((defined-thing (car low-level-macro-args))
+        (macro-body-forms (cdr low-level-macro-args)))
+    (let ((macro-name (car defined-thing))
+          (macro-formals (cdr defined-thing)))
+      `(define-low-level-macro ,macro-name
+         (destructuring-bind ,macro-formals
+                             low-level-macro-args
+                             ,@macro-body-forms)))))
 
 
 
@@ -1348,27 +1407,141 @@
 
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Scratch.
+;;;; Stuff to move.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; (define n 10000000)
-;; ;; (display (length (reverse! (iota n)))) (newline)
-;; ;;(define f (iterate-squaring-post (lambda (x) (1+ x)) n))
-;; (display '(computing f)) (newline)
-;; (define f (iterate-squaring-pre (lambda (x) (1+ x)) n))
-;; (display '(using f twice)) (newline)
-;; ;;(define f (iterate-iterative (lambda (x) (1+ x)) n))
-;; (display (f 0)) (newline)
-;; (display (f 0)) (newline)
-;; (display 'done) (newline)
+;;; The code below is okay, but should be moved up.
 
-;; (define q (destructuring-bind-procedure '(a b) 'args '((display #t))))
-;; (display q)
-;; (newline)
-;; (display (make-vector 10 #f))
-;; (newline)
-;; (display (make-vector 10 7))
-;; (newline)
 
-;; FIXME: make this short-circuit and variadic once I have macros.
-(define (or a b) (if a #t b))
+;;;; High-level syntax: one-way conditionals.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-macro (when condition . body-forms)
+  `(if ,condition
+       (begin ,@body-forms)
+       (begin)))
+
+(define-macro (unless condition . body-forms)
+  `(if ,condition
+       (begin)
+       (begin ,@body-forms)))
+
+
+
+
+;;;; Variadic boolean connectives.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-macro (or . clauses)
+  (cond ((null? clauses)
+         '#f)
+        ((non-cons? clauses)
+         (error '(or: non-list arguments)))
+        ((null? (cdr clauses))
+         (car clauses))
+        (#t
+         `(if ,(car clauses)
+              '#t
+              (or ,@(cdr clauses))))))
+
+(define-macro (and . clauses)
+  (cond ((null? clauses)
+         '#t)
+        ((non-cons? clauses)
+         (error '(and: non-list arguments)))
+        ((null? (cdr clauses))
+         (car clauses))
+        (#t
+         `(if ,(car clauses)
+              (and ,@(cdr clauses))
+              '#f))))
+
+
+
+
+;;;; Variadic list operations.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-macro (list . elements)
+  (if (null? elements)
+      '()
+      `(cons ,(car elements) (list ,@(cdr elements)))))
+
+
+
+
+;;;; High-level syntax: let*.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-macro (let* bindings . body-forms)
+  (if (null? bindings)
+      `(begin ,@body-forms)
+      `(let ((,(caar bindings) ,@(cdar bindings)))
+         (let* ,(cdr bindings)
+           ,@body-forms))))
+
+
+
+
+;;;; High-level syntax: letrec.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-macro (letrec bindings . body-forms)
+  `(let ,(map (lambda (binding) `(,(car binding) (undefined)))
+              bindings)
+     ,@(map (lambda (binding) `(set! ,(car binding) ,@(cdr binding)))
+            bindings)
+     ,@body-forms))
+
+
+
+
+;;;; High-level syntax: named let.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-macro (named-let loop-name bindings . body-forms)
+  `(letrec ((,loop-name (lambda ,(map car bindings) ,@body-forms)))
+     (,loop-name ,@(map (lambda (binding) `(begin ,@(cdr binding)))
+                        bindings))))
+
+
+
+
+;;;; High-level syntax: Scheme-style let, either named or not.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Redefine let form to expand to either the primordial let or named-let,
+;;; according to the shape of the first argument.  In order to do this we first
+;;; have to save the oridinal let macro implemented in C, to be reused in one of
+;;; the two cases.
+(define primordial-let
+  let)
+(define-macro (let first-argument . other-arguments)
+  (if (symbol? first-argument)
+      `(named-let ,first-argument ,@other-arguments)
+      `(primordial-let ,first-argument ,@other-arguments)))
+
+
+
+
+;;;; High-level syntax: case.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; FIXME: use let-macro
+(define-macro (case-variable-matches? variable . literals)
+  `(or ,@(map (lambda (a-literal)
+                `(eq? ,variable ,a-literal))
+              literals)))
+
+;; FIXME: use let-macro
+(define-macro (case-variable variable . clauses)
+  (if (null? clauses)
+      '(begin)
+      `(if (case-variable-matches? ,variable ,@(caar clauses))
+           (begin ,@(cdar clauses))
+           (case-variable ,variable ,@(cdr clauses)))))
+
+(define-macro (case discriminand . clauses)
+  (let ((discriminand-variable (gensym)))
+    `(let ((,discriminand-variable ,discriminand))
+       (case-variable ,discriminand-variable ,@clauses))))

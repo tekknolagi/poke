@@ -247,6 +247,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(booleanp, ANYTHING,
   { JITTERLISP_BOOLEANP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(nothingp, ANYTHING,
   { JITTERLISP_NOTHINGP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(undefinedp, ANYTHING,
+  { JITTERLISP_UNDEFINEDP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(symbolp, ANYTHING,
   { JITTERLISP_SYMBOLP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(non_symbolp, ANYTHING,
@@ -257,6 +259,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(non_consp, ANYTHING,
   { JITTERLISP_NON_CONSP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(procedurep, ANYTHING,
   { JITTERLISP_PROCEDUREP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(macrop, ANYTHING,
+  { JITTERLISP_MACROP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(vectorp, ANYTHING,
   { JITTERLISP_VECTORP_(res, args [0]); })
 /* Arithmetic */
@@ -341,7 +345,9 @@ JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(lambda)
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(let)
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(begin)
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(quote)
-JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(current_environment)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(undefined)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(define_low_level_macro)
+
 
 
 
@@ -360,11 +366,13 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("eof?", 1, eofp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("boolean?", 1, booleanp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("nothing?", 1, nothingp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("undefined?", 1, undefinedp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("symbol?", 1, symbolp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-symbol?", 1, non_symbolp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("cons?", 1, consp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-cons?", 1, non_consp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("procedure?", 1, procedurep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("macro?", 1, macrop),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("vector?", 1, vectorp),
       /* Arithmetic. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("+", 2, plus),
@@ -418,7 +426,9 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("let", let),
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("begin", begin),
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("quote", quote),
-      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("current-environment", current_environment)
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("undefined", undefined),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("define-low-level-macro",
+                                         define_low_level_macro)
     };
 
 /* How many primitive descriptors there are. */

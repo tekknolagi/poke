@@ -460,6 +460,8 @@
   JITTER_END_
 
 
+
+
 /* Closure operations.
  * ************************************************************************** */
 
@@ -531,6 +533,27 @@
       = JITTERLISP_FIXNUM_ENCODE(_jitterlisp_elt_no_untagged);         \
     _jitterlisp_tmp->elements = _jitterlisp_elts;                      \
     (_jitterlisp_out) = JITTERLISP_VECTOR_ENCODE(_jitterlisp_tmp);     \
+  JITTER_END_
+
+
+
+
+/* Non-primitive macro operations.
+ * ************************************************************************** */
+
+// FIXME: comment.
+
+#define JITTERLISP_NON_PRIMITIVE_MACRO_(_jitterlisp_out,                        \
+                                        _jitterlisp_in0,                        \
+                                        _jitterlisp_in1,                        \
+                                        _jitterlisp_in2)                        \
+  JITTER_BEGIN_                                                                 \
+    struct jitterlisp_closure *_jitterlisp_tmp                                  \
+      = JITTERLISP_NON_PRIMITIVE_MACRO_MAKE_UNINITIALIZED_UNENCODED();          \
+    _jitterlisp_tmp->environment = _jitterlisp_in0;                             \
+    _jitterlisp_tmp->formals = _jitterlisp_in1;                                 \
+    _jitterlisp_tmp->body = _jitterlisp_in2;                                    \
+    (_jitterlisp_out) = JITTERLISP_NON_PRIMITIVE_MACRO_ENCODE(_jitterlisp_tmp); \
   JITTER_END_
 
 
@@ -636,6 +659,14 @@
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_NOTHING(_jitterlisp_in0));  \
   JITTER_END_
 
+/* Compute a tagged boolean, #t iff the given in-argument is the undefined
+   object. */
+#define JITTERLISP_UNDEFINEDP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                           \
+    _jitterlisp_out =                                                     \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_UNDEFINED(_jitterlisp_in0));  \
+  JITTER_END_
+
 /* Compute a tagged boolean, #t iff the given in-argument is a cons . */
 #define JITTERLISP_CONSP_(_jitterlisp_out, _jitterlisp_in0)            \
   JITTER_BEGIN_                                                        \
@@ -662,11 +693,20 @@
       JITTERLISP_BOOLEAN_ENCODE(! JITTERLISP_IS_SYMBOL(_jitterlisp_in0));  \
   JITTER_END_
 
-/* Compute a tagged boolean, #t iff the given in-argument is a closure . */
+/* Compute a tagged boolean, #t iff the given in-argument is a procedure; this
+   doesn't distinguish between primitive procedures and procedure closures. */
 #define JITTERLISP_PROCEDUREP_(_jitterlisp_out, _jitterlisp_in0)            \
   JITTER_BEGIN_                                                             \
     _jitterlisp_out =                                                       \
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_PROCEDURE(_jitterlisp_in0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is a macro; this
+   doesn't distinguish between primitive macros and macro closures. */
+#define JITTERLISP_MACROP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                             \
+    _jitterlisp_out =                                                       \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_MACRO(_jitterlisp_in0));  \
   JITTER_END_
 
 /* Compute a tagged boolean, #t iff the given in-argument is a vector . */
