@@ -86,7 +86,8 @@ jitterlisp_run_from_string (const char *string)
     = jitterlisp_make_string_reader_state (string);
   jitterlisp_object result
     = jitterlisp_run_and_destroy_reader_state (rstate);
-  if (! JITTERLISP_IS_NOTHING(result))
+  if (jitterlisp_settings.print_nothing_results
+      || ! JITTERLISP_IS_NOTHING(result))
     {
       jitterlisp_print_to_stream (stdout, result);
       printf ("\n");

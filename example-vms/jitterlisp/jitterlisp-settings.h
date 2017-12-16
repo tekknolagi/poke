@@ -38,8 +38,9 @@ struct jitterlisp_settings
   bool verbose;
 
   /* If false don't print #<nothing> when it's the result of an evaluation to be
-     printed.  This doesn't suppress explicit printing of values, for example by
-     the display procedure. */
+     printed.  No setting suppresses explicit printing of values, for example by
+     the display procedure, or the printing of #<nothing> as a component of a
+     larger structure. */
   bool print_nothing_results;
 
   /* Non-false iff we are to uses the Jittery VM, and not a naïf interpreter. */
