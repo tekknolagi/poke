@@ -1871,3 +1871,78 @@
 ;; renaming this to append.
 ;; Calls in code which is already in AST form will be affected otherwise.
 (define-right-nested-variadic-extension variadic-append previous-append () #f)
+
+
+
+
+;;;; Tentative functionality, just for fun: streams.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define stream-empty
+  '(#t . ()))
+
+(define (stream-ready? s)
+  (car s))
+
+(define (stream-force! s)
+  (unless (stream-ready? s)
+    (set-cdr! s ((cdr s)))
+    (set-car! s #t))
+  (cdr s))
+
+(define (stream-null? s)
+  (null? (stream-force! s)))
+(define (stream-non-null? s)
+  (non-null? (stream-force! s)))
+(define (stream-car s)
+  (car (stream-force! s)))
+(define (stream-cdr s)
+  (cdr (stream-force! s)))
+
+(define-macro (stream-cons x s)
+  `(cons #f
+         (lambda ()
+           (cons ,x ,s))))
+
+(define-macro (stream-delay stream-expression)
+  `(cons #f
+         (lambda ()
+           (stream-force! ,stream-expression))))
+
+(define (stream-ones)
+  (stream-cons 1 stream-ones))
+
+(define (stream-from from)
+  (stream-cons from (stream-from (1+ from))))
+(define (naturals)
+  (stream-from 0))
+
+(define (stream-walk-elements procedure s)
+  (while (stream-non-null? s)
+    (procedure (stream-car s))
+    (set! s (stream-cdr s))))
+
+(define (stream-print-elements s)
+  (stream-walk-elements (lambda (x)
+                          (display x)
+                          (newline))
+                        s))
+
+(define (stream-touch-elements s)
+  (stream-walk-elements (lambda (x))
+                        s))
+
+(define (stream-range a b)
+  (if (> a b)
+      stream-empty
+      (stream-cons a (stream-range (1+ a) b))))
+
+(define (stream-filter p? s)
+  (stream-delay
+    (cond ((stream-null? s)
+           stream-empty)
+          ((p? (stream-car s))
+           (stream-cons (stream-car s)
+                        (stream-filter p? (stream-cdr s))))
+          (#t
+           (stream-filter p? (stream-cdr s))))))

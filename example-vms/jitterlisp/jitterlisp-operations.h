@@ -706,12 +706,28 @@
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_PROCEDURE(_jitterlisp_in0));  \
   JITTER_END_
 
+/* Compute a tagged boolean, #t iff the given in-argument is a procedure; this
+   doesn't distinguish between primitive procedures and procedure closures. */
+#define JITTERLISP_PROCEDUREP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                             \
+    _jitterlisp_out =                                                       \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_PROCEDURE(_jitterlisp_in0));  \
+  JITTER_END_
+
 /* Compute a tagged boolean, #t iff the given in-argument is a macro; this
    doesn't distinguish between primitive macros and macro closures. */
 #define JITTERLISP_MACROP_(_jitterlisp_out, _jitterlisp_in0)            \
-  JITTER_BEGIN_                                                             \
-    _jitterlisp_out =                                                       \
+  JITTER_BEGIN_                                                         \
+    _jitterlisp_out =                                                   \
       JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_MACRO(_jitterlisp_in0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is an AST; this
+   doesn't distinguish between primitive asts and ast closures. */
+#define JITTERLISP_ASTP_(_jitterlisp_out, _jitterlisp_in0)            \
+  JITTER_BEGIN_                                                       \
+    _jitterlisp_out =                                                 \
+      JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_AST(_jitterlisp_in0));  \
   JITTER_END_
 
 /* Compute a tagged boolean, #t iff the given in-argument is a vector . */
