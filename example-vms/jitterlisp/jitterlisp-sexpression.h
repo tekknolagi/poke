@@ -1129,14 +1129,14 @@ struct jitterlisp_ast;
 
 /* AST tag checking, encoding and decoding. */
 #define JITTERLISP_IS_AST(_jitterlisp_tagged_object)  \
-  JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),        \
+  JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),     \
                      JITTERLISP_AST_PTAG,             \
                      JITTERLISP_AST_STAG,             \
                      JITTERLISP_AST_STAG_BIT_NO)
 #define JITTERLISP_AST_ENCODE(_jitterlisp_untagged_AST)  \
-  JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_AST,       \
-                            JITTERLISP_AST_PTAG,            \
-                            JITTERLISP_AST_STAG,            \
+  JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_AST,    \
+                            JITTERLISP_AST_PTAG,         \
+                            JITTERLISP_AST_STAG,         \
                             JITTERLISP_AST_STAG_BIT_NO)
 #define JITTERLISP_AST_DECODE(_jitterlisp_tagged_AST)             \
   ((struct jitterlisp_ast *)                                      \
