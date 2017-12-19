@@ -1075,6 +1075,7 @@ EXTRA_DIST += \
   example-vms/jitterlisp/examples/counter-recursive.lisp \
   example-vms/jitterlisp/examples/derivative.lisp \
   example-vms/jitterlisp/examples/factorial.lisp \
+  example-vms/jitterlisp/examples/fibo.lisp \
   example-vms/jitterlisp/examples/peano.lisp
 
 # Compatibility files for limited JitterLisp compatibility for
