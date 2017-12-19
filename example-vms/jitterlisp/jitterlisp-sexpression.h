@@ -1113,12 +1113,10 @@ struct jitterlisp_vector
 
 
 
-/* [FIXME: tentative] S-expression representation: ASTs.
+/* S-expression representation: ASTs.
  * ************************************************************************** */
 
 // FIXME: support "extended" types sharing tags at the cost of having a header.
-
-/* FIXME: comment */
 
 #define JITTERLISP_AST_PTAG           0//0b111
 

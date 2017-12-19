@@ -40,34 +40,21 @@
 /* AST allocation utility.
  * ************************************************************************** */
 
-/* Return an (unencoded) initial pointer to a fresh C array of s-expressions
-   with the given number of elements, uninitialized. */
-static jitterlisp_object*
-jitterlisp_make_subs (size_t sub_no)
-{
-  return ((jitterlisp_object *)
-          jitterlisp_allocate
-             (JITTERLISP_ALIGNED_SIZE(sub_no * sizeof (jitterlisp_object))));
-}
-
 /* Expand to an unprotected sequence of C declarations and statements declaring
    an automatic variable of type struct jitterlisp_ast * named unencoded_res,
    its encoded counterpart res, and a subs pointer pointer to the subs field
    of unencoded res; heap-allocating unencoded_res, initializing its case_ and
-   sub_no fields to the given values, and the subs field of res to a fresh
-   s-expression array of the correct size.  The array content is not
+   sub_no fields to the given values.  The flexible array member content is not
    initialized. */
 #define JITTERLISP_MAKE_LOCALS_(_jitterlisp_case, _jitterlisp_sub_no)  \
+  const size_t sub_no = (_jitterlisp_sub_no);                          \
   struct jitterlisp_ast *unencoded_res                                 \
-    = JITTERLISP_AST_MAKE_UNINITIALIZED_UNENCODED();                   \
+    = JITTERLISP_AST_MAKE_UNINITIALIZED_UNENCODED(sub_no);             \
   jitterlisp_object res = JITTERLISP_AST_ENCODE(unencoded_res);        \
-  jitterlisp_object *subs __attribute__ ((unused))                     \
-    = unencoded_res->subs;                                             \
   unencoded_res->case_ = (_jitterlisp_case);                           \
-  subs                                                                 \
-    = unencoded_res->subs                                              \
-    = jitterlisp_make_subs (unencoded_res->sub_no                      \
-                            = (_jitterlisp_sub_no))
+  unencoded_res->sub_no = (sub_no);                                    \
+  jitterlisp_object * const subs __attribute__ ((unused))              \
+    = unencoded_res->subs
 
 
 

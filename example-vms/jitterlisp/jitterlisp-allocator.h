@@ -174,11 +174,14 @@ jitterlisp_symbol_make_interned (const char *name)
    jitterlisp-ast.h . */
 
 /* Expand to an rvalue of type struct jitterlisp_ast * whose evaluation points
-   to a just allocated AST, completely uninitialized. */
-#define JITTERLISP_AST_MAKE_UNINITIALIZED_UNENCODED()  \
-  ((struct jitterlisp_ast*)                            \
-   (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(    \
-                            struct jitterlisp_ast))))
+   to a just allocated AST with the given number of subs, completely
+   uninitialized. */
+#define JITTERLISP_AST_MAKE_UNINITIALIZED_UNENCODED(_jitterlisp_sub_no)  \
+  ((struct jitterlisp_ast*)                                              \
+   (jitterlisp_allocate                                                  \
+       (JITTERLISP_ALIGNED_SIZE(sizeof (struct jitterlisp_ast)           \
+                                + (sizeof (jitterlisp_object)            \
+                                   * (_jitterlisp_sub_no))))))
 
 
 

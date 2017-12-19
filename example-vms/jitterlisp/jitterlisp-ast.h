@@ -79,10 +79,9 @@ enum jitterlisp_ast_case
   };
 
 /* An AST data structure.  The structure definition itself seems lax, but
-   operations on ASTs are designed to only build syntactically valid ASTs,
-   and fail otherwise.  This eliminates the need for safety checks at
-   interpretation or VM code generation time.  Sub-structures are all
-   tagged. */
+   operations on ASTs are designed to only build syntactically valid ASTs, and
+   fail otherwise.  This eliminates the need for safety checks at interpretation
+   or VM code generation time.  Sub-structures are all tagged. */
 struct jitterlisp_ast
 {
   /* What case this AST represents. */
@@ -92,10 +91,11 @@ struct jitterlisp_ast
      with a fixed number of subs. */
   jitter_uint sub_no;
 
-  /* A pointer to this AST's sub-components, which are element_no.  Some
-     sub-components may be other ASTs and others may be different Lisp object,
-     according to the case. */
-  jitterlisp_object *subs;
+  /* A flexible array member holding this AST's sub-components, which are
+     exactly sub_no.  Some sub-components may be other ASTs and others may be
+     different Lisp object, according to the case.  All are tagged, and checked
+     for compatibility with the case at construction time. */
+  jitterlisp_object subs [];
 };
 
 
