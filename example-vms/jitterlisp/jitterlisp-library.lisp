@@ -1862,6 +1862,24 @@
 
 
 
+;;;; Making non-variadic lambdas from possibly variadic operators.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; This is a convenient way to syntactically generate a lambda from a macro
+;;; name.
+;;; Example:
+;;;   (lambda-wrapper 2 +)
+;;;   expands to something equivalent to
+;;;   (lambda (a b) (+ a b)) .
+(define-macro (lambda-wrapper arity rator)
+  (let ((formals (map (lambda (_) (gensym))
+                      (iota arity))))
+    `(lambda ,formals
+       (,rator ,@formals))))
+
+
+
+
 ;;;; Variadic list operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
