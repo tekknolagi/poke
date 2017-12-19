@@ -128,6 +128,24 @@ jitterlisp_is_list_of_distinct_symbols (jitterlisp_object o)
   return res;
 }
 
+bool
+jitterlisp_is_alist (jitterlisp_object o)
+{
+  while (! JITTERLISP_IS_EMPTY_LIST(o))
+    {
+      if (! JITTERLISP_IS_CONS(o))
+        return false;
+      jitterlisp_object element = JITTERLISP_EXP_C_A_CAR(o);
+      if (! JITTERLISP_IS_CONS(element))
+        return false;
+      if (! JITTERLISP_IS_SYMBOL(JITTERLISP_EXP_C_A_CAR(element)))
+        return false;
+
+      o = JITTERLISP_EXP_C_A_CDR(o);
+    }
+  return true;
+}
+
 
 
 
@@ -190,6 +208,14 @@ jitterlisp_validate_asts (jitterlisp_object list)
 
       list = JITTERLISP_EXP_C_A_CDR(list);
     }
+}
+
+void
+jitterlisp_validate_alist (jitterlisp_object o)
+{
+  if (! jitterlisp_is_alist (o))
+    jitterlisp_error_cloned ("jitterlisp_validate_alist: not an a-list with "
+                             "symbols as keys");
 }
 
 

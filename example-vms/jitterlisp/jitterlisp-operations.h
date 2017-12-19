@@ -29,6 +29,8 @@
 #include <stdbool.h>
 
 #include "jitterlisp-sexpression.h"
+#include "jitterlisp-eval-interpreter.h" // FIXME: review after writing VM eval.
+#include "jitterlisp-macros.h"
 #include "jitterlisp-allocator.h"
 
 
@@ -768,16 +770,18 @@
 
 /* Macroexpand the given expression in the given non-global expansion-time
    environment. */
-#define JITTERLISP_MACROEXPAND_(_jitterlisp_out, _jitterlisp_in0,            \
-                                _jitterlisp_in1)                             \
-  JITTER_BEGIN_                                                              \
-    jitterlisp_error_cloned ("macroexpand operation temporarily disabled");  \
+#define JITTERLISP_MACROEXPAND_(_jitterlisp_out, _jitterlisp_in0,  \
+                                _jitterlisp_in1)                   \
+  JITTER_BEGIN_                                                    \
+    _jitterlisp_out = jitterlisp_macroexpand (_jitterlisp_in0,     \
+                                              _jitterlisp_in1);    \
   JITTER_END_
 
 /* Eval the given expression in the given non-global environment. */
 #define JITTERLISP_EVAL_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
   JITTER_BEGIN_                                                              \
-    jitterlisp_error_cloned ("eval operation temporarily disabled");         \
+    _jitterlisp_out = jitterlisp_eval_interpreter (_jitterlisp_in0,          \
+                                                   _jitterlisp_in1);         \
   JITTER_END_
 
 

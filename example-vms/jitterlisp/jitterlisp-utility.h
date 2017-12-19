@@ -44,6 +44,17 @@ jitterlisp_is_list_of_symbols (jitterlisp_object o);
 bool
 jitterlisp_is_list_of_distinct_symbols (jitterlisp_object o);
 
+/* Return non-false iff the given s-expression is an a-list of the kind used for
+   macroexpand and eval from Lisp.  This means that the a-list keys must be
+   symbols. */
+bool
+jitterlisp_is_alist (jitterlisp_object o);
+
+/* A macro wrapper around jitterlisp_is_alist , convenient for type-checking
+   primitive arguments.  This calls jitterlisp_is_alist . */
+#define JITTERLISP_IS_ALIST(x)  \
+  (jitterlisp_is_alist(x))
+
 
 
 
@@ -81,6 +92,11 @@ jitterlisp_validate_distinct_symbols (jitterlisp_object list);
 /* Error out if the given encoded s-expression is not a list of ASTs. */
 void
 jitterlisp_validate_asts (jitterlisp_object list);
+
+/* Error out if the given encoded s-expression is not an a-list.  This is meant
+   for validating the arguments of eval and macroexpand , as used from Lisp. */
+void
+jitterlisp_validate_alist (jitterlisp_object o);
 
 
 
