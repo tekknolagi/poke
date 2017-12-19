@@ -36,17 +36,6 @@
 
 
 
-/* Non-Jittery AST interpreter.
- * ************************************************************************** */
-
-/* Return the result of the evaluation of the given form (as an encoded AST),
-   which must be already macroexpanded, in the given non-global environment. */
-jitterlisp_object
-jitterlisp_eval_interpreter_ast (jitterlisp_object ast, jitterlisp_object env);
-
-
-
-
 /* Non-Jittery interpreter.
  * ************************************************************************** */
 
@@ -56,8 +45,21 @@ jitterlisp_object
 jitterlisp_eval_globally_interpreter (jitterlisp_object form);
 
 /* Macroexpand the given JitterLisp form, and return the result of its
-   evaluation, using the given non-global environment. */
+   evaluation, using the given non-global environment expressed as an alist. */
 jitterlisp_object
 jitterlisp_eval_interpreter (jitterlisp_object form, jitterlisp_object env);
+
+
+
+
+/* Non-Jittery AST interpreter.
+ * ************************************************************************** */
+
+/* Return the result of the evaluation of the given form (as an encoded AST),
+   which must be already macroexpanded, in the given non-global environment.
+   The environment is encoded according to the unspecified internal encoding
+   used in the interpreter. */
+jitterlisp_object
+jitterlisp_eval_interpreter_ast (jitterlisp_object ast, jitterlisp_object env);
 
 #endif // #ifndef JITTERLISP_EVAL_INTERPRETER_H_

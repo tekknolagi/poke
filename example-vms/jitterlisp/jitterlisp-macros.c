@@ -195,6 +195,12 @@ jitterlisp_macroexpand (jitterlisp_object o,
     return jitterlisp_ast_make_literal (o);
 }
 
+jitterlisp_object
+jitterlisp_macroexpand_globally (jitterlisp_object o)
+{
+  return jitterlisp_macroexpand (o, jitterlisp_empty_environment);
+}
+
 
 
 

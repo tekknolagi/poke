@@ -1898,6 +1898,10 @@
   (car (stream-force! s)))
 (define (stream-cdr s)
   (cdr (stream-force! s)))
+(define (stream-set-car! s new-car)
+  (set-car! (stream-force! s) new-car))
+(define (stream-set-cdr! s new-cdr)
+  (set-cdr! (stream-force! s) new-cdr))
 
 (define-macro (stream-cons x s)
   `(cons #f
@@ -1909,12 +1913,16 @@
          (lambda ()
            (stream-force! ,stream-expression))))
 
+(define (stream-forever-1 x)
+  (letrec ((res (stream-delay (stream-cons x res))))
+    res))
+
 (define (stream-ones)
-  (stream-cons 1 stream-ones))
+  (stream-forever-1 1))
 
 (define (stream-from from)
   (stream-cons from (stream-from (1+ from))))
-(define (naturals)
+(define (stream-naturals)
   (stream-from 0))
 
 (define (stream-walk-elements procedure s)
@@ -1937,6 +1945,17 @@
       stream-empty
       (stream-cons a (stream-range (1+ a) b))))
 
+(define (stream-append s1 s2)
+  (stream-delay
+    (if (stream-null? s1)
+        s2
+        (stream-cons (stream-car s1)
+                     (stream-append (stream-cdr s1) s2)))))
+
+(define (stream-forever-stream s)
+  (letrec ((res (stream-delay (stream-append s res))))
+    res))
+
 (define (stream-filter p? s)
   (stream-delay
     (cond ((stream-null? s)
@@ -1946,3 +1965,36 @@
                         (stream-filter p? (stream-cdr s))))
           (#t
            (stream-filter p? (stream-cdr s))))))
+
+(define (stream-map f s)
+  (stream-delay
+    (if (stream-null? s)
+        stream-empty
+        (stream-cons (f (stream-car s))
+                     (stream-map f (stream-cdr s))))))
+
+(define (stream-take n s)
+  (stream-delay
+    (cond ((zero? n)
+           stream-empty)
+          ((stream-null? s)
+           stream-empty)
+          (#t
+           (stream-cons (stream-car s)
+                        (stream-take (1- n) (stream-cdr s)))))))
+
+(define (stream-drop n s)
+  (stream-delay
+    (cond ((zero? n)
+           s)
+          ((stream-null? s)
+           stream-empty)
+          (#t
+           (stream-drop (1- n) (stream-cdr s))))))
+
+(define (stream-fold-left f x xs)
+  (if (stream-null? xs)
+      x
+      (stream-fold-left f
+                        (f x (stream-car xs))
+                        (stream-cdr xs))))

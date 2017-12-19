@@ -336,6 +336,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_0_(newline,
 JITTERLISP_PRIMITIVE_FUNCTION_0_(read,
   { JITTERLISP_READ_(res); })
 /* Interpretation operations. */
+JITTERLISP_PRIMITIVE_FUNCTION_2_(macroexpand, ANYTHING, ANYTHING,
+  { JITTERLISP_MACROEXPAND_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(eval, ANYTHING, ANYTHING,
   { JITTERLISP_EVAL_(res, args [0], args [1]); })
 
@@ -420,6 +422,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("newline", 0, newline),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("read", 0, read),
       /* Interpretation operations. */
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("macroexpand", 2, macroexpand),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("eval", 2, eval),
 
       /* Primitive macros */

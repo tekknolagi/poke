@@ -766,10 +766,18 @@
 /* Interpretation operations.
  * ************************************************************************** */
 
+/* Macroexpand the given expression in the given non-global expansion-time
+   environment. */
+#define JITTERLISP_MACROEXPAND_(_jitterlisp_out, _jitterlisp_in0,            \
+                                _jitterlisp_in1)                             \
+  JITTER_BEGIN_                                                              \
+    jitterlisp_error_cloned ("macroexpand operation temporarily disabled");  \
+  JITTER_END_
+
 /* Eval the given expression in the given non-global environment. */
-#define JITTERLISP_EVAL_(_jitterlisp_out, _jitterlisp_in0,  _jitterlisp_in1)  \
-  JITTER_BEGIN_                                                               \
-    jitterlisp_error_cloned ("eval operation temporarily disabled");          \
+#define JITTERLISP_EVAL_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
+  JITTER_BEGIN_                                                              \
+    jitterlisp_error_cloned ("eval operation temporarily disabled");         \
   JITTER_END_
 
 
