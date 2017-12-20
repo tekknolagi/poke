@@ -28,6 +28,10 @@
 /* We need the jitter_int and jitter_uint types. */
 #include <jitter/jitter.h>
 
+/* We rely on our CPP general-purpose macros, in particular for token
+   concatenation. */
+#include <jitter/jitter-cpp.h>
+
 
 
 
@@ -225,6 +229,157 @@
   (JITTERLISP_GET_BITS(_jitterlisp_word,         \
                        _jitterlisp_bit_no)       \
    == ((jitter_uint) (_jitterlisp_bits)))
+
+
+
+
+/* Tentative: boxed objects.
+ * ************************************************************************** */
+
+/* Assuming the given word evaluates to a boxed tagged object with the given
+   tag, expand to an r-value evaluating to an initial pointer to the object
+   in-memory representation.  If the type is stage-tagged (see below) the
+   pointer will point to the beginning of the header-tagged struct, which is to
+   say to the tag header.
+   The expression has a char * type and will need to be cast to the appropriate
+   type; this macro is meant as a building block for other macros accessing the
+   tag header or payload for specific types.  */
+#define JITTERLISP_UNBOX_TO_CHAR_STAR(_jitterlisp_word,                   \
+                                      _jitterlisp_tag,                    \
+                                      _jitterlisp_tag_bit_no)             \
+  ((char *)                                                               \
+   (JITTERLISP_WITH_BITS_SUBTRACTED(_jitterlisp_word, _jitterlisp_tag)))
+
+/* Assuming the given word is a boxed object with the given tag, expand to an
+   r-value evaluating to an initial pointer to the heap structure, including the
+   header tag if any, cast to a pointer to the struct with the given name. */
+#define JITTERLISP_UNBOX_TO_STRUCT_STAR(_jitterlisp_word,         \
+                                        _jitterlisp_tag,          \
+                                        _jitterlisp_tag_bit_no,   \
+                                        _jitterlisp_struct_name)  \
+  ((struct _jitterlisp_struct_name *)                             \
+   (JITTERLISP_UNBOX_TO_CHAR_STAR(_jitterlisp_word,               \
+                                  _jitterlisp_tag,                \
+                                  _jitterlisp_tag_bit_no)))
+
+
+
+
+/* Tentative: header tags.
+ * ************************************************************************** */
+
+/* FIXME: speak about staging.
+
+   Header-tagged objects are words pointing to
+   the beginning of a type-dependent struct with the tag as the first field;
+   the pointer itself is tagged with a particular tag called the stage tag. */
+
+/* A header tag is an unsigned word-sized integer.  Objects of types requiring a
+   headers are always heap-allocated as structs, of which the first field is a
+   header tag named jitter_header_tag .  The actual struct type depends on the
+   type, and there may be padding space between the first field and the second;
+   however we assume that there is no padding before the first field, so that
+   the same header-tag extraction code works for any tagged-header type. */
+
+
+/* Expand to an identifier, conventionally naming the heap-allocated
+   non-tagged-header struct for the named type, using the given C disambiguation
+   prefix. */
+#define JITTERLISP_NON_TAGGED_HEADER_STRUCT_NAME(_jitterlisp_prefix,     \
+                                                 _jitterlisp_type_name)  \
+  JITTER_CONCATENATE_TWO(_jitterlisp_prefix,                             \
+                         _jitterlisp_name)
+
+/* Expand to an identifier, conventionally naming the heap-allocated
+   tagged-header struct for the named type, using the given C disambiguation
+   prefix.  The payload field of this struct, defined by
+   JITTERLISP_DEFINE_TAGGED_HEADER_STRUCT_ , will be of a struct type named
+   by JITTERLISP_NON_TAGGED_HEADER_STRUCT_NAME . */
+#define JITTERLISP_TAGGED_HEADER_STRUCT_NAME(_jitterlisp_prefix,     \
+                                             _jitterlisp_type_name)  \
+  JITTER_CONCATENATE_THREE(_jitterlisp_prefix,                       \
+                           _tagged_,                                 \
+                           _jitterlisp_type_name)
+
+
+/* Expand to a struct definition for a tagged-header struct named
+     JITTERLISP_TAGGED_HEADER_STRUCT_NAME(_jitterlisp_prefix,
+                                          _jitterlisp_type_name)
+   , containing two fields: a tagged header named jitter_header_tag, and a
+   member of an untagged struct named
+     JITTERLISP_NON_TAGGED_HEADER_STRUCT_NAME(_jitterlisp_prefix,
+                                              _jitterlisp_type_name)
+   , the member being named jitter_payload . */
+#define JITTERLISP_DEFINE_TAGGED_HEADER_STRUCT_(_jitterlisp_prefix,         \
+                                                _jitterlisp_type_name)      \
+  /* Define a struct containing a header tag and a payload. */              \
+  struct JITTERLISP_TAGGED_HEADER_STRUCT_NAME(_jitterlisp_prefix,           \
+                                              _jitterlisp_type_name)        \
+  {                                                                         \
+    /* The header tag.  The header tag is represented as an */              \
+    /* untagged unsigned word-sized integer. */                             \
+    jitter_uint jitter_header_tag;                                          \
+                                                                            \
+    /* The actual payload, another struct. */                               \
+    struct JITTERLISP_NON_TAGGED_HEADER_STRUCT_NAME(_jitterlisp_prefix,     \
+                                                    _jitterlisp_type_name)  \
+    jitter_payload;                                                         \
+  };
+
+/* Assumung that _jitterlisp_word evaluates to a stage-tagged object with
+   the given stage-tag value and size to a header-tagged object, expand to an
+   r-value evaluating to the object header tag. */
+#define JITTERLISP_GET_HEADER_TAG(_jitterlisp_word,                    \
+                                  _jitterlisp_stage_tag,               \
+                                  _jitterlisp_stage_tag_bit_no)        \
+  (* ((jitter_uint *)                                                  \
+      (JITTERLISP_UNBOX_TO_CHAR_STAR(_jitterlisp_word,                 \
+                                     _jitterlisp_stage_tag,            \
+                                     _jitterlisp_stage_tag_bit_no))))
+
+/* Assuming that the given word evaluates to a stage-tagged object expand
+   to an r-value evaluating to a boolean, non-false iff the header tag has
+   the given value.
+   This dereferences the pointer, and is therefore unsafe if the object is
+   not actually boxed.  JITTERLISP_HAS_HEADER_TAG , below, is a safe version
+   of this which also checks the object tag. */
+#define JITTERLISP_STAGE_TAGGED_HAS_HEADER_TAG(_jitterlisp_word,              \
+                                               _jitterlisp_stage_tag,         \
+                                               _jitterlisp_stage_tag_bit_no,  \
+                                               _jitterlisp_header_tag)        \
+  (JITTERLISP_GET_HEADER_TAG(_jitterlisp_word,                                \
+                             _jitterlisp_stage_tag,                           \
+                             _jitterlisp_stage_tag_bit_no)                    \
+   == (_jitterlisp_header_tag))
+
+/* Expand to an r-value evaluating to a boolean, non-false iff the given word is
+   a boxed stage-tagged object with the given stage tag and header tag.
+   Notice that several arguments may be evaluated more than once. */
+#define JITTERLISP_HAS_HEADER_TAG(_jitterlisp_word,                         \
+                                  _jitterlisp_stage_tag,                    \
+                                  _jitterlisp_stage_tag_bit_no,             \
+                                  _jitterlisp_header_tag)                   \
+  (JITTERLISP_HAS_TAG(_jitterlisp_word,                                     \
+                      0, /* FIXME: ptag */                                  \
+                      _jitterlisp_stage_tag,                                \
+                      _jitterlisp_stage_tag_bit_no)                         \
+   && JITTERLISP_STAGE_TAGGED_HAS_HEADER_TAG(_jitterlisp_word,              \
+                                             _jitterlisp_stage_tag,         \
+                                             _jitterlisp_stage_tag_bit_no,  \
+                                             _jitterlisp_header_tag))
+
+/* // FIXME: add a helper macro decoding the stage pointer and expanding to */
+/* // an initial pointer to the header-tagged struct. */
+/* #define JITTERLISP_HEADER_TAGGED_PAYLOAD(_jitterlisp_word,              \ */
+/*                                          _jitterlisp_stage_tag,         \ */
+/*                                          _jitterlisp_stage_tag_bit_no,  \ */
+/*                                          _jitterlisp_type_name)         \ */
+/*   ????JITTERLISP_UNBOX_TO_STRUCT_STAR???? */
+/*   (* ((jitter_uint *)                                                  \ */
+/*       (JITTERLISP_UNBOX_TO_CHAR_STAR(_jitterlisp_word,                 \ */
+/*                                      _jitterlisp_stage_tag,            \ */
+/*                                      _jitterlisp_stage_tag_bit_no)))) */
+
 
 
 
