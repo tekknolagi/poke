@@ -78,23 +78,48 @@ jitterlisp_run_and_destroy_reader_state (struct jitterlisp_reader_state *rstate)
 /* Run s-expressions parsed from a C string.
  * ************************************************************************** */
 
-void
-jitterlisp_run_from_string (const char *string)
+/* A function factoring jitterlisp_run_from_string and jitterlisp_run_library ,
+   with an additional boolean argument making the execution non-verbose as
+   appropriate for the library. */
+static void
+jitterlisp_run_from_string_internal (const char *string, bool library_verbosity)
 {
-  if (jitterlisp_settings.verbose)
+  if (! library_verbosity && jitterlisp_settings.verbose)
     printf ("Running from string \"%s\"...\n", string);
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_string_reader_state (string);
   jitterlisp_object result
     = jitterlisp_run_and_destroy_reader_state (rstate);
-  if (jitterlisp_settings.print_nothing_results
-      || ! JITTERLISP_IS_NOTHING(result))
+  if (! library_verbosity && (jitterlisp_settings.print_nothing_results
+                              || ! JITTERLISP_IS_NOTHING(result)))
     {
       jitterlisp_print_to_stream (stdout, result);
       printf ("\n");
     }
-  if (jitterlisp_settings.verbose)
+  if (! library_verbosity && jitterlisp_settings.verbose)
     printf ("...Done running from string \"%s\".\n", string);
+}
+
+void
+jitterlisp_run_from_string (const char *string)
+{
+  jitterlisp_run_from_string_internal (string, false);
+}
+
+
+
+
+/* Run the Lisp library.
+ * ************************************************************************** */
+
+void
+jitterlisp_run_library (void)
+{
+  if (jitterlisp_settings.verbose)
+    printf ("Running the library...\n");
+  jitterlisp_run_from_string_internal (jitterlisp_library_string, true);
+  if (jitterlisp_settings.verbose)
+    printf ("...Done running the library.\n");
 }
 
 
@@ -161,11 +186,26 @@ jitterlisp_run_from_input_files (void)
 /* Run s-expressions interactively from a REPL.
  * ************************************************************************** */
 
+/* The text to show before starting the interactive REPL. */
+const char *
+jitterlisp_interactive_banner =
+  "JitterLisp " JITTER_PACKAGE_VERSION "\n"
+"Copyright (C) 2017 Luca Saiu\n"
+"\n"
+"JitterLisp comes with ABSOLUTELY NO WARRANTY; type (no-warranty) for details.\n"
+"This program is free software, and you are welcome to redistribute it\n"
+"under the GNU General Public License, version 3 or later; type (copying) to\n"
+"display the license text.\n\n";
+
 void
 jitterlisp_repl (void)
 {
   if (jitterlisp_settings.verbose)
     printf ("Running the REPL...\n");
+
+  /* Since we are in interactive mode print the welcome banner also showing
+     legal notes. */
+  printf ("%s", jitterlisp_interactive_banner);
 
   /* Make a readline reader state.  It will be used to read every form
      from the REPL, even in case of parse errors. */
@@ -204,4 +244,8 @@ jitterlisp_repl (void)
 
   if (jitterlisp_settings.verbose)
     printf ("...Done running the REPL.\n");
+
+  /* Print a goodbye message.  It is acceptable to do it unconditionally, since
+     this is interactive use. */
+  printf ("Goodbye.\n");
 }

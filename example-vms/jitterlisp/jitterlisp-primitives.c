@@ -340,6 +340,11 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(macroexpand, ANYTHING, ALIST,
   { JITTERLISP_MACROEXPAND_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(eval, ANYTHING, ALIST,
   { JITTERLISP_EVAL_(res, args [0], args [1]); })
+/* Operations to display legal notices. */
+JITTERLISP_PRIMITIVE_FUNCTION_0_(copying,
+  { printf ("%s\n", jitterlisp_gpl); })
+JITTERLISP_PRIMITIVE_FUNCTION_0_(no_warranty,
+  { printf ("%s\n", jitterlisp_no_warranty); })
 
 /* Primitive macro functions. */
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(define)
@@ -424,6 +429,9 @@ jitterlisp_primitives []
       /* Interpretation operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("macroexpand", 2, macroexpand),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("eval", 2, eval),
+      /* Operations to display legal notices. */
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("copying", 0, copying),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("no-warranty", 0, no_warranty),
 
       /* Primitive macros */
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("define", define),

@@ -1,4 +1,4 @@
-/* Jittery Lisp: global settings.
+/* Jittery Lisp: constant string header.
 
    Copyright (C) 2017 Luca Saiu
    Written by Luca Saiu
@@ -20,41 +20,28 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-#include "jitterlisp-settings.h"
+#ifndef JITTERLISP_CONSTANT_STRINGS_H_
+#define JITTERLISP_CONSTANT_STRINGS_H_
 
 
-
-
-/* JitterLisp global settings.
+/* Global machine-generated strings.
  * ************************************************************************** */
 
-/* The one global variable we define here.  This is initialized by the argp
-   parser in main. */
-struct jitterlisp_settings
-jitterlisp_settings;
+/* The variables declared here are defined in a machine-generated C file,
+   obtained by running text files thru a simple sed script. */
 
-void
-jitterlisp_settings_set_default (void)
-{
-  jitterlisp_settings.verbose = false;
-  jitterlisp_settings.print_nothing_results = false;
-  jitterlisp_settings.vm = true;
-  jitterlisp_settings.library = true;
-  jitterlisp_settings.colorize = false;
-  jitter_dynamic_buffer_initialize
-     (& jitterlisp_settings.input_file_path_names);
-  jitterlisp_settings.sexps_string = NULL;
-  jitterlisp_settings.repl = true;
-}
+/* The JitterLisp library in Lisp, as a constant C string containing the text to
+   be parsed. */
+extern const char *
+jitterlisp_library_string;
 
+/* The GNU GPL text as a C string. */
+extern const char *
+jitterlisp_gpl;
 
-
+/* An excerpt from the GNU GPL explaining that there is no warranty, as a C
+   string. */
+extern const char *
+jitterlisp_no_warranty;
 
-/* Not fo the user: finalization.
- * ************************************************************************** */
-
-void
-jitterlisp_settings_finalize (void)
-{
-  jitter_dynamic_buffer_finalize (& jitterlisp_settings.input_file_path_names);
-}
+#endif // #ifndef JITTERLISP_CONSTANT_STRINGS_H_

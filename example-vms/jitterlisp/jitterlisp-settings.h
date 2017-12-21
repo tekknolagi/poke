@@ -37,6 +37,9 @@ struct jitterlisp_settings
   /* Non-false iff the output needs to be verbose. */
   bool verbose;
 
+  /* Non-false iff we have to load the Lisp library. */
+  bool library;
+
   /* If false don't print #<nothing> when it's the result of an evaluation to be
      printed.  No setting suppresses explicit printing of values, for example by
      the display procedure, or the printing of #<nothing> as a component of a

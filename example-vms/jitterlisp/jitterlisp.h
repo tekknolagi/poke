@@ -30,6 +30,7 @@
 /* Include the other JitterLisp headers, so that the user has to deal with this
    one only. */
 #include "jitterlisp-config.h"
+#include "jitterlisp-constant-strings.h"
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-allocator.h"
 #include "jitterlisp-ast.h"

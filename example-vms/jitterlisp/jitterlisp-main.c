@@ -47,20 +47,22 @@
 enum jitterlisp_negative_option
   {
     jitterlisp_negative_option_no_verbose = -1,
-    jitterlisp_negative_option_omit_nothing = -2,
-    jitterlisp_negative_option_vm = -3,
-    jitterlisp_negative_option_repl = -4,
-    jitterlisp_negative_option_no_colorize = -5
+    jitterlisp_negative_option_library = -2,
+    jitterlisp_negative_option_omit_nothing = -3,
+    jitterlisp_negative_option_vm = -4,
+    jitterlisp_negative_option_repl = -5,
+    jitterlisp_negative_option_no_colorize = -6
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum jitterlisp_negative_option . */
 enum jitterlisp_long_only_option
   {
-    jitterlisp_long_only_option_no_omit_nothing = -6,
-    jitterlisp_long_only_option_no_vm = -7,
-    jitterlisp_long_only_option_no_repl = -8,
-    jitterlisp_long_only_option_dump_version = -9
+    jitterlisp_long_only_option_no_library = -7,
+    jitterlisp_long_only_option_no_omit_nothing = -8,
+    jitterlisp_long_only_option_no_vm = -9,
+    jitterlisp_long_only_option_no_repl = -10,
+    jitterlisp_long_only_option_dump_version = -11
   };
 
 /* Command-line option specification. */
@@ -100,6 +102,8 @@ static struct argp_option jitterlisp_option_specification[] =
    {"no-vm", jitterlisp_long_only_option_no_vm, NULL, 0,
     "Use a naïf C interpreter instead of the Jittery VM" },
    {"no-jittery", '\0', NULL, OPTION_ALIAS },
+   {"no-library", jitterlisp_long_only_option_no_library, NULL, 0,
+    "Don't load the Lisp library" },
    /* Debugging negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 41},
    {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
@@ -109,6 +113,8 @@ static struct argp_option jitterlisp_option_specification[] =
    {"vm", jitterlisp_negative_option_vm, NULL, 0,
     "Use the Jittery VM (default)"},
    {"jittery", '\0', NULL, OPTION_ALIAS },
+   {"library", jitterlisp_negative_option_library, NULL, 0,
+    "Load the Lisp library (default)" },
 
    {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 50},
    {"dump-version", jitterlisp_long_only_option_dump_version, NULL, 0,
@@ -191,6 +197,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case jitterlisp_long_only_option_no_vm:
       sp->vm = false;
       break;
+    case jitterlisp_long_only_option_no_library:
+      sp->library = false;
+      break;
 
     /* Debugging negative options. */
     case jitterlisp_negative_option_no_colorize:
@@ -201,6 +210,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case jitterlisp_negative_option_vm:
       sp->vm = true;
+      break;
+    case jitterlisp_negative_option_library:
+      sp->library = true;
       break;
 
     /* Scripting options. */
@@ -252,6 +264,10 @@ main (int argc, char **argv)
   int return_code = EXIT_SUCCESS;
   JITTERLISP_HANDLE_ERRORS(
     {
+      /* Run the library, unless disabled. */
+      if (sp->library)
+        jitterlisp_run_library ();
+
       /* Run the input files. */
       jitterlisp_run_from_input_files ();
 

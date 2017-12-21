@@ -1039,7 +1039,36 @@ SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp.c \
   example-vms/jitterlisp/jitterlisp.h \
   example-vms/jitterlisp/jitterlisp-config.h \
+  example-vms/jitterlisp/jitterlisp-constant-strings.h \
+  example-vms/jitterlisp/jitterlisp-constant-strings.c \
   example-vms/jitterlisp/jitterlisp-main.c
+
+BUILT_SOURCES += \
+  example-vms/jitterlisp/jitterlisp-constant-strings.c
+
+# A sed script turning an arbitrary text into a C string literal with proper
+# delimiters and escapes..
+JITTERLISP_SED_STRINGIFY = \
+  's/\\/\\\\/g;s/"/\\"/g;s/^/  "/g;s/$$/\\n"/g'
+
+$(srcdir)/example-vms/jitterlisp/jitterlisp-constant-strings.c: example-vms/jitterlisp/jitterlisp-library.lisp NO-WARRANTY COPYING
+	(echo "/* This C file is machine-generated, and is not the actual source. */"; \
+         echo; \
+         echo "const char *jitterlisp_library_string ="; \
+         cat "$(srcdir)/example-vms/jitterlisp/jitterlisp-library.lisp" \
+          | sed $(JITTERLISP_SED_STRINGIFY); \
+         echo ";"; \
+         echo "const char *jitterlisp_no_warranty ="; \
+         cat "$(srcdir)/NO-WARRANTY" \
+          | sed $(JITTERLISP_SED_STRINGIFY); \
+         echo ";"; \
+         echo "const char *jitterlisp_gpl ="; \
+         cat "$(srcdir)/COPYING" \
+          | sed $(JITTERLISP_SED_STRINGIFY); \
+         echo ";") \
+          > "$@"
+
+
 
 # There is only one version for the best dispatching model, as of now.
 bin_jitterlisp_SOURCES = $(SOURCES_FOR_JITTERLISP)

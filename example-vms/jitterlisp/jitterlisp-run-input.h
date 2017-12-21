@@ -43,6 +43,18 @@ jitterlisp_run_from_string (const char *string)
 
 
 
+/* Run the Lisp library.
+ * ************************************************************************** */
+
+/* Run the Lisp library which is held in a constant C string directly within the
+   executable.  Don't ever print the result, which in this case is guaranteed to
+   be uninteresting. */
+void
+jitterlisp_run_library (void);
+
+
+
+
 /* Run s-expressions parsed from input streams.
  * ************************************************************************** */
 
