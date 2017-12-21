@@ -574,10 +574,10 @@
 
 /* Compute a tagged boolean, #t iff the two given arguments are
    not equal-by-identity. */
-#define JITTERLISP_NEQP_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
-  JITTER_BEGIN_                                                              \
-    _jitterlisp_out =                                                        \
-      JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0) != (_jitterlisp_in1));     \
+#define JITTERLISP_NOT_EQP_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
+  JITTER_BEGIN_                                                                 \
+    _jitterlisp_out =                                                           \
+      JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0) != (_jitterlisp_in1));        \
   JITTER_END_
 
 /* Compute a tagged boolean, #t iff the given argument is the fixnum zero. */

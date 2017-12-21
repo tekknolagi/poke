@@ -293,7 +293,7 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(not, ANYTHING,
 JITTERLISP_PRIMITIVE_FUNCTION_2_(equals, FIXNUM, FIXNUM,
   { JITTERLISP_EQP_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(different, FIXNUM, FIXNUM,
-  { JITTERLISP_NEQP_(res, args [0], args [1]); })
+  { JITTERLISP_NOT_EQP_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(less, FIXNUM, FIXNUM,
   { JITTERLISP_LESSP_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(notgreater, FIXNUM, FIXNUM,
@@ -309,8 +309,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(non_zerop, FIXNUM,
 /* Comparison. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(eqp, ANYTHING, ANYTHING,
   { JITTERLISP_EQP_(res, args [0], args [1]); })
-JITTERLISP_PRIMITIVE_FUNCTION_2_(neqp, ANYTHING, ANYTHING,
-  { JITTERLISP_NEQP_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(not_eqp, ANYTHING, ANYTHING,
+  { JITTERLISP_NOT_EQP_(res, args [0], args [1]); })
 /* Cons operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(cons, ANYTHING, ANYTHING,
   { JITTERLISP_CONS_(res, args [0], args [1]); })
@@ -406,7 +406,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-zero?", 1, non_zerop),
       /* Comparison. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("eq?", 2, eqp),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("neq?", 2, neqp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("not-eq?", 2, not_eqp),
       /* Cons operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("cons", 2, cons),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("car", 1, car),

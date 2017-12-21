@@ -464,8 +464,12 @@ typedef jitter_uint jitter_tagged_object;
      - 2-bit: 0b01 for the empty list, unboxed;
      - 2-bit: 0b10 for conses, boxed, no header tag;
      - 2-bit: 0b11 as the stage tag.
-     Vectors and strings will be stage-tagged, and their header tag will
-     contain two different values in order to distinguish vectors from strings. */
+     Symbols, vectors and strings will be stage-tagged, and their header tag
+     will contain three different values in order to distinguish each type from
+     the other two.  Notice that symbols can still be compared by identity
+     without touching memory: the tagged object points to a struct containing
+     the symbol attributes, not to another pointer; if symbols are interned then
+     tagged objects for equal symbols will be equal. */
 
 
 
