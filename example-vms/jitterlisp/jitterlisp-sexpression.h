@@ -97,7 +97,7 @@ typedef jitter_uint jitter_tagged_object;
 
 
 
-/* Bitwise expression utility.
+/* Bitwise operations to be used below.
  * ************************************************************************** */
 
 /* The words taken as arguments by the macros in this section and evaluated to
@@ -117,8 +117,8 @@ typedef jitter_uint jitter_tagged_object;
 /* Expand to an r-value evaluating to a bit mask with the given number of
    consecutive 1 bits, the first one starting at the most significant position
    in a word. */
-#define JITTER_HIGH_BIT_MASK(_jitter_bit_no)  \
-  (JITTER_BIT_MASK(_jitter_bit_no)            \
+#define JITTER_HIGH_BIT_MASK(_jitter_bit_no)      \
+  (JITTER_BIT_MASK(_jitter_bit_no)                \
    << (JITTER_BITS_PER_WORD - (_jitter_bit_no)))
 
 /* Expand to an r-value evaluating to the given word with the given number of
@@ -258,7 +258,7 @@ typedef jitter_uint jitter_tagged_object;
 
 
 
-/* Tentative: boxed objects.
+/* Boxed objects.
  * ************************************************************************** */
 
 /* Assuming the given word evaluates to a boxed tagged object with the given
@@ -290,21 +290,20 @@ typedef jitter_uint jitter_tagged_object;
 
 
 
-/* Tentative: header tags.
+/* Header tags.
  * ************************************************************************** */
 
-/* FIXME: speak about staging.
+/* Header-tagged objects are tagged pointers to the beginning of a
+   type-dependent struct with another tag called the "header tag" as its first
+   field; the pointer itself is tagged with a particular tag called the "stage
+   tag".  Header-tagged types are always boxed.
 
-   Header-tagged objects are words pointing to
-   the beginning of a type-dependent struct with the tag as the first field;
-   the pointer itself is tagged with a particular tag called the stage tag. */
-
-/* A header tag is an unsigned word-sized integer.  Objects of types requiring a
-   headers are always heap-allocated as structs, of which the first field is a
+   A header tag is an unsigned word-sized integer.  Any object of a type
+   requiring a header heap-allocated as a struct, of which the first field is a
    header tag named jitter_header_tag .  The actual struct type depends on the
    type, and there may be padding space between the first field and the second;
    however we assume that there is no padding before the first field, so that
-   the same header-tag extraction code works for any tagged-header type. */
+   the same header-tag extraction code works for any header-tagged type. */
 
 
 /* Expand to an identifier, conventionally naming the heap-allocated
@@ -423,17 +422,28 @@ typedef jitter_uint jitter_tagged_object;
     JITTER_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,            \
                                      _jitter_type_name))
 
+/* FIXME: define an initialization macro working on a given type, deciding itself
+   whether to use header-tagging or not.  The macro should take the type name
+   as a parameter and use the macro below:
+
+   There should probably be at least one macro for each type specifying if the
+   type is:
+   - unboxed
+   - header-tagged boxed
+   - non-header-tagged boxed
+*/
+
 
 
 
-/* S-expression representation: tags.
+/* Tags and staging.
  * ************************************************************************** */
 
-/* I reserve at some of the least bits in every Lisp object, be it boxed or
-   unboxed, for its "tag", which contains type information about the object.
-   An object tag can be variable-length, as long as it is possible to
-   distinguish different cases by looking at a word.  Each case will have both
-   a tag configuration and a tag length (in bits).
+/* I reserve at some of the least bits in every dynamically typed object, be it
+   boxed or unboxed, for its "tag", which contains type information about the
+   object.  An object tag can be variable-length, as long as it is possible to
+   distinguish different cases by looking at a word.  Each case will have both a
+   tag configuration and a tag length (in bits).
 
    Example:
      In a hypothetical system with just three types, integers cons and symbols,
@@ -474,19 +484,19 @@ typedef jitter_uint jitter_tagged_object;
 
 
 
-/* S-expression representation: tag checking, tagging and untagging.
+/* Tag checking, tagging and untagging.
  * ************************************************************************** */
 
-/* An C object of the appropriate type can be "encoded" into a Jitter
-   object by representing it, or some pointer to it or to equivalent
-   information in memory, combined with a tag.  "Decoding" is the opposite
-   process converting a Jitter object to a C object, or a pointer to it.
+/* An C object of the appropriate type can be "encoded" into a Jitter object by
+   representing it, or some pointer to it or to equivalent information in
+   memory, combined with a tag.  "Decoding" is the opposite process converting a
+   Jitter object to a C object, or a pointer to it.
 
    Encoding and decoding are non-destructive operations: they expand to
    expressions evaluating to values, and do not modify the result of their
    operand evaluation.  Memory allocation is a separate operation from encoding
-   and decoding; memory operations are defined in jitter-allocator.h ,
-   not here. */
+   and decoding; memory operations are defined in jitter-allocator.h , not
+   here. */
 
 /* Style/mnemonic convention: these macros have arguments always following
    this order:
@@ -611,7 +621,7 @@ typedef jitter_uint jitter_tagged_object;
 
 
 
-/* S-expression representation.
+/* Tagged object representation.
  * ************************************************************************** */
 
 /* A JitterLisp object is a tagged object. */
@@ -620,18 +630,16 @@ typedef jitter_tagged_object jitterlisp_object;
 
 
 
-/* S-expression representation: conventions.
+/* Tagged object representation: conventions.
  * ************************************************************************** */
 
-/* Some operations on s-expression are more efficient with specific stag
-   values.  When the definitions below need to make such assumptions they always
-   do it within CPP conditionals checking for the actual value.
+/* Some operations on tagged objects are more efficient with specific stag
+   values, particularly arithmetic and bitwise operations.  When an operation
+   below needs to make such assumptions it always does it within CPP
+   conditionals checking for the actual tag value.
 
-   Stag values and widths must be kept easy to change in the future, even
-   conditionally to accommodate for different hardware.
-
-   Operations on tagged objects are not defined here: see
-   jitterlisp-operations.h . */
+   Tag values and widths must be kept easy to change in the future, even
+   conditionally to accommodate for different hardware. */
 
 /* For every tagged type foo the following macros are defined:
    - the tag size in bits for foos, named JITTERLISP_FOO_TAG_BIT_NO;
