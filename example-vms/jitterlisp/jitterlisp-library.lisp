@@ -1,4 +1,4 @@
-;;; JitterLisp (almost -*- Scheme -*- for Emacs) -- predefined library.
+;;; JitterLisp (let's say -*- Scheme -*- for the purposes of Emacs) -- library.
 
 ;;; Copyright (C) 2017 Luca Saiu
 ;;; Written by Luca Saiu

@@ -187,15 +187,17 @@ jitterlisp_run_from_input_files (void)
  * ************************************************************************** */
 
 /* The text to show before starting the interactive REPL. */
-const char *
+static const char *
 jitterlisp_interactive_banner =
-  "JitterLisp " JITTER_PACKAGE_VERSION "\n"
+"================================================================\n"
+"JitterLisp (from Jitter version " JITTER_PACKAGE_VERSION ")\n"
 "Copyright (C) 2017 Luca Saiu\n"
 "\n"
-"JitterLisp comes with ABSOLUTELY NO WARRANTY; type (no-warranty) for details.\n"
-"This program is free software, and you are welcome to redistribute it\n"
-"under the GNU General Public License, version 3 or later; type (copying) to\n"
-"display the license text.\n\n";
+"JitterLisp comes with ABSOLUTELY NO WARRANTY; type (no-warranty)\n"
+"for details.  This program is free software, and you are welcome\n"
+"to redistribute it under the GNU General Public License, version\n"
+"3 or later; type (copying) to display the license text.\n"
+"================================================================\n\n";
 
 void
 jitterlisp_repl (void)
