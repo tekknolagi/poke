@@ -373,14 +373,14 @@
    non-header-tagged structure for the given type, assuming the object is
    actually a non-header-tagged boxed object of the given type. */
 #define JITTERLISP_NON_HEADER_TAGGED_PAYLOAD(_jitterlisp_word,         \
-                                             _jitterlisp_stag,         \
-                                             _jitterlisp_stag_bit_no,  \
+                                             _jitterlisp_tag,         \
+                                             _jitterlisp_tag_bit_no,  \
                                              _jitterlisp_prefix,       \
                                              _jitterlisp_type_name)    \
   JITTERLISP_UNBOX_TO_STRUCT_STAR(                                     \
     _jitterlisp_word,                                                  \
-    _jitterlisp_stag,                                                  \
-    _jitterlisp_stag_bit_no,                                           \
+    _jitterlisp_tag,                                                  \
+    _jitterlisp_tag_bit_no,                                           \
     JITTERLISP_NON_TAGGED_HEADER_STRUCT_NAME(_jitterlisp_prefix,       \
                                              _jitterlisp_type_name))
 
@@ -421,70 +421,46 @@ typedef jitter_uint jitterlisp_object;
 
 
 
-// FIXME: remove every reference to ptags
-
-// FIXME: remove "stag" to "tag" everywhere paying attention to the word
-// "stage".
-
-/* S-expression representation: tags, ptags, stags.
+/* S-expression representation: tags.
  * ************************************************************************** */
 
-/* I reserve at least the least significant JITTERLISP_PTAG_BIT_NO bits in
-   every Lisp object, be it boxed or unboxed, for its "tag", which contains
-   type information about the object.
-
-   The tag is staged into two parts:
-   - the primary tag or "ptag", always of exactly JITTERLISP_PTAG_BIT_NO bits,
-     in the least significant part of the word;
-   - the secondary tag or "stag", immediately on the left of the primary tag,
-     of variable size.
-
-   The stag can have different sizes according to the ptag, and the stag size
-   may even differ for different cases belonging to the same ptag.
-   The concatenation of stag and ptag is the full "tag" of an object.  Stags are
-   chosen so as to make full tags unambiguous.
+/* I reserve at some of the least bits in every Lisp object, be it boxed or
+   unboxed, for its "tag", which contains type information about the object.
+   An object tag can be variable-length, as long as it is possible to
+   distinguish different cases by looking at a word.  Each case will have both
+   a tag configuration and a tag length (in bits).
 
    Example:
-     We could have a 2-bit ptag, and for its configuration 0b10 we could have
-     three possible stags: 0b1 (1-bit), 0b00 (2-bit), 0b10 (2-bit).  By checking
-     the least significant four bits on a word we can always distinguish the
-     case: 0b?110, 0b0010, 0b1010; the first case has one more bit available to
-     the payload compared to the other two.
+     In a hypothetical system with just three types, integers cons and symbols,
+     integers might have the 1-bit tag 0b0, conses the 2-bit tag 0b01 and
+     symbols the 2-bit tag 0b11: the integer tag being shorter introduces no
+     ambiguity, and makes one more bit available to the object payload.  By
+     checking the last three bits on a word we can find its type, with
+     conditionals or a table lookup.
 
    An object tag contains some type information about the object, but not
-   necessarily all of it.  Other relevant bits, for some boxed objects, may be
-   in a header in memory. */
+   necessarily all of it.  If the number of types in the system is too high to
+   be encoded using just tag then one tag configuration and length is reserved
+   as the "stage tag".  An object whose tag is the stage tag is always boxed,
+   and encodes a pointer to a struct whose first field is a word-sized "header
+   tag", followed by type-dependent data.  Not all unboxed objects are
+   header-tagged: for efficiency reasons some boxed types which are very
+   frequently used, such as conses in Lisp, may have a tag which is sufficient
+   to identify the object type alone, and in that case the memory representation
+   of the object will have no header tag.
 
-
-
-
-/* S-expression representation: tag definitions.
- * ************************************************************************** */
-
-/* How many bits in a word are taken by the full tag, given the stag size.
-   Just a sum of course, but this macro makes the intent of some code more
-   explicit. */
-#define JITTERLISP_TAG_BIT_NO(_jitterlisp_stag_bit_no)  \
-  (_jitterlisp_stag_bit_no)
-
-/* How many bits in a word are used for the payload, given the stag size. */
-#define JITTERLISP_PAYLOAD_BIT_NO(_jitterlisp_stag_bit_no)  \
-  (JITTER_BITS_PER_WORD                                     \
-   - JITTERLISP_TAG_BIT_NO(_jitterlisp_stag_bit_no))
-
-/* A bit mask (on the least significant part of a word) matching the full
-   tag, given the stag size. */
-#define JITTERLISP_TAG_BIT_MASK(_jitterlisp_stag_bit_no)  \
-  ((((jitter_uint) 1)                                     \
-    << JITTERLISP_TAG_BIT_NO(_jitterlisp_stag_bit_no))    \
-   - 1)
-
-/* Expand to a r-value evaluating to a bit configuration matching objects with
-   the given stag, using the given stag size.  This is meant to be checked
-   against the least significant part of a word. */
-#define JITTERLISP_TAG(_jitterlisp_stag,         \
-                       _jitterlisp_stag_bit_no)  \
-  (_jitterlisp_stag)
+   Example:
+     Another hypothetical system might have fixnums, symbols, the empty list,
+     conses, vectors and strings.  Lists are commonly used and their efficiency
+     is paramount, so we don't want conses to have a header tag and we want the
+     empty list to be unique and unboxed.
+     A reasonable tag assignment for this system would be:
+     - 2-bit: 0b00 for fixnums, unboxed;
+     - 2-bit: 0b01 for the empty list, unboxed;
+     - 2-bit: 0b10 for conses, boxed, no header tag;
+     - 2-bit: 0b11 as the stage tag.
+     Vectors and strings will be stage-tagged, and their header tag will
+     contain two different values in order to distinguish vectors from strings. */
 
 
 
@@ -506,111 +482,105 @@ typedef jitter_uint jitterlisp_object;
 /* Style/mnemonic convention: these macros have arguments always following
    this order:
    - object;
-   - stag;
-   - stag-bit-no.
+   - tag;
+   - tag-bit-no.
    The general-purpose macros for tagging and untagging objects, meant to be
    used for defining type-specific tagging and untagging, take all of the
    arguments above, in the order above, even if some unneeded arguments may
    never be evaluated.  This makes the code easier to modify. */
 
 /* Expand to a r-value evaluating to a boolean, non-false iff the given word has
-   the full tag obtained by the given stag, using the given stag size. */
-#define JITTERLISP_HAS_TAG(_jitterlisp_tagged_object,    \
-                           _jitterlisp_stag,             \
-                           _jitterlisp_stag_bit_no)      \
-  (((_jitterlisp_tagged_object)                          \
-    & JITTERLISP_TAG_BIT_MASK(_jitterlisp_stag_bit_no))  \
-   == (JITTERLISP_TAG((_jitterlisp_stag),                \
-                      (_jitterlisp_stag_bit_no))))
+   the given tag. */
+#define JITTERLISP_HAS_TAG(_jitterlisp_tagged_object,  \
+                           _jitterlisp_tag,            \
+                           _jitterlisp_tag_bit_no)     \
+  (((_jitterlisp_tagged_object)                        \
+    & JITTERLISP_BIT_MASK(_jitterlisp_tag_bit_no))     \
+   == (_jitterlisp_tag))
 
 /* Expand to an r-value evaluating to the Lisp representation of the given
    object, which must have a type castable to jitter_uint, on which the given
-   full tag is attached by left-shiting and or-ing. */
+   tag is attached by left-shiting and or-ing. */
 #define JITTERLISP_WITH_TAG_SHIFTED_ON(_jitterlisp_untagged_object,  \
-                                       _jitterlisp_stag,             \
-                                       _jitterlisp_stag_bit_no)      \
+                                       _jitterlisp_tag,              \
+                                       _jitterlisp_tag_bit_no)       \
   JITTERLISP_WITH_BITS_SHIFTED_ON(                                   \
      _jitterlisp_untagged_object,                                    \
-     JITTERLISP_TAG((_jitterlisp_stag),                              \
-                    (_jitterlisp_stag_bit_no)),                      \
-     JITTERLISP_TAG_BIT_NO(_jitterlisp_stag_bit_no))
+     _jitterlisp_tag,                                                \
+     _jitterlisp_tag_bit_no)
 
 /* Expand to an r-value evaluating to the given object representation modified
-   by arithmetically shifting the value right, eliminating the full tag bits.
-   No side effects. */
+   by arithmetically shifting the value right, eliminating tag bits.  No side
+   effects. */
 #define JITTERLISP_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_object,  \
-                                         _jitterlisp_stag,           \
-                                         _jitterlisp_stag_bit_no)    \
+                                         _jitterlisp_tag,            \
+                                         _jitterlisp_tag_bit_no)     \
   JITTERLISP_WITH_BITS_ASHIFTED_OFF(                                 \
      _jitterlisp_tagged_object,                                      \
-     JITTERLISP_TAG_BIT_NO(_jitterlisp_stag_bit_no))
+     _jitterlisp_tag_bit_no)
 
 /* Expand to an r-value evaluating to the given object representation modified
-   by logically shifting the value right, eliminating the full tag bits.  No
-   side effects. */
+   by logically shifting the value right, eliminating tag bits.  No side
+   effects. */
 #define JITTERLISP_WITH_TAG_LSHIFTED_OFF(_jitterlisp_tagged_object,  \
-                                         _jitterlisp_stag,           \
-                                         _jitterlisp_stag_bit_no)    \
+                                         _jitterlisp_tag,            \
+                                         _jitterlisp_tag_bit_no)     \
   JITTERLISP_WITH_BITS_LSHIFTED_OFF(                                 \
      _jitterlisp_tagged_object,                                      \
-     JITTERLISP_TAG_BIT_NO(_jitterlisp_stag_bit_no))
+     _jitterlisp_tag_bit_no)
 
 /* Expand to an r-value evaluating to the Lisp representation of the given
    object, which must have a type castable to jitter_uint, on which the given
-   full tag is attached by masking-shiting and or-ing -- which is to say,
-   by overwriting the rightmost JITTERLISP_TAG_BIT_NO bits of the
+   tag is attached by masking-shiting and or-ing -- which is to say,
+   by overwriting the rightmost _jitterlisp_tag_bit_no bits of the
    untagged representation but without losing any bit of the left.
 
    Rationale: see the comment before JITTERLISP_WITH_TAG_MASKED_OFF. */
 #define JITTERLISP_WITH_TAG_MASKED_ON(_jitterlisp_untagged_object,  \
-                                      _jitterlisp_stag,             \
-                                      _jitterlisp_stag_bit_no)      \
+                                      _jitterlisp_tag,              \
+                                      _jitterlisp_tag_bit_no)       \
   JITTERLISP_WITH_BITS_MASKED_ON(                                   \
      _jitterlisp_untagged_object,                                   \
-     JITTERLISP_TAG(_jitterlisp_stag,                               \
-                    _jitterlisp_stag_bit_no),                       \
-     JITTERLISP_TAG_BIT_NO(_jitterlisp_stag_bit_no))
+     _jitterlisp_tag,                                               \
+     _jitterlisp_tag_bit_no)
 
 /* Expand to an r-value evaluating to the given object representation modified
-   by seeting all the full tag bits to zero.  The object payload may or may not
-   need to be shifted according to its type, but that operation is not performed
-   by the expansion of this macro.  No side effects.
+   by seeting all the tag bits to zero.  The object payload may or may not need
+   to be shifted according to its type, but that operation is not performed by
+   the expansion of this macro.  No side effects.
    Rationale: see JITTERLISP_WITH_BITS_MASKED_OFF . */
 #define JITTERLISP_WITH_TAG_MASKED_OFF(_jitterlisp_untagged_object,  \
-                                       _jitterlisp_stag,             \
-                                       _jitterlisp_stag_bit_no)      \
+                                       _jitterlisp_tag,              \
+                                       _jitterlisp_tag_bit_no)       \
   JITTERLISP_WITH_BITS_MASKED_OFF(                                   \
      _jitterlisp_tagged_object,                                      \
-     JITTERLISP_TAG_BIT_NO(_jitterlisp_stag_bit_no))
+     _jitterlisp_tag_bit_no)
 
 /* Expand to an r-value evaluating to the Lisp representation of the given
    object, which must have a type castable to jitter_uint, on which the given
-   full tag is attached by simply adding it -- this assumes that the rightmost
+   tag is attached by simply adding it -- this assumes that the rightmost
    JITTERLISP_TAG_BIT_NO bits of the untagged representation are zero, and does
    *not* check that it's true. */
-#define JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_object,         \
-                                  _jitterlisp_stag,                    \
-                                  _jitterlisp_stag_bit_no)             \
-  JITTERLISP_WITH_BITS_ADDED(_jitterlisp_untagged_object,              \
-                             JITTERLISP_TAG(_jitterlisp_stag,          \
-                                            _jitterlisp_stag_bit_no))
+#define JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_object,  \
+                                  _jitterlisp_tag,              \
+                                  _jitterlisp_tag_bit_no)       \
+  JITTERLISP_WITH_BITS_ADDED(_jitterlisp_untagged_object,       \
+                             _jitterlisp_tag)
 
 /* Expand to an r-value evaluating to the given object representation modified
-   by seeting all the full tag bits to zero via a subtraction of the entire full
-   tag; this assumes that the encoded object has the provided full tag, which is
-   *not* checked.
-   The object payload may or may not need to be shifted, according to its type;
-   this macro expansion does not do that.  No side effects.
+   by seeting all the tag bits to zero via a subtraction; this assumes that the
+   encoded object has the provided tag, which is *not* checked.  The object
+   payload may or may not need to be shifted, according to its type; this macro
+   expansion does not do that.  No side effects.
 
    Rationale: when loading or storing thru tagged pointers, particularly if the
-   offset is a compile-time constant, the full tag to be subtracted can be
-   combined with the offset; this saves one bitwise and instruction. */
-#define JITTERLISP_WITH_TAG_SUBTRACTED(_jitterlisp_tagged_object,           \
-                                       _jitterlisp_stag,                    \
-                                       _jitterlisp_stag_bit_no)             \
-  JITTERLISP_WITH_BITS_SUBTRACTED(_jitterlisp_tagged_object,                \
-                                  JITTERLISP_TAG(_jitterlisp_stag,          \
-                                                 _jitterlisp_stag_bit_no))
+   offset is a compile-time constant, the tag to be subtracted can be combined
+   with the offset; this saves one bitwise and instruction. */
+#define JITTERLISP_WITH_TAG_SUBTRACTED(_jitterlisp_tagged_object,  \
+                                       _jitterlisp_tag,            \
+                                       _jitterlisp_tag_bit_no)     \
+  JITTERLISP_WITH_BITS_SUBTRACTED(_jitterlisp_tagged_object,       \
+                                  _jitterlisp_tag)
 
 
 
@@ -635,8 +605,8 @@ typedef jitter_uint jitterlisp_object;
 
 
 /* For every tagged type foo the following macros are defined:
-   - the stag size in bits for foos, named JITTERLISP_FOO_STAG_BIT_NO;
-   - the stag for foos, named JITTERLISP_FOO_STAG;
+   - the tag size in bits for foos, named JITTERLISP_FOO_TAG_BIT_NO;
+   - the tag for foos, named JITTERLISP_FOO_TAG;
    - the untagged C type for foos, named JITTERLISP_FOO_UNTAGGED_TYPE;
    - the macro JITTERLISP_FOO_ENCODE(untagged_exp), expanding to an r-value
      evaluating to the tagged representation of the result of the evaluation
@@ -668,11 +638,11 @@ typedef jitter_uint jitterlisp_object;
 
 /* Fixnums are encoded unboxed as two's complement signed integers. */
 
-/* The tag for fixnums.  Notice that a zero full tag allows for more efficient
-   sum and subtraction operations, and this is exploited in the operation
+/* The tag for fixnums.  Notice that a zero tag allows for more efficient sum
+   and subtraction operations, and this is exploited in the operation
    definitions. */
-#define JITTERLISP_FIXNUM_STAG_BIT_NO    4
-#define JITTERLISP_FIXNUM_STAG           0b0000
+#define JITTERLISP_FIXNUM_TAG_BIT_NO    4
+#define JITTERLISP_FIXNUM_TAG           0b0000
 
 /* The C type for untagged fixnums.  Notice that fixnums are always signed. */
 #define JITTERLISP_FIXNUM_UNTAGGED_TYPE  jitter_int
@@ -681,22 +651,22 @@ typedef jitter_uint jitterlisp_object;
    iff the given tagged object evaluates to a fixnum. */
 #define JITTERLISP_IS_FIXNUM(_jitterlisp_tagged_object)  \
   JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),        \
-                     JITTERLISP_FIXNUM_STAG,             \
-                     JITTERLISP_FIXNUM_STAG_BIT_NO)
+                     JITTERLISP_FIXNUM_TAG,              \
+                     JITTERLISP_FIXNUM_TAG_BIT_NO)
 
 /* Expand to an r-value evaluating to the encoded representation of the given
    untagged integer expression as a Lisp fixnum. */
 #define JITTERLISP_FIXNUM_ENCODE(_jitterlisp_untagged_fixnum)    \
   JITTERLISP_WITH_TAG_SHIFTED_ON((_jitterlisp_untagged_fixnum),  \
-                                 JITTERLISP_FIXNUM_STAG,         \
-                                 JITTERLISP_FIXNUM_STAG_BIT_NO)
+                                 JITTERLISP_FIXNUM_TAG,          \
+                                 JITTERLISP_FIXNUM_TAG_BIT_NO)
 
 /* Expand to an r-value evaluating to the untagged jitter_int content of the
    given tagged fixnum.  No type check is performed. */
-#define JITTERLISP_FIXNUM_DECODE(_jitterlisp_tagged_fixnum)        \
-  JITTERLISP_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_fixnum,      \
-                                   JITTERLISP_FIXNUM_STAG,         \
-                                   JITTERLISP_FIXNUM_STAG_BIT_NO)
+#define JITTERLISP_FIXNUM_DECODE(_jitterlisp_tagged_fixnum)       \
+  JITTERLISP_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_fixnum,     \
+                                   JITTERLISP_FIXNUM_TAG,         \
+                                   JITTERLISP_FIXNUM_TAG_BIT_NO)
 
 
 
@@ -720,47 +690,47 @@ typedef jitter_uint jitterlisp_object;
    here in the future, with just one more stag bit to discriminate. */
 
 /* How to distinguish unique values from characters. */
-#define JITTERLISP_UNIQUE_STAG_BIT_NO               5
-#define JITTERLISP_UNIQUE_STAG                      0b01000
-#define JITTERLISP_CHARACTER_STAG_BIT_NO            5
-#define JITTERLISP_CHARACTER_STAG                   0b11000
+#define JITTERLISP_UNIQUE_TAG_BIT_NO               5
+#define JITTERLISP_UNIQUE_TAG                      0b01000
+#define JITTERLISP_CHARACTER_TAG_BIT_NO            5
+#define JITTERLISP_CHARACTER_TAG                   0b11000
 
 /* Expand to an r-value evaluating to a C (untagged) boolean which is non-false
    iff the given tagged object evaluates to a unique object. */
-#define JITTERLISP_IS_UNIQUE(_jitterlisp_tagged_object)    \
-  JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),          \
-                     JITTERLISP_UNIQUE_STAG,               \
-                     JITTERLISP_UNIQUE_STAG_BIT_NO)
+#define JITTERLISP_IS_UNIQUE(_jitterlisp_tagged_object)  \
+  JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),        \
+                     JITTERLISP_UNIQUE_TAG,              \
+                     JITTERLISP_UNIQUE_TAG_BIT_NO)
 
 /* Like JITTERLISP_IS_UNIQUE , for characters. */
 #define JITTERLISP_IS_CHARACTER(_jitterlisp_tagged_object)  \
   JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),           \
-                     JITTERLISP_CHARACTER_STAG,             \
-                     JITTERLISP_CHARACTER_STAG_BIT_NO)
+                     JITTERLISP_CHARACTER_TAG,              \
+                     JITTERLISP_CHARACTER_TAG_BIT_NO)
 
 /* Encode operation for a character. */
-#define JITTERLISP_CHARACTER_ENCODE(_jitterlisp_untagged_character)    \
-  JITTERLISP_WITH_TAG_SHIFTED_ON((_jitterlisp_untagged_character),     \
-                                 JITTERLISP_CHARACTER_STAG,            \
-                                 JITTERLISP_CHARACTER_STAG_BIT_NO)
+#define JITTERLISP_CHARACTER_ENCODE(_jitterlisp_untagged_character)  \
+  JITTERLISP_WITH_TAG_SHIFTED_ON((_jitterlisp_untagged_character),   \
+                                 JITTERLISP_CHARACTER_TAG,           \
+                                 JITTERLISP_CHARACTER_TAG_BIT_NO)
 
 /* Encode operation for a unique-object index. */
-#define JITTERLISP_UNIQUE_ENCODE(_jitterlisp_unique_index)             \
-  JITTERLISP_WITH_TAG_SHIFTED_ON((_jitterlisp_unique_index),           \
-                                 JITTERLISP_UNIQUE_STAG,               \
-                                 JITTERLISP_UNIQUE_STAG_BIT_NO)
+#define JITTERLISP_UNIQUE_ENCODE(_jitterlisp_unique_index)      \
+  JITTERLISP_WITH_TAG_SHIFTED_ON((_jitterlisp_unique_index),    \
+                                 JITTERLISP_UNIQUE_TAG,         \
+                                 JITTERLISP_UNIQUE_TAG_BIT_NO)
 
 /* Decode operation for a character. */
-#define JITTERLISP_UNIQUE_DECODE(_jitterlisp_tagged_object)              \
-  JITTERLISP_WITH_TAG_LSHIFTED_OFF((_jitterlisp_tagged_object),          \
-                                   JITTERLISP_UNIQUE_STAG,               \
-                                   JITTERLISP_UNIQUE_STAG_BIT_NO)
+#define JITTERLISP_UNIQUE_DECODE(_jitterlisp_tagged_object)       \
+  JITTERLISP_WITH_TAG_LSHIFTED_OFF((_jitterlisp_tagged_object),   \
+                                   JITTERLISP_UNIQUE_TAG,         \
+                                   JITTERLISP_UNIQUE_TAG_BIT_NO)
 
 /* Decode operation for a unique-object index. */
-#define JITTERLISP_CHARACTER_DECODE(_jitterlisp_tagged_object)           \
-  JITTERLISP_WITH_TAG_LSHIFTED_OFF((_jitterlisp_tagged_object),          \
-                                   JITTERLISP_CHARACTER_STAG,            \
-                                   JITTERLISP_CHARACTER_STAG_BIT_NO)
+#define JITTERLISP_CHARACTER_DECODE(_jitterlisp_tagged_object)       \
+  JITTERLISP_WITH_TAG_LSHIFTED_OFF((_jitterlisp_tagged_object),      \
+                                   JITTERLISP_CHARACTER_TAG,         \
+                                   JITTERLISP_CHARACTER_TAG_BIT_NO)
 
 /* Every unique object has a unique printable name.  The array is meant to be
    indexed by decoded unique values and is defined to have exactly
@@ -871,8 +841,8 @@ jitterlisp_unique_object_names [];
    Uninterned symbols, on the other hand, live on the garbage-collected heap.
 
    Both symbol types are encoded pointers to a struct jitterlisp_symbol . */
-#define JITTERLISP_SYMBOL_STAG_BIT_NO  3
-#define JITTERLISP_SYMBOL_STAG         0b001
+#define JITTERLISP_SYMBOL_TAG_BIT_NO  3
+#define JITTERLISP_SYMBOL_TAG         0b001
 
 /* A symbol datum. */
 struct jitterlisp_symbol
@@ -892,17 +862,17 @@ struct jitterlisp_symbol
 /* Symbol tag checking, encoding and decoding. */
 #define JITTERLISP_IS_SYMBOL(_jitterlisp_tagged_object)  \
   JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),        \
-                     JITTERLISP_SYMBOL_STAG,             \
-                     JITTERLISP_SYMBOL_STAG_BIT_NO)
+                     JITTERLISP_SYMBOL_TAG,              \
+                     JITTERLISP_SYMBOL_TAG_BIT_NO)
 #define JITTERLISP_SYMBOL_ENCODE(_jitterlisp_untagged_symbol)  \
   JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_symbol,       \
-                            JITTERLISP_SYMBOL_STAG,            \
-                            JITTERLISP_SYMBOL_STAG_BIT_NO)
-#define JITTERLISP_SYMBOL_DECODE(_jitterlisp_tagged_symbol)          \
-  ((struct jitterlisp_symbol *)                                      \
-   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_symbol),      \
-                                   JITTERLISP_SYMBOL_STAG,           \
-                                   JITTERLISP_SYMBOL_STAG_BIT_NO)))
+                            JITTERLISP_SYMBOL_TAG,             \
+                            JITTERLISP_SYMBOL_TAG_BIT_NO)
+#define JITTERLISP_SYMBOL_DECODE(_jitterlisp_tagged_symbol)         \
+  ((struct jitterlisp_symbol *)                                     \
+   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_symbol),     \
+                                   JITTERLISP_SYMBOL_TAG,           \
+                                   JITTERLISP_SYMBOL_TAG_BIT_NO)))
 
 
 
@@ -914,8 +884,8 @@ struct jitterlisp_symbol
    fields in memory is a frequent operation so it's particularly important to
    decode tagged conses with subtractions, which are often optimizable. */
 
-#define JITTERLISP_CONS_STAG_BIT_NO    3
-#define JITTERLISP_CONS_STAG           0b010
+#define JITTERLISP_CONS_TAG_BIT_NO    3
+#define JITTERLISP_CONS_TAG           0b010
 
 /* A cons datum. */
 struct jitterlisp_cons
@@ -930,17 +900,17 @@ struct jitterlisp_cons
 /* Cons tag checking, encoding and decoding. */
 #define JITTERLISP_IS_CONS(_jitterlisp_tagged_object)  \
   JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),      \
-                     JITTERLISP_CONS_STAG,             \
-                     JITTERLISP_CONS_STAG_BIT_NO)
+                     JITTERLISP_CONS_TAG,              \
+                     JITTERLISP_CONS_TAG_BIT_NO)
 #define JITTERLISP_CONS_ENCODE(_jitterlisp_untagged_cons)  \
   JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_cons,     \
-                            JITTERLISP_CONS_STAG,          \
-                            JITTERLISP_CONS_STAG_BIT_NO)
-#define JITTERLISP_CONS_DECODE(_jitterlisp_tagged_cons)            \
-  ((struct jitterlisp_cons *)                                      \
-   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_cons),      \
-                                   JITTERLISP_CONS_STAG,           \
-                                   JITTERLISP_CONS_STAG_BIT_NO)))
+                            JITTERLISP_CONS_TAG,           \
+                            JITTERLISP_CONS_TAG_BIT_NO)
+#define JITTERLISP_CONS_DECODE(_jitterlisp_tagged_cons)           \
+  ((struct jitterlisp_cons *)                                     \
+   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_cons),     \
+                                   JITTERLISP_CONS_TAG,           \
+                                   JITTERLISP_CONS_TAG_BIT_NO)))
 
 
 
@@ -949,8 +919,8 @@ struct jitterlisp_cons
 
 /* Closures are represented boxed, with no header. */
 
-#define JITTERLISP_CLOSURE_STAG_BIT_NO    3
-#define JITTERLISP_CLOSURE_STAG           0b011
+#define JITTERLISP_CLOSURE_TAG_BIT_NO    3
+#define JITTERLISP_CLOSURE_TAG           0b011
 
 /* A closure datum. */
 struct jitterlisp_closure
@@ -968,17 +938,17 @@ struct jitterlisp_closure
 /* Closure tag checking, encoding and decoding. */
 #define JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)  \
   JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),         \
-                     JITTERLISP_CLOSURE_STAG,             \
-                     JITTERLISP_CLOSURE_STAG_BIT_NO)
+                     JITTERLISP_CLOSURE_TAG,              \
+                     JITTERLISP_CLOSURE_TAG_BIT_NO)
 #define JITTERLISP_CLOSURE_ENCODE(_jitterlisp_untagged_closure)  \
   JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_closure,        \
-                            JITTERLISP_CLOSURE_STAG,             \
-                            JITTERLISP_CLOSURE_STAG_BIT_NO)
-#define JITTERLISP_CLOSURE_DECODE(_jitterlisp_tagged_closure)         \
-  ((struct jitterlisp_closure *)                                      \
-   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_closure),      \
-                                   JITTERLISP_CLOSURE_STAG,           \
-                                   JITTERLISP_CLOSURE_STAG_BIT_NO)))
+                            JITTERLISP_CLOSURE_TAG,              \
+                            JITTERLISP_CLOSURE_TAG_BIT_NO)
+#define JITTERLISP_CLOSURE_DECODE(_jitterlisp_tagged_closure)        \
+  ((struct jitterlisp_closure *)                                     \
+   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_closure),     \
+                                   JITTERLISP_CLOSURE_TAG,           \
+                                   JITTERLISP_CLOSURE_TAG_BIT_NO)))
 
 
 
@@ -988,8 +958,8 @@ struct jitterlisp_closure
 
 /* Primitives are represented boxed. */
 
-#define JITTERLISP_PRIMITIVE_STAG_BIT_NO    3
-#define JITTERLISP_PRIMITIVE_STAG           0b100
+#define JITTERLISP_PRIMITIVE_TAG_BIT_NO    3
+#define JITTERLISP_PRIMITIVE_TAG           0b100
 
 /* How many arguments a primitive can take, as a maximum. */
 #define JITTERLISP_PRIMITIVE_MAX_IN_ARITY   4
@@ -1029,17 +999,17 @@ struct jitterlisp_primitive
 /* Primitive tag checking, encoding and decoding. */
 #define JITTERLISP_IS_PRIMITIVE(_jitterlisp_tagged_object)  \
   JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),           \
-                     JITTERLISP_PRIMITIVE_STAG,             \
-                     JITTERLISP_PRIMITIVE_STAG_BIT_NO)
+                     JITTERLISP_PRIMITIVE_TAG,              \
+                     JITTERLISP_PRIMITIVE_TAG_BIT_NO)
 #define JITTERLISP_PRIMITIVE_ENCODE(_jitterlisp_untagged_primitive)  \
   JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_primitive,          \
-                            JITTERLISP_PRIMITIVE_STAG,               \
-                            JITTERLISP_PRIMITIVE_STAG_BIT_NO)
-#define JITTERLISP_PRIMITIVE_DECODE(_jitterlisp_tagged_primitive)       \
-  ((struct jitterlisp_primitive *)                                      \
-   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_primitive),      \
-                                   JITTERLISP_PRIMITIVE_STAG,           \
-                                   JITTERLISP_PRIMITIVE_STAG_BIT_NO)))
+                            JITTERLISP_PRIMITIVE_TAG,                \
+                            JITTERLISP_PRIMITIVE_TAG_BIT_NO)
+#define JITTERLISP_PRIMITIVE_DECODE(_jitterlisp_tagged_primitive)      \
+  ((struct jitterlisp_primitive *)                                     \
+   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_primitive),     \
+                                   JITTERLISP_PRIMITIVE_TAG,           \
+                                   JITTERLISP_PRIMITIVE_TAG_BIT_NO)))
 
 
 
@@ -1064,8 +1034,8 @@ struct jitterlisp_primitive
 /* Vectors are represented boxed as a header pointing to the actual vector
    elements as a separate heap buffer, not directly accessible by the user. */
 
-#define JITTERLISP_VECTOR_STAG_BIT_NO    3 // disabled: see below.
-#define JITTERLISP_VECTOR_STAG           0b100 // disabled: see below.
+#define JITTERLISP_VECTOR_TAG_BIT_NO    3 // disabled: see below.
+#define JITTERLISP_VECTOR_TAG           0b100 // disabled: see below.
 
 // FIXME: vectors are currently disabled, until I implement object headers.
 
@@ -1084,19 +1054,19 @@ struct jitterlisp_vector
 /* Vector tag checking, encoding and decoding. */
 /* #define JITTERLISP_IS_VECTOR(_jitterlisp_tagged_object)  \ */
 /*   JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),        \ */
-/*                      JITTERLISP_VECTOR_STAG,             \ */
-/*                      JITTERLISP_VECTOR_STAG_BIT_NO) */
+/*                      JITTERLISP_VECTOR_TAG,             \ */
+/*                      JITTERLISP_VECTOR_TAG_BIT_NO) */
 #define JITTERLISP_IS_VECTOR(_jitterlisp_tagged_object)  \
   false
 #define JITTERLISP_VECTOR_ENCODE(_jitterlisp_untagged_vector)  \
   JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_vector,       \
-                            JITTERLISP_VECTOR_STAG,            \
-                            JITTERLISP_VECTOR_STAG_BIT_NO)
-#define JITTERLISP_VECTOR_DECODE(_jitterlisp_tagged_vector)          \
-  ((struct jitterlisp_vector *)                                      \
-   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_vector),      \
-                                   JITTERLISP_VECTOR_STAG,           \
-                                   JITTERLISP_VECTOR_STAG_BIT_NO)))
+                            JITTERLISP_VECTOR_TAG,             \
+                            JITTERLISP_VECTOR_TAG_BIT_NO)
+#define JITTERLISP_VECTOR_DECODE(_jitterlisp_tagged_vector)         \
+  ((struct jitterlisp_vector *)                                     \
+   (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_vector),     \
+                                   JITTERLISP_VECTOR_TAG,           \
+                                   JITTERLISP_VECTOR_TAG_BIT_NO)))
 
 
 
@@ -1107,24 +1077,24 @@ struct jitterlisp_vector
 /* Non-primitive (low-level) macros are implemented exactly like closures using
    struct jitterlisp_closure , with a different tag. */
 
-#define JITTERLISP_NON_PRIMITIVE_MACRO_STAG_BIT_NO    3
-#define JITTERLISP_NON_PRIMITIVE_MACRO_STAG           0b101
+#define JITTERLISP_NON_PRIMITIVE_MACRO_TAG_BIT_NO    3
+#define JITTERLISP_NON_PRIMITIVE_MACRO_TAG           0b101
 
 
 /* Non-primitive-macro tag checking, encoding and decoding. */
 #define JITTERLISP_IS_NON_PRIMITIVE_MACRO(_jitterlisp_tagged_object)  \
   JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),                     \
-                     JITTERLISP_NON_PRIMITIVE_MACRO_STAG,             \
-                     JITTERLISP_NON_PRIMITIVE_MACRO_STAG_BIT_NO)
+                     JITTERLISP_NON_PRIMITIVE_MACRO_TAG,              \
+                     JITTERLISP_NON_PRIMITIVE_MACRO_TAG_BIT_NO)
 #define JITTERLISP_NON_PRIMITIVE_MACRO_ENCODE(_jitterlisp_untagged_non_primitive_macro)  \
   JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_non_primitive_macro,                    \
-                            JITTERLISP_NON_PRIMITIVE_MACRO_STAG,                         \
-                            JITTERLISP_NON_PRIMITIVE_MACRO_STAG_BIT_NO)
+                            JITTERLISP_NON_PRIMITIVE_MACRO_TAG,                          \
+                            JITTERLISP_NON_PRIMITIVE_MACRO_TAG_BIT_NO)
 #define JITTERLISP_NON_PRIMITIVE_MACRO_DECODE(_jitterlisp_tagged_non_primitive_macro)  \
   ((struct jitterlisp_closure *)                                                       \
    (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_non_primitive_macro),           \
-                                   JITTERLISP_NON_PRIMITIVE_MACRO_STAG,                \
-                                   JITTERLISP_NON_PRIMITIVE_MACRO_STAG_BIT_NO)))
+                                   JITTERLISP_NON_PRIMITIVE_MACRO_TAG,                 \
+                                   JITTERLISP_NON_PRIMITIVE_MACRO_TAG_BIT_NO)))
 
 
 
@@ -1134,23 +1104,23 @@ struct jitterlisp_vector
 /* Primitive macros are implemented exactly like primitives using struct
    jitterlisp_primitive , with a different tag. */
 
-#define JITTERLISP_PRIMITIVE_MACRO_STAG_BIT_NO    3
-#define JITTERLISP_PRIMITIVE_MACRO_STAG           0b110
+#define JITTERLISP_PRIMITIVE_MACRO_TAG_BIT_NO    3
+#define JITTERLISP_PRIMITIVE_MACRO_TAG           0b110
 
 /* Primitive-macro tag checking, encoding and decoding. */
 #define JITTERLISP_IS_PRIMITIVE_MACRO(_jitterlisp_tagged_object)  \
   JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),                 \
-                     JITTERLISP_PRIMITIVE_MACRO_STAG,             \
-                     JITTERLISP_PRIMITIVE_MACRO_STAG_BIT_NO)
+                     JITTERLISP_PRIMITIVE_MACRO_TAG,              \
+                     JITTERLISP_PRIMITIVE_MACRO_TAG_BIT_NO)
 #define JITTERLISP_PRIMITIVE_MACRO_ENCODE(_jitterlisp_untagged_primitive_macro)  \
   JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_primitive_macro,                \
-                            JITTERLISP_PRIMITIVE_MACRO_STAG,                     \
-                            JITTERLISP_PRIMITIVE_MACRO_STAG_BIT_NO)
+                            JITTERLISP_PRIMITIVE_MACRO_TAG,                      \
+                            JITTERLISP_PRIMITIVE_MACRO_TAG_BIT_NO)
 #define JITTERLISP_PRIMITIVE_MACRO_DECODE(_jitterlisp_tagged_primitive_macro)  \
   ((struct jitterlisp_primitive *)                                             \
    (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_primitive_macro),       \
-                                   JITTERLISP_PRIMITIVE_MACRO_STAG,            \
-                                   JITTERLISP_PRIMITIVE_MACRO_STAG_BIT_NO)))
+                                   JITTERLISP_PRIMITIVE_MACRO_TAG,             \
+                                   JITTERLISP_PRIMITIVE_MACRO_TAG_BIT_NO)))
 
 
 
@@ -1171,8 +1141,8 @@ struct jitterlisp_vector
 
 // FIXME: support "extended" types sharing tags at the cost of having a header.
 
-#define JITTERLISP_AST_STAG_BIT_NO    3
-#define JITTERLISP_AST_STAG           0b111
+#define JITTERLISP_AST_TAG_BIT_NO    3
+#define JITTERLISP_AST_TAG           0b111
 
 /* Just a declaration for the AST data structure.  Its definition is in
    jitterlisp-ast.h . */
@@ -1181,17 +1151,17 @@ struct jitterlisp_ast;
 /* AST tag checking, encoding and decoding. */
 #define JITTERLISP_IS_AST(_jitterlisp_tagged_object)  \
   JITTERLISP_HAS_TAG((_jitterlisp_tagged_object),     \
-                     JITTERLISP_AST_STAG,             \
-                     JITTERLISP_AST_STAG_BIT_NO)
+                     JITTERLISP_AST_TAG,              \
+                     JITTERLISP_AST_TAG_BIT_NO)
 #define JITTERLISP_AST_ENCODE(_jitterlisp_untagged_AST)  \
   JITTERLISP_WITH_TAG_ADDED(_jitterlisp_untagged_AST,    \
-                            JITTERLISP_AST_STAG,         \
-                            JITTERLISP_AST_STAG_BIT_NO)
+                            JITTERLISP_AST_TAG,          \
+                            JITTERLISP_AST_TAG_BIT_NO)
 #define JITTERLISP_AST_DECODE(_jitterlisp_tagged_AST)             \
   ((struct jitterlisp_ast *)                                      \
    (JITTERLISP_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_AST),      \
-                                   JITTERLISP_AST_STAG,           \
-                                   JITTERLISP_AST_STAG_BIT_NO)))
+                                   JITTERLISP_AST_TAG,            \
+                                   JITTERLISP_AST_TAG_BIT_NO)))
 
 
 
@@ -1216,22 +1186,8 @@ struct jitterlisp_ast;
 
    This requires them to be GC roots, which will need some work if I switch to a
    moving GC. */
-extern jitterlisp_object jitterlisp_object_begin;
-extern jitterlisp_object jitterlisp_object_call;
-extern jitterlisp_object jitterlisp_object_cond;
-extern jitterlisp_object jitterlisp_object_current_environment;
-extern jitterlisp_object jitterlisp_object_define;
-extern jitterlisp_object jitterlisp_object_if;
-extern jitterlisp_object jitterlisp_object_lambda;
-extern jitterlisp_object jitterlisp_object_let;
-extern jitterlisp_object jitterlisp_object_letrec;
-extern jitterlisp_object jitterlisp_object_letstar;
-extern jitterlisp_object jitterlisp_object_quasiquote;
-extern jitterlisp_object jitterlisp_object_quasiquote_procedure;
-extern jitterlisp_object jitterlisp_object_quote;
-extern jitterlisp_object jitterlisp_object_setb;
-extern jitterlisp_object jitterlisp_object_while;
 extern jitterlisp_object jitterlisp_low_level_macro_args;
+
 
 
 
