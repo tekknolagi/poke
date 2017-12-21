@@ -304,7 +304,7 @@ jitterlisp_memory_initialize (void)
    (JITTER_LG_BYTES_PER_WORD + 1) bits are guaranteed to be zero. */
   jitter_uint required_zero_bit_mask = JITTERLISP_ALIGNMENT_BIT_MASK;
   jitter_uint provided_zero_bit_mask
-    = JITTERLISP_BIT_MASK(JITTER_LG_BYTES_PER_WORD + 1);
+    = JITTER_BIT_MASK(JITTER_LG_BYTES_PER_WORD + 1);
   if (required_zero_bit_mask > provided_zero_bit_mask)
     jitter_fatal ("Alignment requirement not satisfied by GC_MALLOC.  This "
                   "can be fixed by conditionally using GC_memalign , but the "
