@@ -113,7 +113,7 @@
 # define JITTERLISP_EXP_FF_F_PLUS_OR_MINUS(_jitterlisp_infix,            \
                                            _jitterlisp_tagged_fixnum_a,  \
                                            _jitterlisp_tagged_fixnum_b)  \
-    JITTERLISP_WITH_TAG_MASKED_ON(                                       \
+    JITTER_WITH_TAG_MASKED_ON(                                       \
        ((_jitterlisp_tagged_fixnum_a)                                    \
         _jitterlisp_infix                                                \
         (_jitterlisp_tagged_fixnum_b)),                                  \
@@ -124,7 +124,7 @@
                                            _jitterlisp_tagged_fixnum_a,  \
                                            _jitterlisp_tagged_fixnum_b)  \
     /* Notice that the infix operation is on unsigned operands. */       \
-    JITTERLISP_WITH_TAG_MASKED_ON(                                       \
+    JITTER_WITH_TAG_MASKED_ON(                                       \
        ((_jitterlisp_tagged_fixnum_a)                                    \
         _jitterlisp_infix                                                \
         (JITTERLISP_WITH_TAG_SUBTRACTED(                                 \

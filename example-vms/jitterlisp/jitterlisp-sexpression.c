@@ -65,7 +65,7 @@ jitterlisp_platform_sanity_check (void)
     jitter_fatal ("this machine doesn't seem to use two's complement");
 
   /* Check that the C implementation sign-extends on signed >> operands. */
-  if (! JITTERLISP_RIGHT_SHIFT_SIGN_EXTENDS)
+  if (! JITTER_RIGHT_SHIFT_SIGN_EXTENDS)
     jitter_fatal ("this compiler doesn't sign-extend on signed >> .  "
                   "You can comment out this fatal error and everything "
                   "should still work, but performance will suffer.  "
