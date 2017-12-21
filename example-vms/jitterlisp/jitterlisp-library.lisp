@@ -2016,3 +2016,20 @@
       (stream-fold-left f
                         (f x (stream-car xs))
                         (stream-cdr xs))))
+
+
+;;;; Variadic eval and macroexpand.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define primordial-eval eval)
+(define primordial-macroexpand macroexpand)
+
+(define-macro (eval form . optional-environment)
+  (if (null? optional-environment)
+      `(primordial-eval ,form '())
+      `(primordial-eval ,form ,@optional-environment)))
+
+(define-macro (macroexpand form . optional-environment)
+  (if (null? optional-environment)
+      `(primordial-macroexpand ,form '())
+      `(primordial-macroexpand ,form ,@optional-environment)))
