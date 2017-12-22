@@ -410,20 +410,44 @@ typedef jitter_uint jitter_tagged_object;
 
 
 
-/* Header tags.
+/* The stage tag and header tags.
  * ************************************************************************** */
 
-/* Header-tagged objects are tagged pointers to the beginning of a
-   type-dependent struct with another tag called the "header tag" as its first
-   field; the pointer itself is tagged with a particular tag called the "stage
-   tag".  Header-tagged types are always boxed.
+/* An object tag contains some type information about the object, but not
+   necessarily all of it.  If the number of types in the system is too high to
+   be encoded using just tag then one tag configuration and length is reserved
+   as the "stage tag".  An object whose tag is the stage tag is always boxed,
+   and encodes a pointer to a struct whose first field is a word-sized "header
+   tag", followed by type-dependent data.  Not all unboxed objects are
+   header-tagged: for efficiency reasons some boxed types which are very
+   frequently used, such as conses in Lisp, may have a tag which is sufficient
+   to identify the object type alone, and in that case the memory representation
+   of the object will have no header tag.
 
-   A header tag is an unsigned word-sized integer.  Any object of a type
-   requiring a header heap-allocated as a struct, of which the first field is a
-   header tag named jitter_header_tag .  The actual struct type depends on the
-   type, and there may be padding space between the first field and the second;
-   however we assume that there is no padding before the first field, so that
-   the same header-tag extraction code works for any header-tagged type. */
+   Example:
+     A hypothetical system might have fixnums, symbols, the empty list, conses,
+     vectors and strings.  Lists are commonly used and their efficiency is
+     paramount, so we don't want conses to have a header tag and we want the
+     empty list to be unique and unboxed.
+     A reasonable tag assignment for this system would be:
+     - 2-bit: 0b00 for fixnums, unboxed;
+     - 2-bit: 0b01 for the empty list, unboxed;
+     - 2-bit: 0b10 for conses, boxed, no header tag;
+     - 2-bit: 0b11 as the stage tag.
+     Symbols, vectors and strings will be stage-tagged, and their header tag
+     will contain three different values in order to distinguish each type from
+     the other two.  Notice that symbols can still be compared by identity
+     without touching memory: the tagged object points to a struct containing
+     the symbol attributes, not to another pointer; if symbols are interned then
+     tagged objects for equal symbols will be equal.
+
+   Any object of a header-tagged type is heap-allocated as a struct, of which
+   the first field is a header tag named jitter_header_tag , and the second is
+   named jitter_payload.  The actual external struct type depends on the
+   internal payload type, also a struct, and there may be padding space between
+   the header tag and the payload; however we assume that there is no padding
+   before the header tag, so that the same header-tag extraction code works for
+   any header-tagged type. */
 
 
 /* Expand to an identifier, conventionally naming the heap-allocated
@@ -452,21 +476,19 @@ typedef jitter_uint jitter_tagged_object;
    member of an untagged struct named
      JITTER_NON_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix, _jitter_type_name)
    , the member being named jitter_payload . */
-#define JITTER_DEFINE_TAGGED_HEADER_STRUCT_(_jitter_prefix,           \
-                                            _jitter_type_name)        \
-  /* Define a struct containing a header tag and a payload. */        \
-  struct JITTER_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,             \
-                                          _jitter_type_name)          \
-  {                                                                   \
-    /* The header tag.  The header tag is represented as an */        \
-    /* untagged unsigned word-sized integer. */                       \
-    jitter_uint jitter_header_tag;                                    \
-                                                                      \
-    /* The actual payload, another struct whose definition is not */  \
-    /* machine-generated. */                                          \
-    struct JITTER_NON_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,       \
-                                                _jitter_type_name)    \
-    jitter_payload;                                                   \
+#define JITTER_DEFINE_TAGGED_HEADER_STRUCT_(_jitter_prefix, _jitter_type_name)  \
+  /* Define a struct containing a header tag and a payload. */                  \
+  struct JITTER_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix, _jitter_type_name)    \
+  {                                                                             \
+    /* The header tag.  The header tag is represented as an untagged */         \
+    /* unsigned word-sized integer. */                                          \
+    jitter_uint jitter_header_tag;                                              \
+                                                                                \
+    /* The actual payload, another struct whose definition is not */            \
+    /* machine-generated. */                                                    \
+    struct JITTER_NON_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,                 \
+                                                _jitter_type_name)              \
+    jitter_payload;                                                             \
   };
 
 /* Assumung that _jitter_word evaluates to a stage-tagged object with
@@ -483,9 +505,10 @@ typedef jitter_uint jitter_tagged_object;
 /* Assuming that the given word evaluates to a stage-tagged object expand
    to an r-value evaluating to a boolean, non-false iff the header tag has
    the given value.
-   This dereferences the pointer, and is therefore unsafe if the object is
-   not actually boxed.  JITTER_HAS_HEADER_TAG , below, is a safe version
-   of this which also checks the object tag. */
+   This dereferences the pointer, and is therefore unsafe if the object is not
+   boxed, and may return an incorrect result if the object is boxed but not
+   stage-tagged.  JITTER_HAS_HEADER_TAG , below, is a safe version of this which
+   also checks the object tag. */
 #define JITTER_STAGE_TAGGED_HAS_HEADER_TAG(_jitter_word,              \
                                            _jitter_stage_tag,         \
                                            _jitter_stage_tag_bit_no,  \
@@ -513,32 +536,32 @@ typedef jitter_uint jitter_tagged_object;
 /* Expand to an r-value evaluating to an initial pointer to the appropriate
    non-header-tagged structure for the given type, assuming the object is
    actually a non-header-tagged boxed object of the given type. */
-#define JITTER_NON_HEADER_TAGGED_PAYLOAD(_jitter_word,        \
-                                         _jitter_tag,         \
-                                         _jitter_tag_bit_no,  \
-                                         _jitter_prefix,      \
-                                         _jitter_type_name)   \
-  JITTER_UNBOX_TO_STRUCT_STAR(                                \
-    _jitter_word,                                             \
-    _jitter_tag,                                              \
-    _jitter_tag_bit_no,                                       \
-    JITTER_NON_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,      \
-                                         _jitter_type_name))
+#define JITTER_NON_HEADER_TAGGED_PAYLOAD(_jitter_word,                        \
+                                         _jitter_tag,                         \
+                                         _jitter_tag_bit_no,                  \
+                                         _jitter_prefix,                      \
+                                         _jitter_type_name)                   \
+  JITTER_UNBOX_TO_STRUCT_STAR(                                                \
+    _jitter_word,                                                             \
+    _jitter_tag,                                                              \
+    _jitter_tag_bit_no,                                                       \
+    JITTER_NON_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix, _jitter_type_name))
 
 /* Expand to an r-value evaluating to an initial pointer to the appropriate
-   header-tagged structure (including the header tag) for the given type,
-   assuming the object is actually a header-tagged object of the given type. */
-#define JITTER_HEADER_TAGGED_PAYLOAD(_jitter_word,              \
-                                     _jitter_stage_tag,         \
-                                     _jitter_stage_tag_bit_no,  \
-                                     _jitter_prefix,            \
-                                     _jitter_type_name)         \
-  JITTER_UNBOX_TO_STRUCT_STAR(                                  \
-    _jitter_word,                                               \
-    _jitter_stage_tag,                                          \
-    _jitter_stage_tag_bit_no,                                   \
-    JITTER_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,            \
-                                     _jitter_type_name))
+   payload structure within the header-tagged structure (therefore skipping
+   the header tag and any padding after it) for the given type, assuming
+   the object is actually a header-tagged object of the given type. */
+#define JITTER_HEADER_TAGGED_PAYLOAD(_jitter_word,                             \
+                                     _jitter_stage_tag,                        \
+                                     _jitter_stage_tag_bit_no,                 \
+                                     _jitter_prefix,                           \
+                                     _jitter_type_name)                        \
+  (& (JITTER_UNBOX_TO_STRUCT_STAR(                                             \
+         _jitter_word,                                                         \
+         _jitter_stage_tag,                                                    \
+         _jitter_stage_tag_bit_no,                                             \
+         JITTER_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix, _jitter_type_name))  \
+            ->jitter_payload))
 
 /* FIXME: define an initialization macro working on a given type, deciding itself
    whether to use header-tagging or not.  The macro should take the type name
@@ -569,35 +592,7 @@ typedef jitter_uint jitter_tagged_object;
      symbols the 2-bit tag 0b11: the integer tag being shorter introduces no
      ambiguity, and makes one more bit available to the object payload.  By
      checking the last three bits on a word we can find its type, with
-     conditionals or a table lookup.
-
-   An object tag contains some type information about the object, but not
-   necessarily all of it.  If the number of types in the system is too high to
-   be encoded using just tag then one tag configuration and length is reserved
-   as the "stage tag".  An object whose tag is the stage tag is always boxed,
-   and encodes a pointer to a struct whose first field is a word-sized "header
-   tag", followed by type-dependent data.  Not all unboxed objects are
-   header-tagged: for efficiency reasons some boxed types which are very
-   frequently used, such as conses in Lisp, may have a tag which is sufficient
-   to identify the object type alone, and in that case the memory representation
-   of the object will have no header tag.
-
-   Example:
-     Another hypothetical system might have fixnums, symbols, the empty list,
-     conses, vectors and strings.  Lists are commonly used and their efficiency
-     is paramount, so we don't want conses to have a header tag and we want the
-     empty list to be unique and unboxed.
-     A reasonable tag assignment for this system would be:
-     - 2-bit: 0b00 for fixnums, unboxed;
-     - 2-bit: 0b01 for the empty list, unboxed;
-     - 2-bit: 0b10 for conses, boxed, no header tag;
-     - 2-bit: 0b11 as the stage tag.
-     Symbols, vectors and strings will be stage-tagged, and their header tag
-     will contain three different values in order to distinguish each type from
-     the other two.  Notice that symbols can still be compared by identity
-     without touching memory: the tagged object points to a struct containing
-     the symbol attributes, not to another pointer; if symbols are interned then
-     tagged objects for equal symbols will be equal. */
+     conditionals or a table lookup. */
 
 
 

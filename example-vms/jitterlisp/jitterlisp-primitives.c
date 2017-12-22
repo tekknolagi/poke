@@ -100,7 +100,7 @@
                 _jitterlisp_the_name_suffix);                               \
         jitterlisp_print_to_stream (stdout, * _jitterlisp_next_arg);        \
         printf (":\n");                                                     \
-        jitterlisp_error_cloned ("invalid type argument for primitive");    \
+        jitterlisp_error_cloned ("invalid argument type for primitive");    \
       }                                                                     \
     /* Increment the next-argumnent pointer so that the next type check */  \
     /* affects the next argument. */                                        \
