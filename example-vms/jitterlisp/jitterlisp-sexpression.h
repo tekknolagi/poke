@@ -258,6 +258,126 @@ typedef jitter_uint jitter_tagged_object;
 
 
 
+/* Tag checking, tagging and untagging.
+ * ************************************************************************** */
+
+/* An C object of the appropriate type can be "encoded" into a Jitter object by
+   representing it, or some pointer to it or to equivalent information in
+   memory, combined with a tag.  "Decoding" is the opposite process converting a
+   Jitter object to a C object, or a pointer to it.
+
+   Encoding and decoding are non-destructive operations: they expand to
+   expressions evaluating to values, and do not modify the result of their
+   operand evaluation.  Memory allocation is a separate operation from encoding
+   and decoding; memory operations are defined in jitter-allocator.h , not
+   here. */
+
+/* Style/mnemonic convention: these macros have arguments always following
+   this order:
+   - object;
+   - tag;
+   - tag-bit-no.
+   The general-purpose macros for tagging and untagging objects, meant to be
+   used for defining type-specific tagging and untagging, take all of the
+   arguments above, in the order above, even if some unneeded arguments may
+   never be evaluated.  This makes the code easier to modify. */
+
+/* Expand to a r-value evaluating to a boolean, non-false iff the given word has
+   the given tag. */
+#define JITTER_HAS_TAG(_jitter_tagged_object,  \
+                       _jitter_tag,            \
+                       _jitter_tag_bit_no)     \
+  (((_jitter_tagged_object)                    \
+    & JITTER_BIT_MASK(_jitter_tag_bit_no))     \
+   == (_jitter_tag))
+
+/* Expand to an r-value evaluating to the Lisp representation of the given
+   object, which must have a type castable to jitter_uint, on which the given
+   tag is attached by left-shiting and or-ing. */
+#define JITTER_WITH_TAG_SHIFTED_ON(_jitter_untagged_object,  \
+                                   _jitter_tag,              \
+                                   _jitter_tag_bit_no)       \
+  JITTER_WITH_BITS_SHIFTED_ON(                               \
+     _jitter_untagged_object,                                \
+     _jitter_tag,                                            \
+     _jitter_tag_bit_no)
+
+/* Expand to an r-value evaluating to the given object representation modified
+   by arithmetically shifting the value right, eliminating tag bits.  No side
+   effects. */
+#define JITTER_WITH_TAG_ASHIFTED_OFF(_jitter_tagged_object,  \
+                                     _jitter_tag,            \
+                                     _jitter_tag_bit_no)     \
+  JITTER_WITH_BITS_ASHIFTED_OFF(                             \
+     _jitter_tagged_object,                                  \
+     _jitter_tag_bit_no)
+
+/* Expand to an r-value evaluating to the given object representation modified
+   by logically shifting the value right, eliminating tag bits.  No side
+   effects. */
+#define JITTER_WITH_TAG_LSHIFTED_OFF(_jitter_tagged_object,  \
+                                     _jitter_tag,            \
+                                     _jitter_tag_bit_no)     \
+  JITTER_WITH_BITS_LSHIFTED_OFF(                             \
+     _jitter_tagged_object,                                  \
+     _jitter_tag_bit_no)
+
+/* Expand to an r-value evaluating to the Lisp representation of the given
+   object, which must have a type castable to jitter_uint, on which the given
+   tag is attached by masking-shiting and or-ing -- which is to say,
+   by overwriting the rightmost _jitter_tag_bit_no bits of the
+   untagged representation but without losing any bit of the left.
+
+   Rationale: see the comment before JITTER_WITH_TAG_MASKED_OFF. */
+#define JITTER_WITH_TAG_MASKED_ON(_jitter_untagged_object,  \
+                                  _jitter_tag,              \
+                                  _jitter_tag_bit_no)       \
+  JITTER_WITH_BITS_MASKED_ON(                               \
+     _jitter_untagged_object,                               \
+     _jitter_tag,                                           \
+     _jitter_tag_bit_no)
+
+/* Expand to an r-value evaluating to the given object representation modified
+   by seeting all the tag bits to zero.  The object payload may or may not need
+   to be shifted according to its type, but that operation is not performed by
+   the expansion of this macro.  No side effects.
+   Rationale: see JITTER_WITH_BITS_MASKED_OFF . */
+#define JITTER_WITH_TAG_MASKED_OFF(_jitter_untagged_object,  \
+                                   _jitter_tag,              \
+                                   _jitter_tag_bit_no)       \
+  JITTER_WITH_BITS_MASKED_OFF(                               \
+     _jitter_tagged_object,                                  \
+     _jitter_tag_bit_no)
+
+/* Expand to an r-value evaluating to the Lisp representation of the given
+   object, which must have a type castable to jitter_uint, on which the given
+   tag is attached by simply adding it -- this assumes that the rightmost
+   JITTER_TAG_BIT_NO bits of the untagged representation are zero, and does
+   *not* check that it's true. */
+#define JITTER_WITH_TAG_ADDED(_jitter_untagged_object,  \
+                              _jitter_tag,              \
+                              _jitter_tag_bit_no)       \
+  JITTER_WITH_BITS_ADDED(_jitter_untagged_object,       \
+                         _jitter_tag)
+
+/* Expand to an r-value evaluating to the given object representation modified
+   by seeting all the tag bits to zero via a subtraction; this assumes that the
+   encoded object has the provided tag, which is *not* checked.  The object
+   payload may or may not need to be shifted, according to its type; this macro
+   expansion does not do that.  No side effects.
+
+   Rationale: when loading or storing thru tagged pointers, particularly if the
+   offset is a compile-time constant, the tag to be subtracted can be combined
+   with the offset; this saves one bitwise and instruction. */
+#define JITTER_WITH_TAG_SUBTRACTED(_jitter_tagged_object,  \
+                                   _jitter_tag,            \
+                                   _jitter_tag_bit_no)     \
+  JITTER_WITH_BITS_SUBTRACTED(_jitter_tagged_object,       \
+                              _jitter_tag)
+
+
+
+
 /* Boxed objects.
  * ************************************************************************** */
 
@@ -327,28 +447,26 @@ typedef jitter_uint jitter_tagged_object;
 
 
 /* Expand to a struct definition for a tagged-header struct named
-     JITTER_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,
-                                          _jitter_type_name)
+     JITTER_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix, _jitter_type_name)
    , containing two fields: a tagged header named jitter_header_tag, and a
    member of an untagged struct named
-     JITTER_NON_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,
-                                              _jitter_type_name)
-   , the member being named jitter_payload . */                         \
-#define JITTER_DEFINE_TAGGED_HEADER_STRUCT_(_jitter_prefix,             \
-                                            _jitter_type_name)          \
-  /* Define a struct containing a header tag and a payload. */          \
-  struct JITTER_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,               \
-                                          _jitter_type_name)            \
-  {                                                                     \
-    /* The header tag.  The header tag is represented as an */          \
-    /* untagged unsigned word-sized integer. */                         \
-    jitter_uint jitter_header_tag;                                      \
-                                                                        \
-    /* The actual payload, another struct whose definition is not */    \
-    /* machine-generated. */                                            \
-    struct JITTER_NON_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,         \
-                                                    _jitter_type_name)  \
-    jitter_payload;                                                     \
+     JITTER_NON_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix, _jitter_type_name)
+   , the member being named jitter_payload . */
+#define JITTER_DEFINE_TAGGED_HEADER_STRUCT_(_jitter_prefix,           \
+                                            _jitter_type_name)        \
+  /* Define a struct containing a header tag and a payload. */        \
+  struct JITTER_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,             \
+                                          _jitter_type_name)          \
+  {                                                                   \
+    /* The header tag.  The header tag is represented as an */        \
+    /* untagged unsigned word-sized integer. */                       \
+    jitter_uint jitter_header_tag;                                    \
+                                                                      \
+    /* The actual payload, another struct whose definition is not */  \
+    /* machine-generated. */                                          \
+    struct JITTER_NON_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix,       \
+                                                _jitter_type_name)    \
+    jitter_payload;                                                   \
   };
 
 /* Assumung that _jitter_word evaluates to a stage-tagged object with
@@ -480,126 +598,6 @@ typedef jitter_uint jitter_tagged_object;
      without touching memory: the tagged object points to a struct containing
      the symbol attributes, not to another pointer; if symbols are interned then
      tagged objects for equal symbols will be equal. */
-
-
-
-
-/* Tag checking, tagging and untagging.
- * ************************************************************************** */
-
-/* An C object of the appropriate type can be "encoded" into a Jitter object by
-   representing it, or some pointer to it or to equivalent information in
-   memory, combined with a tag.  "Decoding" is the opposite process converting a
-   Jitter object to a C object, or a pointer to it.
-
-   Encoding and decoding are non-destructive operations: they expand to
-   expressions evaluating to values, and do not modify the result of their
-   operand evaluation.  Memory allocation is a separate operation from encoding
-   and decoding; memory operations are defined in jitter-allocator.h , not
-   here. */
-
-/* Style/mnemonic convention: these macros have arguments always following
-   this order:
-   - object;
-   - tag;
-   - tag-bit-no.
-   The general-purpose macros for tagging and untagging objects, meant to be
-   used for defining type-specific tagging and untagging, take all of the
-   arguments above, in the order above, even if some unneeded arguments may
-   never be evaluated.  This makes the code easier to modify. */
-
-/* Expand to a r-value evaluating to a boolean, non-false iff the given word has
-   the given tag. */
-#define JITTER_HAS_TAG(_jitter_tagged_object,  \
-                       _jitter_tag,            \
-                       _jitter_tag_bit_no)     \
-  (((_jitter_tagged_object)                    \
-    & JITTER_BIT_MASK(_jitter_tag_bit_no))     \
-   == (_jitter_tag))
-
-/* Expand to an r-value evaluating to the Lisp representation of the given
-   object, which must have a type castable to jitter_uint, on which the given
-   tag is attached by left-shiting and or-ing. */
-#define JITTER_WITH_TAG_SHIFTED_ON(_jitter_untagged_object,  \
-                                   _jitter_tag,              \
-                                   _jitter_tag_bit_no)       \
-  JITTER_WITH_BITS_SHIFTED_ON(                               \
-     _jitter_untagged_object,                                \
-     _jitter_tag,                                            \
-     _jitter_tag_bit_no)
-
-/* Expand to an r-value evaluating to the given object representation modified
-   by arithmetically shifting the value right, eliminating tag bits.  No side
-   effects. */
-#define JITTER_WITH_TAG_ASHIFTED_OFF(_jitter_tagged_object,  \
-                                     _jitter_tag,            \
-                                     _jitter_tag_bit_no)     \
-  JITTER_WITH_BITS_ASHIFTED_OFF(                             \
-     _jitter_tagged_object,                                  \
-     _jitter_tag_bit_no)
-
-/* Expand to an r-value evaluating to the given object representation modified
-   by logically shifting the value right, eliminating tag bits.  No side
-   effects. */
-#define JITTER_WITH_TAG_LSHIFTED_OFF(_jitter_tagged_object,  \
-                                     _jitter_tag,            \
-                                     _jitter_tag_bit_no)     \
-  JITTER_WITH_BITS_LSHIFTED_OFF(                             \
-     _jitter_tagged_object,                                  \
-     _jitter_tag_bit_no)
-
-/* Expand to an r-value evaluating to the Lisp representation of the given
-   object, which must have a type castable to jitter_uint, on which the given
-   tag is attached by masking-shiting and or-ing -- which is to say,
-   by overwriting the rightmost _jitter_tag_bit_no bits of the
-   untagged representation but without losing any bit of the left.
-
-   Rationale: see the comment before JITTER_WITH_TAG_MASKED_OFF. */
-#define JITTER_WITH_TAG_MASKED_ON(_jitter_untagged_object,  \
-                                  _jitter_tag,              \
-                                  _jitter_tag_bit_no)       \
-  JITTER_WITH_BITS_MASKED_ON(                               \
-     _jitter_untagged_object,                               \
-     _jitter_tag,                                           \
-     _jitter_tag_bit_no)
-
-/* Expand to an r-value evaluating to the given object representation modified
-   by seeting all the tag bits to zero.  The object payload may or may not need
-   to be shifted according to its type, but that operation is not performed by
-   the expansion of this macro.  No side effects.
-   Rationale: see JITTER_WITH_BITS_MASKED_OFF . */
-#define JITTER_WITH_TAG_MASKED_OFF(_jitter_untagged_object,  \
-                                   _jitter_tag,              \
-                                   _jitter_tag_bit_no)       \
-  JITTER_WITH_BITS_MASKED_OFF(                               \
-     _jitter_tagged_object,                                  \
-     _jitter_tag_bit_no)
-
-/* Expand to an r-value evaluating to the Lisp representation of the given
-   object, which must have a type castable to jitter_uint, on which the given
-   tag is attached by simply adding it -- this assumes that the rightmost
-   JITTER_TAG_BIT_NO bits of the untagged representation are zero, and does
-   *not* check that it's true. */
-#define JITTER_WITH_TAG_ADDED(_jitter_untagged_object,  \
-                              _jitter_tag,              \
-                              _jitter_tag_bit_no)       \
-  JITTER_WITH_BITS_ADDED(_jitter_untagged_object,       \
-                         _jitter_tag)
-
-/* Expand to an r-value evaluating to the given object representation modified
-   by seeting all the tag bits to zero via a subtraction; this assumes that the
-   encoded object has the provided tag, which is *not* checked.  The object
-   payload may or may not need to be shifted, according to its type; this macro
-   expansion does not do that.  No side effects.
-
-   Rationale: when loading or storing thru tagged pointers, particularly if the
-   offset is a compile-time constant, the tag to be subtracted can be combined
-   with the offset; this saves one bitwise and instruction. */
-#define JITTER_WITH_TAG_SUBTRACTED(_jitter_tagged_object,  \
-                                   _jitter_tag,            \
-                                   _jitter_tag_bit_no)     \
-  JITTER_WITH_BITS_SUBTRACTED(_jitter_tagged_object,       \
-                              _jitter_tag)
 
 
 

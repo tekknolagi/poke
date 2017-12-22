@@ -1068,8 +1068,6 @@ $(srcdir)/example-vms/jitterlisp/jitterlisp-constant-strings.c: example-vms/jitt
          echo ";") \
           > "$@"
 
-
-
 # There is only one version for the best dispatching model, as of now.
 bin_jitterlisp_SOURCES = $(SOURCES_FOR_JITTERLISP)
 bin_jitterlisp_CPPFLAGS = \
