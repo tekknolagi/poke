@@ -421,6 +421,7 @@ SOURCES_FOR_LIBJITTER = \
   jitter/jitter-interpreter-private.h \
   jitter/jitter-parser.c jitter/jitter-parser.h \
   jitter/jitter-scanner.c jitter/jitter-scanner.h \
+  jitter/jitter-tagging.c jitter/jitter-tagging.h \
   jitter/jitter-vm.c jitter/jitter-vm.h \
   jitter/jitter-machine-common.S jitter/jitter-machine-common.h \
   jitter/jitter-patch.c jitter/jitter-patch.h \
@@ -447,6 +448,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-patch-in.h \
   jitter/jitter-parser.h \
   jitter/jitter-scanner.h \
+  jitter/jitter-tagging.h \
   jitter/jitter-stack.h \
   jitter/jitter-vm.h
 
