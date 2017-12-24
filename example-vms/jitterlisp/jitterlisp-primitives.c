@@ -559,6 +559,12 @@ jitterlisp_primitives_initialize (void)
              symbol to a primitive macro object. */
           name_symbol_p->global_value
             = JITTERLISP_PRIMITIVE_MACRO_ENCODE(descriptor);
+
+          /* Notice that primitive macros are not bound as constants: it is
+             possible to redefine them in Lisp, which has no serious performance
+             implications.  The main purpose of constants is to allow inlining
+             of known callees before run time; macroexpansion occurs before
+             run time anyway. */
         }
     }
 }
