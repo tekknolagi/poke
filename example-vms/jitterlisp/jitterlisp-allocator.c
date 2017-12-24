@@ -395,6 +395,7 @@ jitterlisp_symbol_make_uninterned (void)
     = JITTERLISP_SYMBOL_UNINTERNED_MAKE_UNINITIALIZED_UNENCODED();
   res->name_or_NULL = NULL;
   res->global_value = JITTERLISP_UNDEFINED;
+  res->global_constant = false;
   return res;
 }
 
@@ -419,6 +420,7 @@ jitterlisp_symbol_make_interned (const char *name)
       res->name_or_NULL = jitter_xmalloc (strlen (name) + 1);
       strcpy (res->name_or_NULL, name);
       res->global_value = JITTERLISP_UNDEFINED;
+      res->global_constant = false;
       jitterlisp_push_gc_root (& res->global_value);
       union jitter_word w = { .pointer = (void *) res };
       jitter_string_hash_table_add (& jitterlisp_symbol_table, name, w);

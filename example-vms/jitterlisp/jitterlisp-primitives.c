@@ -328,6 +328,10 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(set_cdr_b, CONS, ANYTHING,
 /* Symbol operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_0_(gensym,
   { JITTERLISP_GENSYM_(res); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(constantp, SYMBOL,
+  { JITTERLISP_CONSTANTP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(make_constant, SYMBOL,
+  { JITTERLISP_MAKE_CONSTANT_(res, args [0]); })
 /* Vector operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
   { JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]); })
@@ -423,6 +427,8 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("set-cdr!", 2, set_cdr_b),
       /* Symbol operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("gensym", 0, gensym),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("constant?", 1, constantp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-constant", 1, make_constant),
       /* Vector operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */

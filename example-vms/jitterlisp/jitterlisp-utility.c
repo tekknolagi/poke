@@ -404,6 +404,39 @@ jitterlisp_environment_has (jitterlisp_object env, jitterlisp_object name)
 }
 
 void
+jitterlisp_define (jitterlisp_object name, jitterlisp_object new_value)
+{
+  struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
+  if (unencoded_name->global_constant)
+    {
+      printf ("About "); jitterlisp_print_to_stream (stdout, name); printf ("\n"); // FIXME: add to the error message
+      jitterlisp_error_cloned ("rebinding global constant");
+    }
+
+  /* The symbol is not a constant.  We can perform the definition or
+     assignment. */
+  unencoded_name->global_value = new_value;
+}
+
+void
+jitterlisp_global_set (jitterlisp_object name, jitterlisp_object new_value)
+{
+  struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
+  if (JITTERLISP_IS_UNDEFINED(unencoded_name->global_value))
+    {
+      /* There is no global binding for the symbol.  It's forbidden to set!
+         a global which has not been define'd before. */
+      printf ("About "); jitterlisp_print_to_stream (stdout, name); printf ("\n"); // FIXME: add to the error message
+      jitterlisp_error_cloned ("set! on unbound variable");
+    }
+
+  /* If there is a global binding to replace we can proceed as if this were a
+     define form.  Notice that this may still fail, if the symbol is globally
+     bound to a constant. */
+  jitterlisp_define (name, new_value);
+}
+
+void
 jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
                             jitterlisp_object new_value)
 {
@@ -425,13 +458,7 @@ jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
     }
 
   /* ...The symbol is not bound in the given local environment.  Change its
-     global binding if one exists, or fail. */
-  struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
-  if (! JITTERLISP_IS_UNDEFINED(unencoded_name->global_value))
-    unencoded_name->global_value = new_value;
-  else
-    {
-      printf ("About "); jitterlisp_print_to_stream (stdout, name); printf ("\n"); // FIXME: add to the error message
-      jitterlisp_error_cloned ("set! on unbound variable");
-    }
+     global binding (failing if there is no previous binding, or the binding is
+     globally constant). */
+  jitterlisp_global_set (name, new_value);
 }

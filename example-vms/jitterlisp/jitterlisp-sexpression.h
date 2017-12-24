@@ -896,6 +896,9 @@ struct jitterlisp_symbol
      FIXME: this makes each symbol a GC root which will require some careful
      testing in the case of interned symbols, as they are malloc-allocated. */
   jitterlisp_object global_value;
+
+  /* Non-false if the global binding for the symbol is constant. */
+  bool global_constant;
 };
 
 /* Symbol tag checking, encoding and decoding. */

@@ -499,6 +499,22 @@
     (_jitterlisp_out) = JITTERLISP_SYMBOL_ENCODE(_jitterlisp_tmp);    \
   JITTER_END_
 
+#define JITTERLISP_CONSTANTP_(_jitterlisp_out,                        \
+                              _jitterlisp_in0)                        \
+  JITTER_BEGIN_                                                       \
+    struct jitterlisp_symbol *_jitterlisp_tmp                         \
+      = JITTERLISP_SYMBOL_DECODE(_jitterlisp_in0);                    \
+    (_jitterlisp_out)                                                 \
+      = JITTERLISP_BOOLEAN_ENCODE(_jitterlisp_tmp->global_constant);  \
+  JITTER_END_
+
+#define JITTERLISP_MAKE_CONSTANT_(_jitterlisp_out,                      \
+                                  _jitterlisp_in0)                      \
+  JITTER_BEGIN_                                                         \
+    JITTERLISP_SYMBOL_DECODE(_jitterlisp_in0)->global_constant = true;  \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;                             \
+  JITTER_END_
+
 
 
 

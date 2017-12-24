@@ -144,11 +144,9 @@ jitterlisp_eval_interpreter_ast (jitterlisp_object o,
 
     case jitterlisp_ast_case_define:
       {
-        struct jitterlisp_symbol *unencoded_variable
-          = JITTERLISP_SYMBOL_DECODE(subs [0]);
         jitterlisp_object defined_value
           = jitterlisp_eval_interpreter_ast (subs [1], env);
-        unencoded_variable->global_value = defined_value;
+        jitterlisp_define (subs [0], defined_value);
         return JITTERLISP_NOTHING;
       }
 
