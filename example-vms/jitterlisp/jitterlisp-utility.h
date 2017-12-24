@@ -202,14 +202,14 @@ jitterlisp_environment_has (jitterlisp_object env, jitterlisp_object name);
    exists (subject to the error conditions of jitterlisp_global_set, below).
    Error out if the name is not bound. */
 void
-jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
-                            jitterlisp_object new_value);
+jitterlisp_environment_setb (jitterlisp_object env, jitterlisp_object name,
+                             jitterlisp_object new_value);
 
 /* Destructively update the global binding for the given symbol, which must
    be already globally bound and non-constant, to the new value.  Error out
    if the name is not globally bound or is a global constant. */
 void
-jitterlisp_global_set (jitterlisp_object name, jitterlisp_object new_value);
+jitterlisp_global_setb (jitterlisp_object name, jitterlisp_object new_value);
 
 /* Like jitterlisp_global_set , but do not error out if the symbol has no
    previous binding.  Do error out if the symbol is bound to a global

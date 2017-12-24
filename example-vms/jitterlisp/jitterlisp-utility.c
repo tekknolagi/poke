@@ -419,7 +419,7 @@ jitterlisp_define (jitterlisp_object name, jitterlisp_object new_value)
 }
 
 void
-jitterlisp_global_set (jitterlisp_object name, jitterlisp_object new_value)
+jitterlisp_global_setb (jitterlisp_object name, jitterlisp_object new_value)
 {
   struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
   if (JITTERLISP_IS_UNDEFINED(unencoded_name->global_value))
@@ -437,8 +437,8 @@ jitterlisp_global_set (jitterlisp_object name, jitterlisp_object new_value)
 }
 
 void
-jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
-                            jitterlisp_object new_value)
+jitterlisp_environment_setb (jitterlisp_object env, jitterlisp_object name,
+                             jitterlisp_object new_value)
 {
   /* First look for a binding in the local environment, which is to say look
      for the first cons in env whose car is equal-by-identity to name... */
@@ -460,5 +460,5 @@ jitterlisp_environment_set (jitterlisp_object env, jitterlisp_object name,
   /* ...The symbol is not bound in the given local environment.  Change its
      global binding (failing if there is no previous binding, or the binding is
      globally constant). */
-  jitterlisp_global_set (name, new_value);
+  jitterlisp_global_setb (name, new_value);
 }

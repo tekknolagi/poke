@@ -165,7 +165,7 @@ jitterlisp_eval_interpreter_ast (jitterlisp_object o,
       {
         jitterlisp_object bound_value
           = jitterlisp_eval_interpreter_ast (subs [1], env);
-        jitterlisp_environment_set (env, subs [0], bound_value);
+        jitterlisp_environment_setb (env, subs [0], bound_value);
         return JITTERLISP_NOTHING;
       }
 
