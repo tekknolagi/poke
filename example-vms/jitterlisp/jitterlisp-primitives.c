@@ -25,7 +25,10 @@
 
 #include "jitterlisp-primitives.h"
 
+#include <string.h>
+
 #include <jitter/jitter-cpp.h>
+#include <jitter/jitter-malloc.h>
 
 #include "jitterlisp.h"
 #include "jitterlisp-ast.h"
@@ -463,17 +466,91 @@ jitterlisp_primitive_no
 void
 jitterlisp_primitives_initialize (void)
 {
+  /* Allocate a few symbols used for primitive wrapper (see below) formals.  In
+     order to make the printed closures more readable and to relieve the stress
+     on the garbage collector, we use interned symbols.  There is no harm in
+     reusing the sams symbols for every primitive wrapper.  */
+  jitterlisp_object variable_array [JITTERLISP_PRIMITIVE_MAX_IN_ARITY];
   int i;
+  for (i = 0; i < JITTERLISP_PRIMITIVE_MAX_IN_ARITY; i ++)
+    {
+      char variable_name [100];
+      sprintf (variable_name, "x-%i", i);
+      struct jitterlisp_symbol *variable_struct_p
+        = jitterlisp_symbol_make_interned (variable_name);
+      variable_array [i] = JITTERLISP_SYMBOL_ENCODE(variable_struct_p);
+    }
+
+  /* For every possible primitive procedure arity make a list of formals (which
+     is to say, a list of symbols) and a list of actuals (which is to say, a
+     list of variable ASTs).  Share structure as far as possible. */
+  jitterlisp_object formals [JITTERLISP_PRIMITIVE_MAX_IN_ARITY + 1];
+  jitterlisp_object actuals [JITTERLISP_PRIMITIVE_MAX_IN_ARITY + 1];
+  formals [0] = JITTERLISP_EMPTY_LIST;
+  actuals [0] = JITTERLISP_EMPTY_LIST;
+  for (i = 1; i < JITTERLISP_PRIMITIVE_MAX_IN_ARITY; i ++)
+    {
+      formals [i] = jitterlisp_cons (variable_array [i - 1],
+                                     formals [i - 1]);
+      actuals [i] = jitterlisp_cons (jitterlisp_ast_make_variable
+                                        (variable_array [i - 1]),
+                                     actuals [i - 1]);
+    }
+
+  /* For every primitive... */
   for (i = 0; i < jitterlisp_primitive_no; i ++)
     {
-      struct jitterlisp_symbol *symbol_object
+      struct jitterlisp_symbol *name_object
         = jitterlisp_symbol_make_interned (jitterlisp_primitives [i].name);
       struct jitterlisp_primitive *descriptor = jitterlisp_primitives + i;
-      jitterlisp_object encoded_descriptor
-        = (descriptor->procedure
-           ? JITTERLISP_PRIMITIVE_ENCODE(descriptor)
-           : JITTERLISP_PRIMITIVE_MACRO_ENCODE(descriptor));
-      symbol_object->global_value = encoded_descriptor;
+      /* ...Check if the primitive descriptor is for a primitive procedure or a
+         primitive macro. */
+      if (descriptor->procedure)
+        {
+          /* The descriptor is for a primitive procedure.  Globally bind two
+             interned symbols, one (with the name prefixed by "primitive-") to
+             the primitive procedure object, and another (with no name prefix)
+             to a closure wrapper around it.
+             Rationale: ordinary user code will call only closures, never
+             primitives: this avoids a type check on the operand at call
+             time.  Known calls to primitives can be made efficient via
+             inlining. */
+
+          /* Define the primitive object. */
+          size_t name_length = strlen (jitterlisp_primitives [i].name);
+          char *prefixed_name = jitter_xmalloc (name_length + 100);
+          sprintf (prefixed_name,
+                   "primitive-%s", jitterlisp_primitives [i].name);
+          struct jitterlisp_symbol *prefixed_name_symbol_p
+            = jitterlisp_symbol_make_interned (prefixed_name);
+          free (prefixed_name);
+          jitterlisp_object primitive_object
+            = JITTERLISP_PRIMITIVE_ENCODE(descriptor);
+          prefixed_name_symbol_p->global_value = primitive_object;
+
+          /* Define the wrapper as a closure object containing a primitive
+             use. */
+          jitterlisp_object formals_for_this_arity
+            = formals [jitterlisp_primitives [i].in_arity];
+          jitterlisp_object actuals_for_this_arity
+            = actuals [jitterlisp_primitives [i].in_arity];
+          jitterlisp_object wrapper_body
+            = jitterlisp_ast_make_primitive (primitive_object,
+                                             actuals_for_this_arity);
+          jitterlisp_object closure;
+          JITTERLISP_CLOSURE_(closure,
+                              jitterlisp_empty_environment,
+                              formals_for_this_arity,
+                              wrapper_body);
+          name_object->global_value = closure;
+        }
+      else
+        {
+          /* The descriptor is for a primitive macro.  Just globally bind the
+             symbol to a primitive macro object. */
+          name_object->global_value
+            = JITTERLISP_PRIMITIVE_MACRO_ENCODE(descriptor);
+        }
     }
 }
 

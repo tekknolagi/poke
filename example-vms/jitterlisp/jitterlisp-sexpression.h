@@ -563,15 +563,24 @@ typedef jitter_uint jitter_tagged_object;
          JITTER_TAGGED_HEADER_STRUCT_NAME(_jitter_prefix, _jitter_type_name))  \
             ->jitter_payload))
 
-/* FIXME: define an initialization macro working on a given type, deciding itself
-   whether to use header-tagging or not.  The macro should take the type name
-   as a parameter and use the macro below:
+/* FIXME: possibly:
+     define an initialization macro working on a given type, deciding itself
+     whether to use header-tagging or not.  The macro should take the type name
+     as a parameter and use the macro below:
 
-   There should probably be at least one macro for each type specifying if the
-   type is:
-   - unboxed
-   - header-tagged boxed
-   - non-header-tagged boxed
+     There should probably be at least one macro for each type specifying if the
+     type is:
+     - unboxed
+     - header-tagged boxed
+     - non-header-tagged boxed
+*/
+
+/* FIXME: definitely:
+     define for each type:
+     - a macro expanding to the full struct name for a given boxed type,
+       be it header-tagged or not;
+     - a macro either initializing the header tag of one such structure if
+       a header tag exists, or doing nothing otherwise.
 */
 
 

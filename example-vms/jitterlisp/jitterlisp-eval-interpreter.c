@@ -65,9 +65,8 @@ jitterlisp_eval_interpreter_ast_primitive (jitterlisp_object rator,
 
 /* Return the result of the given call in the given environment.  The operator
    is an AST, still to evaluate, and the operands are tagged ASTs in the given
-   number; the operator comes first in the array.  The operator may evaluate to
-   a primitive, a closure, or something else, in which case this function errors
-   out cleanly. */
+   number; the operator comes first in the array.  If the operator doesn't
+   evaluate to a closure this function errors out cleanly. */
 static inline jitterlisp_object
 jitterlisp_eval_interpreter_ast_call
    (const jitterlisp_object *rator_and_rand_asts,
@@ -77,41 +76,12 @@ jitterlisp_eval_interpreter_ast_call
   /* First evaluate the operator. */
   jitterlisp_object rator_value
     = jitterlisp_eval_interpreter_ast (rator_and_rand_asts [0], env);
-
-  /* Check the operator tag.  If it's a primitive use the primitive helper
-     function (but checking in-arity first, as this hasn't been checked at AST
-     construction time), otherwise evaluate the operands into an extended
-     environment and use eval. */
-  if (JITTERLISP_IS_PRIMITIVE(rator_value))
-    {
-      const int expected_in_arity_plus_1
-        = JITTERLISP_PRIMITIVE_DECODE(rator_value)->in_arity + 1;
-      if (expected_in_arity_plus_1 < rator_and_rand_no)
-        {
-          printf ("About "); // FIXME: add to the error message
-          jitterlisp_print_to_stream (stdout, rator_value);
-          printf (":\n");
-          jitterlisp_error_cloned ("primitive call: too many actuals");
-        }
-      else if (expected_in_arity_plus_1 > rator_and_rand_no)
-        {
-          printf ("About "); // FIXME: add to the error message
-          jitterlisp_print_to_stream (stdout, rator_value);
-          printf (":\n");
-          jitterlisp_error_cloned ("primitive call: not enough actuals");
-        }
-
-      return jitterlisp_eval_interpreter_ast_primitive (rator_value,
-                                                        rator_and_rand_asts + 1,
-                                                        rator_and_rand_no - 1,
-                                                        env);
-    }
   if (! JITTERLISP_IS_CLOSURE(rator_value))
     {
       printf ("About "); // FIXME: add to the error message
       jitterlisp_print_to_stream (stdout, rator_value);
       printf (":\n");
-      jitterlisp_error_cloned ("call: non-primitive non-closure operator");
+      jitterlisp_error_cloned ("call: non-closure operator");
     }
 
   /* If we arrived here the operator is a closure.  Evaluate actuals binding

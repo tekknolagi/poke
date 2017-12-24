@@ -1762,16 +1762,16 @@
   (let ((limit-name (gensym)))
     `(let ((,limit-name ,limit)
            (,variable 0))
-       (while (primitive < ,variable ,limit-name)
+       (while (< ,variable ,limit-name)
          ,@body-forms
-         (set! ,variable (primitive 1+ ,variable)))
+         (set! ,variable (1+ ,variable)))
        ,@result-forms)))
 
 (define-macro (dotimesdown (variable times . result-forms) . body-forms)
   (let ((times-name (gensym)))
     `(let ((,variable ,times))
-       (while (primitive > ,variable 0)
-         (set! ,variable (primitive 1- ,variable))
+       (while (> ,variable 0)
+         (set! ,variable (1- ,variable))
          ,@body-forms)
        ,@result-forms)))
 
@@ -1780,17 +1780,17 @@
     `(let ((,list-name ,list)
            ;; This is currently faster than binding ,variable inside the loop.
            (,variable (undefined)))
-       (while (primitive non-null? ,list-name)
-         (set! ,variable (primitive car ,list-name))
+       (while (non-null? ,list-name)
+         (set! ,variable (car ,list-name))
          ,@body-forms
-         (set! ,list-name (primitive cdr ,list-name)))
+         (set! ,list-name (cdr ,list-name)))
        ,@result-forms)))
 
 (define-macro (do bindings (end-condition . result-forms) . body-forms)
   `(let (,@(map (lambda (binding)
                   `(,(car binding) ,(cadr binding)))
                bindings))
-     (while (primitive not ,end-condition)
+     (while (not ,end-condition)
        ,@body-forms
        ,@(flatten (map (lambda (binding)
                          (if (null? (cddr binding))
@@ -1817,47 +1817,42 @@
 ;; same thing more simply with higher-order procedures, using simple macro
 ;; wrappers on top of fold-left and fold-right.
 (define-macro (define-right-nested-variadic-extension operator original-name
-                neutral original-is-primitive)
-  (let ((operands-name (gensym))
-        (possibly-primitive (if original-is-primitive '(primitive) '())))
+                neutral)
+  (let ((operands-name (gensym)))
     `(define-macro (,operator . ,operands-name)
        (cond ((null? ,operands-name)
               ,neutral)
              ((null? (cdr ,operands-name))
               (car ,operands-name))
              (#t
-              `(,@',possibly-primitive
-                       ,',original-name
-                       ,(car ,operands-name)
-                       (,',operator ,@(cdr ,operands-name))))))))
+              `(,',original-name
+                ,(car ,operands-name)
+                (,',operator ,@(cdr ,operands-name))))))))
 
 (define-macro (define-associative-variadic-extension operator
-                original-name neutral original-is-primitive)
-  `(define-right-nested-variadic-extension ,operator ,original-name
-     ,neutral ,original-is-primitive))
+                original-name neutral)
+  `(define-right-nested-variadic-extension ,operator ,original-name ,neutral))
 
-(define-associative-variadic-extension + primordial-+ 0 #t)
-(define-associative-variadic-extension * primordial-* 1 #t)
+(define-associative-variadic-extension + primordial-+ 0)
+(define-associative-variadic-extension * primordial-* 1)
 
 (define-macro (- . operands)
   (cond ((null? operands)
          (error '(-: no arguments)))
         ((null? (cdr operands))
-         `(primitive negate ,@operands))
+         `(negate ,@operands))
         (#t
-         `(primitive primordial--
-                     ,(car operands)
-                     (+ ,@(cdr operands))))))
+         `(primordial-- ,(car operands)
+                        (+ ,@(cdr operands))))))
 
 (define-macro (/ . operands)
   (cond ((null? operands)
          (error '(/: no arguments)))
         ((null? (cdr operands))
-         `(primitive primordial-/ 1 ,@operands))
+         `(primordial-/ 1 ,@operands))
         (#t
-         `(primitive primordial-/
-                     ,(car operands)
-                     (* ,@(cdr operands))))))
+         `(primordial-/ ,(car operands)
+                        (* ,@(cdr operands))))))
 
 
 
@@ -1888,7 +1883,7 @@
 ;; FIXME: rename the append operator above in quasiquoting functions before
 ;; renaming this to append.
 ;; Calls in code which is already in AST form will be affected otherwise.
-(define-right-nested-variadic-extension variadic-append previous-append () #f)
+(define-right-nested-variadic-extension variadic-append previous-append ())
 
 
 
