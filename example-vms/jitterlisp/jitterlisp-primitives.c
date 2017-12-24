@@ -396,10 +396,10 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("macro?", 1, macrop),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("vector?", 1, vectorp),
       /* Arithmetic. */
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("+", 2, plus),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("-", 2, minus),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("*", 2, times),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("/", 2, divided),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-+", 2, plus),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial--", 2, minus),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-*", 2, times),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-/", 2, divided),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("quotient", 2, quotient),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("remainder", 2, remainder),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("1+", 1, one_plus),
@@ -436,8 +436,9 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("newline", 0, newline),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("read", 0, read),
       /* Interpretation operations. */
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("macroexpand", 2, macroexpand),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("eval", 2, eval),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-macroexpand", 2,
+                                             macroexpand),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-eval", 2, eval),
       /* Operations to display legal notices. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("copying", 0, copying),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("no-warranty", 0, no_warranty),
@@ -506,7 +507,7 @@ jitterlisp_primitives_initialize (void)
   /* For every primitive... */
   for (i = 0; i < jitterlisp_primitive_no; i ++)
     {
-      struct jitterlisp_symbol *name_object
+      struct jitterlisp_symbol *name_symbol_p
         = jitterlisp_symbol_make_interned (jitterlisp_primitives [i].name);
       struct jitterlisp_primitive *descriptor = jitterlisp_primitives + i;
       /* ...Check if the primitive descriptor is for a primitive procedure or a
@@ -533,6 +534,7 @@ jitterlisp_primitives_initialize (void)
           jitterlisp_object primitive_object
             = JITTERLISP_PRIMITIVE_ENCODE(descriptor);
           prefixed_name_symbol_p->global_value = primitive_object;
+          prefixed_name_symbol_p->global_constant = true;
 
           /* Define the wrapper as a closure object containing a primitive
              use. */
@@ -548,13 +550,14 @@ jitterlisp_primitives_initialize (void)
                               jitterlisp_empty_environment,
                               formals_for_this_arity,
                               wrapper_body);
-          name_object->global_value = closure;
+          name_symbol_p->global_value = closure;
+          name_symbol_p->global_constant = true;
         }
       else
         {
           /* The descriptor is for a primitive macro.  Just globally bind the
              symbol to a primitive macro object. */
-          name_object->global_value
+          name_symbol_p->global_value
             = JITTERLISP_PRIMITIVE_MACRO_ENCODE(descriptor);
         }
     }

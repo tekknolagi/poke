@@ -1805,14 +1805,6 @@
 ;;;; Variadic arithmetic.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Keep primordial operations with different names.
-(define primordial-+ +)
-(define primordial-- -)
-(define primordial-* *)
-(define primordial-/ /)
-
-;;; Reuse primordial names for variadic macros expanding to calls.
-
 ;; FIXME: nested quasiquoting is already difficult to handle here.  I can do the
 ;; same thing more simply with higher-order procedures, using simple macro
 ;; wrappers on top of fold-left and fold-right.
@@ -2015,9 +2007,6 @@
 
 ;;;; Variadic eval and macroexpand.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define primordial-eval eval)
-(define primordial-macroexpand macroexpand)
 
 (define-macro (eval form . optional-environment)
   (if (null? optional-environment)

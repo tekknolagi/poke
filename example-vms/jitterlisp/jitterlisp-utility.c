@@ -410,7 +410,7 @@ jitterlisp_define (jitterlisp_object name, jitterlisp_object new_value)
   if (unencoded_name->global_constant)
     {
       printf ("About "); jitterlisp_print_to_stream (stdout, name); printf ("\n"); // FIXME: add to the error message
-      jitterlisp_error_cloned ("rebinding global constant");
+      jitterlisp_error_cloned ("assignment to global constant");
     }
 
   /* The symbol is not a constant.  We can perform the definition or
