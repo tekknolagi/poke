@@ -332,12 +332,18 @@ jitterlisp_primitive_macro_function_primitive (jitterlisp_object cdr,
     {
       printf ("About "); // FIXME: integrate with the error function
       jitterlisp_print_to_stream (stdout, primitive_name);
+      printf (":\n");
       jitterlisp_error_cloned ("primitive: non-symbol primitive name");
     }
   jitterlisp_object primitive
     = JITTERLISP_SYMBOL_DECODE(primitive_name)->global_value;
   if (! JITTERLISP_IS_PRIMITIVE (primitive))
-    jitterlisp_error_cloned ("primitive: non primitive name");
+    {
+      printf ("About "); // FIXME: integrate with the error function
+      jitterlisp_print_to_stream (stdout, primitive_name);
+      printf (":\n");
+      jitterlisp_error_cloned ("primitive: non primitive name");
+    }
   jitterlisp_object primitive_actuals = jitterlisp_cdr (cdr);
   size_t actual_arity = jitterlisp_length (primitive_actuals);
   if (actual_arity != JITTERLISP_PRIMITIVE_DECODE(primitive)->in_arity)

@@ -31,14 +31,15 @@
          (fibo-scheme (- n 1)))))
 
 (define (fibo-jitterlisp n)
-  (if (primitive < n 2)
+  (if (primitive primitive-< n 2)
       n
-      (+ (fibo-jitterlisp (- n 2))
-         (fibo-jitterlisp (primitive 1- n)))))
+      (primitive primitive-primordial-+
+                 (fibo-jitterlisp (primitive primitive-primordial-- n 2))
+                 (fibo-jitterlisp (primitive primitive-1- n)))))
 
 (define fibo
-  fibo-jitterlisp
-  ;;fibo-scheme
+  ;;fibo-jitterlisp
+  fibo-scheme
   )
 
 
