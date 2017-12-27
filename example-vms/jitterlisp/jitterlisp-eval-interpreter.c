@@ -292,13 +292,16 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
     {
       if (JITTERLISP_IS_EMPTY_LIST(formals))
         jitterlisp_error_cloned ("call: too many actuals");
-      if (! JITTERLISP_IS_CONS(operands_as_list))
-        jitterlisp_error_cloned ("call: operands not a list");
+      /* If this were a safe C function I would check whether operands_as_list
+         is a cons; but this has been already checked out of this function when
+         we get here thru a primitive call. */
 
+      /* Extend the environment with one formal/operand binding. */
       jitterlisp_object rand_value = JITTERLISP_EXP_C_A_CAR(operands_as_list);
       jitterlisp_object formal = JITTERLISP_EXP_C_A_CAR(formals);
       body_env = jitterlisp_environment_bind (body_env, formal, rand_value);
 
+      /* Advance the two lists. */
       formals = JITTERLISP_EXP_C_A_CDR(formals);
       operands_as_list = JITTERLISP_EXP_C_A_CDR(operands_as_list);
     }
