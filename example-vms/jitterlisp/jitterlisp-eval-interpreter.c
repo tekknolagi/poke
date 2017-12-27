@@ -297,8 +297,8 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
          we get here thru a primitive call. */
 
       /* Extend the environment with one formal/operand binding. */
-      jitterlisp_object rand_value = JITTERLISP_EXP_C_A_CAR(operands_as_list);
       jitterlisp_object formal = JITTERLISP_EXP_C_A_CAR(formals);
+      jitterlisp_object rand_value = JITTERLISP_EXP_C_A_CAR(operands_as_list);
       body_env = jitterlisp_environment_bind (body_env, formal, rand_value);
 
       /* Advance the two lists. */
