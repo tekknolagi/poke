@@ -515,6 +515,18 @@
     (_jitterlisp_out) = JITTERLISP_NOTHING;                             \
   JITTER_END_
 
+#define JITTERLISP_DEFINEDP_(_jitterlisp_out,                \
+                             _jitterlisp_in0)                \
+  JITTER_BEGIN_                                              \
+    struct jitterlisp_symbol *_jitterlisp_tmp                \
+      = JITTERLISP_SYMBOL_DECODE(_jitterlisp_in0);           \
+    jitterlisp_object _jitterlisp_value                      \
+      = _jitterlisp_tmp->global_value;                       \
+    (_jitterlisp_out)                                        \
+      = JITTERLISP_BOOLEAN_ENCODE(_jitterlisp_value          \
+                                  != JITTERLISP_UNDEFINED);  \
+  JITTER_END_
+
 
 
 

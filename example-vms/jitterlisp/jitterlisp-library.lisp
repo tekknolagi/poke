@@ -37,6 +37,20 @@
 
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Force the library to be run at most once.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;; Fail if the library has been loaded already.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(if (defined? 'jitterlisp-library-loaded)
+    (error '(you are trying to load the library more than once))
+    #t)
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Arithmetic and number library.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -2005,6 +2019,8 @@
                         (stream-cdr xs))))
 
 
+
+
 ;;;; Variadic eval and macroexpand.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -2017,3 +2033,14 @@
   (if (null? optional-environment)
       `(primordial-macroexpand ,form '())
       `(primordial-macroexpand ,form ,@optional-environment)))
+
+
+
+
+;;;; The library is now loaded.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; This is checked at startup to error out in case the library is being loaded
+;;; more than once.
+(define jitterlisp-library-loaded
+  #t)

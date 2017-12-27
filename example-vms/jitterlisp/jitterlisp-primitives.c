@@ -332,6 +332,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(constantp, SYMBOL,
   { JITTERLISP_CONSTANTP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(make_constant, SYMBOL,
   { JITTERLISP_MAKE_CONSTANT_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(definedp, SYMBOL,
+  { JITTERLISP_DEFINEDP_(res, args [0]); })
 /* Vector operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
   { JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]); })
@@ -429,6 +431,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("gensym", 0, gensym),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("constant?", 1, constantp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-constant", 1, make_constant),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("defined?", 1, definedp),
       /* Vector operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */
