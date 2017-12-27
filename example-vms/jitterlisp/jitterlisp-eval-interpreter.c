@@ -291,7 +291,7 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
   while (! JITTERLISP_IS_EMPTY_LIST (operands_as_list))
     {
       if (JITTERLISP_IS_EMPTY_LIST(formals))
-        jitterlisp_error_cloned ("call: too many actuals");
+        jitterlisp_error_cloned ("apply: too many actuals");
       /* If this were a safe C function I would check whether operands_as_list
          is a cons; but this has been already checked out of this function when
          we get here thru a primitive call. */
@@ -306,7 +306,7 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
       operands_as_list = JITTERLISP_EXP_C_A_CDR(operands_as_list);
     }
   if (! JITTERLISP_IS_EMPTY_LIST(formals))
-    jitterlisp_error_cloned ("call: not enough actuals");
+    jitterlisp_error_cloned ("apply: not enough actuals");
 
   /* Return the evaluation of the closure body in the extended closure
      environment. */
