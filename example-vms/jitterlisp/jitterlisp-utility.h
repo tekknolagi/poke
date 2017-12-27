@@ -50,6 +50,11 @@ jitterlisp_is_list_of_distinct_symbols (jitterlisp_object o);
 bool
 jitterlisp_is_alist (jitterlisp_object o);
 
+/* A macro wrapper around jitterlisp_is_list , convenient for type-checking
+   primitive arguments.  This calls jitterlisp_is_list . */
+#define JITTERLISP_IS_LIST(x)  \
+  (jitterlisp_is_list(x))
+
 /* A macro wrapper around jitterlisp_is_alist , convenient for type-checking
    primitive arguments.  This calls jitterlisp_is_alist . */
 #define JITTERLISP_IS_ALIST(x)  \

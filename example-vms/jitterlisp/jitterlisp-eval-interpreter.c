@@ -261,3 +261,52 @@ jitterlisp_eval_interpreter (jitterlisp_object unexpanded_form,
     }
   return jitterlisp_eval_interpreter_ast (ast, env);
 }
+
+
+
+
+/* Non-Jittery interpreter: apply.
+ * ************************************************************************** */
+
+/* Differently from what happens in simple meta-circual interpreters here eval
+   and apply are not mutually recursive: eval doesn't evaluate a procedure call
+   operands into a temporary list, for efficiency reasons.  However this is
+   convenient to have, particularly to be called from Lisp (with additional type
+   checking done by the primimitive function), when the operands are already a
+   list. */
+
+/* Unfortunately this is difficult to factor with
+   jitterlisp_eval_interpreter_ast_call without introducing unnecessary
+   allocation, and here performance is important. */
+jitterlisp_object
+jitterlisp_apply_interpreter (jitterlisp_object closure_value,
+                              jitterlisp_object operands_as_list)
+{
+  /* Decode the closure and keep its fields in automatic C variables. */
+  struct jitterlisp_closure *closure = JITTERLISP_CLOSURE_DECODE(closure_value);
+  jitterlisp_object formals = closure->formals;
+  jitterlisp_object body_env = closure->environment;
+
+  /* Bind operands to formals in the closure environment. */
+  while (! JITTERLISP_IS_EMPTY_LIST (operands_as_list))
+    {
+      if (JITTERLISP_IS_EMPTY_LIST(formals))
+        jitterlisp_error_cloned ("call: too many actuals");
+      if (! JITTERLISP_IS_CONS(operands_as_list))
+        jitterlisp_error_cloned ("call: operands not a list");
+
+      jitterlisp_object rand_value = JITTERLISP_EXP_C_A_CAR(operands_as_list);
+      jitterlisp_object formal = JITTERLISP_EXP_C_A_CAR(formals);
+      body_env = jitterlisp_environment_bind (body_env, formal, rand_value);
+
+      formals = JITTERLISP_EXP_C_A_CDR(formals);
+      operands_as_list = JITTERLISP_EXP_C_A_CDR(operands_as_list);
+    }
+  if (! JITTERLISP_IS_EMPTY_LIST(formals))
+    jitterlisp_error_cloned ("call: not enough actuals");
+
+  /* Return the evaluation of the closure body in the extended closure
+     environment. */
+  jitterlisp_object body_ast = closure->body;
+  return jitterlisp_eval_interpreter_ast (body_ast, body_env);
+}

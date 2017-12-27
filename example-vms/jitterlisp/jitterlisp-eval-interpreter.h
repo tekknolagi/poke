@@ -49,6 +49,13 @@ jitterlisp_eval_globally_interpreter (jitterlisp_object form);
 jitterlisp_object
 jitterlisp_eval_interpreter (jitterlisp_object form, jitterlisp_object env);
 
+/* Return the result of applying closure_value, which is assumed to be an
+   already evaluated closure (not checked by the function) to the operands,
+   assumed to be a list (not checked for) of already evaluated operands. */
+jitterlisp_object
+jitterlisp_apply_interpreter (jitterlisp_object closure_value,
+                              jitterlisp_object operands_as_list);
+
 
 
 

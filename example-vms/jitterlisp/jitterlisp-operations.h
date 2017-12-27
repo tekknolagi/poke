@@ -807,6 +807,14 @@
                                                    _jitterlisp_in1);         \
   JITTER_END_
 
+/* Return the result of applying the given operator, already evaluated, to the
+   given list of already evaluated operands. */
+#define JITTERLISP_APPLY_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
+  JITTER_BEGIN_                                                               \
+    _jitterlisp_out = jitterlisp_apply_interpreter (_jitterlisp_in0,          \
+                                                    _jitterlisp_in1);         \
+  JITTER_END_
+
 
 
 
