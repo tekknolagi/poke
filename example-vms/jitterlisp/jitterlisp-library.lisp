@@ -1,6 +1,6 @@
 ;;; JitterLisp (let's say -*- Scheme -*- for the purposes of Emacs) -- library.
 
-;;; Copyright (C) 2017 Luca Saiu
+;;; Copyright (C) 2017, 2018 Luca Saiu
 ;;; Written by Luca Saiu
 
 ;;; This file is part of the Jittery Lisp language implementation, distributed as
@@ -665,17 +665,18 @@
 (define (list-copy-iterative xs)
   (if (null? xs)
       '()
-      (let* ((res (cons (car xs) #f))
-             (last-cons res)
-             (new-cons #f))
-        (set! xs (cdr xs))
-        (while (not (null? xs))
-          (set! new-cons (cons (car xs) #f))
-          (set-cdr! last-cons new-cons)
-          (set! last-cons new-cons)
-          (set! xs (cdr xs)))
-        (set-cdr! last-cons '())
-        res)))
+      ;; We have no let* yet.
+      (let ((res (cons (car xs) #f)))
+        (let ((last-cons res)
+              (new-cons #f))
+          (set! xs (cdr xs))
+          (while (not (null? xs))
+            (set! new-cons (cons (car xs) #f))
+            (set-cdr! last-cons new-cons)
+            (set! last-cons new-cons)
+            (set! xs (cdr xs)))
+          (set-cdr! last-cons '())
+          res))))
 
 (define (list-copy-tail-recursive xs)
   (reverse!-tail-recursive (reverse-tail-recursive xs)))
@@ -1013,6 +1014,124 @@
     (if (cons? a-cons)
         (cdr a-cons)
         (error `(alist-get: key ,key not found in alist ,alist)))))
+
+
+
+
+;;;; zip-reversed.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (zip-reversed-iterative as bs)
+  (let ((res ()))
+    (while (non-null? as)
+      (if (null? bs)
+          (error '(zip-reversed-iterative: first list longer))
+          (begin
+            (set! res (cons (cons (car as) (car bs))
+                            res))
+            (set! as (cdr as))
+            (set! bs (cdr bs)))))
+    (if (non-null? bs)
+        (error '(zip-reversed-iterative: second list longer)))
+    res))
+
+(define (zip-reversed-tail-recursive-helper as bs acc)
+  (cond ((null? as)
+         (if (non-null? bs)
+             (error '(zip-non-tail-recursive: second list longer))
+             acc))
+        ((null? bs)
+         (error '(zip-tail-recursive: first list longer)))
+        (#t
+         (zip-reversed-tail-recursive-helper (cdr as)
+                                             (cdr bs)
+                                             (cons (cons (car as)
+                                                         (car bs))
+                                                   acc)))))
+(define (zip-reversed-tail-recursive as bs)
+  (zip-reversed-tail-recursive-helper as bs ()))
+
+(define (zip-reversed as bs)
+  (zip-reversed-iterative as bs))
+
+
+
+
+;;;; zip.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (zip-iterative as bs)
+  (reverse! (zip-reversed-iterative as bs)))
+
+(define (zip-tail-recursive as bs)
+  (reverse!-tail-recursive (zip-reversed-tail-recursive as bs)))
+
+(define (zip-non-tail-recursive as bs)
+  (cond ((null? as)
+         (if (non-null? bs)
+             (error '(zip-non-tail-recursive: second list longer))
+             ()))
+        ((null? bs)
+         (error '(zip-non-tail-recursive: first list longer)))
+        (#t
+         (cons (cons (car as) (car bs))
+               (zip-non-tail-recursive (cdr as) (cdr bs))))))
+
+(define (zip as bs)
+  (zip-iterative as bs))
+
+
+
+
+;;;; unzip-reversed.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (unzip-reversed-iterative as)
+  (let ((cars ())
+        (cdrs ()))
+    (while (non-null? as)
+      (set! cars (cons (caar as) cars))
+      (set! cdrs (cons (cdar as) cdrs))
+      (set! as (cdr as)))
+    (cons cars cdrs)))
+
+(define (unzip-reversed-tail-recursive-helper as acc-cars acc-cdrs)
+  (if (null? as)
+      (cons acc-cars acc-cdrs)
+      (unzip-reversed-tail-recursive-helper (cdr as)
+                                            (cons (caar as) acc-cars)
+                                            (cons (cdar as) acc-cdrs))))
+(define (unzip-reversed-tail-recursive as)
+  (unzip-reversed-tail-recursive-helper as () ()))
+
+(define (unzip-reversed as)
+  (unzip-reversed-iterative as))
+
+
+
+
+;;;; unzip.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (unzip-iterative as)
+  (let ((cons-reversed (unzip-reversed-iterative as)))
+    (cons (reverse! (car cons-reversed))
+          (reverse! (cdr cons-reversed)))))
+
+(define (unzip-tail-recursive as)
+  (let ((cons-reversed (unzip-reversed-tail-recursive as)))
+    (cons (reverse! (car cons-reversed))
+          (reverse! (cdr cons-reversed)))))
+
+(define (unzip-non-tail-recursive as)
+  (if (null? as)
+      '(() . ())
+      (let ((unzipped-cdr (unzip-non-tail-recursive (cdr as))))
+        (cons (cons (caar as) (car unzipped-cdr))
+              (cons (cdar as) (cdr unzipped-cdr))))))
+
+(define (unzip as)
+  (unzip-iterative as))
 
 
 
