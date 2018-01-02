@@ -1659,17 +1659,6 @@
 
 
 
-;;;; Variadic list operations.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define-macro (list . elements)
-  (if (null? elements)
-      '()
-      `(cons ,(car elements) (list ,@(cdr elements)))))
-
-
-
-
 ;;;; High-level syntax: let*.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1723,6 +1712,33 @@
 
 
 
+
+;;;; Variadic list operations.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; These need to come here, as they rely on let* .
+
+(define-macro (improper-list final-element . other-elements)
+  (if (null? other-elements)
+      final-element
+      `(cons ,(car other-elements)
+             (improper-list ,final-element ,@(cdr other-elements)))))
+
+(define-macro (list . elements)
+  `(improper-list () ,@elements))
+
+(define-macro (circular-list first-element . other-elements)
+  (let ((res-name (gensym))
+        (cdr-name (gensym)))
+    `(let* ((,res-name (cons ,first-element #f))
+            (,cdr-name (improper-list ,res-name ,@other-elements)))
+       (set-cdr! ,res-name ,cdr-name)
+       ,res-name)))
+
+
+
+
+
 
 ;;;; High-level syntax: case form.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
