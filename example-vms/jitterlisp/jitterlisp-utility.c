@@ -336,6 +336,11 @@ jitterlisp_cdddr (jitterlisp_object cons)
   return jitterlisp_cdr (jitterlisp_cddr (cons));
 }
 
+jitterlisp_object
+jitterlisp_singleton (jitterlisp_object o)
+{
+  return jitterlisp_cons (o, JITTERLISP_EMPTY_LIST);
+}
 
 
 
