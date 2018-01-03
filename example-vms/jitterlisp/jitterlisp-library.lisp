@@ -693,6 +693,80 @@
 
 
 
+;;;; cdr-or-nil.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (cdr-or-nil xs)
+  (if (null? xs)
+      ()
+      (cdr xs)))
+
+
+
+
+;;;; nth-cons-or-nil.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (nth-cons-or-nil-iterative n xs)
+  ;; A break or return form would be useful here.  Even better I could also
+  ;; iterate on an and condition, but we have no and macro yet.
+  (let ((go-on #t))
+    (while go-on
+      (cond ((zero? n)
+             (set! go-on #f))
+            ((null? xs)
+             (set! go-on #f))
+            (#t
+             (set! n (1- n))
+             (set! xs (cdr xs)))))
+    xs))
+
+(define (nth-cons-or-nil-tail-recursive n xs)
+  (cond ((zero? n)
+         xs)
+        ((null? xs)
+         ())
+        (#t
+         (nth-cons-or-nil-tail-recursive (1- n) (cdr xs)))))
+
+(define (nth-cons-or-nil n xs)
+  (nth-cons-or-nil-iterative n xs))
+
+
+
+
+;;;; nth-cons.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (nth-cons n xs)
+  (let ((c (nth-cons-or-nil n xs)))
+    (if (null? c)
+        (error '(nth-cons: list too short))
+        c)))
+
+
+
+
+;;;; nth.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (nth-iterative n xs)
+  (while (non-zero? n)
+    (set! xs (cdr xs))
+    (set! n (1- n)))
+  (car xs))
+
+(define (nth-tail-recursive n xs)
+  (if (zero? n)
+      (car xs)
+      (nth-tail-recursive (1- n) (cdr xs))))
+
+(define (nth n xs)
+  (nth-iterative n xs))
+
+
+
+
 ;;;; take, take-reversed.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -748,23 +822,12 @@
 ;;;; take!
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; A break or return form would be useful here.
 (define (take!-iterative n xs)
   (if (zero? n)
-      '()
-      (let ((rest xs)
-            (go-on #t))
-        (while go-on
-          (cond ((= n 1)
-                 (if (null? rest)
-                     'do-nothing
-                     (set-cdr! rest '()))
-                 (set! go-on #f))
-                ((null? rest)
-                 (set! go-on #f))
-                (#t
-                 (set! rest (cdr rest))
-                 (set! n (1- n)))))
+      ()
+      (let ((n-1-th-cons-or-nil (nth-cons-or-nil-iterative (1- n) xs)))
+        (if (non-null? n-1-th-cons-or-nil)
+            (set-cdr! n-1-th-cons-or-nil ()))
         xs)))
 
 (define (take!-tail-recursive-helper n xs)
@@ -814,6 +877,22 @@
 
 (define (drop n xs)
   (drop-iterative n xs))
+
+
+
+
+;;;; drop!.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (drop! n xs)
+  (if (zero? n)
+      xs
+      (let ((n-1-th-cons-or-nil (nth-cons-or-nil (1- n) xs)))
+        (if (non-null? n-1-th-cons-or-nil)
+            (let ((old-cdr (cdr n-1-th-cons-or-nil)))
+              (set-cdr! n-1-th-cons-or-nil ())
+              old-cdr)
+            ()))))
 
 
 
