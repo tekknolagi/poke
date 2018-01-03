@@ -902,7 +902,11 @@
 ;;; This would return code binding a and b as local variable to the car and
 ;;; cadr of some-arguments, assumed to be bound, and display them.
 (define (destructuring-bind-procedure formals-template args body-forms)
-  (destructuring-bind-recursive formals-template args body-forms))
+  (let ((args-value-name (gensym)))
+    `(let ((,args-value-name ,args))
+       ,(destructuring-bind-recursive formals-template
+                                      args-value-name
+                                      body-forms))))
 
 ;; FIXME: check that the formals-template doesn't require non-linear bindings.
 
