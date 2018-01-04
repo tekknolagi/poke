@@ -107,7 +107,10 @@ struct jitterlisp_ast
    with the given subs.  When multiple ASTs or multiple symbols are required
    (such as in the case of primitive or lambda) the arguments are s-expression
    lists with ASTs or symbols as elements; in such case the formal arguments
-   have a plural name ending in _asts or _symbols . */
+   have a plural name ending in _asts or _symbols .
+
+   The functions in this section all check their argument types, and error out
+   cleanly in case of mismatch. */
 jitterlisp_object
 jitterlisp_ast_make_literal (jitterlisp_object value);
 jitterlisp_object

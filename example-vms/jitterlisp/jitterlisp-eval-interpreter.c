@@ -202,8 +202,8 @@ jitterlisp_eval_interpreter_ast (jitterlisp_object o,
       {
         /* Evaluate the bound form in env, then bind its result to the bound
            variable in the current environment. */
-        jitterlisp_object bound_value =
-          jitterlisp_eval_interpreter_ast (subs [1], env);
+        jitterlisp_object bound_value
+          = jitterlisp_eval_interpreter_ast (subs [1], env);
         env = jitterlisp_environment_bind (env, subs [0], bound_value);
 
         /* Evaluate the body in the extended environment. */
@@ -212,7 +212,7 @@ jitterlisp_eval_interpreter_ast (jitterlisp_object o,
 
     case jitterlisp_ast_case_sequence:
       jitterlisp_eval_interpreter_ast (subs [0], env);
-      return jitterlisp_eval_interpreter_ast (subs [1],env);
+      return jitterlisp_eval_interpreter_ast (subs [1], env);
 
     default:
       printf ("About "); // FIXME: add to the error message
