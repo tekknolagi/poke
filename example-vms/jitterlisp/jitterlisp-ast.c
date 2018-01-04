@@ -177,27 +177,17 @@ jitterlisp_ast_make_lambda (jitterlisp_object formal_symbols,
 }
 
 jitterlisp_object
-jitterlisp_ast_make_let (jitterlisp_object bound_symbols,
-                         jitterlisp_object bound_asts,
+jitterlisp_ast_make_let (jitterlisp_object bound_symbol,
+                         jitterlisp_object bound_ast,
                          jitterlisp_object body_ast)
 {
-  jitterlisp_validate_distinct_symbols (bound_symbols);
-  jitterlisp_validate_asts (bound_asts);
+  jitterlisp_validate_symbol (bound_symbol);
+  jitterlisp_validate_ast (bound_ast);
   jitterlisp_validate_ast (body_ast);
-  size_t bound_symbol_no = jitterlisp_length (bound_symbols);
-  size_t bound_ast_no = jitterlisp_length (bound_asts);
-  if (bound_symbol_no != bound_ast_no)
-    jitterlisp_error_cloned ("jitterlisp_ast_make_let: different list sizes");
-  JITTERLISP_MAKE_LOCALS_(jitterlisp_ast_case_let, bound_symbol_no * 2 + 1);
-  int i;
-  for (i = 0; i < bound_symbol_no; i ++)
-    {
-      subs [2 * i] = JITTERLISP_EXP_C_A_CAR(bound_symbols);
-      subs [2 * i + 1] = JITTERLISP_EXP_C_A_CAR(bound_asts);
-      bound_symbols = JITTERLISP_EXP_C_A_CDR(bound_symbols);
-      bound_asts = JITTERLISP_EXP_C_A_CDR(bound_asts);
-    }
-  subs [bound_symbol_no * 2] = body_ast;
+  JITTERLISP_MAKE_LOCALS_(jitterlisp_ast_case_let, 3);
+  subs [0] = bound_symbol;
+  subs [1] = bound_ast;
+  subs [2] = body_ast;
   return res;
 }
 

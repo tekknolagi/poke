@@ -305,8 +305,8 @@
 
 ;; FIXME: a return statement would be nice here.
 (define (list?-iterative xs)
-  (let ((go-on #t)
-        (res #t))
+  (let* ((go-on #t)
+         (res #t))
     (while go-on
       (cond ((null? xs)
              (set! go-on #f))
@@ -335,7 +335,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (replicate-iterative n x)
-  (let ((res '()))
+  (let* ((res '()))
     (while (> n 0)
       (set! res (cons x res))
       (set! n (1- n)))
@@ -409,7 +409,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (length-iterative xs)
-  (let ((res 0))
+  (let* ((res 0))
     (while (not (null? xs))
       (set! res (1+ res))
       (set! xs (cdr xs)))
@@ -437,7 +437,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (append-reversed-iterative xs ys)
-  (let ((res ys))
+  (let* ((res ys))
     (while (not (null? xs))
       (set! res (cons (car xs) res))
       (set! xs (cdr xs)))
@@ -495,9 +495,9 @@
 (define (reverse!-iterative xs)
   (if (null? xs)
       '()
-      (let ((previous-list '())
-            (the-cons xs)
-            (following-list #f))
+      (let* ((previous-list '())
+             (the-cons xs)
+             (following-list #f))
         (while (not (null? the-cons))
           (set! following-list (cdr the-cons))
           (set-cdr! the-cons previous-list)
@@ -506,7 +506,7 @@
         previous-list)))
 
 (define (reverse!-tail-recursive-helper outer-cons non-null-inner-list)
-  (let ((old-non-null-inner-list-cdr (cdr non-null-inner-list)))
+  (let* ((old-non-null-inner-list-cdr (cdr non-null-inner-list)))
     ;; outer-cons: (A . non-null-inner-list) , actually (A . (B . ?))
     ;; non-null-inner-list: (B . ?)
     (set-cdr! non-null-inner-list outer-cons)
@@ -574,7 +574,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (flatten-reversed-iterative list-of-lists)
-  (let ((res '()))
+  (let* ((res '()))
     (while (non-null? list-of-lists)
       (set! res (append-iterative (car list-of-lists) res))
       (set! list-of-lists (cdr list-of-lists)))
@@ -599,7 +599,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (flatten-reversed!-iterative list-of-lists)
-  (let ((res '()))
+  (let* ((res '()))
     (while (non-null? list-of-lists)
       (set! res (append!-iterative (car list-of-lists) res))
       (set! list-of-lists (cdr list-of-lists)))
@@ -665,18 +665,17 @@
 (define (list-copy-iterative xs)
   (if (null? xs)
       '()
-      ;; We have no let* yet.
-      (let ((res (cons (car xs) #f)))
-        (let ((last-cons res)
-              (new-cons #f))
-          (set! xs (cdr xs))
-          (while (not (null? xs))
-            (set! new-cons (cons (car xs) #f))
-            (set-cdr! last-cons new-cons)
-            (set! last-cons new-cons)
-            (set! xs (cdr xs)))
-          (set-cdr! last-cons '())
-          res))))
+      (let* ((res (cons (car xs) #f))
+             (last-cons res)
+             (new-cons #f))
+        (set! xs (cdr xs))
+        (while (not (null? xs))
+          (set! new-cons (cons (car xs) #f))
+          (set-cdr! last-cons new-cons)
+          (set! last-cons new-cons)
+          (set! xs (cdr xs)))
+        (set-cdr! last-cons '())
+        res)))
 
 (define (list-copy-tail-recursive xs)
   (reverse!-tail-recursive (reverse-tail-recursive xs)))
@@ -710,7 +709,7 @@
 (define (nth-cons-or-nil-iterative n xs)
   ;; A break or return form would be useful here.  Even better I could also
   ;; iterate on an and condition, but we have no and macro yet.
-  (let ((go-on #t))
+  (let* ((go-on #t))
     (while go-on
       (cond ((zero? n)
              (set! go-on #f))
@@ -739,7 +738,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (nth-cons n xs)
-  (let ((c (nth-cons-or-nil n xs)))
+  (let* ((c (nth-cons-or-nil n xs)))
     (if (null? c)
         (error '(nth-cons: list too short))
         c)))
@@ -772,8 +771,8 @@
 
 ;; A break or return form would be useful here.
 (define (take-reversed-iterative n xs)
-  (let ((res '())
-        (go-on #t))
+  (let* ((res '())
+         (go-on #t))
     (while go-on
       (cond ((null? xs)
              (set! go-on #f))
@@ -788,7 +787,7 @@
   (reverse!-iterative (take-reversed-iterative n xs)))
 
 (define (take-tail-recursive n xs)
-  (reverse! (take-reversed-tail-recursive n xs)))
+  (reverse!-tail-recursive (take-reversed-tail-recursive n xs)))
 
 (define (take-non-tail-recursive n xs)
   (cond ((zero? n)
@@ -825,7 +824,7 @@
 (define (take!-iterative n xs)
   (if (zero? n)
       ()
-      (let ((n-1-th-cons-or-nil (nth-cons-or-nil-iterative (1- n) xs)))
+      (let* ((n-1-th-cons-or-nil (nth-cons-or-nil-iterative (1- n) xs)))
         (if (non-null? n-1-th-cons-or-nil)
             (set-cdr! n-1-th-cons-or-nil ()))
         xs)))
@@ -856,7 +855,7 @@
 
 ;; A break or return form would be useful here.
 (define (drop-iterative n xs)
-  (let ((go-on #t))
+  (let* ((go-on #t))
     (while go-on
       (cond ((null? xs)
              (set! go-on #f))
@@ -887,9 +886,9 @@
 (define (drop! n xs)
   (if (zero? n)
       xs
-      (let ((n-1-th-cons-or-nil (nth-cons-or-nil (1- n) xs)))
+      (let* ((n-1-th-cons-or-nil (nth-cons-or-nil (1- n) xs)))
         (if (non-null? n-1-th-cons-or-nil)
-            (let ((old-cdr (cdr n-1-th-cons-or-nil)))
+            (let* ((old-cdr (cdr n-1-th-cons-or-nil)))
               (set-cdr! n-1-th-cons-or-nil ())
               old-cdr)
             ()))))
@@ -942,15 +941,15 @@
         ((symbol? formals-template)
          ;; The macro template is dotted, or this is a recursive call on a
          ;; template car: in either case bind one variable to every actual.
-         `(let ((,formals-template ,component))
+         `(let* ((,formals-template ,component))
             ,@body-forms))
         ((cons? formals-template)
          ;; Bind both the car and the cdr.  For efficiency's sake name the two
          ;; sub-components in the generated code.
-         (let ((car-name (gensym))
-               (cdr-name (gensym)))
-           `(let ((,car-name (car ,component))
-                  (,cdr-name (cdr ,component)))
+         (let* ((car-name (gensym))
+                (cdr-name (gensym)))
+           `(let* ((,car-name (car ,component))
+                   (,cdr-name (cdr ,component)))
               ,(destructuring-bind-recursive
                   (car formals-template)
                   car-name
@@ -981,8 +980,8 @@
 ;;; This would return code binding a and b as local variable to the car and
 ;;; cadr of some-arguments, assumed to be bound, and display them.
 (define (destructuring-bind-procedure formals-template args body-forms)
-  (let ((args-value-name (gensym)))
-    `(let ((,args-value-name ,args))
+  (let* ((args-value-name (gensym)))
+    `(let* ((,args-value-name ,args))
        ,(destructuring-bind-recursive formals-template
                                       args-value-name
                                       body-forms))))
@@ -1003,9 +1002,9 @@
 ;;; evaluating the body forms with the bindings visible.
 (define destructuring-bind
   (low-level-macro
-    (let ((template (car low-level-macro-args))
-          (structure (cadr low-level-macro-args))
-          (body-forms (cddr low-level-macro-args)))
+    (let* ((template (car low-level-macro-args))
+           (structure (cadr low-level-macro-args))
+           (body-forms (cddr low-level-macro-args)))
       (destructuring-bind-procedure template structure body-forms))))
 
 
@@ -1020,8 +1019,8 @@
 ;;; macro name here.
 (define macro
   (low-level-macro
-    (let ((macro-formals (car low-level-macro-args))
-          (macro-body-forms (cdr low-level-macro-args)))
+    (let* ((macro-formals (car low-level-macro-args))
+           (macro-body-forms (cdr low-level-macro-args)))
       `(low-level-macro
          (destructuring-bind ,macro-formals
                              low-level-macro-args
@@ -1084,8 +1083,8 @@
 ;; FIXME: implement del-assq! .
 
 (define (alist-copy alist)
-  (let ((res '())
-        (first-cons #f))
+  (let* ((res '())
+         (first-cons #f))
     (while (non-null? alist)
       (set! first-cons (car alist))
       (set! res (cons (cons (car first-cons) (cdr first-cons)) res))
@@ -1093,7 +1092,7 @@
     (reverse! res)))
 
 (define (alist-get key alist)
-  (let ((a-cons (assq key alist)))
+  (let* ((a-cons (assq key alist)))
     (if (cons? a-cons)
         (cdr a-cons)
         (error `(alist-get: key ,key not found in alist ,alist)))))
@@ -1105,7 +1104,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (zip-reversed-iterative as bs)
-  (let ((res ()))
+  (let* ((res ()))
     (while (non-null? as)
       (if (null? bs)
           (error '(zip-reversed-iterative: first list longer))
@@ -1170,8 +1169,8 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (unzip-reversed-iterative as)
-  (let ((cars ())
-        (cdrs ()))
+  (let* ((cars ())
+         (cdrs ()))
     (while (non-null? as)
       (set! cars (cons (caar as) cars))
       (set! cdrs (cons (cdar as) cdrs))
@@ -1197,19 +1196,19 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (unzip-iterative as)
-  (let ((cons-reversed (unzip-reversed-iterative as)))
+  (let* ((cons-reversed (unzip-reversed-iterative as)))
     (cons (reverse! (car cons-reversed))
           (reverse! (cdr cons-reversed)))))
 
 (define (unzip-tail-recursive as)
-  (let ((cons-reversed (unzip-reversed-tail-recursive as)))
+  (let* ((cons-reversed (unzip-reversed-tail-recursive as)))
     (cons (reverse! (car cons-reversed))
           (reverse! (cdr cons-reversed)))))
 
 (define (unzip-non-tail-recursive as)
   (if (null? as)
       '(() . ())
-      (let ((unzipped-cdr (unzip-non-tail-recursive (cdr as))))
+      (let* ((unzipped-cdr (unzip-non-tail-recursive (cdr as))))
         (cons (cons (caar as) (car unzipped-cdr))
               (cons (cdar as) (cdr unzipped-cdr))))))
 
@@ -1223,7 +1222,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (map!-iterative f xs)
-  (let ((res xs))
+  (let* ((res xs))
     (while (not (null? xs))
       (set-car! xs (f (car xs)))
       (set! xs (cdr xs)))
@@ -1249,7 +1248,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (map-reversed-iterative f xs)
-  (let ((res '()))
+  (let* ((res '()))
     (while (not (null? xs))
       (set! res (cons (f (car xs)) res))
       (set! xs (cdr xs)))
@@ -1371,8 +1370,8 @@
 
 ;; FIXME: a return form would also be nice here.
 (define (exists?-iterative p xs)
-  (let ((res #f)
-        (go-on #t))
+  (let* ((res #f)
+         (go-on #t))
     (while go-on
       (cond ((null? xs)
              (set! go-on #f))
@@ -1403,8 +1402,8 @@
 
 ;; FIXME: a return form would be nice here.
 (define (for-all?-iterative p xs)
-  (let ((res #t)
-        (go-on #t))
+  (let* ((res #t)
+         (go-on #t))
     (while go-on
       (cond ((null? xs)
              (set! go-on #f))
@@ -1432,7 +1431,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (filter-reversed-iterative p xs)
-  (let ((res '()))
+  (let* ((res '()))
     (while (not (null? xs))
       (if (p (car xs))
           (set! res (cons (car xs) res))
@@ -1478,7 +1477,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (range-reversed-iterative a b)
-  (let ((res '()))
+  (let* ((res '()))
     (while (<= a b)
       (set! res (cons a res))
       (set! a (1+ a)))
@@ -1511,7 +1510,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (range-iterative a b)
-  (let ((res '()))
+  (let* ((res '()))
     (while (<= a b)
       (set! res (cons b res))
       (set! b (1- b)))
@@ -1539,7 +1538,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (iota-iterative n)
-  (let ((res '()))
+  (let* ((res '()))
     (while (> n 0)
       (set! n (1- n))
       (set! res (cons n res)))
@@ -1572,8 +1571,8 @@
 
 ;;; FIXME: a return or break form would be nice here.
 (define (insert-iterative x xs)
-  (let ((smaller-elements-reversed '())
-        (go-on #t))
+  (let* ((smaller-elements-reversed '())
+         (go-on #t))
     (while go-on
       (cond ((null? xs)
              (set! go-on #f))
@@ -1622,17 +1621,17 @@
 
 ;;; Destructively turn (A . B) into (x . (A . B)).
 (define (insert-as-first! x a-cons)
-  (let ((new-cons (cons (car a-cons) (cdr a-cons))))
+  (let* ((new-cons (cons (car a-cons) (cdr a-cons))))
     (set-car! a-cons x)
     (set-cdr! a-cons new-cons)))
 
 ;;; Destructively turn (A . B) into (A . (x . B)).
 (define (insert-as-second! x a-cons)
-  (let ((new-cons (cons x (cdr a-cons))))
+  (let* ((new-cons (cons x (cdr a-cons))))
     (set-cdr! a-cons new-cons)))
 
 (define (insert!-iterative-non-null x xs)
-  (let ((go-on #t))
+  (let* ((go-on #t))
     (while go-on
       ;; Here I can still assume that xs is not ().
       (cond ((< x (car xs))
@@ -1676,7 +1675,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (insertion-sort-iterative xs)
-  (let ((res '()))
+  (let* ((res '()))
     (while (not (null? xs))
       (set! res (insert!-iterative (car xs) res))
       (set! xs (cdr xs)))
@@ -1744,14 +1743,14 @@
 
 (define (iterate-iterative-post f n)
   (lambda (x)
-    (let ((n n))
+    (let* ((n n))
       (while (> n 0)
         (set! x (f x))
         (set! n (1- n)))
       x)))
 
 (define (iterate-iterative-pre f n)
-  (let ((res identity))
+  (let* ((res identity))
     (while (> n 0)
       (set! res (compose res f))
       (set! n (1- n)))
@@ -1778,7 +1777,7 @@
          ;; when the iterated function is eventually called.
          f)
         ((even? n)
-         (let ((f^n/2 (iterate-squaring-pre f (quotient n 2))))
+         (let* ((f^n/2 (iterate-squaring-pre f (quotient n 2))))
            (square-function f^n/2)))
         (#t
          (compose f (iterate-squaring-pre f (1- n))))))
@@ -1861,15 +1860,33 @@
 
 
 
-;;;; High-level syntax: let*.
+;;;; High-level syntax: let.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-macro (let* bindings . body-forms)
-  (if (null? bindings)
-      `(begin ,@body-forms)
-      `(let ((,(caar bindings) ,@(cdar bindings)))
-         (let* ,(cdr bindings)
-           ,@body-forms))))
+;;; Rewrite something like
+;;;   (let ((a 1) (b 2) foo))
+;;; into something like
+;;;   (let* ((fresh-1 1) (fresh-2 2) (a fresh-1) (b fresh-2)) foo)
+;;; .  The redundant bindings will be optimized away by AST rewriting.
+(define-macro (let bindings . body-forms)
+  (let* ((fresh-variables (map (lambda (irrelevant) (gensym))
+                               bindings))
+         (fresh-variable-bindings (zip fresh-variables
+                                       (map cdr bindings)))
+         (user-variable-bindings (zip (map car bindings)
+                                      (map singleton fresh-variables))))
+    `(let* ,(append fresh-variable-bindings
+                    user-variable-bindings)
+       ,@body-forms)))
+
+;;; Optimization [FIXME: remove this when I implement AST rewriting]:
+;;; Translate a one-binding let into a one-binding let*.  There's no need for a
+;;; special case for a zero-binding let.
+(define unoptimized-let let)
+(define-macro (let bindings . body-forms)
+  (if (= (length bindings) 1)
+      `(let* ,bindings ,@body-forms)
+      `(unoptimized-let ,bindings ,@body-forms)))
 
 
 
@@ -1878,8 +1895,8 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-macro (letrec bindings . body-forms)
-  `(let ,(map (lambda (binding) `(,(car binding) (undefined)))
-              bindings)
+  `(let* ,(map (lambda (binding) `(,(car binding) (undefined)))
+               bindings)
      ,@(map (lambda (binding) `(set! ,(car binding) ,@(cdr binding)))
             bindings)
      ,@body-forms))
@@ -1901,24 +1918,22 @@
 ;;;; High-level syntax: Scheme-style let, either named or not.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Redefine let form to expand to either the primordial let or named-let,
-;;; according to the shape of the first argument.  In order to do this we first
-;;; have to save the oridinal let macro implemented in C, to be reused in one of
+;;; Redefine the let form to expand to either the previously defined let form or
+;;; named-let, according to the shape of the first argument.  In order to do
+;;; this we first have to save the previous let macro, to be reused in one of
 ;;; the two cases.
-(define primordial-let
+(define previous-let
   let)
 (define-macro (let first-argument . other-arguments)
   (if (symbol? first-argument)
       `(named-let ,first-argument ,@other-arguments)
-      `(primordial-let ,first-argument ,@other-arguments)))
+      `(previous-let ,first-argument ,@other-arguments)))
 
 
 
 
 ;;;; Variadic list operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; These need to come here, as they rely on let* .
 
 (define-macro (improper-list final-element . other-elements)
   (if (null? other-elements)
@@ -1930,8 +1945,8 @@
   `(improper-list () ,@elements))
 
 (define-macro (circular-list first-element . other-elements)
-  (let ((res-name (gensym))
-        (cdr-name (gensym)))
+  (let* ((res-name (gensym))
+         (cdr-name (gensym)))
     `(let* ((,res-name (cons ,first-element #f))
             (,cdr-name (improper-list ,res-name ,@other-elements)))
        (set-cdr! ,res-name ,cdr-name)
@@ -1992,8 +2007,8 @@
 
 (define-macro (dotimes (variable limit . result-forms) . body-forms)
   (let ((limit-name (gensym)))
-    `(let ((,limit-name ,limit)
-           (,variable 0))
+    `(let* ((,limit-name ,limit)
+            (,variable 0))
        (while (< ,variable ,limit-name)
          ,@body-forms
          (set! ,variable (1+ ,variable)))
@@ -2009,9 +2024,9 @@
 
 (define-macro (dolist (variable list . result-forms) . body-forms)
   (let ((list-name (gensym)))
-    `(let ((,list-name ,list)
-           ;; This is currently faster than binding ,variable inside the loop.
-           (,variable (undefined)))
+    `(let* ((,list-name ,list)
+            ;; This is currently faster than binding ,variable inside the loop.
+            (,variable (undefined)))
        (while (non-null? ,list-name)
          (set! ,variable (car ,list-name))
          ,@body-forms

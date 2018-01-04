@@ -82,8 +82,8 @@ jitterlisp_object
 jitterlisp_primitive_macro_function_lambda (jitterlisp_object cdr,
                                             jitterlisp_object env);
 jitterlisp_object
-jitterlisp_primitive_macro_function_let (jitterlisp_object cdr,
-                                         jitterlisp_object env);
+jitterlisp_primitive_macro_function_let_star (jitterlisp_object cdr,
+                                              jitterlisp_object env);
 jitterlisp_object
 jitterlisp_primitive_macro_function_begin (jitterlisp_object cdr,
                                            jitterlisp_object env);

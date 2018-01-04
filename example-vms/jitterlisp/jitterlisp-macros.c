@@ -438,14 +438,38 @@ jitterlisp_bindings_get_bound_asts (jitterlisp_object bindings,
   return jitterlisp_cons (bound_ast, cdr_bound_asts);
 }
 
+/* Return a tagged AST encoding a let* having the given bound symbols with their
+   respective bound_asts (assumed to be lists of the right type of elements, of
+   the same length) with the given body. */
+static jitterlisp_object
+jitterlisp_primitive_macro_function_let_star_helper
+   (jitterlisp_object bound_symbols,
+    jitterlisp_object bound_asts,
+    jitterlisp_object body_ast)
+{
+  if (JITTERLISP_IS_EMPTY_LIST(bound_symbols))
+    return body_ast;
+  else
+    {
+      jitterlisp_object inner_ast
+        = jitterlisp_primitive_macro_function_let_star_helper
+             (JITTERLISP_EXP_C_A_CDR(bound_symbols),
+              JITTERLISP_EXP_C_A_CDR(bound_asts),
+              body_ast);
+      return jitterlisp_ast_make_let (JITTERLISP_EXP_C_A_CAR(bound_symbols),
+                                      JITTERLISP_EXP_C_A_CAR(bound_asts),
+                                      inner_ast);
+    }
+}
+
 jitterlisp_object
-jitterlisp_primitive_macro_function_let (jitterlisp_object cdr,
-                                         jitterlisp_object env)
+jitterlisp_primitive_macro_function_let_star (jitterlisp_object cdr,
+                                              jitterlisp_object env)
 {
   /* Start by holding the binging list and the body form list in automatic C
      variables, everything unexpanded. */
   if (! JITTERLISP_IS_CONS(cdr))
-    jitterlisp_error_cloned ("let: invalid cdr");
+    jitterlisp_error_cloned ("let*: invalid cdr");
   jitterlisp_object bindings = JITTERLISP_EXP_C_A_CAR(cdr);
   jitterlisp_object body_forms = JITTERLISP_EXP_C_A_CDR(cdr);
 
@@ -459,12 +483,10 @@ jitterlisp_primitive_macro_function_let (jitterlisp_object cdr,
   /* Expand the body as well, and I have every component for the let AST. */
   jitterlisp_object body_ast = jitterlisp_macroexpand_begin (body_forms, env);
 
-  /* Optimization: if there are zero bindings just return the body AST,
-     without wrapping it in a useless let shell. */
-  if (JITTERLISP_IS_EMPTY_LIST(bound_symbols))
-    return body_ast;
-  else
-    return jitterlisp_ast_make_let (bound_symbols, bound_asts, body_ast);
+  /* Build the AST recursively, with one form per binding. */
+  return jitterlisp_primitive_macro_function_let_star_helper (bound_symbols,
+                                                              bound_asts,
+                                                              body_ast);
 }
 
 jitterlisp_object

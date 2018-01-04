@@ -200,21 +200,14 @@ jitterlisp_eval_interpreter_ast (jitterlisp_object o,
 
     case jitterlisp_ast_case_let:
       {
-        /* Evaluate each binding in env, but at the same time build another
-           environment equal to env extended it with the new bindings. */
-        jitterlisp_object body_env = env;
-        int i;
-        const int binding_no = sub_no - 1;
-        for (i = 0; i < binding_no; i += 2)
-          {
-            jitterlisp_object bound_value =
-              jitterlisp_eval_interpreter_ast (subs [i + 1], env);
-            body_env
-              = jitterlisp_environment_bind (body_env, subs [i], bound_value);
-          }
+        /* Evaluate the bound form in env, then bind its result to the bound
+           variable in the current environment. */
+        jitterlisp_object bound_value =
+          jitterlisp_eval_interpreter_ast (subs [1], env);
+        env = jitterlisp_environment_bind (env, subs [0], bound_value);
 
         /* Evaluate the body in the extended environment. */
-        return jitterlisp_eval_interpreter_ast (subs [sub_no - 1], body_env);
+        return jitterlisp_eval_interpreter_ast (subs [2], env);
       }
 
     case jitterlisp_ast_case_sequence:

@@ -69,9 +69,8 @@ enum jitterlisp_ast_case
        making closure initialization faster. */
     jitterlisp_ast_case_lambda,
 
-    /* Parallel-binding let.  Two subs per binding (a symbol for the variable,
-       an AST for the bound expression, alternated in this order) followed by
-       one AST for the body. */
+    /* One-binding let.  Exactly three subs: one symbol for the variable, one
+       AST for the bound expression, one AST for the body. */
     jitterlisp_ast_case_let,
 
     /* Sequence.  Exactly two AST subs. */
@@ -134,8 +133,8 @@ jitterlisp_object
 jitterlisp_ast_make_lambda (jitterlisp_object formal_symbols,
                             jitterlisp_object body_ast);
 jitterlisp_object
-jitterlisp_ast_make_let (jitterlisp_object bound_symbols,
-                         jitterlisp_object bound_asts,
+jitterlisp_ast_make_let (jitterlisp_object bound_symbol,
+                         jitterlisp_object bound_ast,
                          jitterlisp_object body_ast);
 jitterlisp_object
 jitterlisp_ast_make_sequence (jitterlisp_object ast_0,
