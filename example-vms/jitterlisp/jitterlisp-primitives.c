@@ -391,6 +391,51 @@ JITTERLISP_PRIMITIVE_FUNCTION_3_(ast_let, ANYTHING, ANYTHING, ANYTHING,
   { JITTERLISP_AST_LET_(res, args [0], args [1], args [2]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(ast_sequence, ANYTHING, ANYTHING,
   { JITTERLISP_AST_SEQUENCE_(res, args [0], args [1]); })
+/* AST access operations. */
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_literal_value, AST,
+  { JITTERLISP_AST_LITERAL_VALUE_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_variable_name, AST,
+  { JITTERLISP_AST_VARIABLE_NAME_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_define_name, AST,
+  { JITTERLISP_AST_DEFINE_NAME_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_define_body, AST,
+  { JITTERLISP_AST_DEFINE_BODY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_if_condition, AST,
+  { JITTERLISP_AST_IF_CONDITION_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_if_then, AST,
+  { JITTERLISP_AST_IF_THEN_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_if_else, AST,
+  { JITTERLISP_AST_IF_ELSE_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_setb_name, AST,
+  { JITTERLISP_AST_SETB_NAME_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_setb_body, AST,
+  { JITTERLISP_AST_SETB_BODY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_while_guard, AST,
+  { JITTERLISP_AST_WHILE_GUARD_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_while_body, AST,
+  { JITTERLISP_AST_WHILE_BODY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_primitive_operator, AST,
+  { JITTERLISP_AST_PRIMITIVE_OPERATOR_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_primitive_operands, AST,
+  { JITTERLISP_AST_PRIMITIVE_OPERANDS_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_call_operator, AST,
+  { JITTERLISP_AST_CALL_OPERATOR_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_call_operands, AST,
+  { JITTERLISP_AST_CALL_OPERANDS_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_lambda_formals, AST,
+  { JITTERLISP_AST_LAMBDA_FORMALS_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_lambda_body, AST,
+  { JITTERLISP_AST_LAMBDA_BODY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_let_bound_variable, AST,
+  { JITTERLISP_AST_LET_BOUND_VARIABLE_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_let_bound_form, AST,
+  { JITTERLISP_AST_LET_BOUND_FORM_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_let_body, AST,
+  { JITTERLISP_AST_LET_BODY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_sequence_first, AST,
+  { JITTERLISP_AST_SEQUENCE_FIRST_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_sequence_second, AST,
+  { JITTERLISP_AST_SEQUENCE_SECOND_(res, args [0]); })
 /* Interpretation operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(macroexpand, ANYTHING, ALIST,
   { JITTERLISP_MACROEXPAND_(res, args [0], args [1]); })
@@ -511,6 +556,29 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-lambda", 2, ast_lambda),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-let", 3, ast_let),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-sequence", 2, ast_sequence),
+      /* AST access operations. */
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-literal-value", 1, ast_literal_value),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-variable-name", 1, ast_variable_name),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-define-name", 1, ast_define_name),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-define-body", 1, ast_define_body),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-if-condition", 1, ast_if_condition),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-if-then", 1, ast_if_then),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-if-else", 1, ast_if_else),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-set!-name", 1, ast_setb_name),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-set!-body", 1, ast_setb_body),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-while-guard", 1, ast_while_guard),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-while-body", 1, ast_while_body),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-primitive-operator", 1, ast_primitive_operator),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-primitive-operands", 1, ast_primitive_operands),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-call-operator", 1, ast_call_operator),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-call-operands", 1, ast_call_operands),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-lambda-formals", 1, ast_lambda_formals),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-lambda-body", 1, ast_lambda_body),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-let-bound-variable", 1, ast_let_bound_variable),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-let-bound-form", 1, ast_let_bound_form),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-let-body", 1, ast_let_body),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-sequence-first", 1, ast_sequence_first),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-sequence-second", 1, ast_sequence_second),
       /* Interpretation operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-macroexpand", 2,
                                              macroexpand),

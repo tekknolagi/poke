@@ -788,6 +788,156 @@
 
 
 
+/* AST operations.
+ * ************************************************************************** */
+
+/* AST case checking. */
+#define JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0,           \
+                              _jitterlisp_lowercase_case_name)            \
+  JITTER_BEGIN_                                                           \
+    bool _jitterlisp_right_case                                           \
+      = (JITTERLISP_AST_DECODE(_jitterlisp_in0)->case_                    \
+         == JITTER_CONCATENATE_TWO(jitterlisp_ast_case_,                  \
+                                   _jitterlisp_lowercase_case_name));     \
+    _jitterlisp_out = JITTERLISP_BOOLEAN_ENCODE(_jitterlisp_right_case);  \
+  JITTER_END_
+#define JITTERLISP_AST_LITERALP_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0, literal)
+#define JITTERLISP_AST_VARIABLEP_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0, variable)
+#define JITTERLISP_AST_DEFINEP_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0, define)
+#define JITTERLISP_AST_IFP_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0, if)
+#define JITTERLISP_AST_SETBP_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0, setb)
+#define JITTERLISP_AST_WHILEP_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0, while)
+#define JITTERLISP_AST_PRIMITIVEP_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0, primitive)
+#define JITTERLISP_AST_CALLP_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0, call)
+#define JITTERLISP_AST_LAMBDAP_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0, lambda)
+#define JITTERLISP_AST_LETP_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0, let)
+#define JITTERLISP_AST_SEQUENCEP_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_CASEP_(_jitterlisp_out, _jitterlisp_in0, sequence)
+
+/* AST construction. */
+#define JITTERLISP_AST_MAKE_(_jitterlisp_lowercase_case_name,     \
+                             _jitterlisp_out, ...)                \
+  JITTER_BEGIN_                                                   \
+    _jitterlisp_out                                               \
+      = JITTER_CONCATENATE_TWO(jitterlisp_ast_make_,              \
+                               _jitterlisp_lowercase_case_name)(  \
+           __VA_ARGS__);                                          \
+  JITTER_END_
+#define JITTERLISP_AST_LITERAL_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_MAKE_(literal, _jitterlisp_out, _jitterlisp_in0)
+#define JITTERLISP_AST_VARIABLE_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_MAKE_(variable, _jitterlisp_out, _jitterlisp_in0)
+#define JITTERLISP_AST_DEFINE_(_jitterlisp_out, _jitterlisp_in0,  \
+                               _jitterlisp_in1)                   \
+  JITTERLISP_AST_MAKE_(define, _jitterlisp_out, _jitterlisp_in0,  \
+                       _jitterlisp_in1)
+#define JITTERLISP_AST_IF_(_jitterlisp_out, _jitterlisp_in0,  \
+                           _jitterlisp_in1, _jitterlisp_in2)  \
+  JITTERLISP_AST_MAKE_(if, _jitterlisp_out, _jitterlisp_in0,  \
+                       _jitterlisp_in1, _jitterlisp_in2)
+#define JITTERLISP_AST_SETB_(_jitterlisp_out, _jitterlisp_in0,  \
+                             _jitterlisp_in1)                   \
+  JITTERLISP_AST_MAKE_(setb, _jitterlisp_out, _jitterlisp_in0,  \
+                       _jitterlisp_in1)
+#define JITTERLISP_AST_WHILE_(_jitterlisp_out, _jitterlisp_in0,  \
+                              _jitterlisp_in1)                   \
+  JITTERLISP_AST_MAKE_(while, _jitterlisp_out, _jitterlisp_in0,  \
+                       _jitterlisp_in1)
+#define JITTERLISP_AST_PRIMITIVE_(_jitterlisp_out, _jitterlisp_in0,  \
+                                  _jitterlisp_in1)                   \
+  JITTERLISP_AST_MAKE_(primitive, _jitterlisp_out, _jitterlisp_in0,  \
+                       _jitterlisp_in1)
+#define JITTERLISP_AST_CALL_(_jitterlisp_out, _jitterlisp_in0,  \
+                             _jitterlisp_in1)                   \
+  JITTERLISP_AST_MAKE_(call, _jitterlisp_out, _jitterlisp_in0,  \
+                       _jitterlisp_in1)
+#define JITTERLISP_AST_LAMBDA_(_jitterlisp_out, _jitterlisp_in0,  \
+                               _jitterlisp_in1)                   \
+  JITTERLISP_AST_MAKE_(lambda, _jitterlisp_out, _jitterlisp_in0,  \
+                       _jitterlisp_in1)
+#define JITTERLISP_AST_LET_(_jitterlisp_out, _jitterlisp_in0,  \
+                            _jitterlisp_in1, _jitterlisp_in2)  \
+  JITTERLISP_AST_MAKE_(let, _jitterlisp_out, _jitterlisp_in0,  \
+                       _jitterlisp_in1, _jitterlisp_in2)
+#define JITTERLISP_AST_SEQUENCE_(_jitterlisp_out, _jitterlisp_in0,  \
+                                 _jitterlisp_in1)                   \
+  JITTERLISP_AST_MAKE_(sequence, _jitterlisp_out, _jitterlisp_in0,  \
+                       _jitterlisp_in1)
+
+/* AST accessors. */
+#define JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0,        \
+                            _jitterlisp_sub_index,                   \
+                            _jitterlisp_lowercase_case_name)         \
+  JITTER_BEGIN_                                                      \
+    struct jitterlisp_ast *_jitterlisp_decoded_ast                   \
+      = JITTERLISP_AST_DECODE(_jitterlisp_in0);                      \
+    if (_jitterlisp_decoded_ast->case_                               \
+        != JITTER_CONCATENATE_TWO(jitterlisp_ast_case_,              \
+                                  _jitterlisp_lowercase_case_name))  \
+      jitterlisp_error_cloned                                        \
+         ("invalid AST case: non-"                                   \
+          JITTER_STRINGIFY(_jitterlisp_lowercase_case_name));        \
+    _jitterlisp_out                                                  \
+      = _jitterlisp_decoded_ast->subs[_jitterlisp_sub_index];        \
+  JITTER_END_
+#define JITTERLISP_AST_LITERAL_VALUE_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, literal)
+#define JITTERLISP_AST_VARIABLE_NAME_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, variable)
+#define JITTERLISP_AST_DEFINE_NAME_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, define)
+#define JITTERLISP_AST_DEFINE_BODY_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, define)
+#define JITTERLISP_AST_IF_CONDITION_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, if)
+#define JITTERLISP_AST_IF_THEN_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, if)
+#define JITTERLISP_AST_IF_ELSE_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 2, if)
+#define JITTERLISP_AST_SETB_NAME_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, setb)
+#define JITTERLISP_AST_SETB_BODY_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, setb)
+#define JITTERLISP_AST_WHILE_GUARD_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, while)
+#define JITTERLISP_AST_WHILE_BODY_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, while)
+#define JITTERLISP_AST_PRIMITIVE_OPERATOR_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, primitive)
+#define JITTERLISP_AST_PRIMITIVE_OPERANDS_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, primitive)
+#define JITTERLISP_AST_CALL_OPERATOR_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, call)
+#define JITTERLISP_AST_CALL_OPERANDS_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, call)
+#define JITTERLISP_AST_LAMBDA_FORMALS_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, lambda)
+#define JITTERLISP_AST_LAMBDA_BODY_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, lambda)
+#define JITTERLISP_AST_LET_BOUND_VARIABLE_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, let)
+#define JITTERLISP_AST_LET_BOUND_FORM_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, let)
+#define JITTERLISP_AST_LET_BODY_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 2, let)
+#define JITTERLISP_AST_SEQUENCE_FIRST_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, sequence)
+#define JITTERLISP_AST_SEQUENCE_SECOND_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, sequence)
+
+
+
+
 /* Interpretation operations.
  * ************************************************************************** */
 
