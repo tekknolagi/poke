@@ -170,7 +170,7 @@ void
 jitterlisp_validate_primitive (jitterlisp_object o)
 {
   if (! JITTERLISP_IS_PRIMITIVE(o))
-    jitterlisp_error_cloned ("jitterlisp_validate_primitive: non-symbol argument");
+    jitterlisp_error_cloned ("jitterlisp_validate_primitive: non-primitive argument");
 }
 
 void
