@@ -129,14 +129,18 @@ jitterlisp_ast_make_while (jitterlisp_object condition_ast,
 }
 
 jitterlisp_object
-jitterlisp_ast_make_primitive (jitterlisp_object primitive_symbol,
+jitterlisp_ast_make_primitive (jitterlisp_object primitive_object,
                                jitterlisp_object actual_asts)
 {
-  jitterlisp_validate_primitive (primitive_symbol);
+  jitterlisp_validate_primitive (primitive_object);
   jitterlisp_validate_asts (actual_asts);
   size_t actual_no = jitterlisp_length (actual_asts);
+  struct jitterlisp_primitive *p
+    = JITTERLISP_PRIMITIVE_DECODE(primitive_object);
+  if (p->in_arity != actual_no)
+    jitterlisp_error_cloned ("jitterlisp_ast_make_primitive: invalid in-arity");
   JITTERLISP_MAKE_LOCALS_(jitterlisp_ast_case_primitive, actual_no + 1);
-  subs [0] = primitive_symbol;
+  subs [0] = primitive_object;
   int i;
   for (i = 0; i < actual_no; i ++)
     {

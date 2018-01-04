@@ -127,7 +127,7 @@ jitterlisp_object
 jitterlisp_ast_make_while (jitterlisp_object condition_ast,
                            jitterlisp_object body_ast);
 jitterlisp_object
-jitterlisp_ast_make_primitive (jitterlisp_object primitive_symbol,
+jitterlisp_ast_make_primitive (jitterlisp_object primitive_object,
                                jitterlisp_object actual_asts);
 jitterlisp_object
 jitterlisp_ast_make_call (jitterlisp_object operator_ast,
