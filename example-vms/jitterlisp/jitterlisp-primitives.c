@@ -334,6 +334,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(make_constant, SYMBOL,
   { JITTERLISP_MAKE_CONSTANT_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(definedp, SYMBOL,
   { JITTERLISP_DEFINEDP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(undefine, SYMBOL,
+  { JITTERLISP_UNDEFINE_(res, args [0]); })
 /* Vector operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
   { JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]); })
@@ -426,8 +428,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_lambda_formals, AST,
   { JITTERLISP_AST_LAMBDA_FORMALS_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_lambda_body, AST,
   { JITTERLISP_AST_LAMBDA_BODY_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_let_bound_variable, AST,
-  { JITTERLISP_AST_LET_BOUND_VARIABLE_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_let_bound_name, AST,
+  { JITTERLISP_AST_LET_BOUND_NAME_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_let_bound_form, AST,
   { JITTERLISP_AST_LET_BOUND_FORM_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_let_body, AST,
@@ -526,6 +528,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("constant?", 1, constantp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-constant", 1, make_constant),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("defined?", 1, definedp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("undefine", 1, undefine),
       /* Vector operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */
@@ -574,7 +577,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-call-operands", 1, ast_call_operands),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-lambda-formals", 1, ast_lambda_formals),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-lambda-body", 1, ast_lambda_body),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-let-bound-variable", 1, ast_let_bound_variable),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-let-bound-name", 1, ast_let_bound_name),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-let-bound-form", 1, ast_let_bound_form),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-let-body", 1, ast_let_body),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-sequence-first", 1, ast_sequence_first),

@@ -527,6 +527,17 @@
                                   != JITTERLISP_UNDEFINED);  \
   JITTER_END_
 
+#define JITTERLISP_UNDEFINE_(_jitterlisp_out,              \
+                             _jitterlisp_in0)              \
+  JITTER_BEGIN_                                            \
+    struct jitterlisp_symbol *_jitterlisp_tmp              \
+      = JITTERLISP_SYMBOL_DECODE(_jitterlisp_in0);         \
+    if (_jitterlisp_tmp->global_constant)                  \
+      jitterlisp_error_cloned ("undefining constant");     \
+    _jitterlisp_tmp->global_value = JITTERLISP_UNDEFINED;  \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;                \
+  JITTER_END_
+
 
 
 
@@ -890,6 +901,12 @@
     _jitterlisp_out                                                  \
       = _jitterlisp_decoded_ast->subs[_jitterlisp_sub_index];        \
   JITTER_END_
+#define JITTERLISP_AST_GET_OPERANDS_(_jitterlisp_out, _jitterlisp_in0,        \
+                                     _jitterlisp_lowercase_case_name)         \
+  JITTER_BEGIN_                                                      \
+    jitterlisp_error_cloned                                        \
+       ("JITTERLISP_AST_GET_OPERANDS_: not unimplemented yet");      \
+  JITTER_END_
 #define JITTERLISP_AST_LITERAL_VALUE_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, literal)
 #define JITTERLISP_AST_VARIABLE_NAME_(_jitterlisp_out, _jitterlisp_in0)  \
@@ -915,16 +932,16 @@
 #define JITTERLISP_AST_PRIMITIVE_OPERATOR_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, primitive)
 #define JITTERLISP_AST_PRIMITIVE_OPERANDS_(_jitterlisp_out, _jitterlisp_in0)  \
-  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, primitive)
+  JITTERLISP_AST_GET_OPERANDS_(_jitterlisp_out, _jitterlisp_in0, primitive)
 #define JITTERLISP_AST_CALL_OPERATOR_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, call)
 #define JITTERLISP_AST_CALL_OPERANDS_(_jitterlisp_out, _jitterlisp_in0)  \
-  JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, call)
+  JITTERLISP_AST_GET_OPERANDS_(_jitterlisp_out, _jitterlisp_in0, call)
 #define JITTERLISP_AST_LAMBDA_FORMALS_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, lambda)
 #define JITTERLISP_AST_LAMBDA_BODY_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, lambda)
-#define JITTERLISP_AST_LET_BOUND_VARIABLE_(_jitterlisp_out, _jitterlisp_in0)  \
+#define JITTERLISP_AST_LET_BOUND_NAME_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 0, let)
 #define JITTERLISP_AST_LET_BOUND_FORM_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTERLISP_AST_GET_(_jitterlisp_out, _jitterlisp_in0, 1, let)

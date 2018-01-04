@@ -749,19 +749,19 @@
 ;;;; nth.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (nth-iterative n xs)
+(define (nth-iterative xs n)
   (while (non-zero? n)
     (set! xs (cdr xs))
     (set! n (1- n)))
   (car xs))
 
-(define (nth-tail-recursive n xs)
+(define (nth-tail-recursive xs n)
   (if (zero? n)
       (car xs)
-      (nth-tail-recursive (1- n) (cdr xs))))
+      (nth-tail-recursive (cdr xs) (1- n))))
 
-(define (nth n xs)
-  (nth-iterative n xs))
+(define (nth xs n)
+  (nth-iterative xs n))
 
 
 
@@ -770,7 +770,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; A break or return form would be useful here.
-(define (take-reversed-iterative n xs)
+(define (take-reversed-iterative xs n)
   (let* ((res '())
          (go-on #t))
     (while go-on
@@ -783,37 +783,37 @@
              (set! xs (cdr xs))
              (set! n (1- n)))))
     res))
-(define (take-iterative n xs)
-  (reverse!-iterative (take-reversed-iterative n xs)))
+(define (take-iterative xs n)
+  (reverse!-iterative (take-reversed-iterative xs n)))
 
-(define (take-tail-recursive n xs)
-  (reverse!-tail-recursive (take-reversed-tail-recursive n xs)))
+(define (take-tail-recursive xs n)
+  (reverse!-tail-recursive (take-reversed-tail-recursive xs n)))
 
-(define (take-non-tail-recursive n xs)
+(define (take-non-tail-recursive xs n)
   (cond ((zero? n)
          '())
         ((null? xs)
          '())
         (#t
-         (cons (car xs) (take-non-tail-recursive (1- n) (cdr xs))))))
+         (cons (car xs) (take-non-tail-recursive (cdr xs) (1- n))))))
 
-(define (take-reversed-tail-recursive-helper n xs acc)
+(define (take-reversed-tail-recursive-helper xs n acc)
   (cond ((zero? n)
          acc)
         ((null? xs)
          acc)
         (#t
-         (take-reversed-tail-recursive-helper (1- n)
-                                              (cdr xs)
+         (take-reversed-tail-recursive-helper (cdr xs)
+                                              (1- n)
                                               (cons (car xs) acc)))))
-(define (take-reversed-tail-recursive n xs)
-  (take-reversed-tail-recursive-helper n xs '()))
+(define (take-reversed-tail-recursive xs n)
+  (take-reversed-tail-recursive-helper xs n '()))
 
-(define (take-reversed n xs)
-  (take-reversed-iterative n xs))
+(define (take-reversed xs n)
+  (take-reversed-iterative xs n))
 
-(define (take n xs)
-  (take-iterative n xs))
+(define (take xs n)
+  (take-iterative xs n))
 
 
 
@@ -821,7 +821,7 @@
 ;;;; take!
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (take!-iterative n xs)
+(define (take!-iterative xs n)
   (if (zero? n)
       ()
       (let* ((n-1-th-cons-or-nil (nth-cons-or-nil-iterative (1- n) xs)))
@@ -829,23 +829,23 @@
             (set-cdr! n-1-th-cons-or-nil ()))
         xs)))
 
-(define (take!-tail-recursive-helper n xs)
+(define (take!-tail-recursive-helper xs n)
   (cond ((= n 1)
          (if (null? xs)
              'do-nothing
              (set-cdr! xs '())))
         ((null? xs))
         (#t
-         (take!-tail-recursive-helper (1- n) (cdr xs)))))
-(define (take!-tail-recursive n xs)
+         (take!-tail-recursive-helper (cdr xs) (1- n)))))
+(define (take!-tail-recursive xs n)
   (if (zero? n)
       '()
       (begin
-        (take!-tail-recursive-helper n xs)
+        (take!-tail-recursive-helper xs n)
         xs)))
 
-(define (take! n xs)
-  (take!-iterative n xs))
+(define (take! xs n)
+  (take!-iterative xs n))
 
 
 
@@ -854,7 +854,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; A break or return form would be useful here.
-(define (drop-iterative n xs)
+(define (drop-iterative xs n)
   (let* ((go-on #t))
     (while go-on
       (cond ((null? xs)
@@ -866,16 +866,16 @@
              (set! n (1- n)))))
     xs))
 
-(define (drop-tail-recursive n xs)
+(define (drop-tail-recursive xs n)
   (cond ((zero? n)
          xs)
         ((null? xs)
          '())
         (#t
-         (drop-tail-recursive (1- n) (cdr xs)))))
+         (drop-tail-recursive (cdr xs) (1- n)))))
 
-(define (drop n xs)
-  (drop-iterative n xs))
+(define (drop xs n)
+  (drop-iterative xs n))
 
 
 
@@ -883,7 +883,7 @@
 ;;;; drop!.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (drop! n xs)
+(define (drop! xs n)
   (if (zero? n)
       xs
       (let* ((n-1-th-cons-or-nil (nth-cons-or-nil (1- n) xs)))
@@ -2127,7 +2127,116 @@
 
 
 
-;;;; Tentative functionality, just for fun: streams.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Sets as lists.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Sets implemented as unordered lists without duplicates, elements compared
+;;; with eq? .
+
+(define (set-has? xs x)
+  (and (non-null? xs)
+       (or (eq? (car xs) x)
+           (set-has? (cdr xs) x))))
+
+(define (set-without-helper xs x reversed-left-part)
+  (cond ((null? xs)
+         reversed-left-part)
+        ((eq? (car xs) x)
+         (append! reversed-left-part (cdr xs)))
+        (#t
+         (set-without-helper (cdr xs) x (cons (car xs) reversed-left-part)))))
+(define (set-without xs x)
+  (set-without-helper xs x ()))
+
+(define (set-with xs x)
+  (cons x (set-without xs x)))
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; AST optimization.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; Alpha-conversion.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; FIXME: use an alist instead of old-x and new-x.
+
+(define (ast-rename-list asts old-x new-x)
+  (map (lambda (ast) (ast-rename ast old-x new-x))
+       asts))
+
+;;; Return an AST equal to the given one, except that every free occurrence of
+;;; the variable old-x (to be provided as a symbol) is replaced with new-x (also
+;;; a symbol).
+;;; No check is made to ensure that new-x doesn't already occur in AST.  That
+;;; is almost certainly not what the user wants, and new-x should usually be
+;;; a fresh variable.
+(define (ast-rename ast old-x new-x)
+  (cond ((ast-literal? ast)
+         ast)
+        ((ast-variable? ast)
+         (if (eq? (ast-variable-name ast) old-x)
+             (ast-variable new-x)
+             ast))
+        ((ast-define? ast)
+         ;; Do not rename globally bound variables.
+         (ast-define (ast-define-name ast)
+                     (ast-rename (ast-define-body ast) old-x new-x)))
+        ((ast-if? ast)
+         (ast-if (ast-rename (ast-if-condition ast) old-x new-x)
+                 (ast-rename (ast-if-then ast) old-x new-x)
+                 (ast-rename (ast-if-else ast) old-x new-x)))
+        ((ast-set!? ast)
+         (let* ((old-set!-name (ast-set!-name ast))
+                (new-set!-name (if (eq? old-set!-name old-x)
+                                   new-x
+                                   old-set!-name)))
+           (ast-set! new-set!-name
+                     (ast-rename (ast-set!-body ast) old-x new-x))))
+        ((ast-primitive? ast)
+         (ast-primitive (ast-primitive-operator ast)
+                        (ast-rename-list (ast-primitive-operands ast) old-x new-x)))
+        ((ast-call? ast)
+         (ast-call (ast-rename (ast-call-operator ast) old-x new-x)
+                   (ast-rename-list (ast-call-operands ast) old-x new-x)))
+        ((ast-lambda? ast)
+         (let ((formals (ast-lambda-formals ast)))
+           (if (set-has? formals old-x)
+               ast ;; old-x occurs bound: don't touch that.
+               (ast-lambda formals
+                           (ast-rename (ast-lambda-body ast) old-x new-x)))))
+        ((ast-let? ast)
+         (let* ((bound-name (ast-let-bound-name ast))
+                (old-bound-form (ast-let-bound-form ast))
+                (new-bound-form (ast-rename old-bound-form old-x new-x)))
+           ;; - Don't change the bound name in any case;
+           ;; - always rename old-x occurrences in the bound form;
+           ;; - only rename old-x occurrences in the body if this let is *not*
+           ;;   binding it.
+           (ast-let bound-name
+                    (ast-rename (ast-let-bound-form ast) old-x new-x)
+                    (if (eq? bound-name old-x)
+                        (ast-let-body ast)
+                        (ast-rename (ast-let-body ast) old-x new-x)))))
+        ((ast-sequence? ast)
+         (ast-sequence (ast-rename (ast-sequence-first ast) old-x new-x)
+                       (ast-rename (ast-sequence-second ast) old-x new-x)))))
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Tentative features, or experimentation just for fun.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; Streams.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define stream-empty
@@ -2225,7 +2334,7 @@
         (stream-cons (f (stream-car s))
                      (stream-map f (stream-cdr s))))))
 
-(define (stream-take n s)
+(define (stream-take s n)
   (stream-delay
     (cond ((zero? n)
            stream-empty)
@@ -2233,16 +2342,16 @@
            stream-empty)
           (#t
            (stream-cons (stream-car s)
-                        (stream-take (1- n) (stream-cdr s)))))))
+                        (stream-take (stream-cdr s) (1- n)))))))
 
-(define (stream-drop n s)
+(define (stream-drop s n)
   (stream-delay
     (cond ((zero? n)
            s)
           ((stream-null? s)
            stream-empty)
           (#t
-           (stream-drop (1- n) (stream-cdr s))))))
+           (stream-drop (stream-cdr s) (1- n))))))
 
 (define (stream-fold-left f x xs)
   (if (stream-null? xs)
@@ -2270,10 +2379,13 @@
 
 
 
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; The library is now loaded.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; This is checked at startup to error out in case the library is being loaded
-;;; more than once.
+;;; more than once.  Make the defined symbol constant, so that it can't be
+;;; undefined.
 (define jitterlisp-library-loaded
   #t)
+(make-constant 'jitterlisp-library-loaded)
