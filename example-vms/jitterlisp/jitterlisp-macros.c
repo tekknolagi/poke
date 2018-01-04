@@ -295,7 +295,7 @@ jitterlisp_primitive_macro_function_setb (jitterlisp_object cdr,
   if (! JITTERLISP_IS_SYMBOL (variable))
     {
       printf ("About "); // FIXME: integrate with the error function
-      jitterlisp_print_to_stream (stdout, variable);
+      jitterlisp_print_to_stream (stdout, variable); printf (":\n");
       jitterlisp_error_cloned ("set!: non-symbol variable name");
     }
   jitterlisp_object forms = JITTERLISP_EXP_C_A_CDR (cdr);
