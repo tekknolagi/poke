@@ -799,6 +799,24 @@
 
 
 
+/* Error handling operations.
+ * ************************************************************************** */
+
+#define JITTERLISP_ERROR_(_jitterlisp_out, _jitterlisp_in0)           \
+  JITTER_BEGIN_                                                       \
+    printf ("Error: ");                                               \
+    jitterlisp_print_to_stream (stdout, (_jitterlisp_in0));           \
+    printf ("\n");                                                    \
+    /* This should never be used, but let's initialize it in case */  \
+    /* it remains visible because of some bug. */                     \
+    _jitterlisp_out = JITTERLISP_UNDEFINED;                           \
+    /* Error out. */                                                  \
+    jitterlisp_error_cloned ("erroring out from Lisp");               \
+  JITTER_END_
+
+
+
+
 /* AST operations.
  * ************************************************************************** */
 

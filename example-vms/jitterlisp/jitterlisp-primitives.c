@@ -346,6 +346,9 @@ JITTERLISP_PRIMITIVE_FUNCTION_0_(newline,
   { JITTERLISP_NEWLINE_(res); })
 JITTERLISP_PRIMITIVE_FUNCTION_0_(read,
   { JITTERLISP_READ_(res); })
+/* Error handling operations. */
+JITTERLISP_PRIMITIVE_FUNCTION_1_(error, ANYTHING,
+  { JITTERLISP_ERROR_(res, args [0]); })
 /* AST case-checking operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_literalp, AST,
   { JITTERLISP_AST_LITERALP_(res, args [0]); })
@@ -535,6 +538,8 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("display", 1, display),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("newline", 0, newline),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("read", 0, read),
+      /* Error handling operations. */
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("error", 1, error),
       /* AST case-checking operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-literal?", 1, ast_literalp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-variable?", 1, ast_variablep),
