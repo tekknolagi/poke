@@ -337,10 +337,31 @@ jitterlisp_cdddr (jitterlisp_object cons)
 }
 
 jitterlisp_object
-jitterlisp_singleton (jitterlisp_object o)
+jitterlisp_list_1 (jitterlisp_object o0)
 {
-  return jitterlisp_cons (o, JITTERLISP_EMPTY_LIST);
+  return jitterlisp_cons (o0, JITTERLISP_EMPTY_LIST);
 }
+
+jitterlisp_object
+jitterlisp_list_2 (jitterlisp_object o0, jitterlisp_object o1)
+{
+  return jitterlisp_cons (o0, jitterlisp_list_1 (o1));
+}
+
+jitterlisp_object
+jitterlisp_list_3 (jitterlisp_object o0, jitterlisp_object o1,
+                   jitterlisp_object o2)
+{
+  return jitterlisp_cons (o0, jitterlisp_list_2 (o1, o2));
+}
+
+jitterlisp_object
+jitterlisp_list_4 (jitterlisp_object o0, jitterlisp_object o1,
+                   jitterlisp_object o2, jitterlisp_object o3)
+{
+  return jitterlisp_cons (o0, jitterlisp_list_3 (o1, o2, o3));
+}
+
 
 
 

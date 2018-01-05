@@ -160,9 +160,17 @@ jitterlisp_cddar (jitterlisp_object cons);
 jitterlisp_object
 jitterlisp_cdddr (jitterlisp_object cons);
 
-/* Return a fresh one-element list containing the given element. */
+/* Return a fresh list with the given objects as elements. */
 jitterlisp_object
-jitterlisp_singleton (jitterlisp_object o);
+jitterlisp_list_1 (jitterlisp_object o0);
+jitterlisp_object
+jitterlisp_list_2 (jitterlisp_object o0, jitterlisp_object o1);
+jitterlisp_object
+jitterlisp_list_3 (jitterlisp_object o0, jitterlisp_object o1,
+                   jitterlisp_object o2);
+jitterlisp_object
+jitterlisp_list_4 (jitterlisp_object o0, jitterlisp_object o1,
+                   jitterlisp_object o2, jitterlisp_object o3);
 
 
 
