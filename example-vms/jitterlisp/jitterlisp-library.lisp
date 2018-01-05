@@ -401,7 +401,7 @@
 
 (define-constant (length-iterative xs)
   (let* ((res 0))
-    (while (not (null? xs))
+    (while (non-null? xs)
       (set! res (1+ res))
       (set! xs (cdr xs)))
     res))
@@ -429,7 +429,7 @@
 
 (define-constant (append-reversed-iterative xs ys)
   (let* ((res ys))
-    (while (not (null? xs))
+    (while (non-null? xs)
       (set! res (cons (car xs) res))
       (set! xs (cdr xs)))
     res))
@@ -660,7 +660,7 @@
              (last-cons res)
              (new-cons #f))
         (set! xs (cdr xs))
-        (while (not (null? xs))
+        (while (non-null? xs)
           (set! new-cons (cons (car xs) #f))
           (set-cdr! last-cons new-cons)
           (set! last-cons new-cons)
@@ -1225,7 +1225,7 @@
 
 (define-constant (map!-iterative f xs)
   (let* ((res xs))
-    (while (not (null? xs))
+    (while (non-null? xs)
       (set-car! xs (f (car xs)))
       (set! xs (cdr xs)))
     res))
@@ -1251,7 +1251,7 @@
 
 (define-constant (map-reversed-iterative f xs)
   (let* ((res '()))
-    (while (not (null? xs))
+    (while (non-null? xs)
       (set! res (cons (f (car xs)) res))
       (set! xs (cdr xs)))
     res))
@@ -1434,7 +1434,7 @@
 
 (define-constant (filter-reversed-iterative p xs)
   (let* ((res '()))
-    (while (not (null? xs))
+    (while (non-null? xs)
       (if (p (car xs))
           (set! res (cons (car xs) res))
           'do-nothing)
@@ -1673,7 +1673,7 @@
 
 (define-constant (insertion-sort-iterative xs)
   (let* ((res '()))
-    (while (not (null? xs))
+    (while (non-null? xs)
       (set! res (insert!-iterative (car xs) res))
       (set! xs (cdr xs)))
     res))
@@ -2771,11 +2771,11 @@
 ;;; bound.
 ;;; The most important optimizations are for the let case, which uses the helper
 ;;; below.
-(define q 0)
+;;(define rewrite-counter 0)
 (define-constant (ast-optimize-helper ast bounds)
 ;;(display bounds) (newline)
 ;;(display ast) (newline)
-(display `(,q -th expansion -- bounds are ,(length bounds))) (newline) (set! q (1+ q))
+;;(display `(,rewrite-counter -th expansion -- bounds are ,(length bounds))) (newline) (set! rewrite-counter (1+ rewrite-counter))
   (cond ((ast-literal? ast)
          ast)
         ((ast-variable? ast)
@@ -2896,10 +2896,13 @@
 (define-constant (ast-optimize ast-0 bounds)
   (let* (;; Fold global constants into the AST.  This will introduce, in
          ;; particular, closure literals as operators.
+         (_ (display `(ast-0: ,ast-0)) (newline))
          (ast-1 (ast-global-fold ast-0 bounds))
+         (_ (display `(ast-1: ,ast-1)) (newline))
          ;; Alpha-convert everything: we are about to introduce new let
          ;; bindings, and we need to prevent conflicts.
          (ast-2 (ast-alpha-convert ast-1))
+         (_ (display `(ast-2: ,ast-2)) (newline))
          ;; Translate calls to closures literals into let forms,
          ;; alpha-converting the inlined procedures.  This should make almost
          ;; all primitives explicit in the AST eliminating closure wrappers for
@@ -2907,8 +2910,11 @@
          ;; ast-3 will still be alpha-converted, with all bound variables
          ;; different from one another.
          (ast-3 (ast-simplify-calls ast-2))
+         (_ (display `(ast-3: ,ast-3)) (newline))
          ;; Remove redundancy.
-         (ast-4 (ast-optimize-helper ast-3 bounds)))
+         (ast-4 (ast-optimize-helper ast-3 bounds))
+         (_ (display `(ast-4: ,ast-4)) (newline))
+         )
     ast-4))
 
 
@@ -3100,8 +3106,23 @@
 ;;; (ast-optimize (macroexpand '(let ((a (newline) (newline) (newline))) y)) '())
 
 
+;;; Primitive composition:
+;; jitterlisp> (ast-optimize (macroexpand '(list 1 2)) '())
+;; [let #<uninterned:0xe6e120> [primitive #<2-ary primitive cons> [literal 2] [literal ()]] [primitive #<2-ary primitive cons> [literal 1] [variable #<uninterned:0xe6e120>]]]
+
 ;;; Is this correct?  I'd say no.  We can move variables across effectful
 ;;; primitives only when we are sure that referencing them has no effect,
 ;;; which means that they must be bound or global constants.
 ;;; (ast-optimize (macroexpand '(begin1 a (display 1) b (display 2) c (display 3) d)) ())
 ;;; [sequence [primitive #<1-ary primitive display> [literal 1]] [sequence [variable b] [sequence [primitive #<1-ary primitive display> [literal 2]] [sequence [variable c] [sequence [primitive #<1-ary primitive display> [literal 3]] [sequence [variable d] [variable a]]]]]]]
+;;
+;; Other testcase which should not be simplified if b isn't bound or constant:
+;;; jitterlisp> (ast-optimize (macroexpand '(let ((a b)) c)) '())
+;;; [variable c]
+;;
+;;; Special case: this can be simplified even if a is unbound, because the
+;;; bound variable is the same as the bound form.  This is now correct by
+;;; accident.  I should check for this case.
+;; (ast-optimize (macroexpand '(let ((a a)) (cons a a))) '())
+;; [primitive #<2-ary primitive cons> [variable a] [variable a]]
+
