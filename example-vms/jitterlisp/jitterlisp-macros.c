@@ -222,8 +222,7 @@ jitterlisp_primitive_macro_function_define_internal (jitterlisp_object cdr,
     {
       jitterlisp_object body
         = jitterlisp_macroexpand_begin (JITTERLISP_EXP_C_A_CDR (cdr), env);
-      jitterlisp_object res
-        = jitterlisp_ast_make_define (defined_thing, body);
+      jitterlisp_object res = jitterlisp_ast_make_define (defined_thing, body);
       if (constant)
         {
           /* Wrap the definition AST inside a sequence, also making the
