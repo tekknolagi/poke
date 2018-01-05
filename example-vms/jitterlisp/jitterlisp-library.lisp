@@ -2237,9 +2237,9 @@
          ;; all.
          (ast-free (ast-define-body ast)))
         ((ast-if? ast)
-         (set-unite (ast-free (ast-if-condition ast) old-x new-x)
-                    (ast-free (ast-if-then ast) old-x new-x)
-                    (ast-free (ast-if-else ast) old-x new-x)))
+         (set-unite (ast-free (ast-if-condition ast))
+                    (ast-free (ast-if-then ast))
+                    (ast-free (ast-if-else ast))))
         ((ast-set!? ast)
          ;; An assigned variable *is* a reference in the sense of this
          ;; procedure, differently from a defined global.  Of course the
@@ -2247,8 +2247,7 @@
          (set-with (ast-free (ast-set!-body ast))
                    (ast-set!-name ast)))
         ((ast-primitive? ast)
-         (set-unite (ast-free (ast-primitive-operator ast))
-                    (ast-free-list (ast-primitive-operands ast))))
+         (ast-free-list (ast-primitive-operands ast)))
         ((ast-call? ast)
          (set-unite (ast-free (ast-call-operator ast))
                     (ast-free-list (ast-call-operands ast))))
