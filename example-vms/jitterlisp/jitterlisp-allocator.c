@@ -76,13 +76,18 @@
 
 
 
-/* The symbol table.
+/* Symbol data structures.
  * ************************************************************************** */
 
 /* A string hash mapping each interned symbol name as a C string into a
    pointer to the unique struct jitterlisp_symbol for the symbol. */
 static struct jitter_hash_table
 jitterlisp_symbol_table;
+
+/* The global counter used for printing uninterned symbols in compact
+   notation. */
+static jitter_uint
+jitterlisp_next_uninterned_symbol_index;
 
 
 
@@ -321,8 +326,9 @@ jitterlisp_memory_initialize (void)
 
   jitterlisp_gc_root_stack_initialize ();
 
-  /* Initialize the symbol table. */
+  /* Initialize the symbol table and the uninterned symbol counter. */
   jitter_hash_initialize (& jitterlisp_symbol_table);
+  jitterlisp_next_uninterned_symbol_index = 0;
 }
 
 /* Forward-declaration. */
@@ -395,6 +401,9 @@ jitterlisp_symbol_make_uninterned (void)
     = JITTERLISP_SYMBOL_UNINTERNED_MAKE_UNINITIALIZED_UNENCODED();
   res->name_or_NULL = NULL;
   res->global_value = JITTERLISP_UNDEFINED;
+  /* FIXME: this increment operation should be performed in a critical section
+     if I add multi-threading support. */
+  res->index = jitterlisp_next_uninterned_symbol_index ++;
   res->global_constant = false;
   return res;
 }
@@ -420,6 +429,7 @@ jitterlisp_symbol_make_interned (const char *name)
       res->name_or_NULL = jitter_xmalloc (strlen (name) + 1);
       strcpy (res->name_or_NULL, name);
       res->global_value = JITTERLISP_UNDEFINED;
+      res->index = 0;
       res->global_constant = false;
       jitterlisp_push_gc_root (& res->global_value);
       union jitter_word w = { .pointer = (void *) res };

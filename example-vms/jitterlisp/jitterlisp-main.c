@@ -48,21 +48,23 @@ enum jitterlisp_negative_option
   {
     jitterlisp_negative_option_no_verbose = -1,
     jitterlisp_negative_option_library = -2,
-    jitterlisp_negative_option_omit_nothing = -3,
-    jitterlisp_negative_option_vm = -4,
-    jitterlisp_negative_option_repl = -5,
-    jitterlisp_negative_option_no_colorize = -6
+    jitterlisp_negative_option_no_compact_uninterned = -3,
+    jitterlisp_negative_option_omit_nothing = -4,
+    jitterlisp_negative_option_vm = -5,
+    jitterlisp_negative_option_repl = -6,
+    jitterlisp_negative_option_no_colorize = -7
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum jitterlisp_negative_option . */
 enum jitterlisp_long_only_option
   {
-    jitterlisp_long_only_option_no_library = -7,
-    jitterlisp_long_only_option_no_omit_nothing = -8,
-    jitterlisp_long_only_option_no_vm = -9,
-    jitterlisp_long_only_option_no_repl = -10,
-    jitterlisp_long_only_option_dump_version = -11
+    jitterlisp_long_only_option_compact_uninterned = -20,
+    jitterlisp_long_only_option_no_library = -21,
+    jitterlisp_long_only_option_no_omit_nothing = -22,
+    jitterlisp_long_only_option_no_vm = -23,
+    jitterlisp_long_only_option_no_repl = -24,
+    jitterlisp_long_only_option_dump_version = -25
   };
 
 /* Command-line option specification. */
@@ -104,6 +106,8 @@ static struct argp_option jitterlisp_option_specification[] =
    {"no-jittery", '\0', NULL, OPTION_ALIAS },
    {"no-library", jitterlisp_long_only_option_no_library, NULL, 0,
     "Don't load the Lisp library" },
+   {"compact-uninterned", jitterlisp_long_only_option_compact_uninterned, NULL,
+    0, "Print uninterned symbols in compact notation" },
    /* Debugging negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 41},
    {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
@@ -115,6 +119,8 @@ static struct argp_option jitterlisp_option_specification[] =
    {"jittery", '\0', NULL, OPTION_ALIAS },
    {"library", jitterlisp_negative_option_library, NULL, 0,
     "Load the Lisp library (default)" },
+   {"no-compact-uninterned", jitterlisp_negative_option_no_compact_uninterned,
+    NULL, 0, "Don't print uninterned symbols in compact notation (default)" },
 
    {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 50},
    {"dump-version", jitterlisp_long_only_option_dump_version, NULL, 0,
@@ -200,6 +206,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case jitterlisp_long_only_option_no_library:
       sp->library = false;
       break;
+    case jitterlisp_long_only_option_compact_uninterned:
+      sp->print_compact_uninterned_symbols = true;
+      break;
 
     /* Debugging negative options. */
     case jitterlisp_negative_option_no_colorize:
@@ -213,6 +222,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case jitterlisp_negative_option_library:
       sp->library = true;
+      break;
+    case jitterlisp_negative_option_no_compact_uninterned:
+      sp->print_compact_uninterned_symbols = false;
       break;
 
     /* Scripting options. */

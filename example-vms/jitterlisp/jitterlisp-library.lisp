@@ -3126,3 +3126,18 @@
 ;; (ast-optimize (macroexpand '(let ((a a)) (cons a a))) '())
 ;; [primitive #<2-ary primitive cons> [variable a] [variable a]]
 
+;;; The change in evaluation order among a, b and c is more or less benign
+;;; here.  Can it also happen in a context where it would make a difference?
+;;; More importantly, why does it happen?
+;;; (ast-optimize (macroexpand '(+ a b c)) '())
+;;; [let #<uninterned:0x2670e40> [primitive #<2-ary primitive primordial-+> [variable b] [variable c]] [primitive #<2-ary primitive primordial-+> [variable a] [variable #<uninterned:0x2670e40>]]]
+;;
+;;; It seems correct up to this intermediate stage:
+;;; (ast-3: [let #<uninterned:0x266f060> [variable a] [let #<uninterned:0x2670e40> [let #<uninterned:0x265a020> [variable b] [let #<uninterned:0x265ba80> [variable c] [primitive #<2-ary primitive primordial-+> [variable #<uninterned:0x265a020>] [variable #<uninterned:0x265ba80>]]]] [primitive #<2-ary primitive primordial-+> [variable #<uninterned:0x266f060>] [variable #<uninterned:0x2670e40>]]]])
+;;; a, b and c are read sequentially in the same order as in the input.
+;;; Still lets are nested in a way I wasn't expecting.
+;;; [I think it's completely benign: since I currently (see above) don't check
+;;; whether a variable occurring as a let bound form is bound, I unconditionally
+;;; write it in the body, which may change the order.  Anyway the variable case
+;;; will be fixed by adding the check, the literal case is already okay, and
+;;; more complicated expressions will *not* be substituted in.]

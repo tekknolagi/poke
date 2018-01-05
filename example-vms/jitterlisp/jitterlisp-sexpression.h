@@ -331,6 +331,10 @@ struct jitterlisp_symbol
      testing in the case of interned symbols, as they are malloc-allocated. */
   jitterlisp_object global_value;
 
+  /* A unique index for uninterned symbols, used for the compact printed
+     representation.  Not used for interned symbols. */
+  jitter_uint index;
+
   /* Non-false if the global binding for the symbol is constant. */
   bool global_constant;
 };

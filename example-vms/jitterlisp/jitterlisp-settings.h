@@ -46,6 +46,11 @@ struct jitterlisp_settings
      larger structure. */
   bool print_nothing_results;
 
+  /* If true print uninterned symbols in a compact notation using an index
+     rather than an address.  This may be less precise, but is convenient
+     for reading machine-rewritten ASTs. */
+  bool print_compact_uninterned_symbols;
+
   /* Non-false iff we are to uses the Jittery VM, and not a naïf interpreter. */
   bool vm;
 

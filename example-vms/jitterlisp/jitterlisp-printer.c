@@ -475,11 +475,23 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       struct jitterlisp_symbol *s = JITTERLISP_SYMBOL_DECODE(o);
       if (s->name_or_NULL != NULL)
         {
+          /* Print an interned symbol. */
           jitterlisp_print_decoration (cp, cps, INTERNEDSYMBOLATTR);
           jitterlisp_print_string (cp, cps, s->name_or_NULL);
         }
+      else if (jitterlisp_settings.print_compact_uninterned_symbols)
+        {
+          /* Print an uninterned symbol in compact notation. */
+          jitterlisp_print_decoration (cp, cps, UNINTERNEDSYMBOLATTR);
+          jitterlisp_print_string (cp, cps, "#<u");
+          jitterlisp_print_long_long (cp, cps,
+                                      (jitter_long_long) s->index,
+                                      false, 10);
+          jitterlisp_print_string (cp, cps, ">");
+        }
       else
         {
+          /* Print an uninterned symbol in the default notation. */
           jitterlisp_print_decoration (cp, cps, UNINTERNEDSYMBOLATTR);
           jitterlisp_print_string (cp, cps, "#<uninterned:");
           jitterlisp_print_pointer (cp, cps, s);
