@@ -2755,10 +2755,137 @@
          (ast-sequence (ast-simplify-calls (ast-sequence-first ast))
                        (ast-simplify-calls (ast-sequence-second ast))))))
 
-;;; An extension of ast-instantiate to a list of ASTs: return the list
+;;; An extension of ast-simplify-calls to a list of ASTs: return the list
 ;;; of rewriten ASTs in order.
 (define-constant (ast-simplify-calls-list asts)
   (map ast-simplify-calls asts))
+
+
+
+
+;;;; AST optimization.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return an equivalent rewritten version of the given AST, which is assumed to
+;;; be alpha-converted, knowing that the given set-of-list of variables is
+;;; bound.
+;;; The most important optimizations are for the let case, which uses the helper
+;;; below.
+(define q 0)
+(define-constant (ast-optimize-helper ast bounds)
+;;(display bounds) (newline)
+;;(display ast) (newline)
+(display `(,q -th expansion -- bounds are ,(length bounds))) (newline) (set! q (1+ q))
+  (cond ((ast-literal? ast)
+         ast)
+        ((ast-variable? ast)
+         ast)
+        ((ast-define? ast)
+         (ast-define (ast-define-name ast)
+                     (ast-optimize-helper (ast-define-body ast) bounds)))
+        ((ast-if? ast)
+         (let ((optimized-condition
+                (ast-optimize-helper (ast-if-condition ast) bounds)))
+           (cond ((and (ast-literal? optimized-condition)
+                       (ast-literal-value optimized-condition))
+                  ;; The condition has been simplified to non-#f.
+                  (ast-optimize-helper (ast-if-then ast) bounds))
+                 ((ast-literal? optimized-condition)
+                  ;; The condition has been simplified to #f, since we didn't
+                  ;; get to the previous clause.
+                  (ast-optimize-helper (ast-if-else ast) bounds))
+                 (#t
+                  ;; Keep both branches.
+                  (ast-if optimized-condition
+                          (ast-optimize-helper (ast-if-then ast) bounds)
+                          (ast-optimize-helper (ast-if-else ast) bounds))))))
+        ((ast-set!? ast)
+         (ast-set! (ast-set!-name ast)
+                   (ast-optimize-helper (ast-set!-body ast) bounds)))
+        ((ast-while? ast)
+         (ast-while (ast-optimize-helper (ast-while-guard ast) bounds)
+                    (ast-optimize-helper (ast-while-body ast) bounds)))
+        ((ast-primitive? ast)
+         ;; FIXME: evaluate the primitive at expansion time if the primitive
+         ;; has no effect and all of its arguments are literal.
+         (ast-primitive (ast-primitive-operator ast)
+                        (ast-optimize-helper-list (ast-primitive-operands ast)
+                                                  bounds)))
+        ((ast-call? ast)
+         (ast-call (ast-optimize-helper (ast-call-operator ast) bounds)
+                   (ast-optimize-helper-list (ast-call-operands ast) bounds)))
+        ((ast-lambda? ast)
+         (let ((formals (ast-lambda-formals ast)))
+           (ast-lambda formals
+                       (ast-optimize-helper (ast-lambda-body ast)
+                                            (set-unite bounds formals)))))
+        ((ast-let? ast)
+         (let ((bound-name (ast-let-bound-name ast)))
+           ;; Notice that the let body is not optimized here: it will be
+           ;; optimized by ast-optimize-let, after possibly performing
+           ;; replacements into it.  Optimizing the bound form, instead, is
+           ;; important: its shape will determine which optimizations are
+           ;; possible.
+           (ast-optimize-let bound-name
+                             (ast-optimize-helper (ast-let-bound-form ast) bounds)
+                             (ast-let-body ast)
+                             bounds)))
+        ((ast-sequence? ast)
+         (let ((optimized-first (ast-optimize-helper (ast-sequence-first ast)
+                                                     bounds))
+               (optimized-second (ast-optimize-helper (ast-sequence-second ast)
+                                                      bounds)))
+           ;; If fhe first form in the sequence has no effect rewrite to the
+           ;; second form only.
+           ;; FIXME: generalize to no-effect primitives with no-effect actuals.
+           (if (or (ast-literal? optimized-first)
+                   (and (ast-variable? optimized-first)
+                        (or (set-has? bounds
+                                      (ast-variable-name optimized-first))
+                            (constant? (ast-variable-name optimized-first)))))
+               optimized-second
+               (ast-sequence optimized-first
+                             optimized-second))))))
+
+;;; An extension of ast-optimize-helper to a list of ASTs: return the list
+;;; of rewriten ASTs in order.
+(define-constant (ast-optimize-helper-list asts bounds)
+  (map (lambda (ast) (ast-optimize-helper ast bounds))
+       asts))
+
+;;; A helper for ast-optimize-helper in the let case, which is the most complex.
+;;; This assumes that both subforms are alpha-converted.
+;;; This procedure should be called with the bound form already optimized,
+;;; in order to recognize the bound form shape and simplify the body as far
+;;; as possible; however there is no need for the body to be already
+;;; simplified -- it would introduce serious inefficiencies since the body
+;;; is optimized again here, and doing this recursively would easily explode
+;;; to quadratic behavior even assuming set operations to be O(1), which they
+;;; are certainly not.
+(define-constant (ast-optimize-let bound-name bound-form body bounds)
+  (cond ;; FIXME (as the first case): let-sequence-be elimination.
+        ((and (ast-literal? bound-form)
+              (not (ast-has-assigned? body bound-name)))
+         ;; The variable is bound to a literal, without being assigned:
+         ;; fold the literal into the body and optimize it further.
+         (let ((folded-body (ast-instantiate body bound-name bound-form)))
+           (ast-optimize-helper folded-body bounds)))
+        ((and (ast-variable? bound-form)
+              (not (ast-has-assigned? body bound-name))
+              (not (ast-has-assigned? body (ast-variable-name bound-form))))
+         ;; The variable is bound to another variable, with neither being
+         ;; assigned in the body.  We can reduce the entire let AST to a body
+         ;; with the bound variable replaced by the other.  Here we rely on the
+         ;; body being alpha-converted to be sure not to capture the substituted
+         ;; variable.
+         (let ((new-body (ast-instantiate body bound-name bound-form)))
+           (ast-optimize-helper new-body bounds)))
+        (#t
+         ;; Default case: keep the let AST in our rewriting.
+         (ast-let bound-name
+                  bound-form
+                  (ast-optimize-helper body (set-with bounds bound-name))))))
+;;;????
 
 
 
@@ -2780,8 +2907,9 @@
          ;; ast-3 will still be alpha-converted, with all bound variables
          ;; different from one another.
          (ast-3 (ast-simplify-calls ast-2))
-         )
-    ast-3))
+         ;; Remove redundancy.
+         (ast-4 (ast-optimize-helper ast-3 bounds)))
+    ast-4))
 
 
 
@@ -2961,11 +3089,19 @@
 ;;; (define q (macroexpand '(f x (+ 2 3)))) q (ast-optimize q ())
 ;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define x y) x 7))) ())
 
-;;; This is interesting because of the sequence in the let bound form:
-;;; (ast-optimize (macroexpand '(cons 3 (begin x 7))) ())
-
 ;;; An important test:
 ;;; (ast-optimize (closure-body fibo) '(n))
 
 ;;; Something which should get smaller:
 ;;; (ast-optimize (closure-body ast-simplify-calls) '(ast))
+
+;;; These are interesting because of the sequence in the let bound form:
+;;; (ast-optimize (macroexpand '(cons 3 (begin x 7))) ())
+;;; (ast-optimize (macroexpand '(let ((a (newline) (newline) (newline))) y)) '())
+
+
+;;; Is this correct?  I'd say no.  We can move variables across effectful
+;;; primitives only when we are sure that referencing them has no effect,
+;;; which means that they must be bound or global constants.
+;;; (ast-optimize (macroexpand '(begin1 a (display 1) b (display 2) c (display 3) d)) ())
+;;; [sequence [primitive #<1-ary primitive display> [literal 1]] [sequence [variable b] [sequence [primitive #<1-ary primitive display> [literal 2]] [sequence [variable c] [sequence [primitive #<1-ary primitive display> [literal 3]] [sequence [variable d] [variable a]]]]]]]
