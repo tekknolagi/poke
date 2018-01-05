@@ -2416,7 +2416,7 @@
                ast)))
         ((ast-define? ast)
          (ast-define (ast-define-name ast)
-                     (ast-global-fold (ast-define-body ast bounds))))
+                     (ast-global-fold (ast-define-body ast) bounds)))
         ((ast-if? ast)
          (ast-if (ast-global-fold (ast-if-condition ast) bounds)
                  (ast-global-fold (ast-if-then ast) bounds)
