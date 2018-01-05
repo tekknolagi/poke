@@ -2223,7 +2223,7 @@
 
 
 
-;;;; Free variables in an AST.
+;;;; Tentative: free variables in an AST.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Return a set-as-list of the variables occurring free in the given AST.
@@ -2275,7 +2275,59 @@
 
 
 
-;;;; Assigned variables in an AST.
+;;;; Free variables in an AST.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return non-#f iff the given variable occurs free in the given AST.
+(define-constant (ast-has-free? ast x)
+  (cond ((ast-literal? ast)
+         #f)
+        ((ast-variable? ast)
+         (eq? (ast-variable-name ast) x))
+        ((ast-define? ast)
+         ;; The defined variable is global, and doesn't enter the picture.
+         (ast-has-free? (ast-define-body ast) x))
+        ((ast-if? ast)
+         (or (ast-has-free? (ast-if-condition ast) x)
+             (ast-has-free? (ast-if-then ast) x)
+             (ast-has-free? (ast-if-else ast) x)))
+        ((ast-set!? ast)
+         ;; An assigned variable *is* a reference in the sense of this
+         ;; procedure, differently from a defined global.  Of course the
+         ;; modified binding may be global, but the variable is free.
+         (or (eq? (ast-set!-name ast) x)
+             (ast-has-free? (ast-set!-body ast) x)))
+        ((ast-while? ast)
+         (or (ast-has-free? (ast-while-guard ast) x)
+             (ast-has-free? (ast-while-body ast) x)))
+        ((ast-primitive? ast)
+         (ast-has-free?-list (ast-primitive-operands ast) x))
+        ((ast-call? ast)
+         (or (ast-has-free? (ast-call-operator ast) x)
+             (ast-has-free?-list (ast-call-operands ast) x)))
+        ((ast-lambda? ast)
+         (if (set-has? (ast-lambda-formals ast) x)
+             #f
+             (ast-has-free? (ast-lambda-body ast) x)))
+        ((ast-let? ast)
+         (if (eq? (ast-let-bound-name ast) x)
+             (ast-has-free? (ast-let-bound-form ast) x)
+             (or (ast-has-free? (ast-let-bound-form ast) x)
+                 (ast-has-free? (ast-let-body ast) x))))
+        ((ast-sequence? ast)
+         (or (ast-has-free? (ast-sequence-first ast) x)
+             (ast-has-free? (ast-sequence-second ast) x)))))
+
+;;; An extension of ast-has-free? to a list of ASTs.
+(define-constant (ast-has-free?-list asts x)
+  (and (non-null? asts)
+       (or (ast-has-free? (car asts) x)
+           (ast-has-free?-list (cdr asts) x))))
+
+
+
+
+;;;; Tentative: assigned variables in an AST.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; A set! form counts as an assignment; a define form doesn't, as a
@@ -2324,6 +2376,60 @@
       set-empty
       (set-unite (ast-assigned (car asts))
                  (ast-assigned-list (cdr asts)))))
+
+
+
+
+;;;; Assigned variables in an AST.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; A set! form counts as an assignment; a define form doesn't, as a
+;;; define'd variable in JitterLisp is always a global, and globals
+;;; can't be renamed.
+
+;;; Return non-#f iff the a free occurrence of the given variable is set! in the
+;;; given AST.
+(define-constant (ast-has-assigned? ast x)
+  (cond ((ast-literal? ast)
+         #f)
+        ((ast-variable? ast)
+         #f)
+        ((ast-define? ast)
+         ;; The defined variable is global: see the comment above.
+         (ast-has-assigned? (ast-define-body ast) x))
+        ((ast-if? ast)
+         (or (ast-has-assigned? (ast-if-condition ast) x)
+             (ast-has-assigned? (ast-if-then ast) x)
+             (ast-has-assigned? (ast-if-else ast) x)))
+        ((ast-set!? ast)
+         (or (eq? (ast-set!-name ast) x)
+             (ast-has-assigned? (ast-set!-body ast) x)))
+        ((ast-while? ast)
+         (or (ast-has-assigned? (ast-while-guard ast) x)
+             (ast-has-assigned? (ast-while-body ast) x)))
+        ((ast-primitive? ast)
+         (ast-has-assigned?-list (ast-primitive-operands ast) x))
+        ((ast-call? ast)
+         (or (ast-has-assigned? (ast-call-operator ast) x)
+             (ast-has-assigned?-list (ast-call-operands ast) x)))
+        ((ast-lambda? ast)
+         (if (set-has? (ast-lambda-formals ast) x)
+             #f
+             (ast-has-assigned? (ast-lambda-body ast) x)))
+        ((ast-let? ast)
+         (if (eq? (ast-let-bound-name ast) x)
+             (ast-has-assigned? (ast-let-bound-form ast) x)
+             (or (ast-has-assigned? (ast-let-bound-form ast) x)
+                 (ast-has-assigned? (ast-let-body ast) x))))
+        ((ast-sequence? ast)
+         (or (ast-has-assigned? (ast-sequence-first ast) x)
+             (ast-has-assigned? (ast-sequence-second ast) x)))))
+
+;;; An extension of ast-has-assigned? to a list of ASTs.
+(define-constant (ast-has-assigned?-list asts x)
+  (and (non-null? asts)
+       (or (ast-has-assigned? (car asts) x)
+           (ast-has-assigned?-list (cdr asts) x))))
 
 
 
@@ -2860,3 +2966,6 @@
 
 ;;; An important test:
 ;;; (ast-optimize (closure-body fibo) '(n))
+
+;;; Something which should get smaller:
+;;; (ast-optimize (closure-body ast-simplify-calls) '(ast))
