@@ -467,6 +467,7 @@ JITTERLISP_PRIMITIVE_FUNCTION_0_(no_warranty,
 
 /* Primitive macro functions. */
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(define)
+JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(define_constant)
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(if)
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(cond)
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(setb)
@@ -618,6 +619,7 @@ jitterlisp_primitives []
 
       /* Primitive macros */
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("define", define),
+      JITTERLISP_PRIMITIVE_MACRO_STRUCT_("define-constant", define_constant),
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("if", if),
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("cond", cond),
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("set!", setb),

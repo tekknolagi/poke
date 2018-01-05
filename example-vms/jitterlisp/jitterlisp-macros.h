@@ -61,6 +61,9 @@ jitterlisp_object
 jitterlisp_primitive_macro_function_define (jitterlisp_object cdr,
                                             jitterlisp_object env);
 jitterlisp_object
+jitterlisp_primitive_macro_function_define_constant (jitterlisp_object cdr,
+                                                     jitterlisp_object env);
+jitterlisp_object
 jitterlisp_primitive_macro_function_if (jitterlisp_object cdr,
                                         jitterlisp_object env);
 jitterlisp_object

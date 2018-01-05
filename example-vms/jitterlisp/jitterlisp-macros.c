@@ -207,9 +207,12 @@ jitterlisp_macroexpand_globally (jitterlisp_object o)
 /* AST primitive macro functions.
  * ************************************************************************** */
 
-jitterlisp_object
-jitterlisp_primitive_macro_function_define (jitterlisp_object cdr,
-                                            jitterlisp_object env)
+/* Expand to a definition possibly followed by making the defined symbol
+   constant, according to the boolean. */
+static jitterlisp_object
+jitterlisp_primitive_macro_function_define_internal (jitterlisp_object cdr,
+                                                     jitterlisp_object env,
+                                                     bool constant)
 {
   if (! JITTERLISP_IS_CONS(cdr))
     jitterlisp_error_cloned ("define: invalid cdr");
@@ -219,7 +222,23 @@ jitterlisp_primitive_macro_function_define (jitterlisp_object cdr,
     {
       jitterlisp_object body
         = jitterlisp_macroexpand_begin (JITTERLISP_EXP_C_A_CDR (cdr), env);
-      return jitterlisp_ast_make_define (defined_thing, body);
+      jitterlisp_object res
+        = jitterlisp_ast_make_define (defined_thing, body);
+      if (constant)
+        {
+          /* Wrap the definition AST inside a sequence, also making the
+             defined symbol constant. */
+          jitterlisp_object primitive
+            = JITTERLISP_SYMBOL_DECODE(jitterlisp_primitive_make_constant)
+                 ->global_value;
+          jitterlisp_object make_constant
+            = jitterlisp_ast_make_primitive
+                 (primitive,
+                  jitterlisp_cons (jitterlisp_ast_make_literal (defined_thing),
+                                   JITTERLISP_EMPTY_LIST));
+          res = jitterlisp_ast_make_sequence (res, make_constant);
+        }
+      return res;
     }
   else if (JITTERLISP_IS_CONS(defined_thing))
     {
@@ -235,6 +254,20 @@ jitterlisp_primitive_macro_function_define (jitterlisp_object cdr,
     }
   else
     jitterlisp_error_cloned ("define: invalid cadr");
+}
+
+jitterlisp_object
+jitterlisp_primitive_macro_function_define (jitterlisp_object cdr,
+                                            jitterlisp_object env)
+{
+  return jitterlisp_primitive_macro_function_define_internal (cdr, env, false);
+}
+
+jitterlisp_object
+jitterlisp_primitive_macro_function_define_constant (jitterlisp_object cdr,
+                                                     jitterlisp_object env)
+{
+  return jitterlisp_primitive_macro_function_define_internal (cdr, env, true);
 }
 
 jitterlisp_object

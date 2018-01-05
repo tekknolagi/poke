@@ -663,6 +663,7 @@ struct jitterlisp_ast;
    This requires them to be GC roots, which will need some work if I switch to a
    moving GC. */
 extern jitterlisp_object jitterlisp_low_level_macro_args;
+extern jitterlisp_object jitterlisp_primitive_make_constant;
 
 
 
