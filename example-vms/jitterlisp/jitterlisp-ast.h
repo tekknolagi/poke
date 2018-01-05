@@ -143,4 +143,15 @@ jitterlisp_object
 jitterlisp_ast_make_sequence (jitterlisp_object ast_0,
                               jitterlisp_object ast_1);
 
+
+
+
+/* AST accessors.
+ * ************************************************************************** */
+
+/* Return a freshly allocated list containing the operands of the given AST,
+   whose case must be either primitive or call. */
+jitterlisp_object
+jitterlisp_ast_operands (jitterlisp_object ast);
+
 #endif // #ifndef JITTERLISP_AST_H_

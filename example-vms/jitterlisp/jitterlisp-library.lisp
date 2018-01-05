@@ -1066,6 +1066,14 @@
         (#t
          (cons (car alist) (del-assq object (cdr alist))))))
 
+;;; An obvious extension of del-assq, returning a copy of the alist with the
+;;; bindings for all of the given keys removed.
+(define (del-assq-list objects alist)
+  (if (null? objects)
+      alist
+      (del-assq-list (cdr objects)
+                     (del-assq (car objects) alist))))
+
 ;; FIXME: implement del-assq! .
 
 (define (alist-copy alist)
@@ -1709,7 +1717,7 @@
 ;;;; compose.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (compose f g)
+(define (compose-procedure f g)
   (lambda (x) (f (g x))))
 
 (define (compose-eta f g x)
@@ -1738,7 +1746,7 @@
 (define (iterate-iterative-pre f n)
   (let* ((res identity))
     (while (> n 0)
-      (set! res (compose res f))
+      (set! res (compose-procedure res f))
       (set! n (1- n)))
     res))
 
@@ -1766,7 +1774,7 @@
          (let* ((f^n/2 (iterate-squaring-pre f (quotient n 2))))
            (square-function f^n/2)))
         (#t
-         (compose f (iterate-squaring-pre f (1- n))))))
+         (compose-procedure f (iterate-squaring-pre f (1- n))))))
 
 (define (iterate-squaring-eta f n x)
   ;; This uses the same idea of exponentiation by squaring; the advantage here
@@ -1783,7 +1791,7 @@
 (define (iterate-tail-recursive-pre-helper f n acc)
   (if (zero? n)
       acc
-      (iterate-tail-recursive-pre-helper f (1- n) (compose acc f))))
+      (iterate-tail-recursive-pre-helper f (1- n) (compose-procedure acc f))))
 (define (iterate-tail-recursive-pre f n)
   (iterate-tail-recursive-pre-helper f n identity))
 
@@ -1914,6 +1922,33 @@
   (if (symbol? first-argument)
       `(named-let ,first-argument ,@other-arguments)
       `(previous-let ,first-argument ,@other-arguments)))
+
+
+
+
+;;;; Variadic procedure composition.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Variadic procedure composition.
+(define-macro (compose . args)
+  (cond ((null? args)
+         'identity)
+        ((null? (cdr args))
+         (car args))
+        (#t
+         `(compose-procedure ,(car args)
+                             (compose ,@(cdr args))))))
+
+;;; Sometimes it is convenient to write variadic-composition procedures
+;;; in the order they are executed.  This is equivalent to compose with
+;;; its arguments in the opposite order.
+;;; The arguments of this macro are still evaluated left-to-right, in
+;;; the order they are written in the call.
+(define-macro (compose-pipeline . args)
+  (let ((procedure-names (map (lambda (useless) (gensym)) args)))
+    `(let* ,(zip procedure-names
+                 (map singleton args))
+       (compose ,@(reverse procedure-names)))))
 
 
 
@@ -2120,6 +2155,12 @@
 ;;; Sets implemented as unordered lists without duplicates, elements compared
 ;;; with eq? .
 
+(define set-empty
+  ())
+
+(define (set-empty? xs)
+  (null? xs))
+
 (define (set-has? xs x)
   (and (non-null? xs)
        (or (eq? (car xs) x)
@@ -2138,6 +2179,38 @@
 (define (set-with xs x)
   (cons x (set-without xs x)))
 
+(define (set-singleton x)
+  (singleton x))
+
+(define (set-unite-procedure xs ys)
+  (if (null? ys)
+      xs
+      (set-unite-procedure (set-with xs (car ys)) (cdr ys))))
+
+(define-associative-variadic-extension set-unite
+  set-unite-procedure set-empty)
+
+(define (set-subtract xs ys)
+  (if (null? ys)
+      xs
+      (set-subtract (set-without xs (car ys)) (cdr ys))))
+
+(define (set-intersect-helper xs ys acc)
+  (if (null? ys)
+      acc
+      (let* ((car-ys (car ys))
+             (new-acc (if (set-has? xs car-ys)
+                          (cons car-ys acc)
+                          acc)))
+        (set-intersect-helper xs
+                              (cdr ys)
+                              new-acc))))
+(define (set-intersect-procedure xs ys)
+  (set-intersect-helper xs ys ()))
+
+(define-associative-variadic-extension set-intersect
+  set-intersect-procedure set-empty)
+
 
 
 
@@ -2147,71 +2220,443 @@
 
 
 
-;;;; Alpha-conversion.
+;;;; Free variables in an AST.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; FIXME: use an alist instead of old-x and new-x.
+;;; Return a set-as-list of the variables occurring free in the given AST.
+(define (ast-free ast)
+  (cond ((ast-literal? ast)
+         set-empty)
+        ((ast-variable? ast)
+         (set-singleton (ast-variable-name ast)))
+        ((ast-define? ast)
+         ;; The defined variable is global, and doesn't enter the picture at
+         ;; all.
+         (ast-free (ast-define-body ast)))
+        ((ast-if? ast)
+         (set-unite (ast-free (ast-if-condition ast) old-x new-x)
+                    (ast-free (ast-if-then ast) old-x new-x)
+                    (ast-free (ast-if-else ast) old-x new-x)))
+        ((ast-set!? ast)
+         ;; An assigned variable *is* a reference in the sense of this
+         ;; procedure, differently from a defined global.  Of course the
+         ;; modified binding may be global, but the variable is free.
+         (set-with (ast-free (ast-set!-body ast))
+                   (ast-set!-name ast)))
+        ((ast-primitive? ast)
+         (set-unite (ast-free (ast-primitive-operator ast))
+                    (ast-free-list (ast-primitive-operands ast))))
+        ((ast-call? ast)
+         (set-unite (ast-free (ast-call-operator ast))
+                    (ast-free-list (ast-call-operands ast))))
+        ((ast-lambda? ast)
+         (set-subtract (ast-free (ast-lambda-body ast))
+                       (ast-lambda-formals ast)))
+        ((ast-let? ast)
+         (set-unite (ast-free (ast-let-bound-form ast))
+                    (set-without (ast-free (ast-let-body ast))
+                                 (ast-let-bound-name ast))))
+        ((ast-sequence? ast)
+         (set-unite (ast-free (ast-sequence-first ast))
+                    (ast-free (ast-sequence-second ast))))))
 
-(define (ast-rename-list asts old-x new-x)
-  (map (lambda (ast) (ast-rename ast old-x new-x))
-       asts))
+;;; Return a set-as-list of the free variables in the given list of ASTs.
+(define (ast-free-list asts)
+  (if (null? asts)
+      set-empty
+      (set-unite (ast-free (car asts))
+                 (ast-free-list (cdr asts)))))
 
-;;; Return an AST equal to the given one, except that every free occurrence of
-;;; the variable old-x (to be provided as a symbol) is replaced with new-x (also
-;;; a symbol).
-;;; No check is made to ensure that new-x doesn't already occur in AST.  That
-;;; is almost certainly not what the user wants, and new-x should usually be
-;;; a fresh variable.
-(define (ast-rename ast old-x new-x)
+
+
+
+;;;; Assigned variables in an AST.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; A set! form counts as an assignment; a define form doesn't, as a
+;;; define'd variable in JitterLisp is always a global, and globals
+;;; can't be renamed.
+
+;;; Return a set-as-list of the free variables being set! in the given AST.
+(define (ast-assigned ast)
+  (cond ((ast-literal? ast)
+         set-empty)
+        ((ast-variable? ast)
+         set-empty)
+        ((ast-define? ast)
+         ;; The defined variable is global: see the comment above.
+         (ast-assigned (ast-define-body ast)))
+        ((ast-if? ast)
+         (set-unite (ast-assigned (ast-if-condition ast) old-x new-x)
+                    (ast-assigned (ast-if-then ast) old-x new-x)
+                    (ast-assigned (ast-if-else ast) old-x new-x)))
+        ((ast-set!? ast)
+         (set-with (ast-assigned (ast-set!-body ast))
+                   (ast-set!-name ast)))
+        ((ast-primitive? ast)
+         (set-unite (ast-assigned (ast-primitive-operator ast))
+                    (ast-assigned-list (ast-primitive-operands ast))))
+        ((ast-call? ast)
+         (set-unite (ast-assigned (ast-call-operator ast))
+                    (ast-assigned-list (ast-call-operands ast))))
+        ((ast-lambda? ast)
+         (set-subtract (ast-assigned (ast-lambda-body ast))
+                       (ast-lambda-formals ast)))
+        ((ast-let? ast)
+         (set-unite (ast-assigned (ast-let-bound-form ast))
+                    (set-without (ast-assigned (ast-let-body ast))
+                                 (ast-let-bound-name ast))))
+        ((ast-sequence? ast)
+         (set-unite (ast-assigned (ast-sequence-first ast))
+                    (ast-assigned (ast-sequence-second ast))))))
+
+;;; Return a set-as-list of the free variables being set! in the given list of
+;;; ASTs.
+(define (ast-assigned-list asts)
+  (if (null? asts)
+      set-empty
+      (set-unite (ast-assigned (car asts))
+                 (ast-assigned-list (cdr asts)))))
+
+
+
+
+;;;; AST alpha-conversion.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return an AST equal to the given one, except that every bound variable
+;;; has been consistently renamed to a fresh identifier.
+(define (ast-alpha-convert ast)
+  (ast-alpha-convert-with ast ()))
+
+;;; A helper procedure for ast-alpha-convert, keeping track of which free
+;;; variable variable is to be replaced with which new variable.  Recursive
+;;; calls will build new alists extending the given one, with a fresh new
+;;; variable associated to each inner bound variable.
+(define (ast-alpha-convert-with ast alist)
   (cond ((ast-literal? ast)
          ast)
         ((ast-variable? ast)
-         (if (eq? (ast-variable-name ast) old-x)
-             (ast-variable new-x)
+         (let ((pair (assq (ast-variable-name ast) alist)))
+           (if pair
+               (ast-variable (cdr pair))
+               ast)))
+        ((ast-define? ast)
+         ;; Do not rename globally bound variables.
+         (ast-define (ast-define-name ast)
+                     (ast-alpha-convert-with (ast-define-body ast) alist)))
+        ((ast-if? ast)
+         (ast-if (ast-alpha-convert-with (ast-if-condition ast) alist)
+                 (ast-alpha-convert-with (ast-if-then ast) alist)
+                 (ast-alpha-convert-with (ast-if-else ast) alist)))
+        ((ast-set!? ast)
+         (let* ((old-name (ast-set!-name ast))
+                (pair (assq old-name alist))
+                (new-name (if pair (cdr pair) old-name)))
+           (ast-set! new-name
+                     (ast-alpha-convert-with (ast-set!-body ast) alist))))
+        ((ast-primitive? ast)
+         (ast-primitive (ast-primitive-operator ast)
+                        (ast-alpha-convert-with-list
+                            (ast-primitive-operands ast)
+                            alist)))
+        ((ast-call? ast)
+         (ast-call (ast-alpha-convert-with (ast-call-operator ast) alist)
+                   (ast-alpha-convert-with-list (ast-call-operands ast)
+                                                alist)))
+        ((ast-lambda? ast)
+         (let* ((old-formals (ast-lambda-formals ast))
+                (new-formals (map (lambda (useless) (gensym)) old-formals))
+                (new-bindings (zip-reversed old-formals new-formals))
+                (new-alist (append! new-bindings alist)))
+           (ast-lambda new-formals
+                       (ast-alpha-convert-with (ast-lambda-body ast)
+                                               new-alist))))
+        ((ast-let? ast)
+         (let* ((old-bound-name (ast-let-bound-name ast))
+                (new-bound-name (gensym))
+                (new-alist (cons (cons old-bound-name new-bound-name) alist)))
+           (ast-let new-bound-name
+                    (ast-alpha-convert-with (ast-let-bound-form ast)
+                                            alist) ;; Important: not new-alist
+                    (ast-alpha-convert-with (ast-let-body ast)
+                                            new-alist))))
+        ((ast-sequence? ast)
+         (ast-sequence (ast-alpha-convert-with (ast-sequence-first ast)
+                                               alist)
+                       (ast-alpha-convert-with (ast-sequence-second ast)
+                                               alist)))))
+
+;;; An extension of ast-alpha-convert-with to a list of ASTs: return the list
+;;; of rewriten ASTs in order.
+(define (ast-alpha-convert-with-list asts alist)
+  (map (lambda (ast) (ast-alpha-convert-with ast alist))
+       asts))
+
+
+
+
+;;;; Global constant folding.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return a copy of the given AST where every free occurrence of current global
+;;; constants in replaced with its global value as a literal.  The additional
+;;; argument is a set-of-list of the currently bound variables; of course bound
+;;; variables just happening to share a name with a global constant must not be
+;;; replaced.
+(define (ast-global-fold ast bounds)
+  (cond ((ast-literal? ast)
+         ast)
+        ((ast-variable? ast)
+         (let ((name (ast-variable-name ast)))
+           (if (and (not (set-has? bounds name))
+                    (defined? name)
+                    (constant? name))
+               (ast-literal (global-lookup name))
+               ast)))
+        ((ast-define? ast)
+         (ast-define (ast-define-name ast)
+                     (ast-global-fold (ast-define-body ast bounds))))
+        ((ast-if? ast)
+         (ast-if (ast-global-fold (ast-if-condition ast) bounds)
+                 (ast-global-fold (ast-if-then ast) bounds)
+                 (ast-global-fold (ast-if-else ast) bounds)))
+        ((ast-set!? ast)
+         (ast-set! (ast-set!-name ast)
+                   (ast-global-fold (ast-set!-body ast) bounds)))
+        ((ast-primitive? ast)
+         (ast-primitive (ast-primitive-operator ast)
+                        (ast-global-fold-list (ast-primitive-operands ast)
+                                              bounds)))
+        ((ast-call? ast)
+         (ast-call (ast-global-fold (ast-call-operator ast) bounds)
+                   (ast-global-fold-list (ast-call-operands ast)
+                                         bounds)))
+        ((ast-lambda? ast)
+         (let ((formals (ast-lambda-formals ast)))
+           (ast-lambda formals
+                       (ast-global-fold (ast-lambda-body ast)
+                                        (set-unite formals bounds)))))
+        ((ast-let? ast)
+         (let* ((bound-name (ast-let-bound-name ast))
+                (old-bound-form (ast-let-bound-form ast))
+                (new-bound-form (ast-global-fold old-bound-form bounds))
+                (old-body (ast-let-body ast))
+                (new-body (ast-global-fold old-body
+                                           (set-with bounds bound-name))))
+           (ast-let bound-name
+                    new-bound-form
+                    new-body)))
+        ((ast-sequence? ast)
+         (ast-sequence (ast-global-fold (ast-sequence-first ast) bounds)
+                       (ast-global-fold (ast-sequence-second ast)
+                                        bounds)))))
+
+;;; An extension of ast-global-fold to a list of ASTs: return the list
+;;; of rewriten ASTs in order.
+(define (ast-global-fold-list asts bounds)
+  (map (lambda (ast) (ast-global-fold ast bounds))
+       asts))
+
+
+
+
+;;;; Instantiation.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return a copy of the given AST where every free occurrence of the given
+;;; variable is replaced with the given AST.  Error out if a free occurrence
+;;; of the variable is assigned, in which case instantiation would be invalid.
+;;; Of course there are other cases in which instantiation would yield an AST
+;;; not equivalent to the original: this is not checked for.
+(define (ast-instantiate ast x r)
+  (cond ((ast-literal? ast)
+         ast)
+        ((ast-variable? ast)
+         (if (eq? (ast-variable-name ast) x)
+             r
              ast))
         ((ast-define? ast)
          ;; Do not rename globally bound variables.
          (ast-define (ast-define-name ast)
-                     (ast-rename (ast-define-body ast) old-x new-x)))
+                     (ast-instantiate (ast-define-body ast) x r)))
         ((ast-if? ast)
-         (ast-if (ast-rename (ast-if-condition ast) old-x new-x)
-                 (ast-rename (ast-if-then ast) old-x new-x)
-                 (ast-rename (ast-if-else ast) old-x new-x)))
+         (ast-if (ast-instantiate (ast-if-condition ast) x r)
+                 (ast-instantiate (ast-if-then ast) x r)
+                 (ast-instantiate (ast-if-else ast) x r)))
         ((ast-set!? ast)
-         (let* ((old-set!-name (ast-set!-name ast))
-                (new-set!-name (if (eq? old-set!-name old-x)
-                                   new-x
-                                   old-set!-name)))
-           (ast-set! new-set!-name
-                     (ast-rename (ast-set!-body ast) old-x new-x))))
+         (let ((name (ast-set!-name ast)))
+           (when (eq? name x)
+             (error `(instantiating assigned variable ,x in ,ast)))
+           (ast-set! name
+                     (ast-instantiate (ast-set!-body ast) x r))))
         ((ast-primitive? ast)
          (ast-primitive (ast-primitive-operator ast)
-                        (ast-rename-list (ast-primitive-operands ast) old-x new-x)))
+                        (ast-instantiate-list (ast-primitive-operands ast) x r)))
         ((ast-call? ast)
-         (ast-call (ast-rename (ast-call-operator ast) old-x new-x)
-                   (ast-rename-list (ast-call-operands ast) old-x new-x)))
+         (ast-call (ast-instantiate (ast-call-operator ast) x r)
+                   (ast-instantiate-list (ast-call-operands ast) x r)))
         ((ast-lambda? ast)
          (let ((formals (ast-lambda-formals ast)))
-           (if (set-has? formals old-x)
-               ast ;; old-x occurs bound: don't touch that.
+           (if (set-has? formals x)
+               ast ;; x occurs bound: don't touch its uses.
                (ast-lambda formals
-                           (ast-rename (ast-lambda-body ast) old-x new-x)))))
+                           (ast-instantiate (ast-lambda-body ast) x r)))))
         ((ast-let? ast)
+         ;; Always instantiate in the bound form.  Instantiate in the body
+         ;; only if the let variable is not the one we are replacing.  Don't
+         ;; rename the bound variable.
          (let* ((bound-name (ast-let-bound-name ast))
                 (old-bound-form (ast-let-bound-form ast))
-                (new-bound-form (ast-rename old-bound-form old-x new-x)))
-           ;; - Don't change the bound name in any case;
-           ;; - always rename old-x occurrences in the bound form;
-           ;; - only rename old-x occurrences in the body if this let is *not*
-           ;;   binding it.
+                (new-bound-form (ast-instantiate old-bound-form x r))
+                (old-body (ast-let-body ast))
+                (new-body (if (eq? bound-name x)
+                              old-body
+                              (ast-instantiate old-body x r))))
            (ast-let bound-name
-                    (ast-rename (ast-let-bound-form ast) old-x new-x)
-                    (if (eq? bound-name old-x)
-                        (ast-let-body ast)
-                        (ast-rename (ast-let-body ast) old-x new-x)))))
+                    new-bound-form
+                    new-body)))
         ((ast-sequence? ast)
-         (ast-sequence (ast-rename (ast-sequence-first ast) old-x new-x)
-                       (ast-rename (ast-sequence-second ast) old-x new-x)))))
+         (ast-sequence (ast-instantiate (ast-sequence-first ast) x r)
+                       (ast-instantiate (ast-sequence-second ast) x r)))))
+
+;;; An extension of ast-instantiate to a list of ASTs: return the list
+;;; of rewriten ASTs in order.
+(define (ast-instantiate-list asts x r)
+  (map (lambda (ast) (ast-instantiate ast x r))
+       asts))
+
+
+
+
+;;;; AST call simplification.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; A call where the operator is a closure literal (usually obtained by a
+;;; previous optimization) can be easily rewritten into a let binding each
+;;; formal as a local variable and having the lambda body as the let body,
+;;; as long as the closure environment is empty.
+;;; Some optimizations can probably be performed even with non-empty
+;;; closure environments but this is not implemented yet, as the way
+;;; environments are represented will change in the future.
+;;;
+;;; Most of the let forms introduced by this rewrite can be optimized away
+;;; in a later pass.
+
+;;; Return a rewritten call having the given closure as the original (literal)
+;;; operator, and the ASTs in the given list as operands.
+(define (ast-simplify-call-helper closure actuals)
+  (let ((environment (closure-environment closure))
+        (formals (closure-formals closure))
+        (body (closure-body closure)))
+    (cond ((non-null? environment)
+           ;; We currently don't rewrite if the environment is non-empty.
+           (ast-call (ast-literal closure) actuals))
+          ((<> (length formals) (length actuals))
+           ;; This call will fail if reached: don't rewrite it.
+           ;; FIXME: warn in a cleaner way.
+           (display `(warning: invalid in-arity for call to ,closure
+                               with actuals ,actuals))
+           (newline)
+           (ast-call (ast-literal closure) actuals))
+          (#t
+           ;; The environment is empty, and the argument number is correct:
+           ;; rewrite into nested lets binding the closure formals to the call
+           ;; actuals, and then evaluating the closure body.  alpha-convert the
+           ;; closure content to avoid conflicts with local variables in the
+           ;; caller.
+           (let* ((new-formals (map (lambda (useless) (gensym)) formals))
+                  (alist (zip formals new-formals))
+                  (new-body (ast-alpha-convert-with body alist)))
+             (ast-nested-let new-formals actuals new-body))))))
+
+;;; Given a list of bound variables, a list of actuals and a body, build nested
+;;; let ASTs, evaluating the actuals left-to-right.  This is similar to a let*
+;;; in Lisp, with a different syntax.  Assume that the formals and the actual
+;;; ASTs have the same length.
+;;; We can afford simple nested bindings here since procedure formals are
+;;; guaranteed to be all different.
+(define (ast-nested-let formals actual-asts body-ast)
+  (if (null? formals)
+      body-ast
+      (ast-let (car formals) (car actual-asts)
+               (ast-nested-let (cdr formals) (cdr actual-asts)
+                               body-ast))))
+
+;;; Return a copy of the given AST where calls to closure literals are
+;;; rewritten into let forms where possible.  The AST is assumed to be
+;;; already alpha-converted.
+(define (ast-simplify-calls ast)
+  (cond ((ast-literal? ast)
+         ast)
+        ((ast-variable? ast)
+         ast)
+        ((ast-define? ast)
+         (ast-define (ast-define-name ast)
+                     (ast-simplify-calls (ast-define-body ast))))
+        ((ast-if? ast)
+         (ast-if (ast-simplify-calls (ast-if-condition ast))
+                 (ast-simplify-calls (ast-if-then ast))
+                 (ast-simplify-calls (ast-if-else ast))))
+        ((ast-set!? ast)
+         (ast-set! (ast-set!-name ast)
+                   (ast-simplify-calls (ast-set!-body ast))))
+        ((ast-primitive? ast)
+         (ast-primitive (ast-primitive-operator ast)
+                        (ast-simplify-calls-list (ast-primitive-operands ast))))
+        ((ast-call? ast)
+         (let (;; Simplifying the operator seems perfunctory if we consider the
+               ;; kind of ASTs this procedure is used on.  Anyway it might be
+               ;; profitable in the future, with ASTs of a different shape.
+               (simplified-operator
+                (ast-simplify-calls (ast-call-operator ast)))
+               ;; Simplifying the operands is always reasonable, instead: they
+               ;; may contain calls.
+               (simplified-operands
+                (ast-simplify-calls-list (ast-call-operands ast))))
+           (if (and (ast-literal? simplified-operator)
+                    (closure? (ast-literal-value simplified-operator)))
+               (ast-simplify-call-helper (ast-literal-value simplified-operator)
+                                         simplified-operands)
+               (ast-call simplified-operator simplified-operands))))
+        ((ast-lambda? ast)
+         (ast-lambda (ast-lambda-formals ast)
+                     (ast-simplify-calls (ast-lambda-body ast))))
+        ((ast-let? ast)
+         (ast-let (ast-let-bound-name ast)
+                  (ast-simplify-calls (ast-let-bound-form ast))
+                  (ast-simplify-calls (ast-let-body ast))))
+        ((ast-sequence? ast)
+         (ast-sequence (ast-simplify-calls (ast-sequence-first ast))
+                       (ast-simplify-calls (ast-sequence-second ast))))))
+
+;;; An extension of ast-instantiate to a list of ASTs: return the list
+;;; of rewriten ASTs in order.
+(define (ast-simplify-calls-list asts)
+  (map ast-simplify-calls asts))
+
+
+
+
+;;;; AST optimization driver.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (ast-optimize ast-0 bounds)
+  (let* (;; Fold global constants into the AST.  This will introduce, in
+         ;; particular, closure literals as operators.
+         (ast-1 (ast-global-fold ast-0 bounds))
+         ;; Alpha-convert everything: we are about to introduce new let
+         ;; bindings, and we need to prevent conflicts.
+         (ast-2 (ast-alpha-convert ast-1))
+         ;; Translate calls to closures literals into let forms,
+         ;; alpha-converting the inlined procedures.  This should make almost
+         ;; all primitives explicit in the AST eliminating closure wrappers for
+         ;; primitives, at the cost of introducing many redundant lets.
+         ;; ast-3 will still be alpha-converted, with all bound variables
+         ;; different from one another.
+         (ast-3 (ast-simplify-calls ast-2))
+         )
+    ast-3))
 
 
 
@@ -2375,3 +2820,12 @@
 (define jitterlisp-library-loaded
   #t)
 (make-constant 'jitterlisp-library-loaded)
+
+
+
+
+;;;; Scratch.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; (define q (macroexpand '(let ((a a) (b a)) a))) q (ast-alpha-convert q)
+;;; (define q (macroexpand '(f x (+ 2 3)))) q (ast-optimize q ())

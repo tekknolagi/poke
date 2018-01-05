@@ -95,7 +95,12 @@ jitterlisp_eval_interpreter_ast_call
   for (i = 1; i < rator_and_rand_no; i ++)
     {
       if (JITTERLISP_IS_EMPTY_LIST(formals))
-        jitterlisp_error_cloned ("call: too many actuals");
+        {
+          printf ("About a call to "); // FIXME: add to the error message
+          jitterlisp_print_to_stream (stdout, rator_value);
+          printf (":\n");
+          jitterlisp_error_cloned ("call: too many actuals");
+        }
 
       jitterlisp_object rand_value =
         jitterlisp_eval_interpreter_ast (rator_and_rand_asts [i], env);
@@ -105,7 +110,12 @@ jitterlisp_eval_interpreter_ast_call
       formals = JITTERLISP_EXP_C_A_CDR(formals);
     }
   if (! JITTERLISP_IS_EMPTY_LIST(formals))
-    jitterlisp_error_cloned ("call: not enough actuals");
+    {
+      printf ("About a call to "); // FIXME: add to the error message
+      jitterlisp_print_to_stream (stdout, rator_value);
+      printf (":\n");
+      jitterlisp_error_cloned ("call: not enough actuals");
+    }
 
   /* Return the evaluation of the closure body in the extended closure
      environment. */
@@ -284,7 +294,12 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
   while (! JITTERLISP_IS_EMPTY_LIST (operands_as_list))
     {
       if (JITTERLISP_IS_EMPTY_LIST(formals))
-        jitterlisp_error_cloned ("apply: too many actuals");
+        {
+          printf ("About a call to "); // FIXME: add to the error message
+          jitterlisp_print_to_stream (stdout, closure_value);
+          printf ("\n");
+          jitterlisp_error_cloned ("apply: too many actuals");
+        }
       /* If this were a safe C function I would check whether operands_as_list
          is a cons; but this has been already checked out of this function when
          we get here thru a primitive call. */
@@ -299,7 +314,12 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
       operands_as_list = JITTERLISP_EXP_C_A_CDR(operands_as_list);
     }
   if (! JITTERLISP_IS_EMPTY_LIST(formals))
-    jitterlisp_error_cloned ("apply: not enough actuals");
+    {
+      printf ("About a call to "); // FIXME: add to the error message
+      jitterlisp_print_to_stream (stdout, closure_value);
+      printf ("\n");
+      jitterlisp_error_cloned ("apply: not enough actuals");
+    }
 
   /* Return the evaluation of the closure body in the extended closure
      environment. */

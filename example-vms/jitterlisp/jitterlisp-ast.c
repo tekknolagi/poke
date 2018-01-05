@@ -206,3 +206,28 @@ jitterlisp_ast_make_sequence (jitterlisp_object ast_0,
   subs [1] = ast_1;
   return res;
 }
+
+
+
+
+/* AST accessors.
+ * ************************************************************************** */
+
+jitterlisp_object
+jitterlisp_ast_operands (jitterlisp_object ast)
+{
+  jitterlisp_validate_ast (ast);
+  struct jitterlisp_ast *unencoded_ast = JITTERLISP_AST_DECODE(ast);
+  if (unencoded_ast->case_ != jitterlisp_ast_case_call
+      && unencoded_ast->case_ != jitterlisp_ast_case_primitive)
+    jitterlisp_error_cloned ("jitterlisp_ast_operands: non-primitive non-call "
+                             "case");
+
+  /* Build the result list, starting the last element. */
+  jitterlisp_object res = JITTERLISP_EMPTY_LIST;
+  int i;
+  for (i = unencoded_ast->sub_no - 2; i >= 0; i --)
+    res = jitterlisp_cons (unencoded_ast->subs [1 + i], res);
+
+  return res;
+}

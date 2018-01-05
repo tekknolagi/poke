@@ -262,8 +262,10 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(consp, ANYTHING,
   { JITTERLISP_CONSP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(non_consp, ANYTHING,
   { JITTERLISP_NON_CONSP_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(procedurep, ANYTHING,
-  { JITTERLISP_PROCEDUREP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(closurep, ANYTHING,
+  { JITTERLISP_CLOSUREP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(primitivep, ANYTHING,
+  { JITTERLISP_PRIMITIVEP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(astp, ANYTHING,
   { JITTERLISP_ASTP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(macrop, ANYTHING,
@@ -334,8 +336,17 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(make_constant, SYMBOL,
   { JITTERLISP_MAKE_CONSTANT_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(definedp, SYMBOL,
   { JITTERLISP_DEFINEDP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(global_lookup, SYMBOL,
+  { JITTERLISP_GLOBAL_LOOKUP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(undefine, SYMBOL,
   { JITTERLISP_UNDEFINE_(res, args [0]); })
+/* Closure operations. */
+JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_environment, CLOSURE,
+  { JITTERLISP_CLOSURE_ENVIRONMENT_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_formals, CLOSURE,
+  { JITTERLISP_CLOSURE_FORMALS_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_body, CLOSURE,
+  { JITTERLISP_CLOSURE_BODY_(res, args [0]); })
 /* Vector operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
   { JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]); })
@@ -492,7 +503,8 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-symbol?", 1, non_symbolp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("cons?", 1, consp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-cons?", 1, non_consp),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("procedure?", 1, procedurep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure?", 1, closurep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primitive?", 1, primitivep),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast?", 1, astp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("macro?", 1, macrop),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("vector?", 1, vectorp),
@@ -531,7 +543,15 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("constant?", 1, constantp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-constant", 1, make_constant),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("defined?", 1, definedp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("global-lookup", 1, global_lookup),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("undefine", 1, undefine),
+      /* Closure operations. */
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-environment", 1,
+                                             closure_environment),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-formals", 1,
+                                             closure_formals),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-body", 1,
+                                             closure_body),
       /* Vector operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */
