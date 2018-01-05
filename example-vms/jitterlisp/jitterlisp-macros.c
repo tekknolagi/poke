@@ -249,7 +249,10 @@ jitterlisp_primitive_macro_function_define_internal (jitterlisp_object cdr,
         = jitterlisp_primitive_macro_function_lambda
              (jitterlisp_cons (formals, jitterlisp_cdr (cdr)),
               env);
-      return jitterlisp_ast_make_define (defined_name, lambda);
+      jitterlisp_object args = jitterlisp_list_2 (defined_name, lambda);
+      return jitterlisp_primitive_macro_function_define_internal (args,
+                                                                  env,
+                                                                  constant);
     }
   else
     jitterlisp_error_cloned ("define: invalid cadr");
