@@ -2914,6 +2914,7 @@
          ;; Remove redundancy.
          (ast-4 (ast-optimize-helper ast-3 bounds))
          (_ (display `(ast-4: ,ast-4)) (newline))
+         (_  (newline))
          )
     ast-4))
 
