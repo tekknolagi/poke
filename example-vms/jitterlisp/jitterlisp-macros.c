@@ -233,8 +233,8 @@ jitterlisp_primitive_macro_function_define_internal (jitterlisp_object cdr,
           jitterlisp_object make_constant
             = jitterlisp_ast_make_primitive
                  (primitive,
-                  jitterlisp_cons (jitterlisp_ast_make_literal (defined_thing),
-                                   JITTERLISP_EMPTY_LIST));
+                  jitterlisp_list_1 (jitterlisp_ast_make_literal
+                                        (defined_thing)));
           res = jitterlisp_ast_make_sequence (res, make_constant);
         }
       return res;
