@@ -183,8 +183,8 @@ jitterlisp_eval_interpreter_ast (jitterlisp_object o,
       {
         const jitterlisp_object guard = subs [0];
         const jitterlisp_object body = subs [1];
-        while (! JITTERLISP_IS_FALSE (jitterlisp_eval_interpreter_ast (guard,
-                                                                       env)))
+        while (! JITTERLISP_IS_FALSE(jitterlisp_eval_interpreter_ast (guard,
+                                                                      env)))
           jitterlisp_eval_interpreter_ast (body, env);
         return JITTERLISP_NOTHING;
       }
