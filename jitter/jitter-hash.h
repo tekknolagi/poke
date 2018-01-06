@@ -1,6 +1,6 @@
 /* Jitter: hash table data structure header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -163,6 +163,30 @@ jitter_hash_table_remove (struct jitter_hash_table *t,
 
 
 
+
+/* Hash iteration.
+ * ************************************************************************** */
+
+/* This is currently very crude, but sufficient for the purpose. */
+
+/* A function performing some work on a hash binding. */
+typedef
+void (* jitter_hash_for_all_bindings_function)
+     (const union jitter_word key,
+      const union jitter_word value,
+      void *extra_datum);
+
+/* Call the given function once on each binding of the pointed hash table, in
+   some unspecified order.  The last argument is passed as is to the worker
+   function.
+   The function must not change the hash table content. */
+void
+jitter_hash_for_all_bindings (const struct jitter_hash_table *t,
+                              jitter_hash_for_all_bindings_function f,
+                              void *extra_datum);
+
+
+
 
 /* Debugging and tuning.
  * ************************************************************************** */
