@@ -340,6 +340,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(global_lookup, SYMBOL,
   { JITTERLISP_GLOBAL_LOOKUP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(undefine, SYMBOL,
   { JITTERLISP_UNDEFINE_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_0_(interned_symbols,
+  { JITTERLISP_INTERNED_SYMBOLS_(res); })
 /* Closure operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_environment, CLOSURE,
   { JITTERLISP_CLOSURE_ENVIRONMENT_(res, args [0]); })
@@ -546,6 +548,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("defined?", 1, definedp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("global-lookup", 1, global_lookup),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("undefine", 1, undefine),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interned-symbols", 0, interned_symbols),
       /* Closure operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-environment", 1,
                                              closure_environment),

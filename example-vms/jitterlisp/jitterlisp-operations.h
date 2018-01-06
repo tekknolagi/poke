@@ -561,6 +561,11 @@
     (_jitterlisp_out) = JITTERLISP_NOTHING;                \
   JITTER_END_
 
+#define JITTERLISP_INTERNED_SYMBOLS_(_jitterlisp_out)      \
+  JITTER_BEGIN_                                            \
+    (_jitterlisp_out) = jitterlisp_interned_symbols ();    \
+  JITTER_END_
+
 
 
 

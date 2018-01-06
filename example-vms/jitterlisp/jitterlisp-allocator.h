@@ -206,6 +206,17 @@ jitterlisp_allocate (size_t size_in_bytes)
 
 
 
+/* Interned symbol list.
+ * ************************************************************************** */
+
+/* Return a fresh list containing all the interned symbols which currently
+   exist, in an unspecified order. */
+jitterlisp_object
+jitterlisp_interned_symbols (void);
+
+
+
+
 /* Not for the user: initialization and finalization of the memory subsystem.
  * ************************************************************************** */
 

@@ -454,3 +454,38 @@ jitterlisp_destroy_interned_symbol (const union jitter_word w)
      with malloc. */
   free (symbol);
 }
+
+
+
+
+/* Interned symbol list.
+ * ************************************************************************** */
+
+/* Add a symbol bound in the symbol table to the pointer Lisp list.
+   This function is meant to be used with jitter_hash_for_all_bindings . */
+static void
+jitterlisp_add_binding_to_list (const union jitter_word key,
+                                const union jitter_word value,
+                                void *extra_datum)
+{
+  jitterlisp_object * list_pointer = extra_datum;
+
+  /* We don't need to do anything with the symbol name here: we only care about
+     the value part of the binding.  Encode the symbol, which is stored
+     unencoded in the symbol table. */
+  jitterlisp_object symbol = JITTERLISP_SYMBOL_ENCODE(value.pointer);
+
+  /* Update the pointed list to contain another cons. */
+  * list_pointer = jitterlisp_cons (symbol, * list_pointer);
+}
+
+jitterlisp_object
+jitterlisp_interned_symbols (void)
+{
+  /* Add each symbol to a list, and return the list. */
+  jitterlisp_object res = JITTERLISP_EMPTY_LIST;
+  jitter_hash_for_all_bindings (& jitterlisp_symbol_table,
+                                jitterlisp_add_binding_to_list,
+                                & res);
+  return res;
+}
