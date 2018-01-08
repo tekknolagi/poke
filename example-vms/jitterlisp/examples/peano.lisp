@@ -1,6 +1,6 @@
 ;;; JitterLisp (almost -*- Scheme -*- for Emacs) test with Peano encoding.
 
-;;; Copyright (C) 2017 Luca Saiu
+;;; Copyright (C) 2017, 2018 Luca Saiu
 ;;; Written by Luca Saiu
 
 ;;; This file is part of the Jittery Lisp language implementation, distributed as
@@ -104,6 +104,17 @@
       (peano-successor peano-zero)
       (peano-* p (peano-fact (peano-predecessor p)))))
 
+(define (peano-fibo p)
+  (if (peano-< p peano-2)
+      p
+      (peano-+ (peano-fibo (peano-- p peano-2))
+               (peano-fibo (peano-- p peano-1)))))
+(define (fibo n)
+  (if (< n 2)
+      n
+      (+ (fibo (- n 2))
+         (fibo (- n 1)))))
+
 (define (peano-expt b e)
   (if (peano-zero? e)
       (peano-successor peano-zero)
@@ -142,6 +153,13 @@
       (fixnum->peano-acc (1- n) (peano-successor a))))
 (define (fixnum->peano n)
   (fixnum->peano-acc n peano-zero))
+
+(define peano-0
+  (fixnum->peano 0))
+(define peano-1
+  (fixnum->peano 1))
+(define peano-2
+  (fixnum->peano 2))
 
 
 
