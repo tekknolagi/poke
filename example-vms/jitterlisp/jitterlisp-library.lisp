@@ -2214,6 +2214,24 @@
 (define-associative-variadic-extension set-intersect
   set-intersect-procedure set-empty)
 
+(define (list->set list)
+  ;; This relies on set-unite-procedure recurring on its second argument.
+  (set-unite-procedure set-empty list))
+
+;;; Return a fresh set-as-list containing the given elements, each to be
+;;; evaluated left-to-right.  Duplicates are removed.
+(define-macro (set . elements)
+  (if (null? elements)
+      '()
+      ;; This is slightly complicated by the need to keep the evaluation order
+      ;; intuitive: macro arguments are to be evaluated left-to-right.
+      (let ((element-name (gensym))
+            (subset-name (gensym)))
+        ;; Using let* rather than let here is just an optimization.
+        `(let* ((,element-name ,(car elements))
+                (,subset-name (set ,@(cdr elements))))
+           (set-with ,subset-name ,element-name)))))
+
 
 
 
@@ -2580,6 +2598,155 @@
 
 
 
+;;;; Effect analysis.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; FIXME: it would be useful to define a notion similar to this but weaker, not
+;;; considering allocation an effect.  This would let me remove some useless
+;;; allocations.
+
+;;; Return non-#f iff the evaluation of the given may have effects, in an
+;;; environment where with the given set-as-list of variables are bound.
+;;;
+;;; The analysis is, of course, partial: a #f result means that the AST is
+;;; guaranteed not to have effects.  A non-#f result means that the AST
+;;; evaluation *may* have effects, which is meant to direct optimizers to err on
+;;; the safe side.
+;;; An analysis more precise than this is certainly possible, but catching every
+;;; possible case of effects would require solving the Halting Problem.
+;;;
+;;; Notice that accessing a variable which is not bound and is not a constant
+;;; is considered an effectful operation: the variable may be undefined as a
+;;; global at evaluation time, which would cause a runtime error -- a visible
+;;; effect.
+;;; Any other error, including type errors, is also an effect.
+;;; Heap allocation is an effect (allocations cannot in general be merged
+;;;   without changing the program semantics).
+;;; Non-termination is also an effect.
+(define-constant (ast-effectful? ast bounds)
+  (cond ((ast-literal? ast)
+         #f)
+        ((ast-variable? ast)
+         (cond ((set-has? bounds (ast-variable-name ast))
+                ;; Reading a bound variable has no effects.
+                #f)
+               ((constant? (ast-variable-name ast))
+                ;; Reading a global constant has no effects.
+                #f)
+               (#t
+                ;; Reading a global non-constant may fail, which counts as an
+                ;; effect.
+                #t)))
+        ((ast-define? ast)
+         ;; Global definitions can have effects.
+         #t)
+        ((ast-if? ast)
+         (or (ast-effectful? (ast-if-condition ast) bounds)
+             (ast-effectful? (ast-if-then ast) bounds)
+             (ast-effectful? (ast-if-else ast) bounds)))
+        ((ast-set!? ast)
+         ;; Assignments can have effects.
+         #t)
+        ((ast-while? ast)
+         ;; A while loop can have effects even if its guard and body are both
+         ;; non-effectful, since non-termination is an effect...
+         (let ((guard (ast-while-guard ast)))
+           ;; The only case where we bother returning a more precise result is a
+           ;; while loop with the constant #f as guard.
+           (if (and (ast-literal guard)
+                    (not (ast-literal-value guard)))
+               #f
+               ;; The guard is not #f.  Consider the loop effectful.
+               #t)))
+        ((ast-primitive? ast)
+         ;; Some primitives are known to be non-effectful, but all of their
+         ;; arguments must be non-effectful as well for the entire AST to be
+         ;; non-effectful.
+         ;; It would be possible to be more precise and check for types in
+         ;; some cases, where arguments are known; this would be useful for
+         ;; arithmetic.
+         (or (primitive-effectful? (ast-primitive-operator ast))
+             (ast-effectful?-list (ast-primitive-operands ast)
+                                  bounds)))
+        ((ast-call? ast)
+         ;; It's not trivial to return a more precise result here without
+         ;; visiting a call graph of constant callees to be recursively
+         ;; analyzed, keeping termination into account.  Right now I consider
+         ;; any call effectful.
+         #t)
+        ((ast-lambda? ast)
+         ;; Making a new closure is effectful, as an allocation operation.
+         #t)
+        ((ast-let? ast)
+         (or (ast-effectful? (ast-let-bound-form ast)
+                             bounds)
+             (ast-effectful? (ast-let-bound-body ast)
+                             (set-with bounds
+                                       (ast-let-bound-name ast)))))
+        ((ast-sequence? ast)
+         (or (ast-effectful? (ast-sequence-first ast) bounds)
+             (ast-effectful? (ast-sequence-second ast) bounds)))))
+
+;;; An extension of ast-effectful? to a list of ASTs: return #f iff
+;;; *all* the ASTs in the list are known to be non-effectful.
+(define-constant (ast-effectful?-list asts bounds)
+  (cond ((null? asts)
+         #f)
+        ((ast-effectful? (car asts) bounds)
+         #t)
+        (#t
+         (ast-effectful?-list (cdr asts) bounds))))
+
+;;; A set-as-list of non-effectful primitives.  FIXME: add a
+;;; primitive-effectful? primitive and use it, instead of this.
+;;;
+;;; Notice that any primitives having type requirements on its arguments
+;;; may fail, and is therefore effectful.  A primitive always returning
+;;; a result given any argument is non-effectful.
+;;; Type checking (for example primitive-null?) is therefore non-effectful,
+;;; but case checking (for example primitive-ast-variable? or
+;;; primitive-zero? , which fails on non-numbers) is effectful.
+;;;
+;;; Allocation primitives are effectful: primitive uses cannot be eliminated
+;;; without changing the program semantics, in the presence of side effects.
+;;; This makes primitive-cons and primitive-gensym effectful.
+;;;
+;;; Nullary primitives depending on global modifiable state, such as
+;;; primitive-interned-symbols are effectful: their result may be different at a
+;;; later time when the AST is actually executed.
+(define-constant non-effectful-primitives
+  (set ;; Type-checking primitives may return #f, but never fail.
+       primitive-fixnum?
+       primitive-character?
+       primitive-null?
+       primitive-non-null?
+       primitive-eof?
+       primitive-boolean?
+       primitive-nothing?
+       primitive-undefined?
+       primitive-symbol?
+       primitive-non-symbol?
+       primitive-cons?
+       primitive-non-cons?
+       primitive-closure?
+       primitive-primitive?
+       primitive-ast?
+       primitive-macro?
+       primitive-vector?
+       ;; Equality comparisons never fail (but maginitude comparisons may).
+       primitive-eq?
+       primitive-not-eq?
+       ;; Logical negation accepts a generalized boolean, and therefore never
+       ;; fails.
+       primitive-not))
+
+;;; Any primitive not in the set-as-list above is considered to be effectful.
+(define-constant (primitive-effectful? primitive)
+  (not (set-has? non-effectful-primitives primitive)))
+
+
+
+
 ;;;; Instantiation.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -2803,8 +2970,16 @@
          (ast-set! (ast-set!-name ast)
                    (ast-optimize-helper (ast-set!-body ast) bounds)))
         ((ast-while? ast)
-         (ast-while (ast-optimize-helper (ast-while-guard ast) bounds)
-                    (ast-optimize-helper (ast-while-body ast) bounds)))
+         (let ((optimized-guard (ast-optimize-helper (ast-while-guard ast)
+                                                     bounds))
+               (optimized-body (ast-optimize-helper (ast-while-body ast)
+                                                    bounds)))
+           (if (and (ast-literal? optimized-guard)
+                    (not (ast-literal-value optimized-guard)))
+               ;; Remove a (while #f ...).  Notice that we can't simplify
+               ;; a while with a constantly non-#f guard.
+               (ast-literal (begin))
+               (ast-while optimized-guard optimized-body))))
         ((ast-primitive? ast)
          ;; FIXME: evaluate the primitive at expansion time if the primitive
          ;; has no effect and all of its arguments are literal.
@@ -2885,7 +3060,6 @@
          (ast-let bound-name
                   bound-form
                   (ast-optimize-helper body (set-with bounds bound-name))))))
-;;;????
 
 
 
@@ -2917,6 +3091,52 @@
          (_  (newline))
          )
     ast-4))
+
+;;; Destructively modify the given closure, replacing its fields with a
+;;; semantically equivalent optimized version.
+(define-constant (closure-optimize! closure)
+  ;; Bind the fields from the unoptimized closure.
+  (let ((env (closure-environment closure))
+        (formals (closure-formals closure))
+        (body (closure-body closure)))
+    ;; Compute optimized fields.
+    (let* ((nonlocals (map car env))
+           (unary-gensym (lambda (useless) (gensym)))
+           (fresh-formals (map unary-gensym formals))
+           (fresh-nonlocals (map unary-gensym env))
+           (alpha-converted-env (zip fresh-nonlocals (map cdr env)))
+           (alpha-conversion-alist
+            (append (zip formals fresh-formals)
+                    (zip nonlocals fresh-nonlocals)))
+           (alpha-converted-body
+            (ast-alpha-convert-with body
+                                    alpha-conversion-alist))
+           (alpha-converted-bounds
+            (set-unite fresh-formals (list->set fresh-nonlocals)))
+           (optimized-body
+            (ast-optimize alpha-converted-body
+                          alpha-converted-bounds)))
+      ;; Set all the fields, at the same time.  Doing this in more than one
+      ;; operation would be dangerous as the closure we are updating might be
+      ;; used in the update process itself, which would make visible fields in a
+      ;; temporarily inconsistent state.
+      (closure-set! closure
+                    alpha-converted-env
+                    fresh-formals
+                    optimized-body))))
+
+;;; FIXME: this is convenient for debugging, but I shouldn't keep it.
+(define (o x)
+  (closure-optimize! x)
+  x)
+
+
+
+
+;;;; AST optimization ?????.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; ?????
 
 
 
@@ -3142,3 +3362,52 @@
 ;;; write it in the body, which may change the order.  Anyway the variable case
 ;;; will be fixed by adding the check, the literal case is already okay, and
 ;;; more complicated expressions will *not* be substituted in.]
+
+;; Guile can't remove this let:
+;; scheme@(guile-user)> ,optimize (let* ((a (f x))) (+ 1 a))
+;; $1 = (let ((a (f x))) (+ 1 a))
+;; [Is the optimization incorrect with call/cc ?  Actually I don't think so,
+;;  but in that case it wouldn't be Guile's fault.  In that case too bad for
+;;  Scheme: I will do better.]
+;;
+;; So I definitely should.  I should also make sure to turn lets of unused
+;; variables into sequences.  For example:
+;; (define (f x) (let ((a (+ 1 2))) a x)) (ast-optimize (closure-body f) '(x))
+
+;; Make sure that this remains correct:
+;; (ast-optimize (macroexpand '(let ((c 1)) (set! c 4) c)) '())
+;;   { [let #<u235> [literal 1] [sequence [set! #<u235> [literal 4]] [variable #<u235>]]]
+;;     CORRECT (difficult to optimize further without a special case). }
+
+;; Nice testcases, containing many lets.  Those two should be rewritten
+;; to different shapes:
+;; (ast-optimize (macroexpand '(set 1 2 3 4)) ())
+;; (ast-optimize (macroexpand '(set 1 x 3 4)) ())
+
+;; Check that these are correctly optimized:
+;; (ast-optimize (macroexpand '(begin2 x y)) ())
+;;   {  [sequence [variable x] [variable y]] is CORRECT }
+;; (ast-optimize (macroexpand '(begin1 x y z)) ())
+;;   {  [sequence [variable y] [sequence [variable z] [variable x]]] is WRONG }
+;; (ast-optimize (macroexpand '(begin2 x y z)) ())
+;;   {  [sequence [variable x] [sequence [variable z] [variable y]]] is WRONG }
+;; (ast-optimize (macroexpand '(let ((a (f 1)) (b a)) 4)) ())
+;;   {  [let #<u263> [call [variable f] [literal 1]] [literal 4]] is WRONG:
+;;      a is non-bound and non-constant, so its reference is effectful and
+;;      cannot be optimized away. }
+;; (ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) 4)) ())
+;;   {  [let #<u267> [call [variable f] [literal 1]] [literal 4]] is CORRECT
+;;      but subptimal: the let AST should become a sequence AST. }
+;; (ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) b)) ())
+;;   {  [let #<u269> [call [variable f] [literal 1]] [variable #<u269>]] CORRECT
+;;      but SUBOPTIMAL, optimizable to
+;;        [call [variable f] [literal 1]].
+;;        This further optimization would improve tailness! }
+
+;; It's important to rename formals when optimizing closures: otherwise,
+;; when inlining callees within the closure body some references to globals
+;; might be captured by the closure formals.
+
+;; Make sure that when I remove a let binding a variable to a some expression
+;; (say a conditional) I check that the variables occurring free in the
+;; expression are not assigned in the body before the variable use in the body.
