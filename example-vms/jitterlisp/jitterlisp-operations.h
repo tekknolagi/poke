@@ -1,6 +1,6 @@
 /* Jittery Lisp: operations on JitterLisp objects: header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -467,8 +467,7 @@
 /* Closure operations.
  * ************************************************************************** */
 
-// FIXME: comment.
-
+/* Make a fresh closure with the given fields. */
 #define JITTERLISP_CLOSURE_(_jitterlisp_out,                         \
                             _jitterlisp_in0,                         \
                             _jitterlisp_in1,                         \
@@ -482,6 +481,7 @@
     (_jitterlisp_out) = JITTERLISP_CLOSURE_ENCODE(_jitterlisp_tmp);  \
   JITTER_END_
 
+/* Lookup a closure field. */
 #define JITTERLISP_CLOSURE_FIELD_(_jitterlisp_out,                \
                                   _jitterlisp_in0,                \
                                   _jitterlisp_field_name)         \
@@ -490,13 +490,30 @@
       = JITTERLISP_CLOSURE_DECODE(_jitterlisp_in0);               \
     (_jitterlisp_out) = _jitterlisp_tmp->_jitterlisp_field_name;  \
   JITTER_END_
-
 #define JITTERLISP_CLOSURE_ENVIRONMENT_(_jitterlisp_out, _jitterlisp_in0)   \
   JITTERLISP_CLOSURE_FIELD_(_jitterlisp_out, _jitterlisp_in0, environment)
 #define JITTERLISP_CLOSURE_FORMALS_(_jitterlisp_out, _jitterlisp_in0)   \
   JITTERLISP_CLOSURE_FIELD_(_jitterlisp_out, _jitterlisp_in0, formals)
 #define JITTERLISP_CLOSURE_BODY_(_jitterlisp_out, _jitterlisp_in0)   \
   JITTERLISP_CLOSURE_FIELD_(_jitterlisp_out, _jitterlisp_in0, body)
+
+/* Destructively modify all the fields in a closure.  By setting them all in
+   the same operation I can guarantee that no Lisp code will see a closure
+   partly updated, which would be dangerous in case closure-updating code
+   used the same closure. */
+#define JITTERLISP_CLOSURE_SET_(_jitterlisp_out,       \
+                                _jitterlisp_in0,       \
+                                _jitterlisp_in1,       \
+                                _jitterlisp_in2,       \
+                                _jitterlisp_in3)       \
+  JITTER_BEGIN_                                        \
+    struct jitterlisp_closure *_jitterlisp_tmp         \
+      = JITTERLISP_CLOSURE_DECODE(_jitterlisp_in0);    \
+    _jitterlisp_tmp->environment = (_jitterlisp_in1);  \
+    _jitterlisp_tmp->formals = (_jitterlisp_in2);      \
+    _jitterlisp_tmp->body = (_jitterlisp_in3);         \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;            \
+  JITTER_END_
 
 
 

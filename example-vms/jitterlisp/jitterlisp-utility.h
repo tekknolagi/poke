@@ -1,6 +1,6 @@
 /* Jittery Lisp: utility function header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -53,12 +53,18 @@ jitterlisp_is_alist (jitterlisp_object o);
 /* A macro wrapper around jitterlisp_is_list , convenient for type-checking
    primitive arguments.  This calls jitterlisp_is_list . */
 #define JITTERLISP_IS_LIST(x)  \
-  (jitterlisp_is_list(x))
+  (jitterlisp_is_list (x))
+
+/* A macro wrapper around jitterlisp_is_list_of_symbols , convenient for
+   type-checking primitive arguments.  This calls jitterlisp_is_list_of_symbols
+   . */
+#define JITTERLISP_IS_SYMBOLS(x)  \
+  (jitterlisp_is_list_of_symbols (x))
 
 /* A macro wrapper around jitterlisp_is_alist , convenient for type-checking
    primitive arguments.  This calls jitterlisp_is_alist . */
 #define JITTERLISP_IS_ALIST(x)  \
-  (jitterlisp_is_alist(x))
+  (jitterlisp_is_alist (x))
 
 
 

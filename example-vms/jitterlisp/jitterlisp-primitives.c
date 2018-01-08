@@ -1,6 +1,6 @@
 /* Jittery Lisp: primitives.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -103,7 +103,10 @@
                 _jitterlisp_the_name_suffix);                               \
         jitterlisp_print_to_stream (stdout, * _jitterlisp_next_arg);        \
         printf (":\n");                                                     \
-        jitterlisp_error_cloned ("invalid argument type for primitive");    \
+        jitterlisp_error_cloned ("invalid argument type for primitive "     \
+                                 "(not "                                    \
+                                 JITTER_STRINGIFY(_jitterlisp_type_suffix)  \
+                                 ")");                                      \
       }                                                                     \
     /* Increment the next-argumnent pointer so that the next type check */  \
     /* affects the next argument. */                                        \
@@ -349,6 +352,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_formals, CLOSURE,
   { JITTERLISP_CLOSURE_FORMALS_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_body, CLOSURE,
   { JITTERLISP_CLOSURE_BODY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_4_(closure_setb, CLOSURE, ALIST, SYMBOLS, AST,
+  { JITTERLISP_CLOSURE_SET_(res, args [0], args [1], args [2], args [3]); })
 /* Vector operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
   { JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]); })
@@ -554,8 +559,8 @@ jitterlisp_primitives []
                                              closure_environment),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-formals", 1,
                                              closure_formals),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-body", 1,
-                                             closure_body),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-body", 1, closure_body),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-set!", 4, closure_setb),
       /* Vector operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */
@@ -673,7 +678,7 @@ jitterlisp_primitives_initialize (void)
   jitterlisp_object actuals [JITTERLISP_PRIMITIVE_MAX_IN_ARITY + 1];
   formals [0] = JITTERLISP_EMPTY_LIST;
   actuals [0] = JITTERLISP_EMPTY_LIST;
-  for (i = 1; i < JITTERLISP_PRIMITIVE_MAX_IN_ARITY; i ++)
+  for (i = 1; i <= JITTERLISP_PRIMITIVE_MAX_IN_ARITY; i ++)
     {
       formals [i] = jitterlisp_cons (variable_array [i - 1],
                                      formals [i - 1]);
