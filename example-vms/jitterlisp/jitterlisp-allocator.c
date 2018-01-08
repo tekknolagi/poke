@@ -1,6 +1,6 @@
 /* Jittery Lisp: heap allocation.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -482,6 +482,10 @@ jitterlisp_add_binding_to_list (const union jitter_word key,
 jitterlisp_object
 jitterlisp_interned_symbols (void)
 {
+  /* FIXME: this will require changes if I switch to a precise-pointer-finding
+     GC.  Pointer to jitterlisp_objects from automatic C variables need to be
+     temporarily marked as roots. */
+
   /* Add each symbol to a list, and return the list. */
   jitterlisp_object res = JITTERLISP_EMPTY_LIST;
   jitter_hash_for_all_bindings (& jitterlisp_symbol_table,
