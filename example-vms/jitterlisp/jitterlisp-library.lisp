@@ -396,6 +396,60 @@
 
 
 
+;;;; all-but-last-reversed.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (all-but-last-reversed-iterative xs)
+  (if (null? xs)
+      (error '(all-but-last-reversed-iterative: empty argument))
+      (let* ((res ()))
+        (while (non-null? (cdr xs))
+          (set! res (cons (car xs) res))
+          (set! xs (cdr xs)))
+        res)))
+
+(define-constant (all-but-last-reversed-non-empty-tail-recursive-helper xs acc)
+  (if (null? (cdr xs))
+      acc
+      (all-but-last-reversed-non-empty-tail-recursive-helper (cdr xs)
+                                                             (cons (car xs)
+                                                                   acc))))
+(define-constant (all-but-last-reversed-tail-recursive xs)
+  (if (null? xs)
+      (error '(all-but-last-reversed-tail-recursive: empty argument))
+      (all-but-last-reversed-non-empty-tail-recursive-helper xs ())))
+
+(define-constant (all-but-last-reversed xs)
+  (all-but-last-reversed-iterative xs))
+
+
+
+
+;;;; all-but-last.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (all-but-last-iterative xs)
+  (reverse!-iterative (all-but-last-reversed-iterative xs)))
+
+(define-constant (all-but-last-tail-recursive xs)
+  (reverse!-tail-recursive (all-but-last-reversed-tail-recursive xs)))
+
+(define-constant (all-but-last-non-empty-non-tail-recursive xs)
+  (if (null? (cdr xs))
+      '()
+      (cons (car xs)
+            (all-but-last-non-empty-non-tail-recursive (cdr xs)))))
+(define-constant (all-but-last-non-tail-recursive xs)
+  (if (null? xs)
+      (error '(all-but-last-non-tail-recursive: empty argument))
+      (all-but-last-non-empty-non-tail-recursive xs)))
+
+(define-constant (all-but-last xs)
+  (all-but-last-iterative xs))
+
+
+
+
 ;;;; length.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -2073,28 +2127,78 @@
 
 
 
+;;;; Variadic operator procedures.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; It's quite convenient to define the machinery for nesting variadic operators
+;;; as left- or right-deep s-expressions thru procedures, and then to wrap
+;;; procedures into macros.  Defining macro-defining macros is more involved,
+;;; for no gain.
+
+;;; Return an s-expression encoding nested two-argument rator calls, using rands
+;;; as the operands to be evaluated in order.  The neutral rand is only used if
+;;; there are zero rands.  Nest on the neft.
+;;; Examples:
+;;;   (variadic-left-deep '+ 0 '(1 2 3)) ==> (+ (+ 1 2) 3)
+;;;   (variadic-left-deep '+ 0 '(1))     ==> 1
+;;;   (variadic-left-deep '+ 0 '())      ==> 0
+(define-constant (variadic-left-deep rator neutral rands)
+  (cond ((null? rands)
+         neutral)
+        ((null? (cdr rands))
+         (car rands))
+        (#t
+         (let* ((last-rand (last rands))
+                (all-but-last-rands (all-but-last rands)))
+           `(,rator ,(variadic-left-deep rator neutral
+                                         all-but-last-rands)
+                    ,last-rand)))))
+
+;;; Like variadic-left-deep, but nesting on the right.
+;;; Examples:
+;;;   (variadic-right-deep '+ 0 '(1 2 3)) ==> (+ 1 (+ 2 3))
+;;;   (variadic-right-deep '+ 0 '(1))     ==> 1
+;;;   (variadic-right-deep '+ 0 '())      ==> 0
+(define-constant (variadic-right-deep rator neutral rands)
+  (cond ((null? rands)
+         neutral)
+        ((null? (cdr rands))
+         (car rands))
+        (#t
+         `(,rator ,(car rands)
+                  ,(variadic-right-deep rator neutral (cdr rands))))))
+
+
+
+
 ;;;; Variadic arithmetic.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; FIXME: nested quasiquoting is already difficult to handle here.  I can do the
-;; same thing more simply with higher-order procedures, using simple macro
-;; wrappers on top of fold-left and fold-right.
+;;; Define operator as a variadic macro, composing the original-name rator
+;;; (itself a procedure, variable name or macro name) with the given
+;;; netural element.  Nest on the left.
+(define-macro (define-left-nested-variadic-extension operator original-name
+                neutral)
+  (let ((operands-name (gensym)))
+    `(define-macro (,operator . ,operands-name)
+       (variadic-left-deep ',original-name ',neutral ,operands-name))))
+
+;;; Like define-left-nested-variadic-extension, but nest on the right.
 (define-macro (define-right-nested-variadic-extension operator original-name
                 neutral)
   (let ((operands-name (gensym)))
     `(define-macro (,operator . ,operands-name)
-       (cond ((null? ,operands-name)
-              ,neutral)
-             ((null? (cdr ,operands-name))
-              (car ,operands-name))
-             (#t
-              `(,',original-name
-                ,(car ,operands-name)
-                (,',operator ,@(cdr ,operands-name))))))))
+       (variadic-right-deep ',original-name ',neutral ,operands-name))))
 
+;;; Define a variadic operator thru define-left-nested-variadic-extension or
+;;; define-right-nested-variadic-extension ; it makes no difference which way
+;;; we nest for an associative operators, so use whichever one happens to be
+;;; more efficient in the current implementation.
 (define-macro (define-associative-variadic-extension operator
                 original-name neutral)
-  `(define-right-nested-variadic-extension ,operator ,original-name ,neutral))
+  ;; With a strict left-to-right evaluation order nesting on the left yields
+  ;; better stack code.
+  `(define-left-nested-variadic-extension ,operator ,original-name ,neutral))
 
 (define-associative-variadic-extension + primordial-+ 0)
 (define-associative-variadic-extension * primordial-* 1)
@@ -2844,16 +2948,24 @@
           ((<> (length formals) (length actuals))
            ;; This call will fail if reached: don't rewrite it.
            ;; FIXME: warn in a cleaner way.
-           (display `(warning: invalid in-arity for call to ,closure
+           (display `(warning: invalid in-arity ,(length actuals)
+                               for call to in-arity ,(length formals)
+                               ,closure
                                with actuals ,actuals))
            (newline)
            (ast-call (ast-literal closure) actuals))
           (#t
+           ;; FIXME: this may be too aggressive: a procedure with two recursive
+           ;; calls such as fibo gets an exponentially large body AST.  The
+           ;; process however is not infinite, since the closure body doesn't
+           ;; have its own known calls inlined here.
+
            ;; The environment is empty, and the argument number is correct:
            ;; rewrite into nested lets binding the closure formals to the call
            ;; actuals, and then evaluating the closure body.  alpha-convert the
            ;; closure content to avoid conflicts with local variables in the
            ;; caller.
+           ;; (display `(inlining call to ,closure)) (newline)
            (let* ((new-formals (map (lambda (useless) (gensym)) formals))
                   (alist (zip formals new-formals))
                   (new-body (ast-alpha-convert-with body alist)))
@@ -3070,13 +3182,13 @@
 (define-constant (ast-optimize ast-0 bounds)
   (let* (;; Fold global constants into the AST.  This will introduce, in
          ;; particular, closure literals as operators.
-         (_ (display `(ast-0: ,ast-0)) (newline))
+         ;;(_ (display `(ast-0: ,ast-0)) (newline))
          (ast-1 (ast-global-fold ast-0 bounds))
-         (_ (display `(ast-1: ,ast-1)) (newline))
+         ;;(_ (display `(ast-1: ,ast-1)) (newline))
          ;; Alpha-convert everything: we are about to introduce new let
          ;; bindings, and we need to prevent conflicts.
          (ast-2 (ast-alpha-convert ast-1))
-         (_ (display `(ast-2: ,ast-2)) (newline))
+         ;;(_ (display `(ast-2: ,ast-2)) (newline))
          ;; Translate calls to closures literals into let forms,
          ;; alpha-converting the inlined procedures.  This should make almost
          ;; all primitives explicit in the AST eliminating closure wrappers for
@@ -3084,11 +3196,11 @@
          ;; ast-3 will still be alpha-converted, with all bound variables
          ;; different from one another.
          (ast-3 (ast-simplify-calls ast-2))
-         (_ (display `(ast-3: ,ast-3)) (newline))
+         ;;(_ (display `(ast-3: ,ast-3)) (newline))
          ;; Remove redundancy.
          (ast-4 (ast-optimize-helper ast-3 bounds))
-         (_ (display `(ast-4: ,ast-4)) (newline))
-         (_  (newline))
+         ;;(_ (display `(ast-4: ,ast-4)) (newline))
+         ;;(_  (newline))
          )
     ast-4))
 
@@ -3126,10 +3238,10 @@
                     optimized-body))))
 
 ;;; FIXME: this is convenient for debugging, but I shouldn't keep it.
-(define (o x)
-  (closure-optimize! x)
-  x)
-
+(define (o c)
+  (closure-optimize! c)
+  c)
+(define (o0 c))
 
 
 
@@ -3306,7 +3418,7 @@
 ;;;; Scratch.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (fibo n)
+(define-constant (fibo n)
   (if (< n 2)
       n
       (+ (fibo (- n 2))
