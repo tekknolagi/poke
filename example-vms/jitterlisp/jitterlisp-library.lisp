@@ -3019,6 +3019,8 @@
 ;;; Return a rewritten call having the given closure as the original (literal)
 ;;; operator, and the ASTs in the given list as operands.
 (define-constant (ast-simplify-call-helper closure actuals)
+  ;; FIXME: would it be a problem for termination if I used ast-optimize instead
+  ;; of ast-simplify-call-helper in recursive calls?  Would it help?
   (let ((environment (closure-environment closure))
         (formals (closure-formals closure))
         (body (closure-body closure)))
@@ -3239,14 +3241,14 @@
          ;; the error point.
          (let ((new-body (ast-instantiate body bound-name bound-form)))
            (ast-optimize-helper new-body bounds)))
-        ((and (ast-variable? bound-form)
-              (ast-variable? body)
+        ((and (ast-variable? body)
               (eq? bound-name (ast-variable-name body)))
-         ;; Rewrite [let x [variable y] [variable x]] into [variable y].  There
-         ;; are no restrictions on the boundness of y.
+         ;; Rewrite [let x E [variable x]] into E , without any restriction on
+         ;; the shape of E , on bound variables or on effects.
          ;; This rewrite could be subsumed by more general rules which are not
-         ;; implemented yet, but at least this case is easy to optimize. It can
-         ;; occur as a consequence of other rewrites.
+         ;; implemented yet but at least this case is easy to optimize, and
+         ;; an opportunity to improve tailness.  It can occur as a consequence
+         ;; of other rewrites.
          bound-form)
         (#t
          ;; Default case: keep the let AST in our rewriting.
@@ -3691,4 +3693,8 @@
 ;; (ast-optimize (macroexpand '(if (begin 1 (f 2) 3 a) b c)) ())
 
 
-(define (f) (let loop ((a 0)) (unless (>= a 10000000) (loop (1+ a)))))
+;; This must have no redundant lets...
+;; (ast-optimize (macroexpand '(if (< n 2) a b) ) ())
+
+
+;;(define (f) (let loop ((a 0)) (unless (>= a 10000000) (loop (1+ a)))))
