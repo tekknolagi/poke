@@ -30,7 +30,7 @@
 /* Jittery evaluation engine.
  * ************************************************************************** */
 
-/* Fail saying that the VM is not yet implemented. */
+/* Error out saying that the VM is not yet implemented. */
 __attribute__ ((noreturn))
 static void
 jitterlisp_vm_unimplemented (void)

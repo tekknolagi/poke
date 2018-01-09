@@ -3035,11 +3035,6 @@
            (newline)
            (ast-call (ast-literal closure) actuals))
           (#t
-           ;; FIXME: this may be too aggressive: a procedure with two recursive
-           ;; calls such as fibo gets an exponentially large body AST.  The
-           ;; process however is not infinite, since the closure body doesn't
-           ;; have its own known calls inlined here.
-
            ;; The environment is empty, and the argument number is correct:
            ;; rewrite into nested lets binding the closure formals to the call
            ;; actuals, and then evaluating the closure body.  alpha-convert the
@@ -3099,7 +3094,12 @@
                (simplified-operands
                 (ast-simplify-calls-list (ast-call-operands ast))))
            (if (and (ast-literal? simplified-operator)
-                    (closure? (ast-literal-value simplified-operator)))
+                    (closure? (ast-literal-value simplified-operator))
+                    ;; This may be too aggressive: I currently inline every
+                    ;; call to a known leaf closure, independently from the
+                    ;; body size.
+                    (ast-leaf? (closure-body (ast-literal-value
+                                              simplified-operator))))
                (ast-simplify-call-helper (ast-literal-value simplified-operator)
                                          simplified-operands)
                (ast-call simplified-operator simplified-operands))))
