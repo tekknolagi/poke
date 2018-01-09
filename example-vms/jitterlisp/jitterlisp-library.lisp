@@ -3492,6 +3492,14 @@
   (if (null? optional-environment)
       `(primordial-eval ,form '())
       `(primordial-eval ,form ,@optional-environment)))
+(define-macro (eval-interpreter form . optional-environment)
+  (if (null? optional-environment)
+      `(primordial-eval-interpreter ,form '())
+      `(primordial-eval-interpreter ,form ,@optional-environment)))
+(define-macro (eval-vm form . optional-environment)
+  (if (null? optional-environment)
+      `(primordial-eval-vm ,form '())
+      `(primordial-eval-vm ,form ,@optional-environment)))
 
 (define-macro (macroexpand form . optional-environment)
   (if (null? optional-environment)
@@ -3620,7 +3628,8 @@
 
 ;; Make sure that when I remove a let binding a variable to a some expression
 ;; (say a conditional) I check that the variables occurring free in the
-;; expression are not assigned in the body before the variable use in the body.
+;; expression are not assigned in the body *before* the variable use in the
+;; body.
 
 ;; FIXME: Primitive optimization:
 ;;   (ast-optimize (macroexpand '(if (not a) b c)) ())
