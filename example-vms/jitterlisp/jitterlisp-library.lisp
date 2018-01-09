@@ -371,7 +371,7 @@
       (last-cons-tail-recursive-non-null (cdr xs))))
 (define-constant (last-cons-tail-recursive xs)
   (if (null? xs)
-      (error)
+      (error '(last-cons-tail-recursive: empty list))
       (last-cons-tail-recursive-non-null xs)))
 
 (define-constant (last-cons xs)
@@ -1865,6 +1865,36 @@
 ;;; The code below is okay, but should be moved up.
 
 
+;;;; all-different?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (list-has? xs x)
+  (cond ((null? xs)
+         #f)
+        ((eq? (car xs) x)
+         #t)
+        (#t
+         (list-has? (cdr xs) x))))
+
+
+
+
+;;;; all-different?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; This is O(n^2).
+(define-constant (all-different? xs)
+  (cond ((null? xs)
+         #t)
+        ((list-has? (cdr xs) (car xs))
+         #f)
+        (#t
+         (all-different? (cdr xs)))))
+
+
+
+
+
 ;;;; High-level syntax: one-way conditionals.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1920,6 +1950,8 @@
 ;;;   (let* ((fresh-1 1) (fresh-2 2) (a fresh-1) (b fresh-2)) foo)
 ;;; .  The redundant bindings will be optimized away by AST rewriting.
 (define-macro (let bindings . body-forms)
+  (unless (all-different? (map car bindings))
+    (error `(non-distinct let-bound variables in ,bindings)))
   (let* ((fresh-variables (map (lambda (irrelevant) (gensym))
                                bindings))
          (fresh-variable-bindings (zip fresh-variables
@@ -1946,6 +1978,8 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-macro (letrec bindings . body-forms)
+  (unless (all-different? (map car bindings))
+    (error `(non-distinct letrec-bound variables in ,bindings)))
   `(let* ,(map (lambda (binding) `(,(car binding) (undefined)))
                bindings)
      ,@(map (lambda (binding) `(set! ,(car binding) ,@(cdr binding)))
@@ -1959,6 +1993,8 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-macro (named-let loop-name bindings . body-forms)
+  (unless (all-different? (map car bindings))
+    (error `(non-distinct named-let-bound variables in ,bindings)))
   `(letrec ((,loop-name (lambda ,(map car bindings) ,@body-forms)))
      (,loop-name ,@(map (lambda (binding) `(begin ,@(cdr binding)))
                         bindings))))
@@ -2269,9 +2305,7 @@
   (null? xs))
 
 (define-constant (set-has? xs x)
-  (and (non-null? xs)
-       (or (eq? (car xs) x)
-           (set-has? (cdr xs) x))))
+  (list-has? xs x))
 
 (define-constant (set-without-helper xs x reversed-left-part)
   (cond ((null? xs)
@@ -3523,3 +3557,15 @@
 ;; Make sure that when I remove a let binding a variable to a some expression
 ;; (say a conditional) I check that the variables occurring free in the
 ;; expression are not assigned in the body before the variable use in the body.
+
+;; FIXME: Primitive optimization:
+;;   (ast-optimize (macroexpand '(if (not a) b c)) ())
+;;   (ast-optimize (macroexpand '(+ a 1)) ())
+;;   (ast-optimize (macroexpand '(- a 1)) ())
+;;   (ast-optimize (macroexpand '(= a 0)) ())
+;;   (ast-optimize (macroexpand '(= 0 a)) ())
+
+;; To check:
+;; (ast-optimize (macroexpand '(let ((c (q 1)) (d (q 2)) (e (q 3))) a b a a)) '(a b))
+;; (ast-optimize (macroexpand '(let* ((c (q 1)) (d (q 2)) (e (q 3))) a b a a)) '(a b))
+;; (ast-optimize (macroexpand '(let ((c (q 1)) (c (q 2)) (c (q 3))) a b a a)) '(a b))
