@@ -390,6 +390,13 @@ jitter_hash_for_all_bindings (const struct jitter_hash_table *t,
 /* Debugging and tuning.
  * ************************************************************************** */
 
+/* Return the square of the given number. */
+static double
+square (double x)
+{
+  return x * x;
+}
+
 /* Print information about collisions. */
 void
 jitter_hash_print_debug_stats (const struct jitter_hash_table *t)
@@ -412,25 +419,45 @@ jitter_hash_print_debug_stats (const struct jitter_hash_table *t)
       if (used_size > 0 && used_size < min_nonempty_bucket_size)
         min_nonempty_bucket_size = used_size;
     }
-  printf ("Binding no:                   %lu\n",
+  double bucket_size_mean = t->binding_no / (double) t->bucket_no;
+  double nonempty_bucket_size_mean
+    = t->binding_no / (double) nonempty_bucket_no;
+
+  double bucket_size_variance = 0;
+  double nonempty_bucket_size_variance = 0;
+  for (i = 0; i < t->bucket_no; i ++)
+    {
+      struct jitter_hash_bucket *b = t->buckets [i];
+      size_t used_size = b != NULL ? b->used_binding_no : 0;
+      bucket_size_variance += square (used_size - bucket_size_mean);
+      if (used_size > 0)
+        nonempty_bucket_size_variance
+          += square (used_size - nonempty_bucket_size_mean);
+    }
+  bucket_size_variance /= t->bucket_no;
+  nonempty_bucket_size_variance /= nonempty_bucket_no;
+
+  printf ("Binding no:                      %lu\n",
           (unsigned long) t->binding_no);
-  printf ("Fill factor:                  %f\n",
-          t->binding_no / (double) t->bucket_no);
-  printf ("Bucket no:                    %lu\n",
+  printf ("Fill factor or bucket size mean: %f\n", bucket_size_mean);
+  printf ("Bucket no:                       %lu\n",
           (unsigned long) t->bucket_no);
-  printf ("Nonempty bucket no:           %lu\n",
+  printf ("Nonempty bucket no:              %lu\n",
           (unsigned long) nonempty_bucket_no);
-  printf ("Minimum bucket size:          %lu\n",
+  printf ("Minimum bucket size:             %lu\n",
           (unsigned long) min_bucket_size);
-  printf ("Minimum nonempty bucket size: %lu\n",
+  printf ("Minimum nonempty bucket size:    %lu\n",
           (unsigned long) min_nonempty_bucket_size);
-  printf ("Average nonempty bucket size: %f\n",
-          t->binding_no / (double) nonempty_bucket_no);
-  printf ("Maximum bucket size:          %lu\n", (unsigned long) max_bucket_size);
+  printf ("Nonempty bucket size mean:       %f\n", nonempty_bucket_size_mean);
+  printf ("Nonempty bucket size variance:   %f\n",
+          nonempty_bucket_size_variance);
+  printf ("Bucket size variance:            %f\n", bucket_size_variance);
+  printf ("Maximum bucket size:             %lu\n",
+          (unsigned long) max_bucket_size);
 }
 
-
 
+
 
 /* String hash utilities.
  * ************************************************************************** */
