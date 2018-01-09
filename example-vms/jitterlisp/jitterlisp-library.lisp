@@ -3097,35 +3097,18 @@
          (ast-define (ast-define-name ast)
                      (ast-optimize-helper (ast-define-body ast) bounds)))
         ((ast-if? ast)
-         (let ((optimized-condition
-                (ast-optimize-helper (ast-if-condition ast) bounds)))
-           (cond ((and (ast-literal? optimized-condition)
-                       (ast-literal-value optimized-condition))
-                  ;; The condition has been simplified to non-#f.
-                  (ast-optimize-helper (ast-if-then ast) bounds))
-                 ((ast-literal? optimized-condition)
-                  ;; The condition has been simplified to #f, since we didn't
-                  ;; get to the previous clause.
-                  (ast-optimize-helper (ast-if-else ast) bounds))
-                 (#t
-                  ;; Keep both branches.
-                  (ast-if optimized-condition
-                          (ast-optimize-helper (ast-if-then ast) bounds)
-                          (ast-optimize-helper (ast-if-else ast) bounds))))))
+         (ast-optimize-if (ast-optimize-helper (ast-if-condition ast) bounds)
+                          (ast-if-then ast)
+                          (ast-if-else ast)
+                          bounds))
         ((ast-set!? ast)
          (ast-set! (ast-set!-name ast)
                    (ast-optimize-helper (ast-set!-body ast) bounds)))
         ((ast-while? ast)
-         (let ((optimized-guard (ast-optimize-helper (ast-while-guard ast)
-                                                     bounds))
-               (optimized-body (ast-optimize-helper (ast-while-body ast)
-                                                    bounds)))
-           (if (and (ast-literal? optimized-guard)
-                    (not (ast-literal-value optimized-guard)))
-               ;; Remove a (while #f ...).  Notice that we can't simplify
-               ;; a while with a constantly non-#f guard.
-               (ast-literal (begin))
-               (ast-while optimized-guard optimized-body))))
+         (ast-optimize-while (ast-optimize-helper (ast-while-guard ast)
+                                                  bounds)
+                             (ast-while-body ast)
+                             bounds))
         ((ast-primitive? ast)
          ;; FIXME: evaluate the primitive at expansion time if the primitive
          ;; has no effect and all of its arguments are literal.
@@ -3142,14 +3125,10 @@
                                             (set-unite bounds formals)))))
         ((ast-let? ast)
          (let ((bound-name (ast-let-bound-name ast)))
-           ;; Notice that the let body is not optimized here: it will be
-           ;; optimized by ast-optimize-let, after possibly performing
-           ;; replacements into it.  Optimizing the bound form, instead, is
-           ;; important: its shape will determine which optimizations are
-           ;; possible.
            (ast-optimize-let bound-name
                              (ast-optimize-helper (ast-let-bound-form ast) bounds)
-                             (ast-let-body ast)
+                             (ast-optimize-helper (ast-let-body ast)
+                                                  (set-with bounds bound-name))
                              bounds)))
         ((ast-sequence? ast)
          (let ((optimized-first (ast-optimize-helper (ast-sequence-first ast)
@@ -3158,12 +3137,7 @@
                                                       bounds)))
            ;; If fhe first form in the sequence has no effect rewrite to the
            ;; second form only.
-           ;; FIXME: generalize to no-effect primitives with no-effect actuals.
-           (if (or (ast-literal? optimized-first)
-                   (and (ast-variable? optimized-first)
-                        (or (set-has? bounds
-                                      (ast-variable-name optimized-first))
-                            (constant? (ast-variable-name optimized-first)))))
+           (if (not (ast-effectful? optimized-first bounds))
                optimized-second
                (ast-sequence optimized-first
                              optimized-second))))))
@@ -3176,15 +3150,27 @@
 
 ;;; A helper for ast-optimize-helper in the let case, which is the most complex.
 ;;; This assumes that both subforms are alpha-converted.
-;;; This procedure should be called with the bound form already optimized,
-;;; in order to recognize the bound form shape and simplify the body as far
-;;; as possible; however there is no need for the body to be already
-;;; simplified -- it would introduce serious inefficiencies since the body
-;;; is optimized again here, and doing this recursively would easily explode
-;;; to quadratic behavior even assuming set operations to be O(1), which they
-;;; are certainly not.
 (define-constant (ast-optimize-let bound-name bound-form body bounds)
-  (cond ;; FIXME (as the first case): let-sequence-be elimination.
+  (cond ((ast-sequence? bound-form)
+         ;; Rewrite [let x [sequence E1 E2] E3] into [sequence E1 [let x E2 E3]]
+         ;; , which may enable further optimizations...
+         (let ((rewritten
+                (ast-sequence (ast-sequence-first bound-form)
+                              (ast-let bound-name
+                                       (ast-sequence-second bound-form)
+                                       body))))
+           ;; ...and then re-optimize the rewritten sequence.  This may trigger
+           ;; the same rewrite on a bound-form sub-sequence, or other
+           ;; optimizations; in particular the bound form, now smaller, may have
+           ;; been reduced to a variable or a literal.  Notice that moving the
+           ;; first form of the bound-form sequence out of the let form doesn't
+           ;; change the bound variable set at any program point.
+           (ast-optimize-helper rewritten bounds)))
+        ((not (ast-has-free? body bound-name))
+         ;; The bound variable is not used in the body.  Rewrite the let into
+         ;; a sequence and optimize it further.
+         (ast-optimize-helper (ast-sequence bound-form body)
+                              bounds))
         ((and (ast-literal? bound-form)
               (not (ast-has-assigned? body bound-name)))
          ;; The variable is bound to a literal, without being assigned:
@@ -3193,19 +3179,97 @@
            (ast-optimize-helper folded-body bounds)))
         ((and (ast-variable? bound-form)
               (not (ast-has-assigned? body bound-name))
-              (not (ast-has-assigned? body (ast-variable-name bound-form))))
+              (not (ast-has-assigned? body (ast-variable-name bound-form)))
+              (or (set-has? bounds (ast-variable-name bound-form))
+                  (constant? (ast-variable-name bound-form))))
          ;; The variable is bound to another variable, with neither being
          ;; assigned in the body.  We can reduce the entire let AST to a body
          ;; with the bound variable replaced by the other.  Here we rely on the
          ;; body being alpha-converted to be sure not to capture the substituted
          ;; variable.
+         ;; The or clause is important: this rewriting is only valid if we are
+         ;; sure that referencing the bound-form variable will not have effects;
+         ;; it being undefined would trigger an error, and we don't want to move
+         ;; the error point.
          (let ((new-body (ast-instantiate body bound-name bound-form)))
            (ast-optimize-helper new-body bounds)))
+        ((and (ast-variable? bound-form)
+              (ast-variable? body)
+              (eq? bound-name (ast-variable-name body)))
+         ;; Rewrite [let x [variable y] [variable x]] into [variable y].  There
+         ;; are no restrictions on the boundness of y.
+         ;; This rewrite could be subsumed by more general rules which are not
+         ;; implemented yet, but at least this case is easy to optimize. It can
+         ;; occur as a consequence of other rewrites.
+         bound-form)
         (#t
          ;; Default case: keep the let AST in our rewriting.
          (ast-let bound-name
                   bound-form
                   (ast-optimize-helper body (set-with bounds bound-name))))))
+
+;;; A helper for ast-optimize-helper in the if case.  Only the condition
+;;; needs to be already optimized.
+(define-constant (ast-optimize-if optimized-condition then else bounds)
+  (cond ((ast-sequence? optimized-condition)
+         ;; Rewrite [if [sequence E1 E2] E3 E4] into
+         ;; [sequence E1 [if E2 E3 E4]], and optimize the result.  This may
+         ;; lead to further optimizations, particularly if the condition
+         ;; eventually reduces to a constant.  The set of bound variables
+         ;; doesn't change at any point.
+         (let ((sequence
+                (ast-sequence (ast-sequence-first optimized-condition)
+                              (ast-if (ast-sequence-second optimized-condition)
+                                      then
+                                      else))))
+           (ast-optimize-helper sequence bounds)))
+        ((and (ast-primitive? optimized-condition)
+              (eq? (ast-primitive-operator optimized-condition)
+                   primitive-not))
+         ;; Rewrite [if [primitive not E1] E2 E3] into [if E1 E3 E2], and
+         ;; optimize the result.
+         (ast-optimize-if (car (ast-primitive-operands optimized-condition))
+                          else
+                          then
+                          bounds))
+        ((and (ast-literal? optimized-condition)
+              (ast-literal-value optimized-condition))
+         ;; The condition has been simplified to non-#f.
+         (ast-optimize-helper then bounds))
+        ((ast-literal? optimized-condition)
+         ;; The condition has been simplified to #f, since we didn't
+         ;; get to the previous clause.
+         (ast-optimize-helper else bounds))
+        (#t
+         ;; Keep both branches.
+         (ast-if optimized-condition
+                 (ast-optimize-helper then bounds)
+                 (ast-optimize-helper else bounds)))))
+
+;;; A helper for ast-optimize-helper in the while case.  Only the guard
+;;; needs to be already optimized.
+(define-constant (ast-optimize-while optimized-guard body bounds)
+  (cond ((ast-sequence? optimized-guard)
+         ;; Rewrite [while [sequence E1 E2] E3] into
+         ;; [sequence E1 [while E2 [sequence E3 E1]]], and optimize further,
+         ;; which may hopefully reduce to a loop with a literal #f guard.
+         ;; The bound variable set doesn't change at any program point.
+         (let* ((first (ast-sequence-first optimized-guard))
+                (second (ast-sequence-second optimized-guard))
+                (sequence (ast-sequence first
+                                        (ast-while second
+                                                   (ast-sequence body
+                                                                 first)))))
+           (ast-optimize-helper sequence bounds)))
+        ((and (ast-literal? optimized-guard)
+              (not (ast-literal-value optimized-guard)))
+         ;; Remove a (while #f ...).  Notice that we can't simplify
+         ;; a while with a constantly non-#f guard.
+         (ast-literal (begin)))
+        (#t
+         ;; Keep the while form.
+         (ast-while optimized-guard
+                    (ast-optimize-helper body bounds)))))
 
 
 
@@ -3276,6 +3340,7 @@
   (closure-optimize! c)
   c)
 (define (o0 c))
+
 
 
 
@@ -3458,9 +3523,17 @@
       (+ (fibo (- n 2))
          (fibo (- n 1)))))
 
+;;;  OK
 ;;; (define q (macroexpand '(let ((a a) (b a)) a))) q (ast-alpha-convert q)
 ;;; (define q (macroexpand '(f x (+ 2 3)))) q (ast-optimize q ())
+
+;;; OK
 ;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define x y) x 7))) ())
+;;; [sequence [define x [variable y]] [let #<u443> [variable x] [primitive #<2-ary primitive cons> [literal 3] [variable #<u443>]]]]
+
+;;; OK
+;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define x y) x 7))) '(x))
+;;; [sequence [define x [variable y]] [primitive #<2-ary primitive cons> [literal 3] [variable x]]]
 
 ;;; An important test:
 ;;; (ast-optimize (closure-body fibo) '(n))
@@ -3477,15 +3550,6 @@
 ;; jitterlisp> (ast-optimize (macroexpand '(list 1 2)) '())
 ;; [let #<uninterned:0xe6e120> [primitive #<2-ary primitive cons> [literal 2] [literal ()]] [primitive #<2-ary primitive cons> [literal 1] [variable #<uninterned:0xe6e120>]]]
 
-;;; Is this correct?  I'd say no.  We can move variables across effectful
-;;; primitives only when we are sure that referencing them has no effect,
-;;; which means that they must be bound or global constants.
-;;; (ast-optimize (macroexpand '(begin1 a (display 1) b (display 2) c (display 3) d)) ())
-;;; [sequence [primitive #<1-ary primitive display> [literal 1]] [sequence [variable b] [sequence [primitive #<1-ary primitive display> [literal 2]] [sequence [variable c] [sequence [primitive #<1-ary primitive display> [literal 3]] [sequence [variable d] [variable a]]]]]]]
-;;
-;; Other testcase which should not be simplified if b isn't bound or constant:
-;;; jitterlisp> (ast-optimize (macroexpand '(let ((a b)) c)) '())
-;;; [variable c]
 ;;
 ;;; Special case: this can be simplified even if a is unbound, because the
 ;;; bound variable is the same as the bound form.  This is now correct by
@@ -3521,7 +3585,7 @@
 ;; (define (f x) (let ((a (+ 1 2))) a x)) (ast-optimize (closure-body f) '(x))
 
 ;; Make sure that this remains correct:
-;; (ast-optimize (macroexpand '(let ((c 1)) (set! c 4) c)) '())
+;; OK(ast-optimize (macroexpand '(let ((c 1)) (set! c 4) c)) '())
 ;;   { [let #<u235> [literal 1] [sequence [set! #<u235> [literal 4]] [variable #<u235>]]]
 ;;     CORRECT (difficult to optimize further without a special case). }
 
@@ -3531,20 +3595,20 @@
 ;; (ast-optimize (macroexpand '(set 1 x 3 4)) ())
 
 ;; Check that these are correctly optimized:
-;; (ast-optimize (macroexpand '(begin2 x y)) ())
+;; OK(ast-optimize (macroexpand '(begin2 x y)) ())
 ;;   {  [sequence [variable x] [variable y]] is CORRECT }
-;; (ast-optimize (macroexpand '(begin1 x y z)) ())
+;; OK(ast-optimize (macroexpand '(begin1 x y z)) ())
 ;;   {  [sequence [variable y] [sequence [variable z] [variable x]]] is WRONG }
-;; (ast-optimize (macroexpand '(begin2 x y z)) ())
+;; OK(ast-optimize (macroexpand '(begin2 x y z)) ())
 ;;   {  [sequence [variable x] [sequence [variable z] [variable y]]] is WRONG }
-;; (ast-optimize (macroexpand '(let ((a (f 1)) (b a)) 4)) ())
+;; OK(ast-optimize (macroexpand '(let ((a (f 1)) (b a)) 4)) ())
 ;;   {  [let #<u263> [call [variable f] [literal 1]] [literal 4]] is WRONG:
 ;;      a is non-bound and non-constant, so its reference is effectful and
 ;;      cannot be optimized away. }
-;; (ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) 4)) ())
+;; OK(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) 4)) ())
 ;;   {  [let #<u267> [call [variable f] [literal 1]] [literal 4]] is CORRECT
 ;;      but subptimal: the let AST should become a sequence AST. }
-;; (ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) b)) ())
+;; SUBOPTIMAL(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) b)) ())
 ;;   {  [let #<u269> [call [variable f] [literal 1]] [variable #<u269>]] CORRECT
 ;;      but SUBOPTIMAL, optimizable to
 ;;        [call [variable f] [literal 1]].
@@ -3565,7 +3629,11 @@
 ;;   (ast-optimize (macroexpand '(= a 0)) ())
 ;;   (ast-optimize (macroexpand '(= 0 a)) ())
 
-;; To check:
-;; (ast-optimize (macroexpand '(let ((c (q 1)) (d (q 2)) (e (q 3))) a b a a)) '(a b))
-;; (ast-optimize (macroexpand '(let* ((c (q 1)) (d (q 2)) (e (q 3))) a b a a)) '(a b))
-;; (ast-optimize (macroexpand '(let ((c (q 1)) (c (q 2)) (c (q 3))) a b a a)) '(a b))
+
+
+;; (ast-optimize (macroexpand '(if (not a) b c)) ())
+;; OK (ast-optimize (macroexpand '(if (begin 1 2 3 a) b c)) ())
+;; (ast-optimize (macroexpand '(if (begin 1 (f 2) 3 a) b c)) ())
+
+
+(define (f) (let loop ((a 0)) (unless (>= a 10000000) (loop (1+ a)))))
