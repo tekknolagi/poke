@@ -2791,7 +2791,7 @@
          (let ((guard (ast-while-guard ast)))
            ;; The only case where we bother returning a more precise result is a
            ;; while loop with the constant #f as guard.
-           (if (and (ast-literal guard)
+           (if (and (ast-literal? guard)
                     (not (ast-literal-value guard)))
                #f
                ;; The guard is not #f.  Consider the loop effectful.
