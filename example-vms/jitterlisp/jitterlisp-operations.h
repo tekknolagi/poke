@@ -29,7 +29,7 @@
 #include <stdbool.h>
 
 #include "jitterlisp-sexpression.h"
-#include "jitterlisp-eval-interpreter.h" // FIXME: review after writing VM eval.
+#include "jitterlisp-eval.h"
 #include "jitterlisp-macros.h"
 #include "jitterlisp-allocator.h"
 
@@ -404,12 +404,21 @@
 /* Boolean operations.
  * ************************************************************************** */
 
-/* Compute a tagged boolean, #t iff the argument is #f. */
+/* Compute a tagged boolean, #t iff the operand is #f. */
 #define JITTERLISP_NOT_(_jitterlisp_out, _jitterlisp_in0)                \
   JITTER_BEGIN_                                                          \
     (_jitterlisp_out)                                                    \
       = JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                      \
                                   == JITTERLISP_BOOLEAN_ENCODE(false));  \
+  JITTER_END_
+
+/* Canonicalize a boolean, computing #f if the argument is #f and #t if the
+   operand is anything else. */
+#define JITTERLISP_BOOLEAN_CANONICALIZE_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTER_BEGIN_                                                             \
+    (_jitterlisp_out)                                                       \
+      = JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                         \
+                                  != JITTERLISP_BOOLEAN_ENCODE(false));     \
   JITTER_END_
 
 
@@ -558,7 +567,7 @@
                                   != JITTERLISP_UNDEFINED);  \
   JITTER_END_
 
-#define JITTERLISP_GLOBAL_LOOKUP_(_jitterlisp_out, _jitterlisp_in0)  \
+#define JITTERLISP_SYMBOL_GLOBAL_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTER_BEGIN_                                                      \
     struct jitterlisp_symbol *_jitterlisp_tmp                        \
       = JITTERLISP_SYMBOL_DECODE(_jitterlisp_in0);                   \
@@ -664,22 +673,34 @@
       = JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0) != (_jitterlisp_in1));      \
   JITTER_END_
 
-/* Compute a tagged boolean, #t iff the given argument is the fixnum zero. */
-#define JITTERLISP_ZEROP_(_jitterlisp_out, _jitterlisp_in0)         \
-  JITTER_BEGIN_                                                     \
-    (_jitterlisp_out)                                               \
-      = JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                 \
-                                  == JITTERLISP_FIXNUM_ENCODE(0));  \
+/* Compute a tagged boolean, #t iff the given fixnum argument is respectively the
+   zero, a non-zero, positive, non-positive, negative, non-negative. */
+#define JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                         _jitterlisp_expression_operator,   \
+                                         _jitterlisp_right)                 \
+  JITTER_BEGIN_                                                             \
+    (_jitterlisp_out) =                                                     \
+      _jitterlisp_expression_operator(                                      \
+         (_jitterlisp_in0), JITTERLISP_FIXNUM_ENCODE(_jitterlisp_right));   \
   JITTER_END_
-
-/* Compute a tagged boolean, #t iff the given argument is different from the
-   fixnum zero. */
-#define JITTERLISP_NON_ZEROP_(_jitterlisp_out, _jitterlisp_in0)     \
-  JITTER_BEGIN_                                                     \
-    (_jitterlisp_out)                                               \
-      = JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                 \
-                                  != JITTERLISP_FIXNUM_ENCODE(0));  \
-  JITTER_END_
+#define JITTERLISP_ZEROP_(_jitterlisp_out, _jitterlisp_in0)           \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                   JITTERLISP_EXP_FF_B_EQUAL, 0)
+#define JITTERLISP_NON_ZEROP_(_jitterlisp_out, _jitterlisp_in0)       \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                   JITTERLISP_EXP_FF_B_NOTEQUAL, 0)
+#define JITTERLISP_POSITIVEP_(_jitterlisp_out, _jitterlisp_in0)       \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                   JITTERLISP_EXP_FF_B_GREATER, 0)
+#define JITTERLISP_NON_POSITIVEP_(_jitterlisp_out, _jitterlisp_in0)    \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,   \
+                                   JITTERLISP_EXP_FF_B_NOTGREATER, 0)
+#define JITTERLISP_NEGATIVEP_(_jitterlisp_out, _jitterlisp_in0)       \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                   JITTERLISP_EXP_FF_B_LESS, 0)
+#define JITTERLISP_NON_NEGATIVEP_(_jitterlisp_out, _jitterlisp_in0)   \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                   JITTERLISP_EXP_FF_B_NOTLESS, 0)
 
 
 
@@ -826,6 +847,23 @@
   JITTER_BEGIN_                                                \
     jitterlisp_print_to_stream (stdout, _jitterlisp_in0);      \
     (_jitterlisp_out) = JITTERLISP_NOTHING;                    \
+  JITTER_END_
+
+#define JITTERLISP_CHARACTER_DISPLAY_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTER_BEGIN_                                                          \
+    jitter_int _jitterlisp_character                                     \
+      = JITTERLISP_CHARACTER_DECODE(_jitterlisp_in0);                    \
+    putchar (_jitterlisp_character);                                     \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;                              \
+  JITTER_END_
+
+#define JITTERLISP_CHARACTER_READ_(_jitterlisp_out)              \
+  JITTER_BEGIN_                                                  \
+    jitter_int _jitterlisp_character = getchar ();               \
+    (_jitterlisp_out)                                            \
+      = ((_jitterlisp_character == EOF)                          \
+         ? JITTERLISP_EOF                                        \
+         : JITTERLISP_CHARACTER_ENCODE(_jitterlisp_character));  \
   JITTER_END_
 
 #define JITTERLISP_NEWLINE_(_jitterlisp_out)  \
@@ -1034,7 +1072,20 @@
                                               _jitterlisp_in1);    \
   JITTER_END_
 
-/* Eval the given expression in the given non-global environment. */
+/* Eval the given expression in the given non-global environment, using
+   the AST interpreter, the VM, or the default engine, respectively. */
+#define JITTERLISP_EVAL_INTERPRETER_(_jitterlisp_out, _jitterlisp_in0,       \
+                                     _jitterlisp_in1)                        \
+  JITTER_BEGIN_                                                              \
+    _jitterlisp_out = jitterlisp_eval_interpreter (_jitterlisp_in0,          \
+                                                   _jitterlisp_in1);         \
+  JITTER_END_
+#define JITTERLISP_EVAL_VM_(_jitterlisp_out, _jitterlisp_in0,  \
+                            _jitterlisp_in1)                   \
+  JITTER_BEGIN_                                                \
+    _jitterlisp_out = jitterlisp_eval_vm (_jitterlisp_in0,     \
+                                          _jitterlisp_in1);    \
+  JITTER_END_
 #define JITTERLISP_EVAL_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
   JITTER_BEGIN_                                                              \
     _jitterlisp_out = jitterlisp_eval_interpreter (_jitterlisp_in0,          \
@@ -1042,11 +1093,30 @@
   JITTER_END_
 
 /* Return the result of applying the given operator, already evaluated, to the
-   given list of already evaluated operands. */
-#define JITTERLISP_APPLY_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
+   given list of already evaluated operands; use the AST interpreter, the
+   Jittery VM or the default engine, respectively. */
+#define JITTERLISP_APPLY_INTERPRETER_(_jitterlisp_out, _jitterlisp_in0,       \
+                                      _jitterlisp_in1)                        \
   JITTER_BEGIN_                                                               \
     _jitterlisp_out = jitterlisp_apply_interpreter (_jitterlisp_in0,          \
                                                     _jitterlisp_in1);         \
+  JITTER_END_
+#define JITTERLISP_APPLY_VM_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1) \
+  JITTER_BEGIN_                                                                 \
+    _jitterlisp_out = jitterlisp_apply_vm (_jitterlisp_in0, _jitterlisp_in1);   \
+  JITTER_END_
+#define JITTERLISP_APPLY_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
+  JITTER_BEGIN_                                                               \
+    _jitterlisp_out = jitterlisp_apply (_jitterlisp_in0, _jitterlisp_in1);    \
+  JITTER_END_
+
+/* Return the result of applying the given primitive to the given list of
+   already evaluated operands. */
+#define JITTERLISP_APPLY_PRIMITIVE_(_jitterlisp_out, _jitterlisp_in0,  \
+                                    _jitterlisp_in1)                   \
+  JITTER_BEGIN_                                                        \
+    _jitterlisp_out = jitterlisp_apply_primitive (_jitterlisp_in0,     \
+                                                  _jitterlisp_in1);    \
   JITTER_END_
 
 

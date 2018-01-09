@@ -37,6 +37,20 @@
 
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Type checking.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;; anything?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; A type predicate always returning #t.
+(define-constant (anything? x)
+  #t)
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Arithmetic and number library.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -322,6 +336,40 @@
 
 
 
+;;;; symbols?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return non-#f iff the argument is a list of symbols, possibly empty.
+
+(define-constant (symbols?-iterative xs)
+  (let* ((res #t))
+    (while (non-null? xs)
+      (cond ((non-cons? xs)
+             (set! xs ())
+             (set! res #f))
+            ((symbol? (car xs))
+             (set! xs (cdr xs)))
+            (#t
+             (set! xs ())
+             (set! res #f))))
+    res))
+
+(define-constant (symbols?-tail-recursive xs)
+  (cond ((null? xs)
+         #t)
+        ((non-cons? xs)
+         #f)
+        ((symbol? (car xs))
+         (symbols?-tail-recursive (cdr xs)))
+        (#t
+         #f)))
+
+(define-constant (symbols? xs)
+   (symbols?-iterative xs))
+
+
+
+
 ;;;; replicate.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -371,7 +419,7 @@
       (last-cons-tail-recursive-non-null (cdr xs))))
 (define-constant (last-cons-tail-recursive xs)
   (if (null? xs)
-      (error)
+      (error '(last-cons-tail-recursive: empty list))
       (last-cons-tail-recursive-non-null xs)))
 
 (define-constant (last-cons xs)
@@ -1865,6 +1913,36 @@
 ;;; The code below is okay, but should be moved up.
 
 
+;;;; all-different?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (list-has? xs x)
+  (cond ((null? xs)
+         #f)
+        ((eq? (car xs) x)
+         #t)
+        (#t
+         (list-has? (cdr xs) x))))
+
+
+
+
+;;;; all-different?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; This is O(n^2).
+(define-constant (all-different? xs)
+  (cond ((null? xs)
+         #t)
+        ((list-has? (cdr xs) (car xs))
+         #f)
+        (#t
+         (all-different? (cdr xs)))))
+
+
+
+
+
 ;;;; High-level syntax: one-way conditionals.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1884,6 +1962,11 @@
 ;;;; Variadic boolean connectives.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; Return a generalized boolean which is the logical disjunction of the given
+;;; clauses, evaluated left-to-right short-circuit; in case of a non-#f result
+;;; which exact value is returned is unspecified.
+;;; This definition is much laxer than the one common in other Lisp dialects;
+;;; see the comment before lispy-or for a rationale.
 (define-macro (or . clauses)
   (cond ((null? clauses)
          '#f)
@@ -1896,6 +1979,13 @@
               '#t
               (or ,@(cdr clauses))))))
 
+;;; Return a generalized boolean which is the logical conjunction of the given
+;;; clauses, evaluated left-to-right short-circuit; in case of a non-#f result
+;;; which exact value is returned is unspecified.
+;;; This specification is much laxer than the one common in other Lisp dialects,
+;;; for symmetry with the or macro above, but the implementation in this case
+;;; actually follows the Lisp tradition.  See the comment before lispy-or for a
+;;; rationale.
 (define-macro (and . clauses)
   (cond ((null? clauses)
          '#t)
@@ -1907,6 +1997,33 @@
          `(if ,(car clauses)
               (and ,@(cdr clauses))
               '#f))))
+
+;;; This is a more typical Lisp-style variadic or operator returning the first
+;;; non-#f form result in case of a true conjunction.
+;;; The problem is that the nested let blocks it expands to will be difficult to
+;;; compile efficiently with the naïf code generator I have in mind for a stack
+;;; machine.  It would work well if I did liveness analysis, and reused
+;;; registers as soon as each variable died.
+(define-macro (lispy-or . args)
+  (cond ((null? args)
+         '#f)
+        ((null? (cdr args))
+         (car args))
+        (#t
+         (let* ((first-name (gensym)))
+           `(let* ((,first-name ,(car args)))
+              (if ,first-name
+                  ,first-name
+                  (lispy-or ,@(cdr args))))))))
+
+;;; A variadic left-to-right short-circuit logical conjunction, returning the
+;;; result of the last clause in case of a non-#f result according to the Lisp
+;;; convention.
+;;; This is provided just for symmetry, since JitterLisp's default and operator
+;;; is already efficient, and differently from JitterLisp's or follows the Lisp
+;;; convention.
+(define-macro (lispy-and . args)
+  `(and ,@args))
 
 
 
@@ -1920,6 +2037,8 @@
 ;;;   (let* ((fresh-1 1) (fresh-2 2) (a fresh-1) (b fresh-2)) foo)
 ;;; .  The redundant bindings will be optimized away by AST rewriting.
 (define-macro (let bindings . body-forms)
+  (unless (all-different? (map car bindings))
+    (error `(non-distinct let-bound variables in ,bindings)))
   (let* ((fresh-variables (map (lambda (irrelevant) (gensym))
                                bindings))
          (fresh-variable-bindings (zip fresh-variables
@@ -1930,15 +2049,6 @@
                     user-variable-bindings)
        ,@body-forms)))
 
-;;; Optimization [FIXME: remove this when I implement AST rewriting]:
-;;; Translate a one-binding let into a one-binding let*.  There's no need for a
-;;; special case for a zero-binding let.
-(define-constant unoptimized-let let)
-(define-macro (let bindings . body-forms)
-  (if (= (length bindings) 1)
-      `(let* ,bindings ,@body-forms)
-      `(unoptimized-let ,bindings ,@body-forms)))
-
 
 
 
@@ -1946,6 +2056,8 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-macro (letrec bindings . body-forms)
+  (unless (all-different? (map car bindings))
+    (error `(non-distinct letrec-bound variables in ,bindings)))
   `(let* ,(map (lambda (binding) `(,(car binding) (undefined)))
                bindings)
      ,@(map (lambda (binding) `(set! ,(car binding) ,@(cdr binding)))
@@ -1959,6 +2071,8 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-macro (named-let loop-name bindings . body-forms)
+  (unless (all-different? (map car bindings))
+    (error `(non-distinct named-let-bound variables in ,bindings)))
   `(letrec ((,loop-name (lambda ,(map car bindings) ,@body-forms)))
      (,loop-name ,@(map (lambda (binding) `(begin ,@(cdr binding)))
                         bindings))))
@@ -2269,9 +2383,7 @@
   (null? xs))
 
 (define-constant (set-has? xs x)
-  (and (non-null? xs)
-       (or (eq? (car xs) x)
-           (set-has? (cdr xs) x))))
+  (list-has? xs x))
 
 (define-constant (set-without-helper xs x reversed-left-part)
   (cond ((null? xs)
@@ -2318,7 +2430,7 @@
 (define-associative-variadic-extension set-intersect
   set-intersect-procedure set-empty)
 
-(define (list->set list)
+(define-constant (list->set list)
   ;; This relies on set-unite-procedure recurring on its second argument.
   (set-unite-procedure set-empty list))
 
@@ -2335,6 +2447,139 @@
         `(let* ((,element-name ,(car elements))
                 (,subset-name (set ,@(cdr elements))))
            (set-with ,subset-name ,element-name)))))
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Tentative features, or experimentation just for fun.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; Streams.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant stream-empty
+  '(#t . ()))
+
+(define-constant (stream-ready? s)
+  (car s))
+
+(define-constant (stream-force! s)
+  (unless (stream-ready? s)
+    (set-cdr! s ((cdr s)))
+    (set-car! s #t))
+  (cdr s))
+
+(define-constant (stream-null? s)
+  (null? (stream-force! s)))
+(define-constant (stream-non-null? s)
+  (non-null? (stream-force! s)))
+(define-constant (stream-car s)
+  (car (stream-force! s)))
+(define-constant (stream-cdr s)
+  (cdr (stream-force! s)))
+(define-constant (stream-set-car! s new-car)
+  (set-car! (stream-force! s) new-car))
+(define-constant (stream-set-cdr! s new-cdr)
+  (set-cdr! (stream-force! s) new-cdr))
+
+(define-macro (stream-cons x s)
+  `(cons #f
+         (lambda ()
+           (cons ,x ,s))))
+
+(define-macro (stream-delay stream-expression)
+  `(cons #f
+         (lambda ()
+           (stream-force! ,stream-expression))))
+
+(define-constant (stream-forever-1 x)
+  (letrec ((res (stream-delay (stream-cons x res))))
+    res))
+
+(define-constant (stream-ones)
+  (stream-forever-1 1))
+
+(define-constant (stream-from from)
+  (stream-cons from (stream-from (1+ from))))
+(define-constant (stream-naturals)
+  (stream-from 0))
+
+(define-constant (stream-walk-elements procedure s)
+  (while (stream-non-null? s)
+    (procedure (stream-car s))
+    (set! s (stream-cdr s))))
+
+(define-constant (stream-print-elements s)
+  (stream-walk-elements (lambda (x)
+                          (display x)
+                          (newline))
+                        s))
+
+(define-constant (stream-touch-elements s)
+  (stream-walk-elements (lambda (x))
+                        s))
+
+(define-constant (stream-range a b)
+  (if (> a b)
+      stream-empty
+      (stream-cons a (stream-range (1+ a) b))))
+
+(define-constant (stream-append s1 s2)
+  (stream-delay
+    (if (stream-null? s1)
+        s2
+        (stream-cons (stream-car s1)
+                     (stream-append (stream-cdr s1) s2)))))
+
+(define-constant (stream-forever-stream s)
+  (letrec ((res (stream-delay (stream-append s res))))
+    res))
+
+(define-constant (stream-filter p? s)
+  (stream-delay
+    (cond ((stream-null? s)
+           stream-empty)
+          ((p? (stream-car s))
+           (stream-cons (stream-car s)
+                        (stream-filter p? (stream-cdr s))))
+          (#t
+           (stream-filter p? (stream-cdr s))))))
+
+(define-constant (stream-map f s)
+  (stream-delay
+    (if (stream-null? s)
+        stream-empty
+        (stream-cons (f (stream-car s))
+                     (stream-map f (stream-cdr s))))))
+
+(define-constant (stream-take s n)
+  (stream-delay
+    (cond ((zero? n)
+           stream-empty)
+          ((stream-null? s)
+           stream-empty)
+          (#t
+           (stream-cons (stream-car s)
+                        (stream-take (stream-cdr s) (1- n)))))))
+
+(define-constant (stream-drop s n)
+  (stream-delay
+    (cond ((zero? n)
+           s)
+          ((stream-null? s)
+           stream-empty)
+          (#t
+           (stream-drop (stream-cdr s) (1- n))))))
+
+(define-constant (stream-fold-left f x xs)
+  (if (stream-null? xs)
+      x
+      (stream-fold-left f
+                        (f x (stream-car xs))
+                        (stream-cdr xs))))
 
 
 
@@ -2507,9 +2752,9 @@
 
 ;;; A set! form counts as an assignment; a define form doesn't, as a
 ;;; define'd variable in JitterLisp is always a global, and globals
-;;; can't be renamed.
+;;; can't be renamed by alpha-conversion.
 
-;;; Return non-#f iff the a free occurrence of the given variable is set! in the
+;;; Return non-#f iff any free occurrence of the given variable is set! in the
 ;;; given AST.
 (define-constant (ast-has-assigned? ast x)
   (cond ((ast-literal? ast)
@@ -2552,6 +2797,90 @@
   (and (non-null? asts)
        (or (ast-has-assigned? (car asts) x)
            (ast-has-assigned?-list (cdr asts) x))))
+
+
+
+
+;;;; Non-locally assigned variables in an AST.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; FIXME: no, this idea is not what I need.  I need to check if a given local
+;;; is at the same time *used* nonlocally (assigned or not, it doesn't matter)
+;;; and assigned (locally or not, it doesn't matter).  That is the case where
+;;; a variable needs to be boxed.
+
+;;; Check whether a variable is assigned non-locally in a lambda occurring
+;;; within the given AST.  For the purposes of this definition nested lets do
+;;; not count: only lambdas introduce the kind of non-locality we care about.
+;;;
+;;; Rationale: a set! on a non-local variable forces us to access the variable
+;;; locally thru a box, also pointed by any closure closing over the variable;
+;;; if, instead, a variable is accessed non-locally without being assigned in
+;;; the lambda, this indirection is not necessary.  The same way, we don't need
+;;; the box if the variable is assigned *locally* (including within a let, but
+;;; not within a lambda).
+;;; Compiled code relies on this, and I don't want to introduce boxes when it's
+;;; not needed.
+
+;;; Return non-#f iff any free occurrence of the given variable is set! (as per
+;;; ast-has-assigned?) in a lambda syntactically contained within the given AST.
+(define-constant (ast-nonlocally-assigns? ast x)
+  (cond ((ast-literal? ast)
+         #f)
+        ((ast-variable? ast)
+         #f)
+        ((ast-define? ast)
+         ;; The defined variable is global, and therefore irrelevant here.
+         (ast-nonlocally-assigns? (ast-define-body ast) x))
+        ((ast-if? ast)
+         (or (ast-nonlocally-assigns? (ast-if-condition ast) x)
+             (ast-nonlocally-assigns? (ast-if-then ast) x)
+             (ast-nonlocally-assigns? (ast-if-else ast) x)))
+        ((ast-set!? ast)
+         ;; By itself this assignment, even if it were on x, is irrelevant
+         ;; because it's not within a lambda.  However the set! body might
+         ;; contain a lambda.
+         (ast-nonlocally-assigns? (ast-set!-body ast) x))
+        ((ast-while? ast)
+         (or (ast-nonlocally-assigns? (ast-while-guard ast) x)
+             (ast-nonlocally-assigns? (ast-while-body ast) x)))
+        ((ast-primitive? ast)
+         (ast-nonlocally-assigns?-list (ast-primitive-operands ast) x))
+        ((ast-call? ast)
+         (or (ast-nonlocally-assigns? (ast-call-operator ast) x)
+             (ast-nonlocally-assigns?-list (ast-call-operands ast) x)))
+        ((ast-lambda? ast)
+         ;; This is the interesting case: we search for assignment to *free*
+         ;; occurrences of x within the lambda -- including within lambdas
+         ;; nested within this one.
+         ;; If the lambda shadows x, then our own variable is not visible
+         ;; there and we know that it's not assigned non-locally.
+         ;; If the lambda doesn't shadow x, then we look for any assigned
+         ;; free occurrence within the lambda body.  Notice that the call
+         ;; examining the body doesn't recur to this function, but uses
+         ;; ast-has-assigned? since we have already crossed the one lambda
+         ;; boundary we were searching for: from this point the level of
+         ;; nesting of lambdas is no longer important.
+         (if (set-has? (ast-lambda-formals ast) x)
+             #f
+             (ast-has-assigned? (ast-lambda-body ast) x)))
+        ((ast-let? ast)
+         ;; If this let shadows x then we don't care about its body, but we do
+         ;; care about the bound form, which might contain a lambda assigning x.
+         ;; Otherwise we care about both the bound form and the body.
+         (if (eq? (ast-let-bound-name ast) x)
+             (ast-nonlocally-assigns? (ast-let-bound-form ast) x)
+             (or (ast-nonlocally-assigns? (ast-let-bound-form ast) x)
+                 (ast-nonlocally-assigns? (ast-let-body ast) x))))
+        ((ast-sequence? ast)
+         (or (ast-nonlocally-assigns? (ast-sequence-first ast) x)
+             (ast-nonlocally-assigns? (ast-sequence-second ast) x)))))
+
+;;; An extension of ast-nonlocally-assigns? to a list of ASTs.
+(define-constant (ast-nonlocally-assigns?-list asts x)
+  (and (non-null? asts)
+       (or (ast-nonlocally-assigns? (car asts) x)
+           (ast-nonlocally-assigns?-list (cdr asts) x))))
 
 
 
@@ -2650,7 +2979,7 @@
            (if (and (not (set-has? bounds name))
                     (defined? name)
                     (constant? name))
-               (ast-literal (global-lookup name))
+               (ast-literal (symbol-global name))
                ast)))
         ((ast-define? ast)
          (ast-define (ast-define-name ast)
@@ -2749,15 +3078,15 @@
              (ast-effectful? (ast-if-then ast) bounds)
              (ast-effectful? (ast-if-else ast) bounds)))
         ((ast-set!? ast)
-         ;; Assignments can have effects.
+         ;; Assignments can have effects, and usually do.
          #t)
         ((ast-while? ast)
          ;; A while loop can have effects even if its guard and body are both
-         ;; non-effectful, since non-termination is an effect...
+         ;; non-effectful, since non-termination is an effect.
          (let ((guard (ast-while-guard ast)))
            ;; The only case where we bother returning a more precise result is a
            ;; while loop with the constant #f as guard.
-           (if (and (ast-literal guard)
+           (if (and (ast-literal? guard)
                     (not (ast-literal-value guard)))
                #f
                ;; The guard is not #f.  Consider the loop effectful.
@@ -2784,7 +3113,7 @@
         ((ast-let? ast)
          (or (ast-effectful? (ast-let-bound-form ast)
                              bounds)
-             (ast-effectful? (ast-let-bound-body ast)
+             (ast-effectful? (ast-let-body ast)
                              (set-with bounds
                                        (ast-let-bound-name ast)))))
         ((ast-sequence? ast)
@@ -2840,9 +3169,10 @@
        ;; Equality comparisons never fail (but maginitude comparisons may).
        primitive-eq?
        primitive-not-eq?
-       ;; Logical negation accepts a generalized boolean, and therefore never
-       ;; fails.
-       primitive-not))
+       ;; Logical negation and canonicalization accept a generalized boolean,
+       ;; and therefore never fail.
+       primitive-not
+       primitive-boolean-canonicalize))
 
 ;;; Any primitive not in the set-as-list above is considered to be effectful.
 (define-constant (primitive-effectful? primitive)
@@ -2922,8 +3252,57 @@
 
 
 
+;;;; AST leafness.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return non-#f iff the given AST is a leaf expression.
+(define-constant (ast-leaf? ast)
+  (cond ((ast-literal? ast)
+         #t)
+        ((ast-variable? ast)
+         #t)
+        ((ast-define? ast)
+         (ast-leaf? (ast-define-body ast)))
+        ((ast-if? ast)
+         (and (ast-leaf? (ast-if-condition ast))
+              (ast-leaf? (ast-if-then ast))
+              (ast-leaf? (ast-if-else ast))))
+        ((ast-set!? ast)
+         (ast-leaf? (ast-set!-body ast)))
+        ((ast-while? ast)
+         (and (ast-leaf? (ast-while-guard ast))
+              (ast-leaf? (ast-while-body ast))))
+        ((ast-primitive? ast)
+         (ast-leaf?-list (ast-primitive-operands ast)))
+        ((ast-call? ast)
+         #f)
+        ((ast-lambda? ast)
+         (ast-leaf? (ast-lambda-body ast)))
+        ((ast-let? ast)
+         (and (ast-leaf? (ast-let-bound-form ast))
+              (ast-leaf? (ast-let-body ast))))
+        ((ast-sequence? ast)
+         (and (ast-leaf? (ast-sequence-first ast))
+              (ast-leaf? (ast-sequence-second ast))))))
+
+;;; An extension of ast-leaf? to a list of ASTs: return non-#f iff the ASTs in
+;;; the given list are all leaves.
+(define-constant (ast-leaf?-list asts)
+  (cond ((null? asts)
+         #t)
+        ((ast-leaf? (car asts))
+         (ast-leaf?-list (cdr asts)))
+        (#t
+         #f)))
+
+
+
+
 ;;;; AST call simplification.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; The transformations here rely on the caller being alpha-converted already:
+;;; any inlining might result in nonglobal capture otherwise.
 
 ;;; A call where the operator is a closure literal (usually obtained by a
 ;;; previous optimization) can be easily rewritten into a let binding each
@@ -2939,6 +3318,8 @@
 ;;; Return a rewritten call having the given closure as the original (literal)
 ;;; operator, and the ASTs in the given list as operands.
 (define-constant (ast-simplify-call-helper closure actuals)
+  ;; FIXME: would it be a problem for termination if I used ast-optimize instead
+  ;; of ast-simplify-call-helper in recursive calls?  Would it help?
   (let ((environment (closure-environment closure))
         (formals (closure-formals closure))
         (body (closure-body closure)))
@@ -2954,12 +3335,13 @@
                                with actuals ,actuals))
            (newline)
            (ast-call (ast-literal closure) actuals))
+          ((closure-wrapper? closure)
+           ;; Wrapper calls are easy to rewrite into a particularly efficient
+           ;; AST.  This rewrite could be subsumed by others not yet
+           ;; implemented, but this is very common and important to have from
+           ;; the get go.
+           (ast-rewrite-wrapper-call body actuals))
           (#t
-           ;; FIXME: this may be too aggressive: a procedure with two recursive
-           ;; calls such as fibo gets an exponentially large body AST.  The
-           ;; process however is not infinite, since the closure body doesn't
-           ;; have its own known calls inlined here.
-
            ;; The environment is empty, and the argument number is correct:
            ;; rewrite into nested lets binding the closure formals to the call
            ;; actuals, and then evaluating the closure body.  alpha-convert the
@@ -2970,6 +3352,91 @@
                   (alist (zip formals new-formals))
                   (new-body (ast-alpha-convert-with body alist)))
              (ast-nested-let new-formals actuals new-body))))))
+
+;;; By definition a "wrapper" is an empty-environment closure with n formals,
+;;; whose entire body consists in either:
+;;; - a primitive with the formals as its operands, all used, in the same order;
+;;; - a call with a leaf operator where no formal occurs free in the operator,
+;;;   and the operands are like in the previous case.
+;;; Notice that the second case has no restriction on operator effects: even in
+;;; rewritten form the order of effects doesn't change.
+;;;
+;;; The leafness restriction is unfortunate, but is an easy way to avoid
+;;; infinite expansion in case the operator contains recursive calls to itself
+;;; or to the closure containing it.
+;;;
+;;; Wrappers are common and calls to them can be rewritten efficiently.  This
+;;; is an easy check to make, which may be subsumed by other rewrites -- however
+;;; those rewrites, still to implement, are much more complex.
+;;;
+;;; Notice that wrapper closures by definition have a leaf body and an empty
+;;; environment, so they are always considered for inlining.
+(define-constant (closure-wrapper? closure)
+  (let ((environment (closure-environment closure))
+        (formals (closure-formals closure))
+        (body (closure-body closure)))
+    (cond ((non-null? environment)
+           ;; This could be generalized, but is probably not worth the trouble
+           ;; yet: right now we refuse to consider a closure to be a wrapper if
+           ;; it has any nonlocals.
+           #f)
+          ((and (ast-primitive? body)
+                (ast-wrapper-arguments? formals (ast-primitive-operands body)))
+           ;; The primitive case as defined above.
+           #t)
+          ((and (ast-call? body)
+                (ast-leaf? (ast-call-operator body))
+                (for-all? (lambda (formal)
+                            (not (ast-has-free? (ast-call-operator body)
+                                                formal)))
+                          formals)
+                ;; No restrictions on operator effects here.  On purpose.
+                (ast-wrapper-arguments? formals (ast-call-operands body)))
+           ;; The call case as defined above.
+           #t)
+          (#t
+           ;; In any other case, the body is not a wrapper.
+           #f))))
+
+;;; A helper for closure-wrapper?.
+;;; Return non-#f iff the given actuals respect the wrapper definition above,
+;;; agreeing with the given formals.
+(define-constant (ast-wrapper-arguments? formals actuals)
+  (cond ((null? formals)
+         ;; If both lists are empty the two in-arities agree.
+         (null? actuals))
+        ((null? actuals)
+         ;; Different in-arities.
+         #f)
+        ((and (ast-variable? (car actuals))
+              (eq? (car formals)
+                   (ast-variable-name (car actuals))))
+         (ast-wrapper-arguments? (cdr formals) (cdr actuals)))
+        (#t
+         ;; Non-variable actual, or variable not matching the
+         ;; formal in its position.
+         #f)))
+
+;;; Return a rewritten a wrapper call.  We assume that the body is a wrapper,
+;;; and that the actuals respect the wrapper in-arity; notice that we even
+;;; ignore the operator formal names.
+(define-constant (ast-rewrite-wrapper-call body actuals)
+  (cond ((ast-primitive? body)
+         ;; We don't need any let, or even alpha-conversion: any call to a
+         ;; primitive wrapper with the correct in-arity can be rewritten to
+         ;; [primitive p . actuals], as long as the actuals are not reordered;
+         ;; this is correct even with effects.
+         (ast-primitive (ast-primitive-operator body) actuals))
+        ((ast-call? body)
+         ;; As long as this is a procedure wrapper we can do like in the
+         ;; primitive case.  This does require the operator not to have effects,
+         ;; but that has been checked already by this procedure's caller.
+         (ast-call (ast-call-operator body) actuals))
+        (#t
+         ;; This shouldn't happen.
+         (error `(ast-rewrite-wrapper-call: operator ,body not a
+                                            wrapper body)))))
+
 
 ;;; Given a list of bound variables, a list of actuals and a body, build nested
 ;;; let ASTs, evaluating the actuals left-to-right.  This is similar to a let*
@@ -3019,7 +3486,19 @@
                (simplified-operands
                 (ast-simplify-calls-list (ast-call-operands ast))))
            (if (and (ast-literal? simplified-operator)
-                    (closure? (ast-literal-value simplified-operator)))
+                    (closure? (ast-literal-value simplified-operator))
+                    (or ;; This may be too aggressive: I currently inline every
+                        ;; call to a known leaf closure, independently from the
+                        ;; body size.
+                        (ast-leaf? (closure-body (ast-literal-value
+                                                  simplified-operator)))
+                        ;; In order to make this not too aggressive as well,
+                        ;; I require procedure wrapper bodies to be leaves;
+                        ;; otherwise a procedure wrapper which is recursive
+                        ;; on the operator side would cause an infinite
+                        ;; expansion here.
+                        (closure-wrapper? (ast-literal-value
+                                           simplified-operator))))
                (ast-simplify-call-helper (ast-literal-value simplified-operator)
                                          simplified-operands)
                (ast-call simplified-operator simplified-operands))))
@@ -3050,11 +3529,7 @@
 ;;; bound.
 ;;; The most important optimizations are for the let case, which uses the helper
 ;;; below.
-;;(define rewrite-counter 0)
 (define-constant (ast-optimize-helper ast bounds)
-;;(display bounds) (newline)
-;;(display ast) (newline)
-;;(display `(,rewrite-counter -th expansion -- bounds are ,(length bounds))) (newline) (set! rewrite-counter (1+ rewrite-counter))
   (cond ((ast-literal? ast)
          ast)
         ((ast-variable? ast)
@@ -3063,41 +3538,24 @@
          (ast-define (ast-define-name ast)
                      (ast-optimize-helper (ast-define-body ast) bounds)))
         ((ast-if? ast)
-         (let ((optimized-condition
-                (ast-optimize-helper (ast-if-condition ast) bounds)))
-           (cond ((and (ast-literal? optimized-condition)
-                       (ast-literal-value optimized-condition))
-                  ;; The condition has been simplified to non-#f.
-                  (ast-optimize-helper (ast-if-then ast) bounds))
-                 ((ast-literal? optimized-condition)
-                  ;; The condition has been simplified to #f, since we didn't
-                  ;; get to the previous clause.
-                  (ast-optimize-helper (ast-if-else ast) bounds))
-                 (#t
-                  ;; Keep both branches.
-                  (ast-if optimized-condition
-                          (ast-optimize-helper (ast-if-then ast) bounds)
-                          (ast-optimize-helper (ast-if-else ast) bounds))))))
+         (ast-optimize-if (ast-optimize-helper (ast-if-condition ast) bounds)
+                          (ast-if-then ast)
+                          (ast-if-else ast)
+                          bounds))
         ((ast-set!? ast)
-         (ast-set! (ast-set!-name ast)
-                   (ast-optimize-helper (ast-set!-body ast) bounds)))
+         (ast-optimize-set! (ast-set!-name ast)
+                            (ast-optimize-helper (ast-set!-body ast) bounds)
+                            bounds))
         ((ast-while? ast)
-         (let ((optimized-guard (ast-optimize-helper (ast-while-guard ast)
-                                                     bounds))
-               (optimized-body (ast-optimize-helper (ast-while-body ast)
-                                                    bounds)))
-           (if (and (ast-literal? optimized-guard)
-                    (not (ast-literal-value optimized-guard)))
-               ;; Remove a (while #f ...).  Notice that we can't simplify
-               ;; a while with a constantly non-#f guard.
-               (ast-literal (begin))
-               (ast-while optimized-guard optimized-body))))
+         (ast-optimize-while (ast-optimize-helper (ast-while-guard ast)
+                                                  bounds)
+                             (ast-while-body ast)
+                             bounds))
         ((ast-primitive? ast)
-         ;; FIXME: evaluate the primitive at expansion time if the primitive
-         ;; has no effect and all of its arguments are literal.
-         (ast-primitive (ast-primitive-operator ast)
-                        (ast-optimize-helper-list (ast-primitive-operands ast)
-                                                  bounds)))
+         (ast-optimize-primitive (ast-primitive-operator ast)
+                                 (ast-optimize-helper-list
+                                     (ast-primitive-operands ast)
+                                     bounds)))
         ((ast-call? ast)
          (ast-call (ast-optimize-helper (ast-call-operator ast) bounds)
                    (ast-optimize-helper-list (ast-call-operands ast) bounds)))
@@ -3108,14 +3566,10 @@
                                             (set-unite bounds formals)))))
         ((ast-let? ast)
          (let ((bound-name (ast-let-bound-name ast)))
-           ;; Notice that the let body is not optimized here: it will be
-           ;; optimized by ast-optimize-let, after possibly performing
-           ;; replacements into it.  Optimizing the bound form, instead, is
-           ;; important: its shape will determine which optimizations are
-           ;; possible.
            (ast-optimize-let bound-name
                              (ast-optimize-helper (ast-let-bound-form ast) bounds)
-                             (ast-let-body ast)
+                             (ast-optimize-helper (ast-let-body ast)
+                                                  (set-with bounds bound-name))
                              bounds)))
         ((ast-sequence? ast)
          (let ((optimized-first (ast-optimize-helper (ast-sequence-first ast)
@@ -3124,12 +3578,7 @@
                                                       bounds)))
            ;; If fhe first form in the sequence has no effect rewrite to the
            ;; second form only.
-           ;; FIXME: generalize to no-effect primitives with no-effect actuals.
-           (if (or (ast-literal? optimized-first)
-                   (and (ast-variable? optimized-first)
-                        (or (set-has? bounds
-                                      (ast-variable-name optimized-first))
-                            (constant? (ast-variable-name optimized-first)))))
+           (if (not (ast-effectful? optimized-first bounds))
                optimized-second
                (ast-sequence optimized-first
                              optimized-second))))))
@@ -3140,17 +3589,50 @@
   (map (lambda (ast) (ast-optimize-helper ast bounds))
        asts))
 
+;;; A helper for ast-optimize-helper in the set! case.  The body should already
+;;; be optimized.
+(define-constant (ast-optimize-set! name body bounds)
+  ;; There isn't much we can do here which is not too difficult.
+  (cond ((and (ast-variable? body)
+              (eq? (ast-variable-name body) name)
+              (set-has? bounds name))
+         ;; An easy case to optimize is [set! x [variable x]], which we can
+         ;; rewrite into [literal #<nothing>] as long as x is non-globally bound
+         ;; (otherwise the reference to x would be effectful, which would make
+         ;; its removal incorrect).  This occurs, for example, in the
+         ;; macroexpansion of (letrec ((a a)) a), which is a way of obtaining
+         ;; #<undefined> as a result.  Notice that [set! x x] is effectful when
+         ;; x is a global constant, and therefore we do not remove it in that
+         ;; case; the condition checks whether the variable is bound in the
+         ;; non-global environement only, on purpose.
+         (ast-literal (begin)))
+        (#t
+         ;; Fallback case, in which we optimize nothing.
+         (ast-set! name body))))
+
 ;;; A helper for ast-optimize-helper in the let case, which is the most complex.
 ;;; This assumes that both subforms are alpha-converted.
-;;; This procedure should be called with the bound form already optimized,
-;;; in order to recognize the bound form shape and simplify the body as far
-;;; as possible; however there is no need for the body to be already
-;;; simplified -- it would introduce serious inefficiencies since the body
-;;; is optimized again here, and doing this recursively would easily explode
-;;; to quadratic behavior even assuming set operations to be O(1), which they
-;;; are certainly not.
 (define-constant (ast-optimize-let bound-name bound-form body bounds)
-  (cond ;; FIXME (as the first case): let-sequence-be elimination.
+  (cond ((ast-sequence? bound-form)
+         ;; Rewrite [let x [sequence E1 E2] E3] into [sequence E1 [let x E2 E3]]
+         ;; , which may enable further optimizations...
+         (let ((rewritten
+                (ast-sequence (ast-sequence-first bound-form)
+                              (ast-let bound-name
+                                       (ast-sequence-second bound-form)
+                                       body))))
+           ;; ...and then re-optimize the rewritten sequence.  This may trigger
+           ;; the same rewrite on a bound-form sub-sequence, or other
+           ;; optimizations; in particular the bound form, now smaller, may have
+           ;; been reduced to a variable or a literal.  Notice that moving the
+           ;; first form of the bound-form sequence out of the let form doesn't
+           ;; change the bound variable set at any program point.
+           (ast-optimize-helper rewritten bounds)))
+        ((not (ast-has-free? body bound-name))
+         ;; The bound variable is not used in the body.  Rewrite the let into
+         ;; a sequence and optimize it further.
+         (ast-optimize-helper (ast-sequence bound-form body)
+                              bounds))
         ((and (ast-literal? bound-form)
               (not (ast-has-assigned? body bound-name)))
          ;; The variable is bound to a literal, without being assigned:
@@ -3159,19 +3641,419 @@
            (ast-optimize-helper folded-body bounds)))
         ((and (ast-variable? bound-form)
               (not (ast-has-assigned? body bound-name))
-              (not (ast-has-assigned? body (ast-variable-name bound-form))))
+              (not (ast-has-assigned? body (ast-variable-name bound-form)))
+              (or (set-has? bounds (ast-variable-name bound-form))
+                  (constant? (ast-variable-name bound-form))))
          ;; The variable is bound to another variable, with neither being
          ;; assigned in the body.  We can reduce the entire let AST to a body
          ;; with the bound variable replaced by the other.  Here we rely on the
          ;; body being alpha-converted to be sure not to capture the substituted
          ;; variable.
+         ;; The or clause is important: this rewriting is only valid if we are
+         ;; sure that referencing the bound-form variable will not have effects;
+         ;; it being undefined would trigger an error, and we don't want to move
+         ;; the error point.
          (let ((new-body (ast-instantiate body bound-name bound-form)))
            (ast-optimize-helper new-body bounds)))
+        ((and (ast-variable? body)
+              (eq? bound-name (ast-variable-name body)))
+         ;; Rewrite [let x E [variable x]] into E , without any restriction on
+         ;; the shape of E , on bound variables or on effects.
+         ;; This rewrite could be subsumed by more general rules which are not
+         ;; implemented yet but at least this case is easy to optimize, and
+         ;; an opportunity to improve tailness.  It can occur as a consequence
+         ;; of other rewrites.
+         bound-form)
         (#t
          ;; Default case: keep the let AST in our rewriting.
          (ast-let bound-name
                   bound-form
                   (ast-optimize-helper body (set-with bounds bound-name))))))
+
+;;; A helper for ast-optimize-helper in the if case.  Only the condition
+;;; needs to be already optimized.
+(define-constant (ast-optimize-if optimized-condition then else bounds)
+  (cond ((ast-sequence? optimized-condition)
+         ;; Rewrite [if [sequence E1 E2] E3 E4] into
+         ;; [sequence E1 [if E2 E3 E4]], and optimize the result.  This may
+         ;; lead to further optimizations, particularly if the condition
+         ;; eventually reduces to a constant.  The set of bound variables
+         ;; doesn't change at any point.
+         (let ((sequence
+                (ast-sequence (ast-sequence-first optimized-condition)
+                              (ast-if (ast-sequence-second optimized-condition)
+                                      then
+                                      else))))
+           (ast-optimize-helper sequence bounds)))
+        ((and (ast-primitive? optimized-condition)
+              (eq? (ast-primitive-operator optimized-condition)
+                   primitive-boolean-canonicalize))
+         ;; Rewrite [if [primitive boolean-canonicalize E1] E2 E3] into
+         ;; [if E1 E2 E3], and optimize the result.  Boolean canonicalization
+         ;; is a waste of time in this position.
+         (ast-optimize-if (car (ast-primitive-operands optimized-condition))
+                          then
+                          else
+                          bounds))
+        ((and (ast-primitive? optimized-condition)
+              (eq? (ast-primitive-operator optimized-condition)
+                   primitive-not))
+         ;; Rewrite [if [primitive not E1] E2 E3] into [if E1 E3 E2], and
+         ;; optimize the result.
+         (ast-optimize-if (car (ast-primitive-operands optimized-condition))
+                          else
+                          then
+                          bounds))
+        ((and (ast-literal? optimized-condition)
+              (ast-literal-value optimized-condition))
+         ;; The condition has been simplified to non-#f.
+         (ast-optimize-helper then bounds))
+        ((ast-literal? optimized-condition)
+         ;; The condition has been simplified to #f, since we didn't
+         ;; get to the previous clause.
+         (ast-optimize-helper else bounds))
+        (#t
+         ;; Keep both branches.
+         (ast-if optimized-condition
+                 (ast-optimize-helper then bounds)
+                 (ast-optimize-helper else bounds)))))
+
+;;; A helper for ast-optimize-helper in the while case.  Only the guard
+;;; needs to be already optimized.
+(define-constant (ast-optimize-while optimized-guard body bounds)
+  (cond ((ast-sequence? optimized-guard)
+         ;; Rewrite [while [sequence E1 E2] E3] into
+         ;; [sequence E1 [while E2 [sequence E3 E1]]], and optimize further,
+         ;; which may hopefully reduce to a loop with a literal #f guard.
+         ;; The bound variable set doesn't change at any program point.
+         (let* ((first (ast-sequence-first optimized-guard))
+                (second (ast-sequence-second optimized-guard))
+                (sequence (ast-sequence first
+                                        (ast-while second
+                                                   (ast-sequence body
+                                                                 first)))))
+           (ast-optimize-helper sequence bounds)))
+        ((and (ast-primitive? optimized-guard)
+              (eq? (ast-primitive-operator optimized-guard)
+                   primitive-boolean-canonicalize))
+         ;; Rewrite [while [primitive boolean-canonicalize E1] E2] into
+         ;; [while E1 E2], and optimize the result.  Boolean canonicalization
+         ;; is a waste of time in this position.
+         (ast-optimize-while (car (ast-primitive-operands optimized-guard))
+                             body
+                             bounds))
+        ((and (ast-literal? optimized-guard)
+              (not (ast-literal-value optimized-guard)))
+         ;; Remove a (while #f ...).  Notice that we can't simplify
+         ;; a while with a constantly non-#f guard.
+         (ast-literal (begin)))
+        (#t
+         ;; Keep the while form.
+         (ast-while optimized-guard
+                    (ast-optimize-helper body bounds)))))
+
+;;; Return a rewritten version of a primitive use with the given primitive
+;;; operator and the given list of AST operands, already rewritten.
+(define-constant (ast-optimize-primitive primitive operands)
+  ;; Here I can assume the primitive in-arity to be respected: there would
+  ;; have been an error at AST creation time otherwise.
+  (cond ;; Increment and decrement.
+        ((and (eq? primitive primitive-primordial-+) (ast-one? (car operands)))
+         ;; [primitive + 1 E] ==> [primitive 1+ E]
+         (ast-optimize-primitive primitive-1+ (list (cadr operands))))
+        ((and (eq? primitive primitive-primordial-+) (ast-one? (cadr operands)))
+         ;; [primitive + E 1] ==> [primitive 1+ E]
+         (ast-optimize-primitive primitive-1+ (list (car operands))))
+        ((and (eq? primitive primitive-primordial--) (ast-one? (cadr operands)))
+         ;; [primitive - E 1] ==> [primitive 1- E]
+         (ast-optimize-primitive primitive-1- (list (car operands))))
+        ;; Zero tests.
+        ((and (eq? primitive primitive-=) (ast-zero? (car operands)))
+         ;; [primitive = 0 E] ==> [primitive zero? E]
+         (ast-optimize-primitive primitive-zero? (list (cadr operands))))
+        ((and (eq? primitive primitive-=) (ast-zero? (cadr operands)))
+         ;; [primitive = E 0] ==> [primitive zero? E]
+         (ast-optimize-primitive primitive-zero? (list (car operands))))
+        ;; Sign tests.
+        ((and (eq? primitive primitive-<) (ast-zero? (cadr operands)))
+         ;; [primitive < E 0] ==> [primitive negative? E]
+         (ast-optimize-primitive primitive-negative? (list (car operands))))
+        ((and (eq? primitive primitive-<=) (ast-zero? (cadr operands)))
+         ;; [primitive <= E 0] ==> [primitive non-positive? E]
+         (ast-optimize-primitive primitive-non-positive? (list (car operands))))
+        ((and (eq? primitive primitive->) (ast-zero? (cadr operands)))
+         ;; [primitive > E 0] ==> [primitive positive? E]
+         (ast-optimize-primitive primitive-positive? (list (car operands))))
+        ((and (eq? primitive primitive->=) (ast-zero? (cadr operands)))
+         ;; [primitive >= E 0] ==> [primitive non-negative? E]
+         (ast-optimize-primitive primitive-non-negative? (list (car operands))))
+        ((and (eq? primitive primitive-<) (ast-zero? (car operands)))
+         ;; [primitive < 0 E] ==> [primitive positive? E]
+         (ast-optimize-primitive primitive-positive? (list (cadr operands))))
+        ((and (eq? primitive primitive-<=) (ast-zero? (car operands)))
+         ;; [primitive <= 0 E] ==> [primitive non-negative? E]
+         (ast-optimize-primitive primitive-non-negative? (list (cadr operands))))
+        ((and (eq? primitive primitive->) (ast-zero? (car operands)))
+         ;; [primitive > 0 E] ==> [primitive negative? E]
+         (ast-optimize-primitive primitive-negative? (list (cadr operands))))
+        ((and (eq? primitive primitive->=) (ast-zero? (car operands)))
+         ;; [primitive >= 0 E] ==> [primitive non-positive? E]
+         (ast-optimize-primitive primitive-non-positive? (list (cadr operands))))
+        ;; Arithmetic with neutral operands.
+        ;; Notice that we cannot, in general, rewrite primitives with absorbing
+        ;; operands without removing effects; however neutral operands are fine.
+        ((and (eq? primitive primitive-primordial-+) (ast-zero? (car operands)))
+         ;; [primitive + 0 E] ==> E
+         (cadr operands))
+        ((and (eq? primitive primitive-primordial-+) (ast-zero? (cadr operands)))
+         ;; [primitive + E 0] ==> E
+         (car operands))
+        ((and (eq? primitive primitive-primordial--) (ast-zero? (cadr operands)))
+         ;; [primitive - E 0] ==> E
+         (car operands))
+        ((and (eq? primitive primitive-primordial-*) (ast-one? (car operands)))
+         ;; [primitive * 1 E] ==> E
+         (cadr operands))
+        ((and (eq? primitive primitive-primordial-*) (ast-one? (cadr operands)))
+         ;; [primitive * E 1] ==> E
+         (car operands))
+        ((and (eq? primitive primitive-primordial-/) (ast-one? (cadr operands)))
+         ;; [primitive / E 1] ==> E
+         (car operands))
+        ;; Other arithmetic simplification with particular literal operands.
+        ((and (eq? primitive primitive-primordial--) (ast-zero? (car operands)))
+         ;; [primitive - 0 E] ==> [primitive negate E]
+         (ast-optimize-primitive primitive-negate (list (cadr operands))))
+        ;; Nested arithmetic negation.
+        ((and (eq? primitive primitive-negate)
+              (ast-primitive? (car operands))
+              (eq? (ast-primitive-operator (car operands)) primitive-negate))
+         ;; [primitive negate [primitive negate E]] ==> E
+         (car (ast-primitive-operands (car operands))))
+        ;; Logical negation of another primitive.
+        ((and (eq? primitive primitive-not)
+              (ast-primitive? (car operands)))
+         ;; [primitive not [primitive P . Es]].
+         ;; Some primitives can be rewritten into a faster form when negated.
+         ;; Use the helper procedure for this.
+         (let ((inner-primitive (ast-primitive-operator (car operands)))
+               (inner-operands (ast-primitive-operands (car operands))))
+           (ast-optimize-not-primitive inner-primitive inner-operands)))
+        ((for-all? ast-literal? operands)
+         ;; The actuals are all literals.  Try to evaluate the primitive use
+         ;; at rewrite time, replacing it with a literal result.
+         (ast-optimize-primitive-known-actuals primitive
+                                               (map ast-literal-value
+                                                    operands)))
+        (#t
+         ;; Fallback case: we have nothing to rewrite.
+         (ast-primitive primitive operands))))
+
+;;; Return non-#f iff the given AST is a literal with the given value.
+(define-constant (ast-literal-value? ast value)
+  (and (ast-literal? ast)
+       (eq? (ast-literal-value ast) value)))
+
+;;; Return non-#f iff the given AST is the literal 0.
+(define-constant (ast-zero? ast)
+  (ast-literal-value? ast 0))
+;;; Return non-#f iff the given AST is the literal 1.
+(define-constant (ast-one? ast)
+  (ast-literal-value? ast 1))
+
+;;; A helper for ast-optimize-not-primitive.  Return the rewritten version
+;;; of [primitive not [primitive PRIMITIVE . OPERANDS]].  The operands are
+;;; already rewritten.
+(define-constant (ast-optimize-not-primitive primitive operands)
+  ;; Like in ast-optimize-primitive , I can assume that the in-arity is
+  ;; respected.
+  (cond ((eq? primitive primitive-not)
+         ;; [primitive not [primitive not E]] ==> [boolean-canonicalize E].
+         ;; A use of boolean-canonicalize as an condition will be rewritten
+         ;; away by the if and while helpers.
+         (ast-optimize-primitive primitive-boolean-canonicalize operands))
+        ((eq? primitive primitive-boolean-canonicalize)
+         ;; [primitive not [primitive boolean-canonicalize E]] ==>
+         ;; [primitive not E].
+         (ast-optimize-primitive primitive-not operands))
+        ;; The following cases are obvious.
+        ((eq? primitive primitive-eq?)
+         ;; [primitive not [primitive eq? . Es]] ==> [primitive not-eq? . Es]
+         (ast-optimize-primitive primitive-not-eq? operands))
+        ((eq? primitive primitive-not-eq?)
+         ;; [primitive not [primitive not-eq? . Es]] ==> [primitive eq? . Es]
+         (ast-optimize-primitive primitive-eq? operands))
+        ((eq? primitive primitive-zero?)
+         ;; [primitive not [primitive zero? . Es]] ==> [primitive non-zero? . Es]
+         (ast-optimize-primitive primitive-non-zero? operands))
+        ((eq? primitive primitive-non-zero?)
+         ;; [primitive not [primitive non-zero? . Es]] ==> [primitive zero? . Es]
+         (ast-optimize-primitive primitive-zero? operands))
+        ((eq? primitive primitive-positive?)
+         ;; [primitive not [primitive positive? . Es]] ==> [primitive non-positive? . Es]
+         (ast-optimize-primitive primitive-non-positive? operands))
+        ((eq? primitive primitive-non-positive?)
+         ;; [primitive not [primitive non-positive? . Es]] ==> [primitive positive? . Es]
+         (ast-optimize-primitive primitive-positive? operands))
+        ((eq? primitive primitive-negative?)
+         ;; [primitive not [primitive negative? . Es]] ==> [primitive non-negative? . Es]
+         (ast-optimize-primitive primitive-non-negative? operands))
+        ((eq? primitive primitive-non-negative?)
+         ;; [primitive not [primitive non-negative? . Es]] ==> [primitive negative? . Es]
+         (ast-optimize-primitive primitive-negative? operands))
+        ((eq? primitive primitive-=)
+         ;; [primitive not [primitive = . Es]] ==> [primitive <> . Es]
+         (ast-optimize-primitive primitive-<> operands))
+        ((eq? primitive primitive-<>)
+         ;; [primitive not [primitive <> . Es]] ==> [primitive = . Es]
+         (ast-optimize-primitive primitive-= operands))
+        ((eq? primitive primitive-<)
+         ;; [primitive not [primitive < . Es]] ==> [primitive >= . Es]
+         (ast-optimize-primitive primitive->= operands))
+        ((eq? primitive primitive-<=)
+         ;; [primitive not [primitive <= . Es]] ==> [primitive > . Es]
+         (ast-optimize-primitive primitive-> operands))
+        ((eq? primitive primitive->)
+         ;; [primitive not [primitive > . Es]] ==> [primitive <= . Es]
+         (ast-optimize-primitive primitive-<= operands))
+        ((eq? primitive primitive->=)
+         ;; [primitive not [primitive >= . Es]] ==> [primitive < . Es]
+         (ast-optimize-primitive primitive-< operands))
+        (#t
+         ;; Fallback case: don't rewrite anything.
+         (ast-primitive primitive-not
+                        (list (ast-primitive primitive operands))))))
+
+;;; Another helper for ast-optimize-primitive.  Return an AST containing a
+;;; rewritten primitive use of the given primitive with the given values (all
+;;; known at rewrite time) as actuals; in some cases we can evaluate the
+;;; primitive use at rewrite time, and replace it with the result as a literal.
+(define-constant (ast-optimize-primitive-known-actuals primitive values)
+  ;; Again I can assume that the in-arity is respected, but not necessarily the
+  ;; actual types.
+  (if (ast-statically-rewritable-primitive-use? primitive values)
+      (ast-literal (apply-primitive primitive values))
+      (ast-primitive primitive (map ast-literal values))))
+
+;;; Given a primitive and a list of actual values return non-#f iff the use is
+;;; known to be statically rewritable.
+(define-constant (ast-statically-rewritable-primitive-use? primitive values)
+  (let outer-loop ((signatures ast-statically-rewritable-primitive-signatures))
+    (if (null? signatures)
+        #f
+        (let* ((signature (car signatures))
+               (a-primitive (car signature))
+               (conditions (cdr signature)))
+          ;; In the inner loop it's convenient to iterate on a list of
+          ;; predicates; so instead of a primitive object I will use as the
+          ;; first element a predicate checking whether its argument is the
+          ;; required primitive.  The list of values to match with the list of
+          ;; predicates contains the primitives as the first element, followed
+          ;; by the actual values.
+          (let inner-loop ((conditions (cons (lambda (p) (eq? a-primitive p))
+                                             conditions))
+                           (values (cons primitive values)))
+            (cond ((and (null? conditions) (null? values))
+                   ;; Every condition was satisfied and there are no excess
+                   ;; actuals: the signature matches.
+                   #t)
+                  ((null? conditions)
+                   ;; No more conditions, but still remaining actuals.
+                   (display `(WARNING: invalid signature: too many actuals for ,primitive)) (newline)
+                   (outer-loop (cdr signatures)))
+                  ((null? values)
+                   ;; No more actuals, but still remaining conditions.
+                   (display `(WARNING: invalid signature: not enough actuals for ,primitive)) (newline)
+                   (outer-loop (cdr signatures)))
+                  (((car conditions) (car values))
+                   ;; The first condition on the first actual is satisfied.
+                   ;; Check the others.
+                   (inner-loop (cdr conditions) (cdr values)))
+                  (#t
+                   ;; The first condition on the first actual is not satisfied.
+                   ;; Leave this signature and try with the next.
+                   (outer-loop (cdr signatures)))))))))
+
+
+;;; Return non-#f iff the argument is a fixnum and different from 0.  Never
+;;; fail.
+(define-constant (non-zero-fixnum? x)
+  (and (fixnum? x)
+       (non-zero? x)))
+
+;;; An unordered list of lists.  Each inner list contains a primitive, and then
+;;; one procedure per primitive argument; the procedure is a predicate never
+;;; failing and returning #t if the argument is suitable for the primitive, and
+;;; safe to evaluate at rewrite time.
+;;; Primitives not occurring here ar not candidates for rewrite-time evaluation.
+;;;
+;;; The outer list is walked sequentially, looking for the first match; it is
+;;; possible for a primitive to appear in multiple lists, and that could be
+;;; useful for primitives with multiple "safe signatures".
+(define-constant ast-statically-rewritable-primitive-signatures
+  (list ;; Type checking.
+        (list primitive-null? anything?)
+        (list primitive-non-null? anything?)
+        (list primitive-fixnum? anything?)
+        (list primitive-symbol? anything?)
+        (list primitive-non-symbol? anything?)
+        (list primitive-cons? anything?)
+        (list primitive-non-cons? anything?)
+        (list primitive-primitive? anything?)
+        (list primitive-closure? anything?)
+        (list primitive-vector? anything?)
+        (list primitive-ast? anything?)
+        (list primitive-macro? anything?)
+        (list primitive-boolean? anything?)
+        (list primitive-eof? anything?)
+        (list primitive-nothing? anything?)
+        (list primitive-undefined? anything?)
+
+        ;; Case checking.  It's probably not worth the trouble to do this for
+        ;; ASTs.
+        (list primitive-zero? fixnum?)
+        (list primitive-non-zero? fixnum?)
+        (list primitive-positive? fixnum?)
+        (list primitive-non-positive? fixnum?)
+        (list primitive-negative? fixnum?)
+        (list primitive-non-negative? fixnum?)
+
+        ;; Generic comparisons.
+        (list primitive-eq? anything? anything?)
+        (list primitive-not-eq? anything? anything?)
+
+        ;; Fixnum arithmetic.
+        (list primitive-1+ fixnum?)
+        (list primitive-1- fixnum?)
+        (list primitive-negate fixnum?)
+        (list primitive-primordial-+ fixnum? fixnum?)
+        (list primitive-primordial-- fixnum? fixnum?)
+        (list primitive-primordial-* fixnum? fixnum?)
+        (list primitive-primordial-/ fixnum? non-zero-fixnum?)
+        (list primitive-remainder fixnum? non-zero-fixnum?)
+
+        ;; Fixnum comparisons.
+        (list primitive-= fixnum? fixnum?)
+        (list primitive-<> fixnum? fixnum?)
+        (list primitive-< fixnum? fixnum?)
+        (list primitive-<= fixnum? fixnum?)
+        (list primitive-> fixnum? fixnum?)
+        (list primitive->= fixnum? fixnum?)
+
+        ;; Booleans operations.
+
+        (list primitive-not anything?)
+        (list primitive-boolean-canonicalize anything?)
+
+        ;; Conses.
+        ;; Notice that cons is *not* safe to evaluate at rewrite time, as it
+        ;; needs to allocate a fresh object at every use.
+        ;; The fact that conses are mutable is not a problem here: this list is
+        ;; only consulted when a primitive use has literals as all of its
+        ;; actuals, which happens in rewritten program only when safe.
+        (list primitive-car cons?) ;; no, because of mutability.
+        (list primitive-cdr cons?) ;; no, because of mutability.
+        ))
 
 
 
@@ -3179,14 +4061,16 @@
 ;;;; AST optimization driver.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; Return an optimized version of the given AST where the given set-as-list of
+;;; variables is bound.
 (define-constant (ast-optimize ast-0 bounds)
   (let* (;; Fold global constants into the AST.  This will introduce, in
          ;; particular, closure literals as operators.
          ;;(_ (display `(ast-0: ,ast-0)) (newline))
          (ast-1 (ast-global-fold ast-0 bounds))
          ;;(_ (display `(ast-1: ,ast-1)) (newline))
-         ;; Alpha-convert everything: we are about to introduce new let
-         ;; bindings, and we need to prevent conflicts.
+         ;; Alpha-convert every variable bound by the AST: we are about to
+         ;; introduce new let bindings, and we need to prevent capture.
          (ast-2 (ast-alpha-convert ast-1))
          ;;(_ (display `(ast-2: ,ast-2)) (newline))
          ;; Translate calls to closures literals into let forms,
@@ -3204,16 +4088,19 @@
          )
     ast-4))
 
-;;; Destructively modify the given closure, replacing its fields with a
-;;; semantically equivalent optimized version.
-(define-constant (closure-optimize! closure)
+;;; Given a closure consistently alpha-convert it and return a list of
+;;; three elements:
+;;; - the new closure environment;
+;;; - the new formals;
+;;; - the new body.
+(define-constant (closure-alpha-convert closure)
   ;; Bind the fields from the unoptimized closure.
   (let ((env (closure-environment closure))
         (formals (closure-formals closure))
         (body (closure-body closure)))
-    ;; Compute optimized fields.
-    (let* ((nonlocals (map car env))
-           (unary-gensym (lambda (useless) (gensym)))
+    ;; Compute new fields.
+    (let* ((unary-gensym (lambda (useless) (gensym)))
+           (nonlocals (map car env))
            (fresh-formals (map unary-gensym formals))
            (fresh-nonlocals (map unary-gensym env))
            (alpha-converted-env (zip fresh-nonlocals (map cdr env)))
@@ -3221,167 +4108,159 @@
             (append (zip formals fresh-formals)
                     (zip nonlocals fresh-nonlocals)))
            (alpha-converted-body
-            (ast-alpha-convert-with body
-                                    alpha-conversion-alist))
-           (alpha-converted-bounds
-            (set-unite fresh-formals (list->set fresh-nonlocals)))
-           (optimized-body
-            (ast-optimize alpha-converted-body
-                          alpha-converted-bounds)))
-      ;; Set all the fields, at the same time.  Doing this in more than one
-      ;; operation would be dangerous as the closure we are updating might be
-      ;; used in the update process itself, which would make visible fields in a
-      ;; temporarily inconsistent state.
+            (ast-alpha-convert-with body alpha-conversion-alist)))
+      ;; Return the results.
+      (list alpha-converted-env
+            fresh-formals
+            alpha-converted-body))))
+
+;;; Destructively modify the given closure, consistently alpha-converting its
+;;; nonlocals, formals and body.
+(define-constant (closure-alpha-convert! closure)
+  (let* ((fields (closure-alpha-convert closure))
+         (alpha-converted-env (car fields))
+         (alpha-converted-formals (cadr fields))
+         (alpha-converted-body (caddr fields)))
+    ;; Set all the fields, at the same time.  Doing this in more than one
+    ;; operation would be dangerous as the closure we are updating might be
+    ;; used in the update process itself, which would make visible fields in a
+    ;; temporarily inconsistent state.
+    (closure-set! closure
+                  alpha-converted-env
+                  alpha-converted-formals
+                  alpha-converted-body)))
+
+;;; Destructively modify the given closure, replacing its fields with a
+;;; semantically equivalent optimized version.
+(define-constant (closure-optimize! closure)
+  ;; First alpha-convert the closure; optimization might rely on this.
+  (let* ((fields (closure-alpha-convert closure))
+         (alpha-converted-env (car fields))
+         (alpha-converted-formals (cadr fields))
+         (alpha-converted-body (caddr fields)))
+    ;; Set all the fields, at the same time, like in closure-alpha-convert! ;
+    ;; but in this case use an optimized version of the body.
+    (let* ((alpha-converted-bounds (set-unite alpha-converted-formals
+                                              (map car alpha-converted-env)))
+           (optimized-body (ast-optimize alpha-converted-body
+                                         alpha-converted-bounds)))
       (closure-set! closure
                     alpha-converted-env
-                    fresh-formals
+                    alpha-converted-formals
                     optimized-body))))
 
-;;; FIXME: this is convenient for debugging, but I shouldn't keep it.
-(define (o c)
-  (closure-optimize! c)
-  c)
-(define (o0 c))
 
 
 
-;;;; AST optimization ?????.
+;;;; Implicit optimization.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; ?????
+;;; From now on definition forms will automatically optimize new globally bound
+;;; closures.
+
+;;; Keep the previous (macro) values for define and define-constant forms .
+(define define-unoptimizing
+  define)
+(define define-constant-unoptimizing
+  define-constant)
+
+;;; Destructively optimize the argument if it's a closure; do nothing
+;;; otherwise.  Return nothing.
+(define-constant (optimize-when-closure! thing)
+  (when (closure? thing)
+    (closure-optimize! thing)))
+
+;;; Define the named thing, and immediately optimize it if it's a closure.  Same
+;;; syntax as define.
+(define-macro (define-optimizing-possibly-constant constant thing . body)
+  (cond ((symbol? thing)
+         (let ((value-name (gensym)))
+           `(let ((,value-name ,@body))
+              (define-unoptimizing ,thing ,value-name)
+              (when ,constant
+                ;; Making a globally defined closure a constant *before*
+                ;; optimizing it may help the rewrite system.
+                (make-constant ',thing))
+              (optimize-when-closure! ,value-name))))
+        ((or (not (symbols? thing))
+             (not (all-different? (cdr thing))))
+         (error `(define-optimizing: ill-defined defined thing ,thing)))
+        (#t
+         (let ((value-name (gensym))
+               (thing-name (car thing))
+               (thing-formals (cdr thing)))
+           `(let ((,value-name (lambda ,thing-formals
+                                 ,@body)))
+              (define-unoptimizing ,thing-name ,value-name)
+              (when ,constant
+                ;; Again, make the thing constant before optimizing it.
+                (make-constant ',thing-name))
+              (optimize-when-closure! ,value-name))))))
+(define-macro (define-optimizing thing . body)
+  `(define-optimizing-possibly-constant #f ,thing ,@body))
+(define-macro (define-constant-optimizing thing . body)
+  `(define-optimizing-possibly-constant #t ,thing ,@body))
+
+;; Re-define define and define-constant.
+(define-macro (define thing . body)
+  `(define-optimizing ,thing ,@body))
+(define-macro (define-constant thing . body)
+  `(define-constant-optimizing ,thing ,@body))
 
 
 
 
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Tentative features, or experimentation just for fun.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-;;;; Streams.
+;;;; Retroactive optimization.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant stream-empty
-  '(#t . ()))
+;;; Optimize composed cons selectors.  Those are important for performance, and
+;;; the rewriting itself, which should be fast.
+(define-constant (optimize-cons-selectors-retroactively!)
+  ;; I want to flatten composed cons selectors, making them all leaf procedures
+  ;; each only using primitives and one variable.
+  ;; First inline cons selectors of size 2, which will flatten them; then do the
+  ;; same with cons selectors of size 3 (defined using selectors of size 2),
+  ;; which will flatten them as well; then cons selectors of size 4.
+  (let ((2-selectors (list caar cadr cdar cddr))
+        (3-selectors (list caaar caadr cadar caddr
+                           cdaar cdadr cddar cdddr))
+        (4-selectors (list caaaar caaadr caadar caaddr
+                           cadaar cadadr caddar cadddr
+                           cdaaar cdaadr cdadar cdaddr
+                           cddaar cddadr cdddar cddddr)))
+    (dolist (selector 2-selectors)
+      (closure-optimize! selector))
+    (dolist (selector 3-selectors)
+      (closure-optimize! selector))
+    (dolist (selector 4-selectors)
+      (closure-optimize! selector))))
 
-(define-constant (stream-ready? s)
-  (car s))
+;;; Optimize every globally defined closure, constant or not, therefore
+;;; retroactively optimizing the code defined up to this point.
+;;; This is defined in a procedure to make it easy to disable, as the
+;;; optimization process itself may be relatively inefficient.
+(define-constant (optimize-closures-retroactively!)
+  ;; AST rewriting will inline leaf calls, and therefore rewriting may turn a
+  ;; non-leaf procedure into a leaf procedure, enabling more rewriting.  Doing
+  ;; this systematically until no more leaf inlining is possible would require
+  ;; a call graph, or some very inefficient alternative.
+  ;; I accept this approximation: once the cons composed selectors are
+  ;; flattened optimize *every* closure, just once, in an unspecified order.
+  ;; Optimizations other than leaf inlining should not be affected by the
+  ;; order.
+  (dolist (symbol (interned-symbols))
+    (when (and (defined? symbol)
+               (closure? (symbol-global symbol)))
+      (closure-optimize! (symbol-global symbol)))))
 
-(define-constant (stream-force! s)
-  (unless (stream-ready? s)
-    (set-cdr! s ((cdr s)))
-    (set-car! s #t))
-  (cdr s))
+;;; Flatten composed cons selectors and optimize everything else once.
+(define-constant (optimize-retroactively!)
+  (optimize-cons-selectors-retroactively!)
+  (optimize-closures-retroactively!))
 
-(define-constant (stream-null? s)
-  (null? (stream-force! s)))
-(define-constant (stream-non-null? s)
-  (non-null? (stream-force! s)))
-(define-constant (stream-car s)
-  (car (stream-force! s)))
-(define-constant (stream-cdr s)
-  (cdr (stream-force! s)))
-(define-constant (stream-set-car! s new-car)
-  (set-car! (stream-force! s) new-car))
-(define-constant (stream-set-cdr! s new-cdr)
-  (set-cdr! (stream-force! s) new-cdr))
-
-(define-macro (stream-cons x s)
-  `(cons #f
-         (lambda ()
-           (cons ,x ,s))))
-
-(define-macro (stream-delay stream-expression)
-  `(cons #f
-         (lambda ()
-           (stream-force! ,stream-expression))))
-
-(define-constant (stream-forever-1 x)
-  (letrec ((res (stream-delay (stream-cons x res))))
-    res))
-
-(define-constant (stream-ones)
-  (stream-forever-1 1))
-
-(define-constant (stream-from from)
-  (stream-cons from (stream-from (1+ from))))
-(define-constant (stream-naturals)
-  (stream-from 0))
-
-(define-constant (stream-walk-elements procedure s)
-  (while (stream-non-null? s)
-    (procedure (stream-car s))
-    (set! s (stream-cdr s))))
-
-(define-constant (stream-print-elements s)
-  (stream-walk-elements (lambda (x)
-                          (display x)
-                          (newline))
-                        s))
-
-(define-constant (stream-touch-elements s)
-  (stream-walk-elements (lambda (x))
-                        s))
-
-(define-constant (stream-range a b)
-  (if (> a b)
-      stream-empty
-      (stream-cons a (stream-range (1+ a) b))))
-
-(define-constant (stream-append s1 s2)
-  (stream-delay
-    (if (stream-null? s1)
-        s2
-        (stream-cons (stream-car s1)
-                     (stream-append (stream-cdr s1) s2)))))
-
-(define-constant (stream-forever-stream s)
-  (letrec ((res (stream-delay (stream-append s res))))
-    res))
-
-(define-constant (stream-filter p? s)
-  (stream-delay
-    (cond ((stream-null? s)
-           stream-empty)
-          ((p? (stream-car s))
-           (stream-cons (stream-car s)
-                        (stream-filter p? (stream-cdr s))))
-          (#t
-           (stream-filter p? (stream-cdr s))))))
-
-(define-constant (stream-map f s)
-  (stream-delay
-    (if (stream-null? s)
-        stream-empty
-        (stream-cons (f (stream-car s))
-                     (stream-map f (stream-cdr s))))))
-
-(define-constant (stream-take s n)
-  (stream-delay
-    (cond ((zero? n)
-           stream-empty)
-          ((stream-null? s)
-           stream-empty)
-          (#t
-           (stream-cons (stream-car s)
-                        (stream-take (stream-cdr s) (1- n)))))))
-
-(define-constant (stream-drop s n)
-  (stream-delay
-    (cond ((zero? n)
-           s)
-          ((stream-null? s)
-           stream-empty)
-          (#t
-           (stream-drop (stream-cdr s) (1- n))))))
-
-(define-constant (stream-fold-left f x xs)
-  (if (stream-null? xs)
-      x
-      (stream-fold-left f
-                        (f x (stream-car xs))
-                        (stream-cdr xs))))
+;; Perform the retroactive rewriting.  This is the call to disable if a low
+;; startup latency matters more than execution speed.
+(optimize-retroactively!)
 
 
 
@@ -3393,11 +4272,210 @@
   (if (null? optional-environment)
       `(primordial-eval ,form '())
       `(primordial-eval ,form ,@optional-environment)))
+(define-macro (eval-interpreter form . optional-environment)
+  (if (null? optional-environment)
+      `(primordial-eval-interpreter ,form '())
+      `(primordial-eval-interpreter ,form ,@optional-environment)))
+(define-macro (eval-vm form . optional-environment)
+  (if (null? optional-environment)
+      `(primordial-eval-vm ,form '())
+      `(primordial-eval-vm ,form ,@optional-environment)))
 
 (define-macro (macroexpand form . optional-environment)
   (if (null? optional-environment)
       `(primordial-macroexpand ,form '())
       `(primordial-macroexpand ,form ,@optional-environment)))
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Compiler.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; Compiler: tentative code.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Scratch, for debugging.
+(define-constant (print-list xs)
+  (dolist (x xs)
+    (when (and (list? x)
+               (not-eq? (car x) 'label))
+      (dotimes (i 4)
+        (character-display #\space)))
+    (display x)
+    (newline)))
+
+(define-constant (compiler-make-state)
+  (list ()   ;; bindings
+        ()   ;; instructions
+        0   ;; label-no
+        ))
+
+(define-constant (compiler-bindings state)
+  (car state))
+(define-constant (compiler-set-bindings! state new-field)
+  (set-car! state new-field))
+
+(define-constant (compiler-instructions state)
+  (cadr state))
+(define-constant (compiler-set-instructions! state new-field)
+  (set-car! (cdr state) new-field))
+
+(define-constant (compiler-add-instruction! state new-instruction)
+  (let ((instructions (compiler-instructions state)))
+    (compiler-set-instructions! state
+                                      (append! instructions
+                                               (singleton new-instruction)))))
+
+
+(define-constant (compiler-label-no state)
+  (caddr state))
+(define-constant (compiler-set-label-no! state new-field)
+  (set-car! (cddr state) new-field))
+
+(define-constant (compiler-new-label state)
+  (let* ((old-count (compiler-label-no state)))
+    (compiler-set-label-no! state (1+ old-count))
+    old-count))
+
+(define-constant (compiler-register-no state)
+  (length (compiler-bindings state)))
+
+(define-constant (compiler-bound-variable? state variable)
+  (assq variable (compiler-bindings state)))
+
+(define-constant (compiler-lookup-variable state variable)
+  (cdr (assq variable (compiler-bindings state))))
+
+(define-constant (compiler-bind-local! state variable-name)
+  (let ((bindings (compiler-bindings state))
+        (new-register-index (compiler-register-no state)))
+    (compiler-set-bindings! state
+                            (cons (cons variable-name new-register-index)
+                                  bindings))
+    new-register-index))
+
+(define-constant (compile-literal! s value)
+  (compiler-add-instruction! s `(push-literal ,value)))
+
+(define-constant (compile-variable! s name)
+  (if (compiler-bound-variable? s name)
+      (compiler-add-instruction!
+          s
+          `(push-register ,(compiler-lookup-variable s name)))
+      (compiler-add-instruction!
+          s
+          `(push-global ,name))))
+
+(define-constant (compile-define s name body)
+  (compile-ast! s body)
+  (compiler-add-instruction! s `(pop-global ,name)))
+
+(define-constant (compile-if! s condition then else)
+  (let ((after-then-label (compiler-new-label s))
+        (after-else-label (compiler-new-label s)))
+    (compile-ast! s condition)
+    (compiler-add-instruction! s `(branch-if-false ,after-then-label))
+    (compile-ast! s then)
+    (compiler-add-instruction! s `(branch ,after-else-label))
+    (compiler-add-instruction! s `(label ,after-then-label))
+    (compile-ast! s else)
+    (compiler-add-instruction! s `(label ,after-else-label))))
+
+(define-constant (compile-infinite-loop s body)
+  (let ((before-body-label (compiler-new-label s)))
+    (compiler-add-instruction! s `(label ,before-body-label))
+    (compile-ast! s body)
+    (compiler-add-instruction! s `(drop))
+    (compiler-add-instruction! s `(branch ,before-body-label))))
+
+(define-constant (compile-while-ordinary s guard body)
+  (let ((before-body-label (compiler-new-label s))
+        (before-guard-label (compiler-new-label s)))
+    (compiler-add-instruction! s `(branch ,before-guard-label))
+    (compiler-add-instruction! s `(label ,before-body-label))
+    (compile-ast! s body)
+    (compiler-add-instruction! s `(drop))
+    (compiler-add-instruction! s `(label ,before-guard-label))
+    (compile-ast! s guard)
+    (compiler-add-instruction! s `(branch-if-true ,before-body-label))))
+
+(define-constant (compile-while s guard body)
+  (if (and (ast-literal? guard)
+           (ast-literal-value guard))
+      (compile-infinite-loop s body)
+      (compile-while-ordinary s guard body)))
+
+(define-constant (compile-primitive s operator operands)
+  (dolist (operand operands)
+    (compile-ast! s operand))
+  (compiler-add-instruction! s `(primitive ,operator)))
+
+(define-constant (compile-let s bound-name bound-form body)
+  (compile-ast! s bound-form)
+  (let ((register (compiler-bind-local! s bound-name)))
+    (compiler-add-instruction! s `(pop-to-register ,register))
+    (compile-ast! s body)
+    ;; FIXME: (compiler-unbind-local! s bound-name)
+    ))
+
+(define-constant (compile-sequence s first second)
+  (compile-ast! s first)
+  (compiler-add-instruction! s '(drop))
+  (compile-ast! s second))
+
+(define-constant (compile-ast! s ast)
+  (cond ((ast-literal? ast)
+         (compile-literal! s (ast-literal-value ast)))
+        ((ast-variable? ast)
+         (compile-variable! s (ast-variable-name ast)))
+        ((ast-define? ast)
+         (compile-define s
+                         (ast-define-name ast)
+                         (ast-define-body ast)))
+        ((ast-if? ast)
+         (compile-if! s
+                      (ast-if-condition ast)
+                      (ast-if-then ast)
+                      (ast-if-else ast)))
+        ((ast-set!? ast)
+         (error 'unimplemented-set!))
+        ((ast-while? ast)
+         (compile-while s
+                        (ast-while-guard ast)
+                        (ast-while-body ast)))
+        ((ast-primitive? ast)
+         (compile-primitive s
+                            (ast-primitive-operator ast)
+                            (ast-primitive-operands ast)))
+        ((ast-call? ast)
+         (error 'unimplemented-call))
+        ((ast-lambda? ast)
+         (error 'unimplemented-lambda))
+        ((ast-let? ast)
+         (compile-let s
+                      (ast-let-bound-name ast)
+                      (ast-let-bound-form ast)
+                      (ast-let-body ast)))
+        ((ast-sequence? ast)
+         (compile-sequence s
+                           (ast-sequence-first ast)
+                           (ast-sequence-second ast)))))
+
+(define-macro (t . forms)
+  `(let* ((s (compiler-make-state))
+          (ast (macroexpand '(begin ,@forms)))
+          (optimized-ast (ast-optimize ast ())))
+     (display ast)
+     (newline)
+     (display optimized-ast)
+     (newline)
+     (compile-ast! s optimized-ast)
+     (print-list (compiler-instructions s))
+     (newline)))
 
 
 
@@ -3424,9 +4502,17 @@
       (+ (fibo (- n 2))
          (fibo (- n 1)))))
 
+;;;  OK
 ;;; (define q (macroexpand '(let ((a a) (b a)) a))) q (ast-alpha-convert q)
 ;;; (define q (macroexpand '(f x (+ 2 3)))) q (ast-optimize q ())
+
+;;; OK
 ;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define x y) x 7))) ())
+;;; [sequence [define x [variable y]] [let #<u443> [variable x] [primitive #<2-ary primitive cons> [literal 3] [variable #<u443>]]]]
+
+;;; OK
+;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define x y) x 7))) '(x))
+;;; [sequence [define x [variable y]] [primitive #<2-ary primitive cons> [literal 3] [variable x]]]
 
 ;;; An important test:
 ;;; (ast-optimize (closure-body fibo) '(n))
@@ -3435,59 +4521,16 @@
 ;;; (ast-optimize (closure-body ast-simplify-calls) '(ast))
 
 ;;; These are interesting because of the sequence in the let bound form:
-;;; (ast-optimize (macroexpand '(cons 3 (begin x 7))) ())
-;;; (ast-optimize (macroexpand '(let ((a (newline) (newline) (newline))) y)) '())
+;;; ACCEPTABLE(ast-optimize (macroexpand '(cons 3 (begin x 7))) ())
+;;; GOOD(ast-optimize (macroexpand '(let ((a (newline) (newline) (newline))) y)) '())
 
 
 ;;; Primitive composition:
 ;; jitterlisp> (ast-optimize (macroexpand '(list 1 2)) '())
-;; [let #<uninterned:0xe6e120> [primitive #<2-ary primitive cons> [literal 2] [literal ()]] [primitive #<2-ary primitive cons> [literal 1] [variable #<uninterned:0xe6e120>]]]
-
-;;; Is this correct?  I'd say no.  We can move variables across effectful
-;;; primitives only when we are sure that referencing them has no effect,
-;;; which means that they must be bound or global constants.
-;;; (ast-optimize (macroexpand '(begin1 a (display 1) b (display 2) c (display 3) d)) ())
-;;; [sequence [primitive #<1-ary primitive display> [literal 1]] [sequence [variable b] [sequence [primitive #<1-ary primitive display> [literal 2]] [sequence [variable c] [sequence [primitive #<1-ary primitive display> [literal 3]] [sequence [variable d] [variable a]]]]]]]
-;;
-;; Other testcase which should not be simplified if b isn't bound or constant:
-;;; jitterlisp> (ast-optimize (macroexpand '(let ((a b)) c)) '())
-;;; [variable c]
-;;
-;;; Special case: this can be simplified even if a is unbound, because the
-;;; bound variable is the same as the bound form.  This is now correct by
-;;; accident.  I should check for this case.
-;; (ast-optimize (macroexpand '(let ((a a)) (cons a a))) '())
-;; [primitive #<2-ary primitive cons> [variable a] [variable a]]
-
-;;; The change in evaluation order among a, b and c is more or less benign
-;;; here.  Can it also happen in a context where it would make a difference?
-;;; More importantly, why does it happen?
-;;; (ast-optimize (macroexpand '(+ a b c)) '())
-;;; [let #<uninterned:0x2670e40> [primitive #<2-ary primitive primordial-+> [variable b] [variable c]] [primitive #<2-ary primitive primordial-+> [variable a] [variable #<uninterned:0x2670e40>]]]
-;;
-;;; It seems correct up to this intermediate stage:
-;;; (ast-3: [let #<uninterned:0x266f060> [variable a] [let #<uninterned:0x2670e40> [let #<uninterned:0x265a020> [variable b] [let #<uninterned:0x265ba80> [variable c] [primitive #<2-ary primitive primordial-+> [variable #<uninterned:0x265a020>] [variable #<uninterned:0x265ba80>]]]] [primitive #<2-ary primitive primordial-+> [variable #<uninterned:0x266f060>] [variable #<uninterned:0x2670e40>]]]])
-;;; a, b and c are read sequentially in the same order as in the input.
-;;; Still lets are nested in a way I wasn't expecting.
-;;; [I think it's completely benign: since I currently (see above) don't check
-;;; whether a variable occurring as a let bound form is bound, I unconditionally
-;;; write it in the body, which may change the order.  Anyway the variable case
-;;; will be fixed by adding the check, the literal case is already okay, and
-;;; more complicated expressions will *not* be substituted in.]
-
-;; Guile can't remove this let:
-;; scheme@(guile-user)> ,optimize (let* ((a (f x))) (+ 1 a))
-;; $1 = (let ((a (f x))) (+ 1 a))
-;; [Is the optimization incorrect with call/cc ?  Actually I don't think so,
-;;  but in that case it wouldn't be Guile's fault.  In that case too bad for
-;;  Scheme: I will do better.]
-;;
-;; So I definitely should.  I should also make sure to turn lets of unused
-;; variables into sequences.  For example:
-;; (define (f x) (let ((a (+ 1 2))) a x)) (ast-optimize (closure-body f) '(x))
+;; OK[let #<uninterned:0xe6e120> [primitive #<2-ary primitive cons> [literal 2] [literal ()]] [primitive #<2-ary primitive cons> [literal 1] [variable #<uninterned:0xe6e120>]]]
 
 ;; Make sure that this remains correct:
-;; (ast-optimize (macroexpand '(let ((c 1)) (set! c 4) c)) '())
+;; OK(ast-optimize (macroexpand '(let ((c 1)) (set! c 4) c)) '())
 ;;   { [let #<u235> [literal 1] [sequence [set! #<u235> [literal 4]] [variable #<u235>]]]
 ;;     CORRECT (difficult to optimize further without a special case). }
 
@@ -3497,29 +4540,91 @@
 ;; (ast-optimize (macroexpand '(set 1 x 3 4)) ())
 
 ;; Check that these are correctly optimized:
-;; (ast-optimize (macroexpand '(begin2 x y)) ())
+;; OK(ast-optimize (macroexpand '(begin2 x y)) ())
 ;;   {  [sequence [variable x] [variable y]] is CORRECT }
-;; (ast-optimize (macroexpand '(begin1 x y z)) ())
+;; OK(ast-optimize (macroexpand '(begin1 x y z)) ())
 ;;   {  [sequence [variable y] [sequence [variable z] [variable x]]] is WRONG }
-;; (ast-optimize (macroexpand '(begin2 x y z)) ())
+;; OK(ast-optimize (macroexpand '(begin2 x y z)) ())
 ;;   {  [sequence [variable x] [sequence [variable z] [variable y]]] is WRONG }
-;; (ast-optimize (macroexpand '(let ((a (f 1)) (b a)) 4)) ())
+;; OK(ast-optimize (macroexpand '(let ((a (f 1)) (b a)) 4)) ())
 ;;   {  [let #<u263> [call [variable f] [literal 1]] [literal 4]] is WRONG:
 ;;      a is non-bound and non-constant, so its reference is effectful and
 ;;      cannot be optimized away. }
-;; (ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) 4)) ())
+;; OK(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) 4)) ())
 ;;   {  [let #<u267> [call [variable f] [literal 1]] [literal 4]] is CORRECT
 ;;      but subptimal: the let AST should become a sequence AST. }
-;; (ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) b)) ())
-;;   {  [let #<u269> [call [variable f] [literal 1]] [variable #<u269>]] CORRECT
-;;      but SUBOPTIMAL, optimizable to
-;;        [call [variable f] [literal 1]].
-;;        This further optimization would improve tailness! }
+;; OK(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) b)) ())
+;;   {  [call [variable f] [literal 1]] }
 
-;; It's important to rename formals when optimizing closures: otherwise,
-;; when inlining callees within the closure body some references to globals
-;; might be captured by the closure formals.
+;; It's important to rename nonglobals in the caller when optimizing closures:
+;; otherwise, when inlining callees within the closure body some references to
+;; globals might be captured by the closure formals.
+;; FIXME: do I need to do a preliminary global alpha-convertion pass over all
+;; closures before inlining for the first time?  I'm almost sure I don't, as
+;; I always alpha-convert both the expression I am inlining *into* and the
+;; callee body I'm copying before inlining.
 
-;; Make sure that when I remove a let binding a variable to a some expression
-;; (say a conditional) I check that the variables occurring free in the
-;; expression are not assigned in the body before the variable use in the body.
+;; FIXME: Make sure that when I remove a let binding a variable to an effectful
+;; expression I check that the variables occurring free in the expression are
+;; not assigned in the body *before* the variable use in the body.
+;; [I don't rewrite such lets now, except in the easy case of wrappers; the
+;;  current solution is therefore correct, even if not as good as it could be].
+
+;; (ALL OK)Primitive optimization:
+;;   (ast-optimize (macroexpand '(if (not a) b c)) ())
+;;   (ast-optimize (macroexpand '(+ a 1)) ())
+;;   (ast-optimize (macroexpand '(- a 1)) ())
+;;   (ast-optimize (macroexpand '(= a 0)) ())
+;;   (ast-optimize (macroexpand '(= 0 a)) ())
+
+
+
+;; OK(ast-optimize (macroexpand '(if (not a) b c)) ())
+;;     [if [variable a] [variable c] [variable b]]
+;; OK(ast-optimize (macroexpand '(if (begin 1 2 3 a) b c)) ())
+;;     [if [variable a] [variable b] [variable c]]
+;; OK(ast-optimize (macroexpand '(if (begin 1 (f 2) 3 a) b c)) ())
+;;     [sequence [call [variable f] [literal 2]] [if [variable a] [variable b] [variable c]]]
+
+
+;; This must have no redundant lets...
+;; (ast-optimize (macroexpand '(if (< n 2) a b) ) ())
+
+;; (macroexpand '(letrec ((a a)) a))
+;;     [let a [literal #<undefined>] [sequence [set! a [variable a]] [variable a]]]
+;; OK(ast-optimize (macroexpand '(letrec ((a a)) a)) ())
+;;     [literal #<undefined>]
+;; Optimizing this may be just academic, but why not: a set! of a non-globally
+;; bound variable to itself can be eliminated.
+
+;; Why does this generate a let?
+;; OK-UP-TO-HERE (macroexpand '(cadr q))
+;;   [call [variable cadr] [variable q]]
+;; SUBOPTIMAL! (ast-optimize (macroexpand '(cadr q)) ())
+;;   [let #<u1812> [variable q] [primitive #<1-ary primitive car> [primitive #<1-ary primitive cdr> [variable #<u1812>]]]]
+;; The problem is in closure-wrapper? :
+;; jitterlisp> car
+;; #<closure () (#<u701>) [primitive #<1-ary primitive car> [variable #<u701>]]>
+;; jitterlisp> cadr
+;; #<closure () (#<u1803>) [primitive #<1-ary primitive car> [primitive #<1-ary primitive cdr> [variable #<u1803>]]]>
+;; jitterlisp> (closure-wrapper? car)
+;; #t
+;; jitterlisp> (closure-wrapper? cadr)
+;; #f
+;; Indeed, cadr is not a wrapper according to my definition, and my inlining
+;; procedure for wrappers wouldn't work on it.
+
+;; (and a b c) => (if a (if b c #f) #f)
+;; (and a b c) => (not (or (not a) (not b) (not c)))
+(define-macro (and2 . clauses)
+  (if (null? clauses)
+      '#t
+      (let ((res-name (gensym)))
+        `(let ((,res-name #t))
+           (cond ,@(map (lambda (clause)
+                          `((not ,clause)
+                            (set! ,res-name #f)))
+                        (all-but-last clauses))
+                 (#t
+                  (set! ,res-name ,(last clauses))))
+           ,res-name))))

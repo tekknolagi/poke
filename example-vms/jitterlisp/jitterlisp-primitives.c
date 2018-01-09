@@ -36,6 +36,59 @@
 
 
 
+/* Primitive application.
+ * ************************************************************************** */
+
+/* This is probably only useful to call from Lisp, as building a list of
+   evaluated operands and then checking it at evaluation time would be very
+   inefficient in the general case, for no gain. */
+
+/* Given a primitive as a tagged Lisp object and a tagged list of already
+   evaluated actuals, return the result of the primitive on the actuals.
+
+   The amount of checking this function performs is appropriate for a function
+   called thru a Lisp primitive (jitterlisp_apply_primitive is itself a
+   primitive function).
+   This function checks that:
+   - actual_values has the appropriate length, matching the primitive in-arity.
+   It does *not* check that:
+   - primitive is actually a primitive;
+   - actual_values is actually a list.
+
+   This function errors out cleanly in case of a mismatch. */
+static jitterlisp_object
+jitterlisp_apply_primitive (jitterlisp_object primitive,
+                            jitterlisp_object actual_values)
+{
+  /* Check that the primitive is actually a primitive. */
+  if (! JITTERLISP_IS_PRIMITIVE(primitive))
+    jitterlisp_error_cloned ("apply-primitive: non-primitive operator");
+
+  /* At this point we can be sure that the primitive use is valid, as long as
+     actual_values has the required length.  Copy the elements from the list to
+     a temporary C array, as required by the primitive function; at the same
+     type check actual_values, and error out on in-arity mismatches. */
+  struct jitterlisp_primitive *p = JITTERLISP_PRIMITIVE_DECODE(primitive);
+  const int required_in_arity = p->in_arity;
+  int provided_in_arity = 0;
+  jitterlisp_object values [JITTERLISP_PRIMITIVE_MAX_IN_ARITY];
+  while (! JITTERLISP_IS_EMPTY_LIST (actual_values))
+    {
+      if (++ provided_in_arity > required_in_arity)
+        jitterlisp_error_cloned ("apply-primitive: too many actuals");
+      values [provided_in_arity - 1] = JITTERLISP_EXP_C_A_CAR (actual_values);
+      actual_values = JITTERLISP_EXP_C_A_CDR (actual_values);
+    }
+  if (provided_in_arity < required_in_arity)
+    jitterlisp_error_cloned ("apply-primitive: not enough actuals");
+
+  /* At this point I'm sure that the primitive function is safe to call. */
+  return p->function (values);
+}
+
+
+
+
 /* Primitive function definition infrastructure.
  * ************************************************************************** */
 
@@ -297,6 +350,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(negate, FIXNUM,
 /* Boolean operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(not, ANYTHING,
   { JITTERLISP_NOT_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(boolean_canonicalize, ANYTHING,
+  { JITTERLISP_BOOLEAN_CANONICALIZE_(res, args [0]); })
 /* Number comparison. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(equals, FIXNUM, FIXNUM,
   { JITTERLISP_EQP_(res, args [0], args [1]); })
@@ -314,6 +369,14 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(zerop, FIXNUM,
   { JITTERLISP_ZEROP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(non_zerop, FIXNUM,
   { JITTERLISP_NON_ZEROP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(positivep, FIXNUM,
+  { JITTERLISP_POSITIVEP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(non_positivep, FIXNUM,
+  { JITTERLISP_NON_POSITIVEP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(negativep, FIXNUM,
+  { JITTERLISP_NEGATIVEP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(non_negativep, FIXNUM,
+  { JITTERLISP_NON_NEGATIVEP_(res, args [0]); })
 /* Comparison. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(eqp, ANYTHING, ANYTHING,
   { JITTERLISP_EQP_(res, args [0], args [1]); })
@@ -339,8 +402,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(make_constant, SYMBOL,
   { JITTERLISP_MAKE_CONSTANT_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(definedp, SYMBOL,
   { JITTERLISP_DEFINEDP_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(global_lookup, SYMBOL,
-  { JITTERLISP_GLOBAL_LOOKUP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(symbol_global, SYMBOL,
+  { JITTERLISP_SYMBOL_GLOBAL_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(undefine, SYMBOL,
   { JITTERLISP_UNDEFINE_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_0_(interned_symbols,
@@ -360,6 +423,10 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
 /* I/O operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(display, ANYTHING,
   { JITTERLISP_DISPLAY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(character_display, CHARACTER,
+  { JITTERLISP_CHARACTER_DISPLAY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_0_(character_read,
+  { JITTERLISP_CHARACTER_READ_(res); })
 JITTERLISP_PRIMITIVE_FUNCTION_0_(newline,
   { JITTERLISP_NEWLINE_(res); })
 JITTERLISP_PRIMITIVE_FUNCTION_0_(read,
@@ -462,10 +529,20 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_sequence_second, AST,
 /* Interpretation operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(macroexpand, ANYTHING, ALIST,
   { JITTERLISP_MACROEXPAND_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(eval_interpreter, ANYTHING, ALIST,
+  { JITTERLISP_EVAL_INTERPRETER_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(eval_vm, ANYTHING, ALIST,
+  { JITTERLISP_EVAL_VM_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(eval, ANYTHING, ALIST,
   { JITTERLISP_EVAL_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(apply_interpreter, CLOSURE, LIST,
+  { JITTERLISP_APPLY_INTERPRETER_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(apply_vm, CLOSURE, LIST,
+  { JITTERLISP_APPLY_VM_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(apply, CLOSURE, LIST,
   { JITTERLISP_APPLY_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(apply_primitive, PRIMITIVE, LIST,
+  { JITTERLISP_APPLY_PRIMITIVE_(res, args [0], args [1]); })
 /* Operations to display legal notices. */
 JITTERLISP_PRIMITIVE_FUNCTION_0_(copying,
   { printf ("%s\n", jitterlisp_gpl); })
@@ -528,6 +605,8 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("negate", 1, negate),
       /* Boolean operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("not", 1, not),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("boolean-canonicalize", 1,
+                                             boolean_canonicalize),
       /* Number comparison. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("=", 2, equals),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("<>", 2, different),
@@ -537,6 +616,10 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_(">=", 2, notless),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("zero?", 1, zerop),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-zero?", 1, non_zerop),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("positive?", 1, positivep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-positive?", 1, non_positivep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("negative?", 1, negativep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-negative?", 1, non_negativep),
       /* Comparison. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("eq?", 2, eqp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("not-eq?", 2, not_eqp),
@@ -551,9 +634,10 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("constant?", 1, constantp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-constant", 1, make_constant),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("defined?", 1, definedp),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("global-lookup", 1, global_lookup),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("symbol-global", 1, symbol_global),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("undefine", 1, undefine),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interned-symbols", 0, interned_symbols),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interned-symbols", 0,
+                                             interned_symbols),
       /* Closure operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-environment", 1,
                                              closure_environment),
@@ -565,6 +649,10 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("display", 1, display),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("character-display", 1,
+                                             character_display),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("character-read", 0,
+                                             character_read),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("newline", 0, newline),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("read", 0, read),
       /* Error handling operations. */
@@ -619,8 +707,16 @@ jitterlisp_primitives []
       /* Interpretation operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-macroexpand", 2,
                                              macroexpand),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-eval-interpreter", 2,
+                                             eval_interpreter),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-eval-vm", 2, eval_vm),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-eval", 2, eval),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply-interpreter", 2,
+                                             apply_interpreter),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply-vm", 2, apply_vm),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply", 2, apply),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply-primitive", 2,
+                                             apply_primitive),
       /* Operations to display legal notices. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("copying", 0, copying),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("no-warranty", 0, no_warranty),
@@ -758,5 +854,6 @@ jitterlisp_primitives_finalize (void)
   /* Do nothing.  Interned symbols are destroyed by the memory subsystem
      finalization function, and primitive descriptors are global constants. */
 }
+
 
 #endif // #ifndef JITTERLISP_PRIMITIVES_H_
