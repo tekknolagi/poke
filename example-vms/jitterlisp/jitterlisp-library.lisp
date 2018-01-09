@@ -2956,6 +2956,52 @@
 
 
 
+;;;; AST leafness.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return non-#f iff the given AST is a leaf expression.
+(define-constant (ast-leaf? ast)
+  (cond ((ast-literal? ast)
+         #t)
+        ((ast-variable? ast)
+         #t)
+        ((ast-define? ast)
+         (ast-leaf? (ast-define-body ast)))
+        ((ast-if? ast)
+         (and (ast-leaf? (ast-if-condition ast))
+              (ast-leaf? (ast-if-then ast))
+              (ast-leaf? (ast-if-else ast))))
+        ((ast-set!? ast)
+         (ast-leaf? (ast-set!-body ast)))
+        ((ast-while? ast)
+         (and (ast-leaf? (ast-while-guard ast))
+              (ast-leaf? (ast-while-body ast))))
+        ((ast-primitive? ast)
+         (ast-leaf?-list (ast-primitive-operands ast)))
+        ((ast-call? ast)
+         #f)
+        ((ast-lambda? ast)
+         (ast-leaf? (ast-lambda-body ast)))
+        ((ast-let? ast)
+         (and (ast-leaf? (ast-let-bound-form ast))
+              (ast-leaf? (ast-let-body ast))))
+        ((ast-sequence? ast)
+         (and (ast-leaf? (ast-sequence-first ast))
+              (ast-leaf? (ast-sequence-second ast))))))
+
+;;; An extension of ast-leaf? to a list of ASTs: return non-#f iff the ASTs in
+;;; the given list are all leaves.
+(define-constant (ast-leaf?-list asts)
+  (cond ((null? asts)
+         #t)
+        ((ast-leaf? (car asts))
+         (ast-leaf?-list (cdr asts)))
+        (#t
+         #f)))
+
+
+
+
 ;;;; AST call simplification.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
