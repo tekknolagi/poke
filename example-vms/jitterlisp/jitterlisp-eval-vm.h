@@ -1,6 +1,6 @@
-/* Jittery Lisp: eval wrapper header.
+/* Jittery Lisp: interpreter: naïve C version header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -20,33 +20,43 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-#ifndef JITTERLISP_EVAL_H_
-#define JITTERLISP_EVAL_H_
+#ifndef JITTERLISP_EVAL_VM_H_
+#define JITTERLISP_EVAL_VM_H_
 
 #include "jitterlisp-sexpression.h"
 
+
 
-/* Eval wrapper.
+/* Jittery engine.
  * ************************************************************************** */
 
-/* This is a wrapper, calling either the naïf C interpreter or a Jittery VM
-   according to the global settings. */
+/* This is the evaluation engine using the Jittery VM. */
+
+
+
+
+/* Jittery engine.
+ * ************************************************************************** */
 
 /* Macroexpand the given JitterLisp form, and return the result of its
-   evaluation, using the global environment only. */
+   evaluation, using the global environment only.  Evaluate using the Jittery
+   VM. */
 jitterlisp_object
-jitterlisp_eval_globally (jitterlisp_object form);
+jitterlisp_eval_globally_vm (jitterlisp_object form);
 
 /* Macroexpand the given JitterLisp form, and return the result of its
-   evaluation, using the given non-global environment expressed as an alist. */
+   evaluation, using the given non-global environment expressed as an alist.
+   Evaluate using the Jittery VM. */
 jitterlisp_object
-jitterlisp_eval (jitterlisp_object form, jitterlisp_object env);
+jitterlisp_eval_vm (jitterlisp_object form, jitterlisp_object env);
 
 /* Return the result of applying closure_value, which is assumed to be an
    already evaluated closure (not checked by the function) to the operands,
-   assumed to be a list (not checked for) of already evaluated operands. */
+   assumed to be a list (not checked for) of already evaluated operands.
+   Evaluate using the Jittery VM. */
 jitterlisp_object
-jitterlisp_apply (jitterlisp_object closure_value,
-                  jitterlisp_object operands_as_list);
+jitterlisp_apply_vm (jitterlisp_object closure_value,
+                              jitterlisp_object operands_as_list);
 
-#endif // #ifndef JITTERLISP_EVAL_H_
+
+#endif // #ifndef JITTERLISP_EVAL_VM_H_

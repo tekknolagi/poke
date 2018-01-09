@@ -42,6 +42,8 @@
 #include "jitterlisp-printer.h"
 #include "jitterlisp-settings.h"
 #include "jitterlisp-eval.h"
+#include "jitterlisp-eval-interpreter.h"
+#include "jitterlisp-eval-vm.h"
 #include "jitterlisp-macros.h"
 #include "jitterlisp-utility.h"
 

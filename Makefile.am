@@ -1020,6 +1020,8 @@ SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-error.c \
   example-vms/jitterlisp/jitterlisp-eval-interpreter.h \
   example-vms/jitterlisp/jitterlisp-eval-interpreter.c \
+  example-vms/jitterlisp/jitterlisp-eval-vm.h \
+  example-vms/jitterlisp/jitterlisp-eval-vm.c \
   example-vms/jitterlisp/jitterlisp-eval.h \
   example-vms/jitterlisp/jitterlisp-eval.c \
   example-vms/jitterlisp/jitterlisp-macros.h \

@@ -462,8 +462,16 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_sequence_second, AST,
 /* Interpretation operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(macroexpand, ANYTHING, ALIST,
   { JITTERLISP_MACROEXPAND_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(eval_interpreter, ANYTHING, ALIST,
+  { JITTERLISP_EVAL_INTERPRETER_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(eval_vm, ANYTHING, ALIST,
+  { JITTERLISP_EVAL_VM_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(eval, ANYTHING, ALIST,
   { JITTERLISP_EVAL_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(apply_interpreter, CLOSURE, LIST,
+  { JITTERLISP_APPLY_INTERPRETER_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(apply_vm, CLOSURE, LIST,
+  { JITTERLISP_APPLY_VM_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(apply, CLOSURE, LIST,
   { JITTERLISP_APPLY_(res, args [0], args [1]); })
 /* Operations to display legal notices. */
@@ -619,7 +627,13 @@ jitterlisp_primitives []
       /* Interpretation operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-macroexpand", 2,
                                              macroexpand),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-eval-interpreter", 2,
+                                             eval_interpreter),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-eval-vm", 2, eval_vm),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-eval", 2, eval),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply-interpreter", 2,
+                                             apply_interpreter),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply-vm", 2, apply_vm),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply", 2, apply),
       /* Operations to display legal notices. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("copying", 0, copying),

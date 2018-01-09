@@ -29,7 +29,7 @@
 #include <stdbool.h>
 
 #include "jitterlisp-sexpression.h"
-#include "jitterlisp-eval-interpreter.h" // FIXME: review after writing VM eval.
+#include "jitterlisp-eval.h"
 #include "jitterlisp-macros.h"
 #include "jitterlisp-allocator.h"
 
@@ -1034,7 +1034,20 @@
                                               _jitterlisp_in1);    \
   JITTER_END_
 
-/* Eval the given expression in the given non-global environment. */
+/* Eval the given expression in the given non-global environment, using
+   the AST interpreter, the VM, or the default engine, respectively. */
+#define JITTERLISP_EVAL_INTERPRETER_(_jitterlisp_out, _jitterlisp_in0,       \
+                                     _jitterlisp_in1)                        \
+  JITTER_BEGIN_                                                              \
+    _jitterlisp_out = jitterlisp_eval_interpreter (_jitterlisp_in0,          \
+                                                   _jitterlisp_in1);         \
+  JITTER_END_
+#define JITTERLISP_EVAL_VM_(_jitterlisp_out, _jitterlisp_in0,  \
+                            _jitterlisp_in1)                   \
+  JITTER_BEGIN_                                                \
+    _jitterlisp_out = jitterlisp_eval_vm (_jitterlisp_in0,     \
+                                          _jitterlisp_in1);    \
+  JITTER_END_
 #define JITTERLISP_EVAL_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
   JITTER_BEGIN_                                                              \
     _jitterlisp_out = jitterlisp_eval_interpreter (_jitterlisp_in0,          \
@@ -1042,11 +1055,21 @@
   JITTER_END_
 
 /* Return the result of applying the given operator, already evaluated, to the
-   given list of already evaluated operands. */
-#define JITTERLISP_APPLY_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
+   given list of already evaluated operands; use the AST interpreter, the
+   Jittery VM or the default engine, respectively. */
+#define JITTERLISP_APPLY_INTERPRETER_(_jitterlisp_out, _jitterlisp_in0,       \
+                                      _jitterlisp_in1)                        \
   JITTER_BEGIN_                                                               \
     _jitterlisp_out = jitterlisp_apply_interpreter (_jitterlisp_in0,          \
                                                     _jitterlisp_in1);         \
+  JITTER_END_
+#define JITTERLISP_APPLY_VM_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1) \
+  JITTER_BEGIN_                                                                 \
+    _jitterlisp_out = jitterlisp_apply_vm (_jitterlisp_in0, _jitterlisp_in1);   \
+  JITTER_END_
+#define JITTERLISP_APPLY_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
+  JITTER_BEGIN_                                                               \
+    _jitterlisp_out = jitterlisp_apply (_jitterlisp_in0, _jitterlisp_in1);    \
   JITTER_END_
 
 
