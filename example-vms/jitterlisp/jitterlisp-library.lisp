@@ -3039,12 +3039,12 @@
                                with actuals ,actuals))
            (newline)
            (ast-call (ast-literal closure) actuals))
-          ((ast-wrapper? closure)
+          ((closure-wrapper? closure)
            ;; Wrapper calls are easy to rewrite into a particularly efficient
            ;; AST.  This rewrite could be subsumed by others not yet
            ;; implemented, but this is very common and important to have from
            ;; the get go.
-           (ast-simplify-wrapper-call body actuals))
+           (ast-rewrite-wrapper-call body actuals))
           (#t
            ;; The environment is empty, and the argument number is correct:
            ;; rewrite into nested lets binding the closure formals to the call
@@ -3057,20 +3057,25 @@
                   (new-body (ast-alpha-convert-with body alist)))
              (ast-nested-let new-formals actuals new-body))))))
 
-;;; A wrapper is an empty-environment closure with n formals, whose entire body
-;;; consists in either:
+;;; A "wrapper" is an empty-environment closure with n formals, whose entire
+;;; body consists in either:
 ;;; - a primitive with the formals as its operands, all used, in the same order;
-;;; - a call where no formal occurs free in the operator, and the operands are
-;;;   like in the previous case.
+;;; - a call with a leaf operator where no formal occurs free in the operator,
+;;;   and the operands are like in the previous case.
 ;;; Notice that the second case has no restriction on operator effects: even in
 ;;; rewritten form the order of effects doesn't change.
+;;;
+;;; The leafness condition is unfortunate, but is an easy way to avoid infinite
+;;; expansion in case the operator contains recursive calls to itself or to the
+;;; closure containing it.
+;;;
 ;;; Wrappers are common and calls to them can be rewritten efficiently.  This
 ;;; is an easy check to make, which may be subsumed by other rewrites -- however
 ;;; those rewrites, still to implement, are much more complex.
 ;;;
 ;;; Notice that wrapper closures by definition have a leaf body and an empty
 ;;; environment, so they are always considered for inlining.
-(define-constant (ast-wrapper? closure)
+(define-constant (closure-wrapper? closure)
   (let ((environment (closure-environment closure))
         (formals (closure-formals closure))
         (body (closure-body closure)))
@@ -3084,6 +3089,7 @@
            ;; The primitive case as defined above.
            #t)
           ((and (ast-call? body)
+                (ast-leaf? (ast-call-operator body))
                 (for-all? (lambda (formal)
                             (not (ast-has-free? (ast-call-operator body)
                                                 formal)))
@@ -3096,7 +3102,7 @@
            ;; In any other case, the body is not a wrapper.
            #f))))
 
-;;; A helper for ast-wrapper?.
+;;; A helper for closure-wrapper?.
 ;;; Return non-#f iff the given actuals respect the wrapper definition above,
 ;;; agreeing with the given formals.
 (define-constant (ast-wrapper-arguments? formals actuals)
@@ -3118,7 +3124,7 @@
 ;;; Return a rewritten a wrapper call.  We assume that the body is a wrapper,
 ;;; and that the actuals respect the wrapper in-arity; notice that we even
 ;;; ignore the operator formal names.
-(define-constant (ast-simplify-wrapper-call body actuals)
+(define-constant (ast-rewrite-wrapper-call body actuals)
   (cond ((ast-primitive? body)
          ;; We don't need any let, or even alpha-conversion: any call to a
          ;; primitive wrapper with the correct in-arity can be rewritten to
@@ -3132,8 +3138,8 @@
          (ast-call (ast-call-operator body) actuals))
         (#t
          ;; This shouldn't happen.
-         (error `(ast-simplify-wrapper-call: operator ,body not a
-                                             wrapper body)))))
+         (error `(ast-rewrite-wrapper-call: operator ,body not a
+                                            wrapper body)))))
 
 
 ;;; Given a list of bound variables, a list of actuals and a body, build nested
@@ -3185,11 +3191,18 @@
                 (ast-simplify-calls-list (ast-call-operands ast))))
            (if (and (ast-literal? simplified-operator)
                     (closure? (ast-literal-value simplified-operator))
-                    ;; This may be too aggressive: I currently inline every
-                    ;; call to a known leaf closure, independently from the
-                    ;; body size.
-                    (ast-leaf? (closure-body (ast-literal-value
-                                              simplified-operator))))
+                    (or ;; This may be too aggressive: I currently inline every
+                        ;; call to a known leaf closure, independently from the
+                        ;; body size.
+                        (ast-leaf? (closure-body (ast-literal-value
+                                                  simplified-operator)))
+                        ;; In order to make this not too aggressive as well,
+                        ;; I require procedure wrapper bodies to be leaves;
+                        ;; otherwise a procedure wrapper which is recursive
+                        ;; on the operator side would cause an infinite
+                        ;; expansion here.
+                        (closure-wrapper? (ast-literal-value
+                                           simplified-operator))))
                (ast-simplify-call-helper (ast-literal-value simplified-operator)
                                          simplified-operands)
                (ast-call simplified-operator simplified-operands))))
@@ -3813,4 +3826,3 @@
 ;; (ast-optimize (macroexpand '(if (< n 2) a b) ) ())
 
 
-;;(define (f) (let loop ((a 0)) (unless (>= a 10000000) (loop (1+ a)))))
