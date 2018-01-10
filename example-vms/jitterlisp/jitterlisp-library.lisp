@@ -2684,7 +2684,7 @@
            (if (and (not (set-has? bounds name))
                     (defined? name)
                     (constant? name))
-               (ast-literal (global-lookup name))
+               (ast-literal (symbol-global name))
                ast)))
         ((ast-define? ast)
          (ast-define (ast-define-name ast)
@@ -3005,6 +3005,9 @@
 ;;;; AST call simplification.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; The transformations here rely on the caller being alpha-converted already:
+;;; any inlining might result in nonglobal capture otherwise.
+
 ;;; A call where the operator is a closure literal (usually obtained by a
 ;;; previous optimization) can be easily rewritten into a let binding each
 ;;; formal as a local variable and having the lambda body as the let body,
@@ -3036,6 +3039,12 @@
                                with actuals ,actuals))
            (newline)
            (ast-call (ast-literal closure) actuals))
+          ((ast-wrapper? closure)
+           ;; Wrapper calls are easy to rewrite into a particularly efficient
+           ;; AST.  This rewrite could be subsumed by others not yet
+           ;; implemented, but this is very common and important to have from
+           ;; the get go.
+           (ast-simplify-wrapper-call body actuals))
           (#t
            ;; The environment is empty, and the argument number is correct:
            ;; rewrite into nested lets binding the closure formals to the call
@@ -3047,6 +3056,85 @@
                   (alist (zip formals new-formals))
                   (new-body (ast-alpha-convert-with body alist)))
              (ast-nested-let new-formals actuals new-body))))))
+
+;;; A wrapper is an empty-environment closure with n formals, whose entire body
+;;; consists in either:
+;;; - a primitive with the formals as its operands, all used, in the same order;
+;;; - a call where no formal occurs free in the operator, and the operands are
+;;;   like in the previous case.
+;;; Notice that the second case has no restriction on operator effects: even in
+;;; rewritten form the order of effects doesn't change.
+;;; Wrappers are common and calls to them can be rewritten efficiently.  This
+;;; is an easy check to make, which may be subsumed by other rewrites -- however
+;;; those rewrites, still to implement, are much more complex.
+;;;
+;;; Notice that wrapper closures by definition have a leaf body and an empty
+;;; environment, so they are always considered for inlining.
+(define-constant (ast-wrapper? closure)
+  (let ((environment (closure-environment closure))
+        (formals (closure-formals closure))
+        (body (closure-body closure)))
+    (cond ((non-null? environment)
+           ;; This could be generalized, but is probably not worth the trouble
+           ;; yet: right now we refuse to consider a closure to be a wrapper if
+           ;; it has any nonlocals.
+           #f)
+          ((and (ast-primitive? body)
+                (ast-wrapper-arguments? formals (ast-primitive-operands body)))
+           ;; The primitive case as defined above.
+           #t)
+          ((and (ast-call? body)
+                (for-all? (lambda (formal)
+                            (not (ast-has-free? (ast-call-operator body)
+                                                formal)))
+                          formals)
+                ;; No restrictions on operator effects here.  On purpose.
+                (ast-wrapper-arguments? formals (ast-call-operands body)))
+           ;; The call case as defined above.
+           #t)
+          (#t
+           ;; In any other case, the body is not a wrapper.
+           #f))))
+
+;;; A helper for ast-wrapper?.
+;;; Return non-#f iff the given actuals respect the wrapper definition above,
+;;; agreeing with the given formals.
+(define-constant (ast-wrapper-arguments? formals actuals)
+  (cond ((null? formals)
+         ;; If both lists are empty the two in-arities agree.
+         (null? actuals))
+        ((null? actuals)
+         ;; Different in-arities.
+         #f)
+        ((and (ast-variable? (car actuals))
+              (eq? (car formals)
+                   (ast-variable-name (car actuals))))
+         (ast-wrapper-arguments? (cdr formals) (cdr actuals)))
+        (#t
+         ;; Non-variable actual, or variable not matching the
+         ;; formal in its position.
+         #f)))
+
+;;; Return a rewritten a wrapper call.  We assume that the body is a wrapper,
+;;; and that the actuals respect the wrapper in-arity; notice that we even
+;;; ignore the operator formal names.
+(define-constant (ast-simplify-wrapper-call body actuals)
+  (cond ((ast-primitive? body)
+         ;; We don't need any let, or even alpha-conversion: any call to a
+         ;; primitive wrapper with the correct in-arity can be rewritten to
+         ;; [primitive p . actuals], as long as the actuals are not reordered;
+         ;; this is correct even with effects.
+         (ast-primitive (ast-primitive-operator body) actuals))
+        ((ast-call? body)
+         ;; As long as this is a procedure wrapper we can do like in the
+         ;; primitive case.  This does require the operator not to have effects,
+         ;; but that has been checked already by this procedure's caller.
+         (ast-call (ast-call-operator body) actuals))
+        (#t
+         ;; This shouldn't happen.
+         (error `(ast-simplify-wrapper-call: operator ,body not a
+                                             wrapper body)))))
+
 
 ;;; Given a list of bound variables, a list of actuals and a body, build nested
 ;;; let ASTs, evaluating the actuals left-to-right.  This is similar to a let*
@@ -3350,6 +3438,34 @@
          )
     ast-4))
 
+;;; Destructively modify the given closure, consistently alpha-converting its
+;;; formals and bound variables.
+(define-constant (closure-alpha-convert! closure)
+  ;; Bind the fields from the unoptimized closure.
+  (let ((env (closure-environment closure))
+        (formals (closure-formals closure))
+        (body (closure-body closure)))
+    ;; Compute new fields.
+    (let* ((unary-gensym (lambda (useless) (gensym)))
+           (nonlocals (map car env))
+           (fresh-formals (map unary-gensym formals))
+           (fresh-nonlocals (map unary-gensym env))
+           (alpha-converted-env (zip fresh-nonlocals (map cdr env)))
+           (alpha-conversion-alist
+            (append (zip formals fresh-formals)
+                    (zip nonlocals fresh-nonlocals)))
+           (alpha-converted-body
+            (ast-alpha-convert-with body alpha-conversion-alist)))
+      ;; Set all the fields, at the same time.  Doing this in more than one
+      ;; operation would be dangerous as the closure we are updating might be
+      ;; used in the update process itself, which would make visible fields in a
+      ;; temporarily inconsistent state.
+      (closure-set! closure
+                    alpha-converted-env
+                    fresh-formals
+                    alpha-converted-body))))
+
+;;; FIXME: factor with closure-alpha-convert!.
 ;;; Destructively modify the given closure, replacing its fields with a
 ;;; semantically equivalent optimized version.
 (define-constant (closure-optimize! closure)
@@ -3670,9 +3786,9 @@
 ;;        [call [variable f] [literal 1]].
 ;;        This further optimization would improve tailness! }
 
-;; It's important to rename formals when optimizing closures: otherwise,
-;; when inlining callees within the closure body some references to globals
-;; might be captured by the closure formals.
+;; It's important to rename nonglobals in the caller when optimizing closures:
+;; otherwise, when inlining callees within the closure body some references to
+;; globals might be captured by the closure formals.
 
 ;; Make sure that when I remove a let binding a variable to a some expression
 ;; (say a conditional) I check that the variables occurring free in the
