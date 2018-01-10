@@ -1948,8 +1948,10 @@
 ;;; Return a generalized boolean which is the logical conjunction of the given
 ;;; clauses, evaluated left-to-right short-circuit; in case of a non-#f result
 ;;; which exact value is returned is unspecified.
-;;; This definition is much laxer than the one common in other Lisp dialects;
-;;; see the comment before lispy-or for a rationale.
+;;; This specification is much laxer than the one common in other Lisp dialects,
+;;; for symmetry with the or macro above, but the implementation in this case
+;;; actually follows the Lisp tradition.  See the comment before lispy-or for a
+;;; rationale.
 (define-macro (and . clauses)
   (cond ((null? clauses)
          '#t)
