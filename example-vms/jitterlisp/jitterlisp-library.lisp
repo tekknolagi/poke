@@ -37,6 +37,20 @@
 
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Type checking.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;; anything?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; A type predicate always returning #t.
+(define-constant (anything? x)
+  #t)
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Arithmetic and number library.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1914,6 +1928,11 @@
 ;;;; Variadic boolean connectives.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; Return a generalized boolean which is the logical disjunction of the given
+;;; clauses, evaluated left-to-right short-circuit; in case of a non-#f result
+;;; which exact value is returned is unspecified.
+;;; This definition is much laxer than the one common in other Lisp dialects;
+;;; see the comment before lispy-or for a rationale.
 (define-macro (or . clauses)
   (cond ((null? clauses)
          '#f)
@@ -1926,6 +1945,11 @@
               '#t
               (or ,@(cdr clauses))))))
 
+;;; Return a generalized boolean which is the logical conjunction of the given
+;;; clauses, evaluated left-to-right short-circuit; in case of a non-#f result
+;;; which exact value is returned is unspecified.
+;;; This definition is much laxer than the one common in other Lisp dialects;
+;;; see the comment before lispy-or for a rationale.
 (define-macro (and . clauses)
   (cond ((null? clauses)
          '#t)
@@ -1937,6 +1961,32 @@
          `(if ,(car clauses)
               (and ,@(cdr clauses))
               '#f))))
+
+;;; This is a more typical Lisp-style variadic or operator returning the first
+;;; non-#f form result in case of a true conjunction.
+;;; The problem is that the nested let blocks it expands to will be difficult to
+;;; compile efficiently with the naïf code generator I have in mind for a stack
+;;; machine.  It would work well if I did liveness analysis, and reused
+;;; registers as soon as each variable died.
+(define-macro (lispy-or . args)
+  (cond ((null? args)
+         '#f)
+        ((null? (cdr args))
+         (car args))
+        (#t
+         (let* ((first-name (gensym)))
+           `(let* ((,first-name ,(car args)))
+              (if ,first-name
+                  ,first-name
+                  (lispy-or ,@(cdr args))))))))
+
+;;; A variadic left-to-right short-circuit logical conjunction, following the
+;;; Lisp convention.
+;;; This is provided just for symmetry, since JitterLisp's default and operator
+;;; is already efficient, and differently from JitterLisp's or follows the Lisp
+;;; convention.
+(define-macro (lispy-and . args)
+  `(and ,@args))
 
 
 
@@ -2874,9 +2924,10 @@
        ;; Equality comparisons never fail (but maginitude comparisons may).
        primitive-eq?
        primitive-not-eq?
-       ;; Logical negation accepts a generalized boolean, and therefore never
-       ;; fails.
-       primitive-not))
+       ;; Logical negation and canonicalization accept a generalized boolean,
+       ;; and therefore never fail.
+       primitive-not
+       primitive-boolean-canonicalize))
 
 ;;; Any primitive not in the set-as-list above is considered to be effectful.
 (define-constant (primitive-effectful? primitive)
@@ -3446,16 +3497,13 @@
   (cond ;; Increment and decrement.
         ((and (eq? primitive primitive-primordial-+) (ast-one? (car operands)))
          ;; [primitive + 1 E] ==> [primitive 1+ E]
-         (ast-optimize-primitive primitive-1+
-                                 (list (cadr operands))))
+         (ast-optimize-primitive primitive-1+ (list (cadr operands))))
         ((and (eq? primitive primitive-primordial-+) (ast-one? (cadr operands)))
          ;; [primitive + E 1] ==> [primitive 1+ E]
-         (ast-optimize-primitive primitive-1+
-                                 (list (car operands))))
+         (ast-optimize-primitive primitive-1+ (list (car operands))))
         ((and (eq? primitive primitive-primordial--) (ast-one? (cadr operands)))
          ;; [primitive - E 1] ==> [primitive 1- E]
-         (ast-optimize-primitive primitive-1-
-                                 (list (car operands))))
+         (ast-optimize-primitive primitive-1- (list (car operands))))
         ;; Zero tests.
         ((and (eq? primitive primitive-=) (ast-zero? (car operands)))
          ;; [primitive = 0 E] ==> [primitive zero? E]
@@ -3488,6 +3536,37 @@
         ((and (eq? primitive primitive->=) (ast-zero? (car operands)))
          ;; [primitive >= 0 E] ==> [primitive non-positive? E]
          (ast-optimize-primitive primitive-non-positive? (list (cadr operands))))
+        ;; Arithmetic with neutral operands.
+        ;; Notice that we cannot, in general, rewrite primitives with absorbing
+        ;; operands without removing effects; however neutral operands are fine.
+        ((and (eq? primitive primitive-primordial-+) (ast-zero? (car operands)))
+         ;; [primitive + 0 E] ==> E
+         (cadr operands))
+        ((and (eq? primitive primitive-primordial-+) (ast-zero? (cadr operands)))
+         ;; [primitive + E 0] ==> E
+         (car operands))
+        ((and (eq? primitive primitive-primordial--) (ast-zero? (cadr operands)))
+         ;; [primitive - E 0] ==> E
+         (car operands))
+        ((and (eq? primitive primitive-primordial-*) (ast-one? (car operands)))
+         ;; [primitive * 1 E] ==> E
+         (cadr operands))
+        ((and (eq? primitive primitive-primordial-*) (ast-one? (cadr operands)))
+         ;; [primitive * E 1] ==> E
+         (car operands))
+        ((and (eq? primitive primitive-primordial-/) (ast-one? (cadr operands)))
+         ;; [primitive / E 1] ==> E
+         (car operands))
+        ;; Other arithmetic simplification with particular literal operands.
+        ((and (eq? primitive primitive-primordial--) (ast-zero? (car operands)))
+         ;; [primitive - 0 E] ==> [primitive negate E]
+         (ast-optimize-primitive primitive-negate (list (cadr operands))))
+        ;; Nested arithmetic negation.
+        ((and (eq? primitive primitive-negate)
+              (ast-primitive? (car operands))
+              (eq? (ast-primitive-operator (car operands)) primitive-negate))
+         ;; [primitive negate [primitive negate E]] ==> E
+         (car (ast-primitive-operands (car operands))))
         ;; Logical negation of another primitive.
         ((and (eq? primitive primitive-not)
               (ast-primitive? (car operands)))
@@ -3497,6 +3576,12 @@
          (let ((inner-primitive (ast-primitive-operator (car operands)))
                (inner-operands (ast-primitive-operands (car operands))))
            (ast-optimize-not-primitive inner-primitive inner-operands)))
+        ((for-all? ast-literal? operands)
+         ;; The actuals are all literals.  Try to evaluate the primitive use
+         ;; at rewrite time, replacing it with a literal result.
+         (ast-optimize-primitive-known-actuals primitive
+                                               (map ast-literal-value
+                                                    operands)))
         (#t
          ;; Fallback case: we have nothing to rewrite.
          (ast-primitive primitive operands))))
@@ -3576,6 +3661,99 @@
          (ast-primitive primitive-not
                         (list (ast-primitive primitive operands))))))
 
+;;; Another helper for ast-optimize-primitive.  Return an AST containing a
+;;; rewritten primitive use of the given primitive with the given values (all
+;;; known at rewrite time) as actuals; in some cases we can evaluate the
+;;; primitive use at rewrite time, and replace it with the result as a literal.
+(define-constant (ast-optimize-primitive-known-actuals primitive values)
+  ;; Again I can assume that the in-arity is respected, but not necessarily the
+  ;; actual types.
+  (cond ;; FIXME: implement the interesting cases.
+        (#t
+         (display `(fallback case: cannot optimize ,primitive)) (newline)
+         ;; Fallback case: don't rewrite anything.
+         (ast-primitive primitive
+                        (map ast-literal values)))))
+
+;;; Return non-#f iff the argument is a fixnum and different from 0.  Never
+;;; fail.
+(define-constant (non-zero-fixnum? x)
+  (and (fixnum? x)
+       (non-zero? x)))
+
+;;; An unordered list of lists.  Each inner list contains a primitive, and then
+;;; one procedure per primitive argument; the procedure is a predicate never
+;;; failing and returning #t if the argument is suitable for the primitive, and
+;;; safe to evaluate at rewrite time.
+;;; Primitives not occurring here ar not candidates for rewrite-time evaluation.
+;;;
+;;; The outer list is walked sequentially, looking for the first match; it is
+;;; possible for a primitive to appear in multiple lists, and that could be
+;;; useful for primitives with multiple "safe signatures".
+(define-constant ast-statically-rewritable-primitive-signatures
+  (list ;; Type checking.
+        (list primitive-null? anything?)
+        (list primitive-non-null? anything?)
+        (list primitive-fixnum? anything?)
+        (list primitive-symbol? anything?)
+        (list primitive-non-symbol? anything?)
+        (list primitive-cons? anything?)
+        (list primitive-non-cons? anything?)
+        (list primitive-primitive? anything?)
+        (list primitive-closure? anything?)
+        (list primitive-vector? anything?)
+        (list primitive-ast? anything?)
+        (list primitive-macro? anything?)
+        (list primitive-boolean? anything?)
+        (list primitive-eof? anything?)
+        (list primitive-nothing? anything?)
+        (list primitive-undefined? anything?)
+
+        ;; Case checking.  It's probably not worth the trouble to do this for
+        ;; ASTs.
+        (list primitive-zero? fixnum?)
+        (list primitive-non-zero? fixnum?)
+        (list primitive-positive? fixnum?)
+        (list primitive-non-positive? fixnum?)
+        (list primitive-negative? fixnum?)
+        (list primitive-non-negative? fixnum?)
+
+        ;; Generic comparisons.
+        (list primitive-eq? anything? anything?)
+        (list primitive-not-eq? anything? anything?)
+
+        ;; Fixnum arithmetic.
+        (list primitive-1+ fixnum?)
+        (list primitive-1- fixnum?)
+        (list primitive-negate fixnum?)
+        (list primitive-primordial-+ fixnum? fixnum?)
+        (list primitive-primordial-- fixnum? fixnum?)
+        (list primitive-primordial-* fixnum? fixnum?)
+        (list primitive-primordial-/ fixnum? non-zero-fixnum?)
+        (list primitive-remainder fixnum? non-zero-fixnum?)
+
+        ;; Fixnum comparisons.
+        (list primitive-= fixnum? fixnum?)
+        (list primitive-<> fixnum? fixnum?)
+        (list primitive-< fixnum? fixnum?)
+        (list primitive-<= fixnum? fixnum?)
+        (list primitive-> fixnum? fixnum?)
+        (list primitive->= fixnum? fixnum?)
+
+        ;; Booleans operations.
+
+        (list primitive-not anything?)
+        (list primitive-boolean-canonicalize anything?)
+
+        ;; Conses.
+        ;; Notice that cons is *not* safe to evaluate at rewrite time, as it
+        ;; needs to allocate a fresh object at every use.
+        ;; Notice that conses being mutable is not a problem: this list
+        ;; is only consulted when a primitive use has literals as all of its
+        ;; actuals, which happens in rewritten program only when safe.
+        (list primitive-car cons?) ;; no, because of mutability.
+        (list primitive-cdr cons?) ;; no, because of mutability.
+        ))
 
 
 
@@ -3946,5 +4124,3 @@
 
 ;; This must have no redundant lets...
 ;; (ast-optimize (macroexpand '(if (< n 2) a b) ) ())
-
-
