@@ -35,7 +35,7 @@
 jitterlisp_object
 jitterlisp_eval_globally (jitterlisp_object form)
 {
-  /* Right now only the naïf interpreter exists. */
+  /* Just call the appropriate jitterlisp_eval_globally_* function. */
   if (jitterlisp_settings.vm)
     return jitterlisp_eval_globally_vm (form);
   else
@@ -45,7 +45,7 @@ jitterlisp_eval_globally (jitterlisp_object form)
 jitterlisp_object
 jitterlisp_eval (jitterlisp_object form, jitterlisp_object env)
 {
-  /* Right now only the naïf interpreter exists. */
+  /* Just call the appropriate jitterlisp_eval_* function. */
   if (jitterlisp_settings.vm)
     return jitterlisp_eval_vm (form, env);
   else
@@ -56,7 +56,7 @@ jitterlisp_object
 jitterlisp_apply (jitterlisp_object closure_value,
                   jitterlisp_object operands_as_list)
 {
-  /* Right now only the naïf interpreter exists. */
+  /* Just call the appropriate jitterlisp_apply_* function. */
   if (jitterlisp_settings.vm)
     return jitterlisp_apply_vm (closure_value, operands_as_list);
   else
