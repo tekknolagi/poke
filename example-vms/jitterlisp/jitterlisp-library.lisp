@@ -3373,13 +3373,14 @@
            (ast-optimize-helper sequence bounds)))
         ((and (ast-primitive? optimized-condition)
               (eq? (ast-primitive-operator optimized-condition)
-                   boolean-canonicalize))
+                   primitive-boolean-canonicalize))
          ;; Rewrite [if [primitive boolean-canonicalize E1] E2 E3] into
          ;; [if E1 E2 E3], and optimize the result.  Boolean canonicalization
          ;; is a waste of time in this position.
          (ast-optimize-if (car (ast-primitive-operands optimized-condition))
                           then
-                          else))
+                          else
+                          bounds))
         ((and (ast-primitive? optimized-condition)
               (eq? (ast-primitive-operator optimized-condition)
                    primitive-not))
