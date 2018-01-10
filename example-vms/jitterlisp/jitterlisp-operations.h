@@ -558,7 +558,7 @@
                                   != JITTERLISP_UNDEFINED);  \
   JITTER_END_
 
-#define JITTERLISP_GLOBAL_LOOKUP_(_jitterlisp_out, _jitterlisp_in0)  \
+#define JITTERLISP_SYMBOL_GLOBAL_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTER_BEGIN_                                                      \
     struct jitterlisp_symbol *_jitterlisp_tmp                        \
       = JITTERLISP_SYMBOL_DECODE(_jitterlisp_in0);                   \

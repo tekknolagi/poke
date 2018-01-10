@@ -339,8 +339,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(make_constant, SYMBOL,
   { JITTERLISP_MAKE_CONSTANT_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(definedp, SYMBOL,
   { JITTERLISP_DEFINEDP_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(global_lookup, SYMBOL,
-  { JITTERLISP_GLOBAL_LOOKUP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(symbol_global, SYMBOL,
+  { JITTERLISP_SYMBOL_GLOBAL_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(undefine, SYMBOL,
   { JITTERLISP_UNDEFINE_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_0_(interned_symbols,
@@ -559,9 +559,10 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("constant?", 1, constantp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-constant", 1, make_constant),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("defined?", 1, definedp),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("global-lookup", 1, global_lookup),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("symbol-global", 1, symbol_global),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("undefine", 1, undefine),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interned-symbols", 0, interned_symbols),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interned-symbols", 0,
+                                             interned_symbols),
       /* Closure operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-environment", 1,
                                              closure_environment),
