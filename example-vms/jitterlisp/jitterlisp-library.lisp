@@ -3727,47 +3727,13 @@
 ;;; (ast-optimize (closure-body ast-simplify-calls) '(ast))
 
 ;;; These are interesting because of the sequence in the let bound form:
-;;; (ast-optimize (macroexpand '(cons 3 (begin x 7))) ())
-;;; (ast-optimize (macroexpand '(let ((a (newline) (newline) (newline))) y)) '())
+;;; ACCEPTABLE(ast-optimize (macroexpand '(cons 3 (begin x 7))) ())
+;;; GOOD(ast-optimize (macroexpand '(let ((a (newline) (newline) (newline))) y)) '())
 
 
 ;;; Primitive composition:
 ;; jitterlisp> (ast-optimize (macroexpand '(list 1 2)) '())
-;; [let #<uninterned:0xe6e120> [primitive #<2-ary primitive cons> [literal 2] [literal ()]] [primitive #<2-ary primitive cons> [literal 1] [variable #<uninterned:0xe6e120>]]]
-
-;;
-;;; Special case: this can be simplified even if a is unbound, because the
-;;; bound variable is the same as the bound form.  This is now correct by
-;;; accident.  I should check for this case.
-;; (ast-optimize (macroexpand '(let ((a a)) (cons a a))) '())
-;; [primitive #<2-ary primitive cons> [variable a] [variable a]]
-
-;;; The change in evaluation order among a, b and c is more or less benign
-;;; here.  Can it also happen in a context where it would make a difference?
-;;; More importantly, why does it happen?
-;;; (ast-optimize (macroexpand '(+ a b c)) '())
-;;; [let #<uninterned:0x2670e40> [primitive #<2-ary primitive primordial-+> [variable b] [variable c]] [primitive #<2-ary primitive primordial-+> [variable a] [variable #<uninterned:0x2670e40>]]]
-;;
-;;; It seems correct up to this intermediate stage:
-;;; (ast-3: [let #<uninterned:0x266f060> [variable a] [let #<uninterned:0x2670e40> [let #<uninterned:0x265a020> [variable b] [let #<uninterned:0x265ba80> [variable c] [primitive #<2-ary primitive primordial-+> [variable #<uninterned:0x265a020>] [variable #<uninterned:0x265ba80>]]]] [primitive #<2-ary primitive primordial-+> [variable #<uninterned:0x266f060>] [variable #<uninterned:0x2670e40>]]]])
-;;; a, b and c are read sequentially in the same order as in the input.
-;;; Still lets are nested in a way I wasn't expecting.
-;;; [I think it's completely benign: since I currently (see above) don't check
-;;; whether a variable occurring as a let bound form is bound, I unconditionally
-;;; write it in the body, which may change the order.  Anyway the variable case
-;;; will be fixed by adding the check, the literal case is already okay, and
-;;; more complicated expressions will *not* be substituted in.]
-
-;; Guile can't remove this let:
-;; scheme@(guile-user)> ,optimize (let* ((a (f x))) (+ 1 a))
-;; $1 = (let ((a (f x))) (+ 1 a))
-;; [Is the optimization incorrect with call/cc ?  Actually I don't think so,
-;;  but in that case it wouldn't be Guile's fault.  In that case too bad for
-;;  Scheme: I will do better.]
-;;
-;; So I definitely should.  I should also make sure to turn lets of unused
-;; variables into sequences.  For example:
-;; (define (f x) (let ((a (+ 1 2))) a x)) (ast-optimize (closure-body f) '(x))
+;; OK[let #<uninterned:0xe6e120> [primitive #<2-ary primitive cons> [literal 2] [literal ()]] [primitive #<2-ary primitive cons> [literal 1] [variable #<uninterned:0xe6e120>]]]
 
 ;; Make sure that this remains correct:
 ;; OK(ast-optimize (macroexpand '(let ((c 1)) (set! c 4) c)) '())
