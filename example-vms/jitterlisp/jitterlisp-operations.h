@@ -664,22 +664,34 @@
       = JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0) != (_jitterlisp_in1));      \
   JITTER_END_
 
-/* Compute a tagged boolean, #t iff the given argument is the fixnum zero. */
-#define JITTERLISP_ZEROP_(_jitterlisp_out, _jitterlisp_in0)         \
-  JITTER_BEGIN_                                                     \
-    (_jitterlisp_out)                                               \
-      = JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                 \
-                                  == JITTERLISP_FIXNUM_ENCODE(0));  \
+/* Compute a tagged boolean, #t iff the given fixnum argument is respectively the
+   zero, a non-zero, positive, non-positive, negative, non-negative. */
+#define JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                         _jitterlisp_expression_operator,   \
+                                         _jitterlisp_right)                 \
+  JITTER_BEGIN_                                                             \
+    (_jitterlisp_out) =                                                     \
+      _jitterlisp_expression_operator(                                      \
+         (_jitterlisp_in0), JITTERLISP_FIXNUM_ENCODE(_jitterlisp_right));   \
   JITTER_END_
-
-/* Compute a tagged boolean, #t iff the given argument is different from the
-   fixnum zero. */
-#define JITTERLISP_NON_ZEROP_(_jitterlisp_out, _jitterlisp_in0)     \
-  JITTER_BEGIN_                                                     \
-    (_jitterlisp_out)                                               \
-      = JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                 \
-                                  != JITTERLISP_FIXNUM_ENCODE(0));  \
-  JITTER_END_
+#define JITTERLISP_ZEROP_(_jitterlisp_out, _jitterlisp_in0)           \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                   JITTERLISP_EXP_FF_B_EQUAL, 0)
+#define JITTERLISP_NON_ZEROP_(_jitterlisp_out, _jitterlisp_in0)       \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                   JITTERLISP_EXP_FF_B_NOTEQUAL, 0)
+#define JITTERLISP_POSITIVEP_(_jitterlisp_out, _jitterlisp_in0)       \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                   JITTERLISP_EXP_FF_B_GREATER, 0)
+#define JITTERLISP_NON_POSITIVEP_(_jitterlisp_out, _jitterlisp_in0)    \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,   \
+                                   JITTERLISP_EXP_FF_B_NOTGREATER, 0)
+#define JITTERLISP_NEGATIVEP_(_jitterlisp_out, _jitterlisp_in0)       \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                   JITTERLISP_EXP_FF_B_LESS, 0)
+#define JITTERLISP_NON_NEGATIVEP_(_jitterlisp_out, _jitterlisp_in0)   \
+  JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
+                                   JITTERLISP_EXP_FF_B_NOTLESS, 0)
 
 
 

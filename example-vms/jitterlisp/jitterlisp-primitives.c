@@ -314,6 +314,14 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(zerop, FIXNUM,
   { JITTERLISP_ZEROP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(non_zerop, FIXNUM,
   { JITTERLISP_NON_ZEROP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(positivep, FIXNUM,
+  { JITTERLISP_POSITIVEP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(non_positivep, FIXNUM,
+  { JITTERLISP_NON_POSITIVEP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(negativep, FIXNUM,
+  { JITTERLISP_NEGATIVEP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(non_negativep, FIXNUM,
+  { JITTERLISP_NON_NEGATIVEP_(res, args [0]); })
 /* Comparison. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(eqp, ANYTHING, ANYTHING,
   { JITTERLISP_EQP_(res, args [0], args [1]); })
@@ -545,6 +553,10 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_(">=", 2, notless),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("zero?", 1, zerop),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-zero?", 1, non_zerop),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("positive?", 1, positivep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-positive?", 1, non_positivep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("negative?", 1, negativep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-negative?", 1, non_negativep),
       /* Comparison. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("eq?", 2, eqp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("not-eq?", 2, not_eqp),
