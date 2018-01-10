@@ -404,12 +404,21 @@
 /* Boolean operations.
  * ************************************************************************** */
 
-/* Compute a tagged boolean, #t iff the argument is #f. */
+/* Compute a tagged boolean, #t iff the operand is #f. */
 #define JITTERLISP_NOT_(_jitterlisp_out, _jitterlisp_in0)                \
   JITTER_BEGIN_                                                          \
     (_jitterlisp_out)                                                    \
       = JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                      \
                                   == JITTERLISP_BOOLEAN_ENCODE(false));  \
+  JITTER_END_
+
+/* Canonicalize a boolean, computing #f if the argument is #f and #t if the
+   operand is anything else. */
+#define JITTERLISP_BOOLEAN_CANONICALIZE_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTER_BEGIN_                                                             \
+    (_jitterlisp_out)                                                       \
+      = JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0)                         \
+                                  != JITTERLISP_BOOLEAN_ENCODE(false));     \
   JITTER_END_
 
 

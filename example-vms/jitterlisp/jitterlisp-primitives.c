@@ -297,6 +297,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(negate, FIXNUM,
 /* Boolean operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(not, ANYTHING,
   { JITTERLISP_NOT_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(boolean_canonicalize, ANYTHING,
+  { JITTERLISP_BOOLEAN_CANONICALIZE_(res, args [0]); })
 /* Number comparison. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(equals, FIXNUM, FIXNUM,
   { JITTERLISP_EQP_(res, args [0], args [1]); })
@@ -544,6 +546,8 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("negate", 1, negate),
       /* Boolean operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("not", 1, not),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("boolean-canonicalize", 1,
+                                             boolean_canonicalize),
       /* Number comparison. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("=", 2, equals),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("<>", 2, different),
