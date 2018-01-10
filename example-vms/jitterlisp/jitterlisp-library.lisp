@@ -3259,11 +3259,10 @@
                              (ast-while-body ast)
                              bounds))
         ((ast-primitive? ast)
-         ;; FIXME: evaluate the primitive at expansion time if the primitive
-         ;; has no effect and all of its arguments are literal.
-         (ast-primitive (ast-primitive-operator ast)
-                        (ast-optimize-helper-list (ast-primitive-operands ast)
-                                                  bounds)))
+         (ast-optimize-primitive (ast-primitive-operator ast)
+                                 (ast-optimize-helper-list
+                                     (ast-primitive-operands ast)
+                                     bounds)))
         ((ast-call? ast)
          (ast-call (ast-optimize-helper (ast-call-operator ast) bounds)
                    (ast-optimize-helper-list (ast-call-operands ast) bounds)))
@@ -3374,6 +3373,15 @@
            (ast-optimize-helper sequence bounds)))
         ((and (ast-primitive? optimized-condition)
               (eq? (ast-primitive-operator optimized-condition)
+                   boolean-canonicalize))
+         ;; Rewrite [if [primitive boolean-canonicalize E1] E2 E3] into
+         ;; [if E1 E2 E3], and optimize the result.  Boolean canonicalization
+         ;; is a waste of time in this position.
+         (ast-optimize-if (car (ast-primitive-operands optimized-condition))
+                          then
+                          else))
+        ((and (ast-primitive? optimized-condition)
+              (eq? (ast-primitive-operator optimized-condition)
                    primitive-not))
          ;; Rewrite [if [primitive not E1] E2 E3] into [if E1 E3 E2], and
          ;; optimize the result.
@@ -3410,6 +3418,15 @@
                                                    (ast-sequence body
                                                                  first)))))
            (ast-optimize-helper sequence bounds)))
+        ((and (ast-primitive? optimized-guard)
+              (eq? (ast-primitive-operator optimized-guard)
+                   primitive-boolean-canonicalize))
+         ;; Rewrite [while [primitive boolean-canonicalize E1] E2] into
+         ;; [while E1 E2], and optimize the result.  Boolean canonicalization
+         ;; is a waste of time in this position.
+         (ast-optimize-while (car (ast-primitive-operands optimized-guard))
+                             body
+                             bounds))
         ((and (ast-literal? optimized-guard)
               (not (ast-literal-value optimized-guard)))
          ;; Remove a (while #f ...).  Notice that we can't simplify
@@ -3419,6 +3436,144 @@
          ;; Keep the while form.
          (ast-while optimized-guard
                     (ast-optimize-helper body bounds)))))
+
+;;; Return a rewritten version of a primitive use with the given primitive
+;;; operator and the given list of AST operands, already rewritten.
+(define-constant (ast-optimize-primitive primitive operands)
+  ;; Here I can assume the primitive in-arity to be respected: there would
+  ;; have been an error at AST creation time otherwise.
+  (cond ;; Increment and decrement.
+        ((and (eq? primitive primitive-primordial-+) (ast-one? (car operands)))
+         ;; [primitive + 1 E] ==> [primitive 1+ E]
+         (ast-optimize-primitive primitive-1+
+                                 (list (cadr operands))))
+        ((and (eq? primitive primitive-primordial-+) (ast-one? (cadr operands)))
+         ;; [primitive + E 1] ==> [primitive 1+ E]
+         (ast-optimize-primitive primitive-1+
+                                 (list (car operands))))
+        ((and (eq? primitive primitive-primordial--) (ast-one? (cadr operands)))
+         ;; [primitive - E 1] ==> [primitive 1- E]
+         (ast-optimize-primitive primitive-1-
+                                 (list (car operands))))
+        ;; Zero tests.
+        ((and (eq? primitive primitive-=) (ast-zero? (car operands)))
+         ;; [primitive = 0 E] ==> [primitive zero? E]
+         (ast-optimize-primitive primitive-zero? (list (cadr operands))))
+        ((and (eq? primitive primitive-=) (ast-zero? (cadr operands)))
+         ;; [primitive = E 0] ==> [primitive zero? E]
+         (ast-optimize-primitive primitive-zero? (list (car operands))))
+        ;; Sign tests.
+        ((and (eq? primitive primitive-<) (ast-zero? (cadr operands)))
+         ;; [primitive < E 0] ==> [primitive negative? E]
+         (ast-optimize-primitive primitive-negative? (list (car operands))))
+        ((and (eq? primitive primitive-<=) (ast-zero? (cadr operands)))
+         ;; [primitive <= E 0] ==> [primitive non-positive? E]
+         (ast-optimize-primitive primitive-non-positive? (list (car operands))))
+        ((and (eq? primitive primitive->) (ast-zero? (cadr operands)))
+         ;; [primitive > E 0] ==> [primitive positive? E]
+         (ast-optimize-primitive primitive-positive? (list (car operands))))
+        ((and (eq? primitive primitive->=) (ast-zero? (cadr operands)))
+         ;; [primitive >= E 0] ==> [primitive non-negative? E]
+         (ast-optimize-primitive primitive-non-negative? (list (car operands))))
+        ((and (eq? primitive primitive-<) (ast-zero? (car operands)))
+         ;; [primitive < 0 E] ==> [primitive positive? E]
+         (ast-optimize-primitive primitive-positive? (list (cadr operands))))
+        ((and (eq? primitive primitive-<=) (ast-zero? (car operands)))
+         ;; [primitive <= 0 E] ==> [primitive non-negative? E]
+         (ast-optimize-primitive primitive-non-negative? (list (cadr operands))))
+        ((and (eq? primitive primitive->) (ast-zero? (car operands)))
+         ;; [primitive > 0 E] ==> [primitive negative? E]
+         (ast-optimize-primitive primitive-negative? (list (cadr operands))))
+        ((and (eq? primitive primitive->=) (ast-zero? (car operands)))
+         ;; [primitive >= 0 E] ==> [primitive non-positive? E]
+         (ast-optimize-primitive primitive-non-positive? (list (cadr operands))))
+        ;; Logical negation of another primitive.
+        ((and (eq? primitive primitive-not)
+              (ast-primitive? (car operands)))
+         ;; [primitive not [primitive P . Es]].
+         ;; Some primitives can be rewritten into a faster form when negated.
+         ;; Use the helper procedure for this.
+         (let ((inner-primitive (ast-primitive-operator (car operands)))
+               (inner-operands (ast-primitive-operands (car operands))))
+           (ast-optimize-not-primitive inner-primitive inner-operands)))
+        (#t
+         ;; Fallback case: we have nothing to rewrite.
+         (ast-primitive primitive operands))))
+
+;;; Return non-#f iff the given AST is a literal with the given value.
+(define-constant (ast-literal-value? ast value)
+  (and (ast-literal? ast)
+       (eq? (ast-literal-value ast) value)))
+
+;;; Return non-#f iff the given AST is the literal 0.
+(define-constant (ast-zero? ast)
+  (ast-literal-value? ast 0))
+;;; Return non-#f iff the given AST is the literal 1.
+(define-constant (ast-one? ast)
+  (ast-literal-value? ast 1))
+
+;;; A helper for ast-optimize-not-primitive.  Return the rewritten version
+;;; of [primitive not [primitive PRIMITIVE . OPERANDS]].  The operands are
+;;; already rewritten.
+(define-constant (ast-optimize-not-primitive primitive operands)
+  ;; Like in ast-optimize-primitive , I can assume that the in-arity is
+  ;; respected.
+  (cond ((eq? primitive primitive-not)
+         ;; [primitive not [primitive not E]] ==> [boolean-canonicalize E].
+         ;; A use of boolean-canonicalize as an condition will be rewritten
+         ;; away by the if and while helpers.
+         (ast-optimize-primitive primitive-boolean-canonicalize operands))
+        ((eq? primitive primitive-boolean-canonicalize)
+         ;; [primitive not [primitive boolean-canonicalize E]] ==>
+         ;; [primitive not E].
+         (ast-optimize-primitive primitive-not operands))
+        ;; The following cases are obvious.
+        ((eq? primitive primitive-eq?)
+         ;; [primitive not [primitive eq? . Es]] ==> [primitive not-eq? . Es]
+         (ast-optimize-primitive primitive-not-eq? operands))
+        ((eq? primitive primitive-not-eq?)
+         ;; [primitive not [primitive not-eq? . Es]] ==> [primitive eq? . Es]
+         (ast-optimize-primitive primitive-eq? operands))
+        ((eq? primitive primitive-zero?)
+         ;; [primitive not [primitive zero? . Es]] ==> [primitive non-zero? . Es]
+         (ast-optimize-primitive primitive-non-zero? operands))
+        ((eq? primitive primitive-non-zero?)
+         ;; [primitive not [primitive non-zero? . Es]] ==> [primitive zero? . Es]
+         (ast-optimize-primitive primitive-zero? operands))
+        ((eq? primitive primitive-positive?)
+         ;; [primitive not [primitive positive? . Es]] ==> [primitive non-positive? . Es]
+         (ast-optimize-primitive primitive-non-positive? operands))
+        ((eq? primitive primitive-non-positive?)
+         ;; [primitive not [primitive non-positive? . Es]] ==> [primitive positive? . Es]
+         (ast-optimize-primitive primitive-positive? operands))
+        ((eq? primitive primitive-negative?)
+         ;; [primitive not [primitive negative? . Es]] ==> [primitive non-negative? . Es]
+         (ast-optimize-primitive primitive-non-negative? operands))
+        ((eq? primitive primitive-non-negative?)
+         ;; [primitive not [primitive non-negative? . Es]] ==> [primitive negative? . Es]
+         (ast-optimize-primitive primitive-negative? operands))
+        ((eq? primitive primitive-=)
+         ;; [primitive not [primitive = . Es]] ==> [primitive <> . Es]
+         (ast-optimize-primitive primitive-<> operands))
+        ((eq? primitive primitive-<>)
+         ;; [primitive not [primitive <> . Es]] ==> [primitive = . Es]
+         (ast-optimize-primitive primitive-= operands))
+        ((eq? primitive primitive-<)
+         ;; [primitive not [primitive < . Es]] ==> [primitive >= . Es]
+         (ast-optimize-primitive primitive->= operands))
+        ((eq? primitive primitive-<=)
+         ;; [primitive not [primitive <= . Es]] ==> [primitive > . Es]
+         (ast-optimize-primitive primitive-> operands))
+        ((eq? primitive primitive->)
+         ;; [primitive not [primitive > . Es]] ==> [primitive <= . Es]
+         (ast-optimize-primitive primitive-<= operands))
+        ((eq? primitive primitive->=)
+         ;; [primitive not [primitive >= . Es]] ==> [primitive < . Es]
+         (ast-optimize-primitive primitive-< operands))
+        (#t
+         ;; Fallback case: don't rewrite anything.
+         (ast-primitive primitive-not
+                        (list (ast-primitive primitive operands))))))
 
 
 
