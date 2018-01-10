@@ -3057,17 +3057,17 @@
                   (new-body (ast-alpha-convert-with body alist)))
              (ast-nested-let new-formals actuals new-body))))))
 
-;;; A "wrapper" is an empty-environment closure with n formals, whose entire
-;;; body consists in either:
+;;; By definition a "wrapper" is an empty-environment closure with n formals,
+;;; whose entire body consists in either:
 ;;; - a primitive with the formals as its operands, all used, in the same order;
 ;;; - a call with a leaf operator where no formal occurs free in the operator,
 ;;;   and the operands are like in the previous case.
 ;;; Notice that the second case has no restriction on operator effects: even in
 ;;; rewritten form the order of effects doesn't change.
 ;;;
-;;; The leafness condition is unfortunate, but is an easy way to avoid infinite
-;;; expansion in case the operator contains recursive calls to itself or to the
-;;; closure containing it.
+;;; The leafness restriction is unfortunate, but is an easy way to avoid
+;;; infinite expansion in case the operator contains recursive calls to itself
+;;; or to the closure containing it.
 ;;;
 ;;; Wrappers are common and calls to them can be rewritten efficiently.  This
 ;;; is an easy check to make, which may be subsumed by other rewrites -- however
