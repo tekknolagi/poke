@@ -849,6 +849,14 @@
     (_jitterlisp_out) = JITTERLISP_NOTHING;                    \
   JITTER_END_
 
+#define JITTERLISP_CHARACTER_DISPLAY_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTER_BEGIN_                                                          \
+    jitter_int _jitterlisp_character                                     \
+      = JITTERLISP_CHARACTER_DECODE(_jitterlisp_in0);                    \
+    putchar (_jitterlisp_character);                                     \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;                              \
+  JITTER_END_
+
 #define JITTERLISP_NEWLINE_(_jitterlisp_out)  \
   JITTER_BEGIN_                               \
     putchar ('\n');                           \

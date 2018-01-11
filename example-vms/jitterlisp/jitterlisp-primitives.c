@@ -423,6 +423,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
 /* I/O operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(display, ANYTHING,
   { JITTERLISP_DISPLAY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(character_display, CHARACTER,
+  { JITTERLISP_CHARACTER_DISPLAY_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_0_(newline,
   { JITTERLISP_NEWLINE_(res); })
 JITTERLISP_PRIMITIVE_FUNCTION_0_(read,
@@ -645,6 +647,8 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("display", 1, display),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("character-display", 1,
+                                             character_display),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("newline", 0, newline),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("read", 0, read),
       /* Error handling operations. */
