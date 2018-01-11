@@ -36,6 +36,59 @@
 
 
 
+/* Primitive application.
+ * ************************************************************************** */
+
+/* This is probably only useful to call from Lisp, as building a list of
+   evaluated operands and then checking it at evaluation time would be very
+   inefficient in the general case, for no gain. */
+
+/* Given a primitive as a tagged Lisp object and a tagged list of already
+   evaluated actuals, return the result of the primitive on the actuals.
+
+   The amount of checking this function performs is appropriate for a function
+   called thru a Lisp primitive (jitterlisp_apply_primitive is itself a
+   primitive function).
+   This function checks that:
+   - actual_values has the appropriate length, matching the primitive in-arity.
+   It does *not* check that:
+   - primitive is actually a primitive;
+   - actual_values is actually a list.
+
+   This function errors out cleanly in case of a mismatch. */
+static jitterlisp_object
+jitterlisp_apply_primitive (jitterlisp_object primitive,
+                            jitterlisp_object actual_values)
+{
+  /* Check that the primitive is actually a primitive. */
+  if (! JITTERLISP_IS_PRIMITIVE(primitive))
+    jitterlisp_error_cloned ("apply-primitive: non-primitive operator");
+
+  /* At this point we can be sure that the primitive use is valid, as long as
+     actual_values has the required length.  Copy the elements from the list to
+     a temporary C array, as required by the primitive function; at the same
+     type check actual_values, and error out on in-arity mismatches. */
+  struct jitterlisp_primitive *p = JITTERLISP_PRIMITIVE_DECODE(primitive);
+  const int required_in_arity = p->in_arity;
+  int provided_in_arity = 0;
+  jitterlisp_object values [JITTERLISP_PRIMITIVE_MAX_IN_ARITY];
+  while (! JITTERLISP_IS_EMPTY_LIST (actual_values))
+    {
+      if (++ provided_in_arity > required_in_arity)
+        jitterlisp_error_cloned ("apply-primitive: too many actuals");
+      values [provided_in_arity - 1] = JITTERLISP_EXP_C_A_CAR (actual_values);
+      actual_values = JITTERLISP_EXP_C_A_CDR (actual_values);
+    }
+  if (provided_in_arity < required_in_arity)
+    jitterlisp_error_cloned ("apply-primitive: not enough actuals");
+
+  /* At this point I'm sure that the primitive function is safe to call. */
+  return p->function (values);
+}
+
+
+
+
 /* Primitive function definition infrastructure.
  * ************************************************************************** */
 
@@ -484,6 +537,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(apply_vm, CLOSURE, LIST,
   { JITTERLISP_APPLY_VM_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(apply, CLOSURE, LIST,
   { JITTERLISP_APPLY_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(apply_primitive, PRIMITIVE, LIST,
+  { JITTERLISP_APPLY_PRIMITIVE_(res, args [0], args [1]); })
 /* Operations to display legal notices. */
 JITTERLISP_PRIMITIVE_FUNCTION_0_(copying,
   { printf ("%s\n", jitterlisp_gpl); })
@@ -652,6 +707,8 @@ jitterlisp_primitives []
                                              apply_interpreter),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply-vm", 2, apply_vm),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply", 2, apply),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply-primitive", 2,
+                                             apply_primitive),
       /* Operations to display legal notices. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("copying", 0, copying),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("no-warranty", 0, no_warranty),
@@ -789,5 +846,6 @@ jitterlisp_primitives_finalize (void)
   /* Do nothing.  Interned symbols are destroyed by the memory subsystem
      finalization function, and primitive descriptors are global constants. */
 }
+
 
 #endif // #ifndef JITTERLISP_PRIMITIVES_H_

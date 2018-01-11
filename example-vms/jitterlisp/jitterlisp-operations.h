@@ -1093,6 +1093,15 @@
     _jitterlisp_out = jitterlisp_apply (_jitterlisp_in0, _jitterlisp_in1);    \
   JITTER_END_
 
+/* Return the result of applying the given primitive to the given list of
+   already evaluated operands. */
+#define JITTERLISP_APPLY_PRIMITIVE_(_jitterlisp_out, _jitterlisp_in0,  \
+                                    _jitterlisp_in1)                   \
+  JITTER_BEGIN_                                                        \
+    _jitterlisp_out = jitterlisp_apply_primitive (_jitterlisp_in0,     \
+                                                  _jitterlisp_in1);    \
+  JITTER_END_
+
 
 
 
