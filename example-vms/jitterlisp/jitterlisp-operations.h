@@ -857,6 +857,15 @@
     (_jitterlisp_out) = JITTERLISP_NOTHING;                              \
   JITTER_END_
 
+#define JITTERLISP_CHARACTER_READ_(_jitterlisp_out)              \
+  JITTER_BEGIN_                                                  \
+    jitter_int _jitterlisp_character = getchar ();               \
+    (_jitterlisp_out)                                            \
+      = ((_jitterlisp_character == EOF)                          \
+         ? JITTERLISP_EOF                                        \
+         : JITTERLISP_CHARACTER_ENCODE(_jitterlisp_character));  \
+  JITTER_END_
+
 #define JITTERLISP_NEWLINE_(_jitterlisp_out)  \
   JITTER_BEGIN_                               \
     putchar ('\n');                           \
