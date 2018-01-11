@@ -334,6 +334,38 @@
   (list?-iterative xs))
 
 
+;;;; symbols?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return non-#f iff the argument is a list of symbols, possibly empty.
+
+(define-constant (symbols?-iterative xs)
+  (let* ((res #t))
+    (while (non-null? xs)
+      (cond ((non-cons? xs)
+             (set! xs ())
+             (set! res #f))
+            ((symbol? (car xs))
+             (set! xs (cdr xs)))
+            (#t
+             (set! xs ())
+             (set! res #f))))
+    res))
+
+(define-constant (symbols?-tail-recursive xs)
+  (cond ((null? xs)
+         #t)
+        ((non-cons? xs)
+         #f)
+        ((symbol? (car xs))
+         (symbols?-tail-recursive (cdr xs)))
+        (#t
+         #f)))
+
+(define-constant (symbols? xs)
+   (symbols?-iterative xs))
+
+
 
 
 ;;;; replicate.
@@ -2014,15 +2046,6 @@
                     user-variable-bindings)
        ,@body-forms)))
 
-;;; Optimization [FIXME: remove this when I implement AST rewriting]:
-;;; Translate a one-binding let into a one-binding let*.  There's no need for a
-;;; special case for a zero-binding let.
-(define-constant unoptimized-let let)
-(define-macro (let bindings . body-forms)
-  (if (= (length bindings) 1)
-      `(let* ,bindings ,@body-forms)
-      `(unoptimized-let ,bindings ,@body-forms)))
-
 
 
 
@@ -2404,7 +2427,7 @@
 (define-associative-variadic-extension set-intersect
   set-intersect-procedure set-empty)
 
-(define (list->set list)
+(define-constant (list->set list)
   ;; This relies on set-unite-procedure recurring on its second argument.
   (set-unite-procedure set-empty list))
 
@@ -2421,6 +2444,139 @@
         `(let* ((,element-name ,(car elements))
                 (,subset-name (set ,@(cdr elements))))
            (set-with ,subset-name ,element-name)))))
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Tentative features, or experimentation just for fun.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; Streams.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant stream-empty
+  '(#t . ()))
+
+(define-constant (stream-ready? s)
+  (car s))
+
+(define-constant (stream-force! s)
+  (unless (stream-ready? s)
+    (set-cdr! s ((cdr s)))
+    (set-car! s #t))
+  (cdr s))
+
+(define-constant (stream-null? s)
+  (null? (stream-force! s)))
+(define-constant (stream-non-null? s)
+  (non-null? (stream-force! s)))
+(define-constant (stream-car s)
+  (car (stream-force! s)))
+(define-constant (stream-cdr s)
+  (cdr (stream-force! s)))
+(define-constant (stream-set-car! s new-car)
+  (set-car! (stream-force! s) new-car))
+(define-constant (stream-set-cdr! s new-cdr)
+  (set-cdr! (stream-force! s) new-cdr))
+
+(define-macro (stream-cons x s)
+  `(cons #f
+         (lambda ()
+           (cons ,x ,s))))
+
+(define-macro (stream-delay stream-expression)
+  `(cons #f
+         (lambda ()
+           (stream-force! ,stream-expression))))
+
+(define-constant (stream-forever-1 x)
+  (letrec ((res (stream-delay (stream-cons x res))))
+    res))
+
+(define-constant (stream-ones)
+  (stream-forever-1 1))
+
+(define-constant (stream-from from)
+  (stream-cons from (stream-from (1+ from))))
+(define-constant (stream-naturals)
+  (stream-from 0))
+
+(define-constant (stream-walk-elements procedure s)
+  (while (stream-non-null? s)
+    (procedure (stream-car s))
+    (set! s (stream-cdr s))))
+
+(define-constant (stream-print-elements s)
+  (stream-walk-elements (lambda (x)
+                          (display x)
+                          (newline))
+                        s))
+
+(define-constant (stream-touch-elements s)
+  (stream-walk-elements (lambda (x))
+                        s))
+
+(define-constant (stream-range a b)
+  (if (> a b)
+      stream-empty
+      (stream-cons a (stream-range (1+ a) b))))
+
+(define-constant (stream-append s1 s2)
+  (stream-delay
+    (if (stream-null? s1)
+        s2
+        (stream-cons (stream-car s1)
+                     (stream-append (stream-cdr s1) s2)))))
+
+(define-constant (stream-forever-stream s)
+  (letrec ((res (stream-delay (stream-append s res))))
+    res))
+
+(define-constant (stream-filter p? s)
+  (stream-delay
+    (cond ((stream-null? s)
+           stream-empty)
+          ((p? (stream-car s))
+           (stream-cons (stream-car s)
+                        (stream-filter p? (stream-cdr s))))
+          (#t
+           (stream-filter p? (stream-cdr s))))))
+
+(define-constant (stream-map f s)
+  (stream-delay
+    (if (stream-null? s)
+        stream-empty
+        (stream-cons (f (stream-car s))
+                     (stream-map f (stream-cdr s))))))
+
+(define-constant (stream-take s n)
+  (stream-delay
+    (cond ((zero? n)
+           stream-empty)
+          ((stream-null? s)
+           stream-empty)
+          (#t
+           (stream-cons (stream-car s)
+                        (stream-take (stream-cdr s) (1- n)))))))
+
+(define-constant (stream-drop s n)
+  (stream-delay
+    (cond ((zero? n)
+           s)
+          ((stream-null? s)
+           stream-empty)
+          (#t
+           (stream-drop (stream-cdr s) (1- n))))))
+
+(define-constant (stream-fold-left f x xs)
+  (if (stream-null? xs)
+      x
+      (stream-fold-left f
+                        (f x (stream-car xs))
+                        (stream-cdr xs))))
 
 
 
@@ -2870,7 +3026,7 @@
         ((ast-let? ast)
          (or (ast-effectful? (ast-let-bound-form ast)
                              bounds)
-             (ast-effectful? (ast-let-bound-body ast)
+             (ast-effectful? (ast-let-body ast)
                              (set-with bounds
                                        (ast-let-bound-name ast)))))
         ((ast-sequence? ast)
@@ -3286,11 +3442,7 @@
 ;;; bound.
 ;;; The most important optimizations are for the let case, which uses the helper
 ;;; below.
-;;(define rewrite-counter 0)
 (define-constant (ast-optimize-helper ast bounds)
-;;(display bounds) (newline)
-;;(display ast) (newline)
-;;(display `(,rewrite-counter -th expansion -- bounds are ,(length bounds))) (newline) (set! rewrite-counter (1+ rewrite-counter))
   (cond ((ast-literal? ast)
          ast)
         ((ast-variable? ast)
@@ -3304,8 +3456,9 @@
                           (ast-if-else ast)
                           bounds))
         ((ast-set!? ast)
-         (ast-set! (ast-set!-name ast)
-                   (ast-optimize-helper (ast-set!-body ast) bounds)))
+         (ast-optimize-set! (ast-set!-name ast)
+                            (ast-optimize-helper (ast-set!-body ast) bounds)
+                            bounds))
         ((ast-while? ast)
          (ast-optimize-while (ast-optimize-helper (ast-while-guard ast)
                                                   bounds)
@@ -3348,6 +3501,27 @@
 (define-constant (ast-optimize-helper-list asts bounds)
   (map (lambda (ast) (ast-optimize-helper ast bounds))
        asts))
+
+;;; A helper for ast-optimize-helper in the set! case.  The body should already
+;;; be optimized.
+(define-constant (ast-optimize-set! name body bounds)
+  ;; There isn't much we can do here which is not too difficult.
+  (cond ((and (ast-variable? body)
+              (eq? (ast-variable-name body) name)
+              (set-has? bounds name))
+         ;; An easy case to optimize is [set! x [variable x]], which we can
+         ;; rewrite into [literal #<nothing>] as long as x is non-globally bound
+         ;; (otherwise the reference to x would be effectful, which would make
+         ;; its removal incorrect).  This occurs, for example, in the
+         ;; macroexpansion of (letrec ((a a)) a), which is a way of obtaining
+         ;; #<undefined> as a result.  Notice that [set! x x] is effectful when
+         ;; x is a global constant, and therefore we do not remove it in that
+         ;; case; the condition checks whether the variable is bound in the
+         ;; non-global environement only, on purpose.
+         (ast-literal (begin)))
+        (#t
+         ;; Fallback case, in which we optimize nothing.
+         (ast-set! name body))))
 
 ;;; A helper for ast-optimize-helper in the let case, which is the most complex.
 ;;; This assumes that both subforms are alpha-converted.
@@ -3674,7 +3848,6 @@
       (ast-literal (apply-primitive primitive values))
       (ast-primitive primitive (map ast-literal values))))
 
-
 ;;; Given a primitive and a list of actual values return non-#f iff the use is
 ;;; known to be statically rewritable.
 (define-constant (ast-statically-rewritable-primitive-use? primitive values)
@@ -3699,11 +3872,11 @@
                    #t)
                   ((null? conditions)
                    ;; No more conditions, but still remaining actuals.
-                   (display `(WARNING: too many actuals for ,primitive)) (newline)
+                   (display `(WARNING: invalid signature: too many actuals for ,primitive)) (newline)
                    (outer-loop (cdr signatures)))
                   ((null? values)
                    ;; No more actuals, but still remaining conditions.
-                   (display `(WARNING: not enough actuals for ,primitive)) (newline)
+                   (display `(WARNING: invalid signature: not enough actuals for ,primitive)) (newline)
                    (outer-loop (cdr signatures)))
                   (((car conditions) (car values))
                    ;; The first condition on the first actual is satisfied.
@@ -3788,8 +3961,8 @@
         ;; Conses.
         ;; Notice that cons is *not* safe to evaluate at rewrite time, as it
         ;; needs to allocate a fresh object at every use.
-        ;; Notice that conses being mutable is not a problem: this list
-        ;; is only consulted when a primitive use has literals as all of its
+        ;; The fact that conses are mutable is not a problem here: this list is
+        ;; only consulted when a primitive use has literals as all of its
         ;; actuals, which happens in rewritten program only when safe.
         (list primitive-car cons?) ;; no, because of mutability.
         (list primitive-cdr cons?) ;; no, because of mutability.
@@ -3801,14 +3974,16 @@
 ;;;; AST optimization driver.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; Return an optimized version of the given AST where the given set-as-list of
+;;; variables is bound.
 (define-constant (ast-optimize ast-0 bounds)
   (let* (;; Fold global constants into the AST.  This will introduce, in
          ;; particular, closure literals as operators.
          ;;(_ (display `(ast-0: ,ast-0)) (newline))
          (ast-1 (ast-global-fold ast-0 bounds))
          ;;(_ (display `(ast-1: ,ast-1)) (newline))
-         ;; Alpha-convert everything: we are about to introduce new let
-         ;; bindings, and we need to prevent conflicts.
+         ;; Alpha-convert every variable bound by the AST: we are about to
+         ;; introduce new let bindings, and we need to prevent capture.
          (ast-2 (ast-alpha-convert ast-1))
          ;;(_ (display `(ast-2: ,ast-2)) (newline))
          ;; Translate calls to closures literals into let forms,
@@ -3826,9 +4001,12 @@
          )
     ast-4))
 
-;;; Destructively modify the given closure, consistently alpha-converting its
-;;; formals and bound variables.
-(define-constant (closure-alpha-convert! closure)
+;;; Given a closure consistently alpha-convert it and return a list of
+;;; three elements:
+;;; - the new closure environment;
+;;; - the new formals;
+;;; - the new body.
+(define-constant (closure-alpha-convert closure)
   ;; Bind the fields from the unoptimized closure.
   (let ((env (closure-environment closure))
         (formals (closure-formals closure))
@@ -3844,195 +4022,158 @@
                     (zip nonlocals fresh-nonlocals)))
            (alpha-converted-body
             (ast-alpha-convert-with body alpha-conversion-alist)))
-      ;; Set all the fields, at the same time.  Doing this in more than one
-      ;; operation would be dangerous as the closure we are updating might be
-      ;; used in the update process itself, which would make visible fields in a
-      ;; temporarily inconsistent state.
-      (closure-set! closure
-                    alpha-converted-env
-                    fresh-formals
-                    alpha-converted-body))))
+      ;; Return the results.
+      (list alpha-converted-env
+            fresh-formals
+            alpha-converted-body))))
 
-;;; FIXME: factor with closure-alpha-convert!.
+;;; Destructively modify the given closure, consistently alpha-converting its
+;;; nonlocals, formals and body.
+(define-constant (closure-alpha-convert! closure)
+  (let* ((fields (closure-alpha-convert closure))
+         (alpha-converted-env (car fields))
+         (alpha-converted-formals (cadr fields))
+         (alpha-converted-body (caddr fields)))
+    ;; Set all the fields, at the same time.  Doing this in more than one
+    ;; operation would be dangerous as the closure we are updating might be
+    ;; used in the update process itself, which would make visible fields in a
+    ;; temporarily inconsistent state.
+    (closure-set! closure
+                  alpha-converted-env
+                  alpha-converted-formals
+                  alpha-converted-body)))
+
 ;;; Destructively modify the given closure, replacing its fields with a
 ;;; semantically equivalent optimized version.
 (define-constant (closure-optimize! closure)
-  ;; Bind the fields from the unoptimized closure.
-  (let ((env (closure-environment closure))
-        (formals (closure-formals closure))
-        (body (closure-body closure)))
-    ;; Compute optimized fields.
-    (let* ((nonlocals (map car env))
-           (unary-gensym (lambda (useless) (gensym)))
-           (fresh-formals (map unary-gensym formals))
-           (fresh-nonlocals (map unary-gensym env))
-           (alpha-converted-env (zip fresh-nonlocals (map cdr env)))
-           (alpha-conversion-alist
-            (append (zip formals fresh-formals)
-                    (zip nonlocals fresh-nonlocals)))
-           (alpha-converted-body
-            (ast-alpha-convert-with body
-                                    alpha-conversion-alist))
-           (alpha-converted-bounds
-            (set-unite fresh-formals (list->set fresh-nonlocals)))
-           (optimized-body
-            (ast-optimize alpha-converted-body
-                          alpha-converted-bounds)))
-      ;; Set all the fields, at the same time.  Doing this in more than one
-      ;; operation would be dangerous as the closure we are updating might be
-      ;; used in the update process itself, which would make visible fields in a
-      ;; temporarily inconsistent state.
+  ;; First alpha-convert the closure; optimization might rely on this.
+  (let* ((fields (closure-alpha-convert closure))
+         (alpha-converted-env (car fields))
+         (alpha-converted-formals (cadr fields))
+         (alpha-converted-body (caddr fields)))
+    ;; Set all the fields, at the same time, like in closure-alpha-convert! ;
+    ;; but in this case use an optimized version of the body.
+    (let* ((alpha-converted-bounds (set-unite alpha-converted-formals
+                                              (map car alpha-converted-env)))
+           (optimized-body (ast-optimize alpha-converted-body
+                                         alpha-converted-bounds)))
       (closure-set! closure
                     alpha-converted-env
-                    fresh-formals
+                    alpha-converted-formals
                     optimized-body))))
 
-;;; FIXME: this is convenient for debugging, but I shouldn't keep it.
-(define (o c)
-  (closure-optimize! c)
-  c)
-(define (o0 c))
+
+
+
+;;;; Implicit optimization.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; From now on definition forms will automatically optimize new globally bound
+;;; closures.
+
+;;; Keep the previous (macro) values for define and define-constant forms .
+(define define-unoptimizing
+  define)
+(define define-constant-unoptimizing
+  define-constant)
+
+;;; Destructively optimize the argument if it's a closure; do nothing
+;;; otherwise.  Return nothing.
+(define-constant (optimize-when-closure! thing)
+  (when (closure? thing)
+    (closure-optimize! thing)))
+
+;;; Define the named thing, and immediately optimize it if it's a closure.  Same
+;;; syntax as define.
+(define-macro (define-optimizing-possibly-constant constant thing . body)
+  (cond ((symbol? thing)
+         (let ((value-name (gensym)))
+           `(let ((,value-name ,@body))
+              (define-unoptimizing ,thing ,value-name)
+              (when ,constant
+                ;; Making a globally defined closure a constant *before*
+                ;; optimizing it may help the rewrite system.
+                (make-constant ',thing))
+              (optimize-when-closure! ,value-name))))
+        ((or (not (symbols? thing))
+             (not (all-different? (cdr thing))))
+         (error `(define-optimizing: ill-defined defined thing ,thing)))
+        (#t
+         (let ((value-name (gensym))
+               (thing-name (car thing))
+               (thing-formals (cdr thing)))
+           `(let ((,value-name (lambda ,thing-formals
+                                 ,@body)))
+              (define-unoptimizing ,thing-name ,value-name)
+              (when ,constant
+                ;; Again, make the thing constant before optimizing it.
+                (make-constant ',thing-name))
+              (optimize-when-closure! ,value-name))))))
+(define-macro (define-optimizing thing . body)
+  `(define-optimizing-possibly-constant #f ,thing ,@body))
+(define-macro (define-constant-optimizing thing . body)
+  `(define-optimizing-possibly-constant #t ,thing ,@body))
+
+;; Re-define define and define-constant.
+(define-macro (define thing . body)
+  `(define-optimizing ,thing ,@body))
+(define-macro (define-constant thing . body)
+  `(define-constant-optimizing ,thing ,@body))
 
 
 
 
-;;;; AST optimization ?????.
+;;;; Retroactive optimization.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; ?????
+;;; Optimize composed cons selectors.  Those are important for performance, and
+;;; the rewriting itself, which should be fast.
+(define-constant (optimize-cons-selectors-retroactively!)
+  ;; I want to flatten composed cons selectors, making them all leaf procedures
+  ;; each only using primitives and one variable.
+  ;; First inline cons selectors of size 2, which will flatten them; then do the
+  ;; same with cons selectors of size 3 (defined using selectors of size 2),
+  ;; which will flatten them as well; then cons selectors of size 4.
+  (let ((2-selectors (list caar cadr cdar cddr))
+        (3-selectors (list caaar caadr cadar caddr
+                           cdaar cdadr cddar cdddr))
+        (4-selectors (list caaaar caaadr caadar caaddr
+                           cadaar cadadr caddar cadddr
+                           cdaaar cdaadr cdadar cdaddr
+                           cddaar cddadr cdddar cddddr)))
+    (dolist (selector 2-selectors)
+      (closure-optimize! selector))
+    (dolist (selector 3-selectors)
+      (closure-optimize! selector))
+    (dolist (selector 4-selectors)
+      (closure-optimize! selector))))
 
+;;; Optimize every globally defined closure, constant or not, therefore
+;;; retroactively optimizing the code defined up to this point.
+;;; This is defined in a procedure to make it easy to disable, as the
+;;; optimization process itself may be relatively inefficient.
+(define-constant (optimize-closures-retroactively!)
+  ;; AST rewriting will inline leaf calls, and therefore rewriting may turn a
+  ;; non-leaf procedure into a leaf procedure, enabling more rewriting.  Doing
+  ;; this systematically until no more leaf inlining is possible would require
+  ;; a call graph, or some very inefficient alternative.
+  ;; I accept this approximation: once the cons composed selectors are
+  ;; flattened optimize *every* closure, just once, in an unspecified order.
+  ;; Optimizations other than leaf inlining should not be affected by the
+  ;; order.
+  (dolist (symbol (interned-symbols))
+    (when (and (defined? symbol)
+               (closure? (symbol-global symbol)))
+      (closure-optimize! (symbol-global symbol)))))
 
-
+;;; Flatten composed cons selectors and optimize everything else once.
+(define-constant (optimize-retroactively!)
+  (optimize-cons-selectors-retroactively!)
+  (optimize-closures-retroactively!))
 
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Tentative features, or experimentation just for fun.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-;;;; Streams.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define-constant stream-empty
-  '(#t . ()))
-
-(define-constant (stream-ready? s)
-  (car s))
-
-(define-constant (stream-force! s)
-  (unless (stream-ready? s)
-    (set-cdr! s ((cdr s)))
-    (set-car! s #t))
-  (cdr s))
-
-(define-constant (stream-null? s)
-  (null? (stream-force! s)))
-(define-constant (stream-non-null? s)
-  (non-null? (stream-force! s)))
-(define-constant (stream-car s)
-  (car (stream-force! s)))
-(define-constant (stream-cdr s)
-  (cdr (stream-force! s)))
-(define-constant (stream-set-car! s new-car)
-  (set-car! (stream-force! s) new-car))
-(define-constant (stream-set-cdr! s new-cdr)
-  (set-cdr! (stream-force! s) new-cdr))
-
-(define-macro (stream-cons x s)
-  `(cons #f
-         (lambda ()
-           (cons ,x ,s))))
-
-(define-macro (stream-delay stream-expression)
-  `(cons #f
-         (lambda ()
-           (stream-force! ,stream-expression))))
-
-(define-constant (stream-forever-1 x)
-  (letrec ((res (stream-delay (stream-cons x res))))
-    res))
-
-(define-constant (stream-ones)
-  (stream-forever-1 1))
-
-(define-constant (stream-from from)
-  (stream-cons from (stream-from (1+ from))))
-(define-constant (stream-naturals)
-  (stream-from 0))
-
-(define-constant (stream-walk-elements procedure s)
-  (while (stream-non-null? s)
-    (procedure (stream-car s))
-    (set! s (stream-cdr s))))
-
-(define-constant (stream-print-elements s)
-  (stream-walk-elements (lambda (x)
-                          (display x)
-                          (newline))
-                        s))
-
-(define-constant (stream-touch-elements s)
-  (stream-walk-elements (lambda (x))
-                        s))
-
-(define-constant (stream-range a b)
-  (if (> a b)
-      stream-empty
-      (stream-cons a (stream-range (1+ a) b))))
-
-(define-constant (stream-append s1 s2)
-  (stream-delay
-    (if (stream-null? s1)
-        s2
-        (stream-cons (stream-car s1)
-                     (stream-append (stream-cdr s1) s2)))))
-
-(define-constant (stream-forever-stream s)
-  (letrec ((res (stream-delay (stream-append s res))))
-    res))
-
-(define-constant (stream-filter p? s)
-  (stream-delay
-    (cond ((stream-null? s)
-           stream-empty)
-          ((p? (stream-car s))
-           (stream-cons (stream-car s)
-                        (stream-filter p? (stream-cdr s))))
-          (#t
-           (stream-filter p? (stream-cdr s))))))
-
-(define-constant (stream-map f s)
-  (stream-delay
-    (if (stream-null? s)
-        stream-empty
-        (stream-cons (f (stream-car s))
-                     (stream-map f (stream-cdr s))))))
-
-(define-constant (stream-take s n)
-  (stream-delay
-    (cond ((zero? n)
-           stream-empty)
-          ((stream-null? s)
-           stream-empty)
-          (#t
-           (stream-cons (stream-car s)
-                        (stream-take (stream-cdr s) (1- n)))))))
-
-(define-constant (stream-drop s n)
-  (stream-delay
-    (cond ((zero? n)
-           s)
-          ((stream-null? s)
-           stream-empty)
-          (#t
-           (stream-drop (stream-cdr s) (1- n))))))
-
-(define-constant (stream-fold-left f x xs)
-  (if (stream-null? xs)
-      x
-      (stream-fold-left f
-                        (f x (stream-car xs))
-                        (stream-cdr xs))))
+;; Perform the retroactive rewriting.  This is the call to disable if a low
+;; startup latency matters more than execution speed.
+(optimize-retroactively!)
 
 
 
@@ -4134,22 +4275,24 @@
 ;; OK(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) 4)) ())
 ;;   {  [let #<u267> [call [variable f] [literal 1]] [literal 4]] is CORRECT
 ;;      but subptimal: the let AST should become a sequence AST. }
-;; SUBOPTIMAL(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) b)) ())
-;;   {  [let #<u269> [call [variable f] [literal 1]] [variable #<u269>]] CORRECT
-;;      but SUBOPTIMAL, optimizable to
-;;        [call [variable f] [literal 1]].
-;;        This further optimization would improve tailness! }
+;; OK(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) b)) ())
+;;   {  [call [variable f] [literal 1]] }
 
 ;; It's important to rename nonglobals in the caller when optimizing closures:
 ;; otherwise, when inlining callees within the closure body some references to
 ;; globals might be captured by the closure formals.
+;; FIXME: do I need to do a preliminary global alpha-convertion pass over all
+;; closures before inlining for the first time?  I'm almost sure I don't, as
+;; I always alpha-convert both the expression I am inlining *into* and the
+;; callee body I'm copying before inlining.
 
-;; Make sure that when I remove a let binding a variable to a some expression
-;; (say a conditional) I check that the variables occurring free in the
-;; expression are not assigned in the body *before* the variable use in the
-;; body.
+;; FIXME: Make sure that when I remove a let binding a variable to an effectful
+;; expression I check that the variables occurring free in the expression are
+;; not assigned in the body *before* the variable use in the body.
+;; [I don't rewrite such lets now, except in the easy case of wrappers; the
+;;  current solution is therefore correct, even if not as good as it could be].
 
-;; FIXME: Primitive optimization:
+;; (ALL OK)Primitive optimization:
 ;;   (ast-optimize (macroexpand '(if (not a) b c)) ())
 ;;   (ast-optimize (macroexpand '(+ a 1)) ())
 ;;   (ast-optimize (macroexpand '(- a 1)) ())
@@ -4158,10 +4301,20 @@
 
 
 
-;; (ast-optimize (macroexpand '(if (not a) b c)) ())
-;; OK (ast-optimize (macroexpand '(if (begin 1 2 3 a) b c)) ())
-;; (ast-optimize (macroexpand '(if (begin 1 (f 2) 3 a) b c)) ())
+;; OK(ast-optimize (macroexpand '(if (not a) b c)) ())
+;;     [if [variable a] [variable c] [variable b]]
+;; OK(ast-optimize (macroexpand '(if (begin 1 2 3 a) b c)) ())
+;;     [if [variable a] [variable b] [variable c]]
+;; OK(ast-optimize (macroexpand '(if (begin 1 (f 2) 3 a) b c)) ())
+;;     [sequence [call [variable f] [literal 2]] [if [variable a] [variable b] [variable c]]]
 
 
 ;; This must have no redundant lets...
 ;; (ast-optimize (macroexpand '(if (< n 2) a b) ) ())
+
+;; (macroexpand '(letrec ((a a)) a))
+;;     [let a [literal #<undefined>] [sequence [set! a [variable a]] [variable a]]]
+;; OK(ast-optimize (macroexpand '(letrec ((a a)) a)) ())
+;;     [literal #<undefined>]
+;; Optimizing this may be just academic, but why not: a set! of a non-globally
+;; bound variable to itself can be eliminated.
