@@ -2749,9 +2749,9 @@
 
 ;;; A set! form counts as an assignment; a define form doesn't, as a
 ;;; define'd variable in JitterLisp is always a global, and globals
-;;; can't be renamed.
+;;; can't be renamed by alpha-conversion.
 
-;;; Return non-#f iff the a free occurrence of the given variable is set! in the
+;;; Return non-#f iff any free occurrence of the given variable is set! in the
 ;;; given AST.
 (define-constant (ast-has-assigned? ast x)
   (cond ((ast-literal? ast)
@@ -2794,6 +2794,90 @@
   (and (non-null? asts)
        (or (ast-has-assigned? (car asts) x)
            (ast-has-assigned?-list (cdr asts) x))))
+
+
+
+
+;;;; Non-locally assigned variables in an AST.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; FIXME: no, this idea is not what I need.  I need to check if a given local
+;;; is at the same time *used* nonlocally (assigned or not, it doesn't matter)
+;;; and assigned (locally or not, it doesn't matter).  That is the case where
+;;; a variable needs to be boxed.
+
+;;; Check whether a variable is assigned non-locally in a lambda occurring
+;;; within the given AST.  For the purposes of this definition nested lets do
+;;; not count: only lambdas introduce the kind of non-locality we care about.
+;;;
+;;; Rationale: a set! on a non-local variable forces us to access the variable
+;;; locally thru a box, also pointed by any closure closing over the variable;
+;;; if, instead, a variable is accessed non-locally without being assigned in
+;;; the lambda, this indirection is not necessary.  The same way, we don't need
+;;; the box if the variable is assigned *locally* (including within a let, but
+;;; not within a lambda).
+;;; Compiled code relies on this, and I don't want to introduce boxes when it's
+;;; not needed.
+
+;;; Return non-#f iff any free occurrence of the given variable is set! (as per
+;;; ast-has-assigned?) in a lambda syntactically contained within the given AST.
+(define-constant (ast-nonlocally-assigns? ast x)
+  (cond ((ast-literal? ast)
+         #f)
+        ((ast-variable? ast)
+         #f)
+        ((ast-define? ast)
+         ;; The defined variable is global, and therefore irrelevant here.
+         (ast-nonlocally-assigns? (ast-define-body ast) x))
+        ((ast-if? ast)
+         (or (ast-nonlocally-assigns? (ast-if-condition ast) x)
+             (ast-nonlocally-assigns? (ast-if-then ast) x)
+             (ast-nonlocally-assigns? (ast-if-else ast) x)))
+        ((ast-set!? ast)
+         ;; By itself this assignment, even if it were on x, is irrelevant
+         ;; because it's not within a lambda.  However the set! body might
+         ;; contain a lambda.
+         (ast-nonlocally-assigns? (ast-set!-body ast) x))
+        ((ast-while? ast)
+         (or (ast-nonlocally-assigns? (ast-while-guard ast) x)
+             (ast-nonlocally-assigns? (ast-while-body ast) x)))
+        ((ast-primitive? ast)
+         (ast-nonlocally-assigns?-list (ast-primitive-operands ast) x))
+        ((ast-call? ast)
+         (or (ast-nonlocally-assigns? (ast-call-operator ast) x)
+             (ast-nonlocally-assigns?-list (ast-call-operands ast) x)))
+        ((ast-lambda? ast)
+         ;; This is the interesting case: we search for assignment to *free*
+         ;; occurrences of x within the lambda -- including within lambdas
+         ;; nested within this one.
+         ;; If the lambda shadows x, then our own variable is not visible
+         ;; there and we know that it's not assigned non-locally.
+         ;; If the lambda doesn't shadow x, then we look for any assigned
+         ;; free occurrence within the lambda body.  Notice that the call
+         ;; examining the body doesn't recur to this function, but uses
+         ;; ast-has-assigned? since we have already crossed the one lambda
+         ;; boundary we were searching for: from this point the level of
+         ;; nesting of lambdas is no longer important.
+         (if (set-has? (ast-lambda-formals ast) x)
+             #f
+             (ast-has-assigned? (ast-lambda-body ast) x)))
+        ((ast-let? ast)
+         ;; If this let shadows x then we don't care about its body, but we do
+         ;; care about the bound form, which might contain a lambda assigning x.
+         ;; Otherwise we care about both the bound form and the body.
+         (if (eq? (ast-let-bound-name ast) x)
+             (ast-nonlocally-assigns? (ast-let-bound-form ast) x)
+             (or (ast-nonlocally-assigns? (ast-let-bound-form ast) x)
+                 (ast-nonlocally-assigns? (ast-let-body ast) x))))
+        ((ast-sequence? ast)
+         (or (ast-nonlocally-assigns? (ast-sequence-first ast) x)
+             (ast-nonlocally-assigns? (ast-sequence-second ast) x)))))
+
+;;; An extension of ast-nonlocally-assigns? to a list of ASTs.
+(define-constant (ast-nonlocally-assigns?-list asts x)
+  (and (non-null? asts)
+       (or (ast-nonlocally-assigns? (car asts) x)
+           (ast-nonlocally-assigns?-list (cdr asts) x))))
 
 
 
@@ -2991,11 +3075,11 @@
              (ast-effectful? (ast-if-then ast) bounds)
              (ast-effectful? (ast-if-else ast) bounds)))
         ((ast-set!? ast)
-         ;; Assignments can have effects.
+         ;; Assignments can have effects, and usually do.
          #t)
         ((ast-while? ast)
          ;; A while loop can have effects even if its guard and body are both
-         ;; non-effectful, since non-termination is an effect...
+         ;; non-effectful, since non-termination is an effect.
          (let ((guard (ast-while-guard ast)))
            ;; The only case where we bother returning a more precise result is a
            ;; while loop with the constant #f as guard.
@@ -4203,6 +4287,195 @@
 
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Compiler.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; Compiler: tentative code.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Scratch, for debugging.
+(define-constant (print-list xs)
+  (dolist (x xs)
+    (when (and (list? x)
+               (not-eq? (car x) 'label))
+      (dotimes (i 4)
+        (character-display #\space)))
+    (display x)
+    (newline)))
+
+(define-constant (compiler-make-state)
+  (list ()   ;; bindings
+        ()   ;; instructions
+        0   ;; label-no
+        ))
+
+(define-constant (compiler-bindings state)
+  (car state))
+(define-constant (compiler-set-bindings! state new-field)
+  (set-car! state new-field))
+
+(define-constant (compiler-instructions state)
+  (cadr state))
+(define-constant (compiler-set-instructions! state new-field)
+  (set-car! (cdr state) new-field))
+
+(define-constant (compiler-add-instruction! state new-instruction)
+  (let ((instructions (compiler-instructions state)))
+    (compiler-set-instructions! state
+                                      (append! instructions
+                                               (singleton new-instruction)))))
+
+
+(define-constant (compiler-label-no state)
+  (caddr state))
+(define-constant (compiler-set-label-no! state new-field)
+  (set-car! (cddr state) new-field))
+
+(define-constant (compiler-new-label state)
+  (let* ((old-count (compiler-label-no state)))
+    (compiler-set-label-no! state (1+ old-count))
+    old-count))
+
+(define-constant (compiler-register-no state)
+  (length (compiler-bindings state)))
+
+(define-constant (compiler-bound-variable? state variable)
+  (assq variable (compiler-bindings state)))
+
+(define-constant (compiler-lookup-variable state variable)
+  (cdr (assq variable (compiler-bindings state))))
+
+(define-constant (compiler-bind-local! state variable-name)
+  (let ((bindings (compiler-bindings state))
+        (new-register-index (compiler-register-no state)))
+    (compiler-set-bindings! state
+                            (cons (cons variable-name new-register-index)
+                                  bindings))
+    new-register-index))
+
+(define-constant (compile-literal! s value)
+  (compiler-add-instruction! s `(push-literal ,value)))
+
+(define-constant (compile-variable! s name)
+  (if (compiler-bound-variable? s name)
+      (compiler-add-instruction!
+          s
+          `(push-register ,(compiler-lookup-variable s name)))
+      (compiler-add-instruction!
+          s
+          `(push-global ,name))))
+
+(define-constant (compile-define s name body)
+  (compile-ast! s body)
+  (compiler-add-instruction! s `(pop-global ,name)))
+
+(define-constant (compile-if! s condition then else)
+  (let ((after-then-label (compiler-new-label s))
+        (after-else-label (compiler-new-label s)))
+    (compile-ast! s condition)
+    (compiler-add-instruction! s `(branch-if-false ,after-then-label))
+    (compile-ast! s then)
+    (compiler-add-instruction! s `(branch ,after-else-label))
+    (compiler-add-instruction! s `(label ,after-then-label))
+    (compile-ast! s else)
+    (compiler-add-instruction! s `(label ,after-else-label))))
+
+(define-constant (compile-infinite-loop s body)
+  (let ((before-body-label (compiler-new-label s)))
+    (compiler-add-instruction! s `(label ,before-body-label))
+    (compile-ast! s body)
+    (compiler-add-instruction! s `(drop))
+    (compiler-add-instruction! s `(branch ,before-body-label))))
+
+(define-constant (compile-while-ordinary s guard body)
+  (let ((before-body-label (compiler-new-label s))
+        (before-guard-label (compiler-new-label s)))
+    (compiler-add-instruction! s `(branch ,before-guard-label))
+    (compiler-add-instruction! s `(label ,before-body-label))
+    (compile-ast! s body)
+    (compiler-add-instruction! s `(drop))
+    (compiler-add-instruction! s `(label ,before-guard-label))
+    (compile-ast! s guard)
+    (compiler-add-instruction! s `(branch-if-true ,before-body-label))))
+
+(define-constant (compile-while s guard body)
+  (if (and (ast-literal? guard)
+           (ast-literal-value guard))
+      (compile-infinite-loop s body)
+      (compile-while-ordinary s guard body)))
+
+(define-constant (compile-primitive s operator operands)
+  (dolist (operand operands)
+    (compile-ast! s operand))
+  (compiler-add-instruction! s `(primitive ,operator)))
+
+(define-constant (compile-let s bound-name bound-form body)
+  (compile-ast! s bound-form)
+  (let ((register (compiler-bind-local! s bound-name)))
+    (compiler-add-instruction! s `(pop-to-register ,register))
+    (compile-ast! s body)
+    ;; FIXME: (compiler-unbind-local! s bound-name)
+    ))
+
+(define-constant (compile-sequence s first second)
+  (compile-ast! s first)
+  (compiler-add-instruction! s '(drop))
+  (compile-ast! s second))
+
+(define-constant (compile-ast! s ast)
+  (cond ((ast-literal? ast)
+         (compile-literal! s (ast-literal-value ast)))
+        ((ast-variable? ast)
+         (compile-variable! s (ast-variable-name ast)))
+        ((ast-define? ast)
+         (compile-define s
+                         (ast-define-name ast)
+                         (ast-define-body ast)))
+        ((ast-if? ast)
+         (compile-if! s
+                      (ast-if-condition ast)
+                      (ast-if-then ast)
+                      (ast-if-else ast)))
+        ((ast-set!? ast)
+         (error 'unimplemented-set!))
+        ((ast-while? ast)
+         (compile-while s
+                        (ast-while-guard ast)
+                        (ast-while-body ast)))
+        ((ast-primitive? ast)
+         (compile-primitive s
+                            (ast-primitive-operator ast)
+                            (ast-primitive-operands ast)))
+        ((ast-call? ast)
+         (error 'unimplemented-call))
+        ((ast-lambda? ast)
+         (error 'unimplemented-lambda))
+        ((ast-let? ast)
+         (compile-let s
+                      (ast-let-bound-name ast)
+                      (ast-let-bound-form ast)
+                      (ast-let-body ast)))
+        ((ast-sequence? ast)
+         (compile-sequence s
+                           (ast-sequence-first ast)
+                           (ast-sequence-second ast)))))
+
+(define-macro (t . forms)
+  `(let ((s (compiler-make-state))
+         (ast (ast-optimize (macroexpand '(begin ,@forms))
+                            ())))
+     (display ast)
+     (newline)
+     (compile-ast! s ast)
+     (print-list (compiler-instructions s))
+     (newline)))
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; The library is now loaded.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -4318,3 +4591,20 @@
 ;;     [literal #<undefined>]
 ;; Optimizing this may be just academic, but why not: a set! of a non-globally
 ;; bound variable to itself can be eliminated.
+
+;; Why does this generate a let?
+;; OK-UP-TO-HERE (macroexpand '(cadr q))
+;;   [call [variable cadr] [variable q]]
+;; SUBOPTIMAL! (ast-optimize (macroexpand '(cadr q)) ())
+;;   [let #<u1812> [variable q] [primitive #<1-ary primitive car> [primitive #<1-ary primitive cdr> [variable #<u1812>]]]]
+;; The problem is in closure-wrapper? :
+;; jitterlisp> car
+;; #<closure () (#<u701>) [primitive #<1-ary primitive car> [variable #<u701>]]>
+;; jitterlisp> cadr
+;; #<closure () (#<u1803>) [primitive #<1-ary primitive car> [primitive #<1-ary primitive cdr> [variable #<u1803>]]]>
+;; jitterlisp> (closure-wrapper? car)
+;; #t
+;; jitterlisp> (closure-wrapper? cadr)
+;; #f
+;; Indeed, cadr is not a wrapper according to my definition, and my inlining
+;; procedure for wrappers wouldn't work on it.
