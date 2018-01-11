@@ -3670,12 +3670,50 @@
 (define-constant (ast-optimize-primitive-known-actuals primitive values)
   ;; Again I can assume that the in-arity is respected, but not necessarily the
   ;; actual types.
-  (cond ;; FIXME: implement the interesting cases.
-        (#t
-         (display `(fallback case: cannot optimize ,primitive)) (newline)
-         ;; Fallback case: don't rewrite anything.
-         (ast-primitive primitive
-                        (map ast-literal values)))))
+  (if (ast-statically-rewritable-primitive-use? primitive values)
+      (ast-literal (apply-primitive primitive values))
+      (ast-primitive primitive (map ast-literal values))))
+
+
+;;; Given a primitive and a list of actual values return non-#f iff the use is
+;;; known to be statically rewritable.
+(define-constant (ast-statically-rewritable-primitive-use? primitive values)
+  (let outer-loop ((signatures ast-statically-rewritable-primitive-signatures))
+    (if (null? signatures)
+        #f
+        (let* ((signature (car signatures))
+               (a-primitive (car signature))
+               (conditions (cdr signature)))
+          ;; In the inner loop it's convenient to iterate on a list of
+          ;; predicates; so instead of a primitive object I will use as the
+          ;; first element a predicate checking whether its argument is the
+          ;; required primitive.  The list of values to match with the list of
+          ;; predicates contains the primitives as the first element, followed
+          ;; by the actual values.
+          (let inner-loop ((conditions (cons (lambda (p) (eq? a-primitive p))
+                                             conditions))
+                           (values (cons primitive values)))
+            (cond ((and (null? conditions) (null? values))
+                   ;; Every condition was satisfied and there are no excess
+                   ;; actuals: the signature matches.
+                   #t)
+                  ((null? conditions)
+                   ;; No more conditions, but still remaining actuals.
+                   (display `(WARNING: too many actuals for ,primitive)) (newline)
+                   (outer-loop (cdr signatures)))
+                  ((null? values)
+                   ;; No more actuals, but still remaining conditions.
+                   (display `(WARNING: not enough actuals for ,primitive)) (newline)
+                   (outer-loop (cdr signatures)))
+                  (((car conditions) (car values))
+                   ;; The first condition on the first actual is satisfied.
+                   ;; Check the others.
+                   (inner-loop (cdr conditions) (cdr values)))
+                  (#t
+                   ;; The first condition on the first actual is not satisfied.
+                   ;; Leave this signature and try with the next.
+                   (outer-loop (cdr signatures)))))))))
+
 
 ;;; Return non-#f iff the argument is a fixnum and different from 0.  Never
 ;;; fail.
@@ -3756,6 +3794,7 @@
         (list primitive-car cons?) ;; no, because of mutability.
         (list primitive-cdr cons?) ;; no, because of mutability.
         ))
+
 
 
 
