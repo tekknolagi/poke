@@ -1,6 +1,6 @@
 /* Jittery Lisp: printer.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -342,7 +342,9 @@ jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
       /* So, o is another cons: print o's car as the next list element, but
          first separate it from the previous element, which must exist if we got
          here, with a space. */
+      jitterlisp_print_decoration (cp, cps, CONSATTR);
       jitterlisp_print_char (cp, cps, ' ');
+      jitterlisp_print_decoration (cp, cps, NOATTR);
       struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
       jitterlisp_print (cp, cps, c->car);
 
@@ -510,8 +512,8 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_char (cp, cps, ' ');
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print (cp, cps, closure->formals);
-      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_char (cp, cps, ' ');
       jitterlisp_print (cp, cps, closure->body);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
