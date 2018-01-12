@@ -58,14 +58,23 @@ struct jitter_hash_table
    restricted to the bucket size. */
 typedef jitter_uint (*jitter_hash_function) (const union jitter_word key);
 
-/* A few hash functions are predefined.  Actually only one right now,
-   working on string keys. */
+/* A few hash functions are predefined. */
+
+/* A hash function working on string keys.  Strings are of course hashed by
+   content, and not by address. */
 jitter_uint
 jitter_string_hash_function (const union jitter_word key)
   __attribute__ ((pure));
 
-
+/* A hash function working on word keys, with a word intended in the sense of
+   Jitter -- an object of size sizeof (void *).  If the word is a pointer the
+   pointed object is ignored. */
+jitter_uint
+jitter_word_hash_function (const union jitter_word key)
+  __attribute__ ((pure));
 
+
+
 
 /* Comparison functions.
  * ************************************************************************** */
@@ -74,19 +83,34 @@ jitter_string_hash_function (const union jitter_word key)
 typedef bool (*jitter_hash_key_equal) (const union jitter_word key_1,
                                        const union jitter_word key_2);
 
+/* A comparison function for strings.  Comparison works by content, not by
+   address. */
 bool
 jitter_string_hash_key_equal (const union jitter_word key_1,
                               const union jitter_word key_2)
   __attribute__ ((pure));
 
-
+/* A comparison function for words, in the Jitter sense.  The convenience
+   functions for hash words below expose an API using jitter_int objects as
+   keys, but this signature is required for the internal machinery. */
+bool
+jitter_word_hash_key_equal (const union jitter_word key_1,
+                            const union jitter_word key_2)
+  __attribute__ ((pure));
 
+
+
 
 /* Key and value functions.
  * ************************************************************************** */
 
 /* A function doing something on a word.  This is convenient for deallocating. */
 typedef void (*jitter_word_function) (const union jitter_word);
+
+/* A function doing nothing to a word.  This is convenient for trivial
+   finalizers where deallocation is not needed. */
+void
+jitter_do_nothing_on_word (const union jitter_word key);
 
 
 
@@ -161,8 +185,8 @@ jitter_hash_table_remove (struct jitter_hash_table *t,
                           jitter_hash_key_equal eq)
   __attribute__ ((nonnull (1, 5, 6)));
 
-
 
+
 
 /* Hash iteration.
  * ************************************************************************** */
@@ -196,10 +220,10 @@ void
 jitter_hash_print_debug_stats (const struct jitter_hash_table *t)
   __attribute__ ((cold, nonnull (1)));
 
+
 
 
-
-/* String hash utilities.
+/* String hash utility.
  * ************************************************************************** */
 
 /* Specialized versions of the functions above using the string hash
@@ -226,6 +250,39 @@ jitter_string_hash_table_remove (struct jitter_hash_table *t,
 void
 jitter_string_hash_finalize (struct jitter_hash_table *t,
                              jitter_word_function finalize_value)
+  __attribute__ ((nonnull (1)));
+
+
+
+
+/* Word hash utility.
+ * ************************************************************************** */
+
+/* Specialized versions of the functions above using the word hash
+   function.  Keys are words, copied as they are without concern for
+   any pointed memory, in case they are pointers.  Keys don't require
+   heap allocation or deallocation. */
+bool
+jitter_word_hash_table_has (const struct jitter_hash_table *t,
+                            const jitter_int key)
+  __attribute__ ((pure, nonnull (1)));
+const union jitter_word
+jitter_word_hash_table_get (const struct jitter_hash_table *t,
+                            const jitter_int key)
+  __attribute__ ((pure, nonnull (1)));
+void
+jitter_word_hash_table_add (struct jitter_hash_table *t,
+                            const jitter_int key,
+                            const union jitter_word value)
+  __attribute__ ((nonnull (1)));
+void
+jitter_word_hash_table_remove (struct jitter_hash_table *t,
+                               const jitter_int key,
+                               jitter_word_function value_function)
+  __attribute__ ((nonnull (1)));
+void
+jitter_word_hash_finalize (struct jitter_hash_table *t,
+                           jitter_word_function finalize_value)
   __attribute__ ((nonnull (1)));
 
 #endif // #ifndef JITTER_HASH_H_

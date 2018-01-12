@@ -19,6 +19,7 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -83,14 +84,58 @@ struct jitter_hash_bucket
 extern const jitter_uint
 jitter_hash_random_words [256];
 
+/* The underlying implementation of every hash function here.  Given the
+   previous state of the hash function, combine the new char to it and return
+   the next state. */
+__attribute__ ((always_inline))
+static inline jitter_uint
+jitter_hash_combine_char (jitter_uint previous, unsigned char new)
+{
+  jitter_uint state = previous;
+  state ^= (state << 1) ^ jitter_hash_random_words [new];
+  return state;
+}
+
+/* Hash memory starting from the given pointer, reading the given number of
+   chars. */
+__attribute__ ((always_inline))
+static inline jitter_uint
+jitter_hash_memory_for (const void *initial_pointer, size_t char_no)
+{
+  const unsigned char *p = (const unsigned char *) initial_pointer;
+  jitter_uint res = 0;
+  int i;
+  for (i = 0; i < char_no; i ++)
+    res = jitter_hash_combine_char (res, p [i]);
+  return res;
+}
+
+/* Hash memory starting from the given pointer, until the given terminator byte
+   is found. */
+__attribute__ ((always_inline))
+static inline jitter_uint
+jitter_hash_memory_until (const void *initial_pointer,
+                          unsigned char terminator)
+{
+  const unsigned char *key = (const unsigned char *) initial_pointer;
+  jitter_uint res = 0;
+  const unsigned char *p;
+  for (p = key; *p != terminator; p ++)
+    res = jitter_hash_combine_char (res, * p);
+  return res;
+}
+
 jitter_uint
 jitter_string_hash_function (const union jitter_word key)
 {
-  jitter_uint res = 0;
-  unsigned char *s;
-  for (s = (unsigned char*) key.pointer_to_char; *s != '\0'; s ++)
-    res ^= (res << 1) ^ jitter_hash_random_words [* s];
-  return res;
+  return jitter_hash_memory_until (key.pointer_to_char, '\0');
+}
+
+jitter_uint
+jitter_word_hash_function (const union jitter_word key_as_union)
+{
+  const jitter_uint key = key_as_union.ufixnum;
+  return jitter_hash_memory_for (& key, sizeof (jitter_uint));
 }
 
 
@@ -106,8 +151,30 @@ jitter_string_hash_key_equal (const union jitter_word key_1,
   return ! strcmp (key_1.pointer_to_char, key_2.pointer_to_char);
 }
 
+bool
+jitter_word_hash_key_equal (const union jitter_word key_1,
+                            const union jitter_word key_2)
+{
+  /* Of course this makes no sense if the word size is different from the union
+     size.  Do a compile-time sanity check. */
+  assert (sizeof (union jitter_word) == sizeof (jitter_int));
+
+  return key_1.fixnum == key_2.fixnum;
+}
+
 
 
+/* Key and value functions.
+ * ************************************************************************** */
+
+void
+jitter_do_nothing_on_word (const union jitter_word key)
+{
+  /* Do nothing. */
+}
+
+
+
 
 /* Initialization and finalization.
  * ************************************************************************** */
@@ -459,7 +526,7 @@ jitter_hash_print_debug_stats (const struct jitter_hash_table *t)
 
 
 
-/* String hash utilities.
+/* String hash utility.
  * ************************************************************************** */
 
 static void
@@ -533,4 +600,73 @@ jitter_string_hash_finalize (struct jitter_hash_table *t,
                              jitter_word_function finalize_value)
 {
   jitter_hash_finalize (t, jitter_string_hash_key_function, finalize_value);
+}
+
+
+
+
+/* Word hash utility.
+ * ************************************************************************** */
+
+static void
+jitter_word_hash_key_function (union jitter_word key)
+{
+  /* Do nothing: word keys don't use heap allocation. */
+}
+
+/* Convert a jitter_int to a union jitter_word. */
+inline static union jitter_word
+jitter_int_to_word (jitter_int k)
+{
+  union jitter_word w = {.fixnum = k};
+  return w;
+}
+
+bool
+jitter_word_hash_table_has (const struct jitter_hash_table *t, jitter_int k)
+{
+  return jitter_hash_table_has (t,
+                                jitter_int_to_word (k),
+                                jitter_word_hash_function,
+                                jitter_word_hash_key_equal);
+}
+
+const union jitter_word
+jitter_word_hash_table_get (const struct jitter_hash_table *t, jitter_int k)
+{
+  return jitter_hash_table_get (t,
+                                jitter_int_to_word (k),
+                                jitter_word_hash_function,
+                                jitter_word_hash_key_equal);
+}
+
+void
+jitter_word_hash_table_add (struct jitter_hash_table *t,
+                            jitter_int k,
+                            const union jitter_word value)
+{
+  jitter_hash_table_add (t,
+                         jitter_int_to_word (k),
+                         value,
+                         jitter_word_hash_function);
+}
+
+void
+jitter_word_hash_table_remove (struct jitter_hash_table *t,
+                               jitter_int k,
+                               jitter_word_function value_function)
+{
+  jitter_hash_table_remove (t,
+                            jitter_int_to_word (k),
+                            jitter_word_hash_key_function,
+                            value_function,
+                            jitter_word_hash_function,
+                            jitter_word_hash_key_equal);
+}
+
+void
+jitter_word_hash_finalize (struct jitter_hash_table *t,
+                           jitter_word_function finalize_value)
+{
+  jitter_hash_finalize (t, jitter_word_hash_key_function, finalize_value);
 }
