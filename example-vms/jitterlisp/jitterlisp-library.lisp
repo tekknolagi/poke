@@ -126,6 +126,46 @@
 
 
 
+;;;; Composed cons updaters.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Length 2.
+(define-constant (set-caar! c x) (set-car! (car c) x))
+(define-constant (set-cadr! c x) (set-car! (cdr c) x))
+(define-constant (set-cdar! c x) (set-cdr! (car c) x))
+(define-constant (set-cddr! c x) (set-cdr! (cdr c) x))
+
+;; Length 3.
+(define-constant (set-caaar! c x) (set-car! (caar c) x))
+(define-constant (set-caadr! c x) (set-car! (cadr c) x))
+(define-constant (set-cadar! c x) (set-car! (cdar c) x))
+(define-constant (set-caddr! c x) (set-car! (cddr c) x))
+(define-constant (set-cdaar! c x) (set-cdr! (caar c) x))
+(define-constant (set-cdadr! c x) (set-cdr! (cadr c) x))
+(define-constant (set-cddar! c x) (set-cdr! (cdar c) x))
+(define-constant (set-cdddr! c x) (set-cdr! (cddr c) x))
+
+;; Length 4.
+(define-constant (set-caaaar! c x) (set-car! (caaar c) x))
+(define-constant (set-caaadr! c x) (set-car! (caadr c) x))
+(define-constant (set-caadar! c x) (set-car! (cadar c) x))
+(define-constant (set-caaddr! c x) (set-car! (caddr c) x))
+(define-constant (set-cadaar! c x) (set-car! (cdaar c) x))
+(define-constant (set-cadadr! c x) (set-car! (cdadr c) x))
+(define-constant (set-caddar! c x) (set-car! (cddar c) x))
+(define-constant (set-cadddr! c x) (set-car! (cdddr c) x))
+(define-constant (set-cdaaar! c x) (set-cdr! (caaar c) x))
+(define-constant (set-cdaadr! c x) (set-cdr! (caadr c) x))
+(define-constant (set-cdadar! c x) (set-cdr! (cadar c) x))
+(define-constant (set-cdaddr! c x) (set-cdr! (caddr c) x))
+(define-constant (set-cddaar! c x) (set-cdr! (cdaar c) x))
+(define-constant (set-cddadr! c x) (set-cdr! (cdadr c) x))
+(define-constant (set-cdddar! c x) (set-cdr! (cddar c) x))
+(define-constant (set-cddddr! c x) (set-cdr! (cdddr c) x))
+
+
+
+
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Quasiquoting.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4213,33 +4253,40 @@
 ;;;; Retroactive optimization.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Optimize composed cons selectors.  Those are important for performance, and
+;;; Optimize composed cons accessors.  Those are important for performance, and
 ;;; the rewriting itself, which should be fast.
-(define-constant (optimize-cons-selectors-retroactively!)
-  ;; I want to flatten composed cons selectors, making them all leaf procedures
+(define-constant (optimize-cons-accessors-retroactively!)
+  ;; I want to flatten composed cons accessors, making them all leaf procedures
   ;; each only using primitives and one variable.
-  ;; First inline cons selectors of size 2, which will flatten them; then do the
-  ;; same with cons selectors of size 3 (defined using selectors of size 2),
-  ;; which will flatten them as well; then cons selectors of size 4.
-  (let ((2-selectors (list caar cadr cdar cddr))
-        (3-selectors (list caaar caadr cadar caddr
-                           cdaar cdadr cddar cdddr))
-        (4-selectors (list caaaar caaadr caadar caaddr
+  ;; First inline cons accessors of size 2, which will flatten them; then do the
+  ;; same with cons accessors of size 3 (defined using accessors of size 2),
+  ;; which will flatten them as well; then cons accessors of size 4.
+  (let ((2-accessors (list caar cadr cdar cddr
+                           set-caar! set-cadr! set-cdar! set-cddr!))
+        (3-accessors (list caaar caadr cadar caddr
+                           cdaar cdadr cddar cdddr
+                           set-caaar! set-caadr! set-cadar! set-caddr!
+                           set-cdaar! set-cdadr! set-cddar! set-cdddr!))
+        (4-accessors (list caaaar caaadr caadar caaddr
                            cadaar cadadr caddar cadddr
                            cdaaar cdaadr cdadar cdaddr
-                           cddaar cddadr cdddar cddddr)))
-    (dolist (selector 2-selectors)
-      (closure-optimize! selector))
-    (dolist (selector 3-selectors)
-      (closure-optimize! selector))
-    (dolist (selector 4-selectors)
-      (closure-optimize! selector))))
+                           cddaar cddadr cdddar cddddr
+                           set-caaaar! set-caaadr! set-caadar! set-caaddr!
+                           set-cadaar! set-cadadr! set-caddar! set-cadddr!
+                           set-cdaaar! set-cdaadr! set-cdadar! set-cdaddr!
+                           set-cddaar! set-cddadr! set-cdddar! set-cddddr!)))
+    (dolist (accessor 2-accessors)
+      (closure-optimize! accessor))
+    (dolist (accessor 3-accessors)
+      (closure-optimize! accessor))
+    (dolist (accessor 4-accessors)
+      (closure-optimize! accessor))))
 
 ;;; Optimize every globally defined closure, constant or not, therefore
 ;;; retroactively optimizing the code defined up to this point.
 ;;; This is defined in a procedure to make it easy to disable, as the
 ;;; optimization process itself may be relatively inefficient.
-(define-constant (optimize-closures-retroactively!)
+(define-constant (optimize-global-closures-retroactively!)
   ;; AST rewriting will inline leaf calls, and therefore rewriting may turn a
   ;; non-leaf procedure into a leaf procedure, enabling more rewriting.  Doing
   ;; this systematically until no more leaf inlining is possible would require
@@ -4251,16 +4298,17 @@
   (dolist (symbol (interned-symbols))
     (when (and (defined? symbol)
                (closure? (symbol-global symbol)))
+      (display `(optimizing ,symbol)) (newline)
       (closure-optimize! (symbol-global symbol)))))
 
-;;; Flatten composed cons selectors and optimize everything else once.
+;;; Flatten composed cons accessors and optimize everything else once.
 (define-constant (optimize-retroactively!)
-  (optimize-cons-selectors-retroactively!)
-  (optimize-closures-retroactively!))
+  (optimize-cons-accessors-retroactively!)
+  (optimize-global-closures-retroactively!))
 
 ;; Perform the retroactive rewriting.  This is the call to disable if a low
 ;; startup latency matters more than execution speed.
-(optimize-retroactively!)
+;;(optimize-retroactively!)
 
 
 
@@ -4322,19 +4370,19 @@
 (define-constant (compiler-instructions state)
   (cadr state))
 (define-constant (compiler-set-instructions! state new-field)
-  (set-car! (cdr state) new-field))
+  (set-cadr! state new-field))
 
 (define-constant (compiler-add-instruction! state new-instruction)
   (let ((instructions (compiler-instructions state)))
     (compiler-set-instructions! state
-                                      (append! instructions
-                                               (singleton new-instruction)))))
+                                (append! instructions
+                                         (singleton new-instruction)))))
 
 
 (define-constant (compiler-label-no state)
   (caddr state))
 (define-constant (compiler-set-label-no! state new-field)
-  (set-car! (cddr state) new-field))
+  (set-caddr! state new-field))
 
 (define-constant (compiler-new-label state)
   (let* ((old-count (compiler-label-no state)))
