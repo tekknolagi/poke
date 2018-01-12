@@ -89,6 +89,7 @@ jitterlisp_sharing_table_add (struct jitter_hash_table *t,
   jitter_word_hash_table_add (t, o, useless);
 }
 
+
 
 
 /* Character names.
