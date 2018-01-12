@@ -1,6 +1,6 @@
 /* Jittery Lisp: s-expression header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -22,6 +22,10 @@
 
 #ifndef JITTERLISP_SEXPRESSION_H_
 #define JITTERLISP_SEXPRESSION_H_
+
+
+/* Include headers.
+ * ************************************************************************** */
 
 #include <stdbool.h>
 
@@ -392,6 +396,21 @@ struct jitterlisp_cons
                                JITTERLISP_CONS_TAG,           \
                                JITTERLISP_CONS_TAG_BIT_NO)))
 
+
+
+
+/* S-expression representation: boxes.
+ * ************************************************************************** */
+
+/* This implementation of boxes is a temporary hack.  Boxed should have their
+   own tag, and not just be conses with a particular shape. */
+
+#define JITTERLISP_IS_BOX(_jitterlisp_tagged_object)     \
+  (JITTERLISP_IS_CONS(_jitterlisp_tagged_object)         \
+   && (JITTERLISP_EXP_C_A_CDR(_jitterlisp_tagged_object) \
+       == JITTERLISP_NOTHING))
+
+
 
 
 /* S-expression representation: closures.
@@ -402,8 +421,18 @@ struct jitterlisp_cons
 #define JITTERLISP_CLOSURE_TAG_BIT_NO    3
 #define JITTERLISP_CLOSURE_TAG           0b011
 
-/* A closure datum. */
-struct jitterlisp_closure
+/* A C type specifying the kind of a closure. */
+enum jitterlisp_closure_kind
+  {
+    /* An interpreted closure, run using the AST interpreter. */
+    jitterlisp_closure_type_interpreted,
+
+    /* A compiled closure, run using the Jittery VM. */
+    jitterlisp_closure_type_compiled
+  };
+
+/* The fields of an intepreted closure object. */
+struct jitterlisp_interpreted_closure
 {
   /* The non-global environment, as an a-list. */
   jitterlisp_object environment;
@@ -414,6 +443,46 @@ struct jitterlisp_closure
   /* The procedure body as an AST. */
   jitterlisp_object body;
 };
+
+/* The fields of a compiled closure object. */
+struct jitterlisp_compiled_closure
+{
+  /* How many arguments this closure takes. */
+  jitter_uint in_arity;
+
+  /* How many nonlocals there are.  FIXME: remove this unless it's needed
+     for garbage collection. */
+  jitter_uint nonlocal_no;
+
+  /* Nonlocals as used in compiled code, with no names and with boxed nonlocals
+     are stored as boxes; NULL if no nonlocals are needed. */
+  jitterlisp_object nonlocals;
+
+  /* VM code.  FIXME: think about the type. */
+  //struct jitterlispvm_program *code;
+  // This is declared as a void * to simplify inter-header dependencies.
+  void *code; // FIXME: comment better.
+};
+
+/* A closure datum. */
+struct jitterlisp_closure
+{
+  /* The kind of this closure. */
+  enum jitterlisp_closure_kind kind;
+
+  /* The kind determines which field of the anonymous union is actually used.
+     Notice that it's allowed, and useful, for a closure to change kind at run
+     time without changing its identity. */
+  union
+  {
+    /* An interpreted closure. */
+    struct jitterlisp_interpreted_closure interpreted;
+
+    /* An compiled closure. */
+    struct jitterlisp_compiled_closure compiled;
+  };
+};
+
 
 /* Closure tag checking, encoding and decoding. */
 #define JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)  \
@@ -430,6 +499,16 @@ struct jitterlisp_closure
                                JITTERLISP_CLOSURE_TAG,           \
                                JITTERLISP_CLOSURE_TAG_BIT_NO)))
 
+/* Closure tag and kind checking. */
+#define JITTERLISP_IS_INTERPRETED_CLOSURE(_jitterlisp_tagged_object)  \
+  (JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)                   \
+   && (JITTERLISP_CLOSURE_DECODE(_jitterlisp_tagged_object)->kind     \
+       == jitterlisp_closure_type_interpreted))
+#define JITTERLISP_IS_COMPILED_CLOSURE(_jitterlisp_tagged_object)  \
+  (JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)                   \
+   && (JITTERLISP_CLOSURE_DECODE(_jitterlisp_tagged_object)->kind     \
+       == jitterlisp_closure_type_compiled))
+
 
 
 
@@ -442,7 +521,7 @@ struct jitterlisp_closure
 #define JITTERLISP_PRIMITIVE_TAG           0b100
 
 /* How many arguments a primitive can take, as a maximum. */
-#define JITTERLISP_PRIMITIVE_MAX_IN_ARITY   4
+#define JITTERLISP_PRIMITIVE_MAX_IN_ARITY   6
 
 /* Primitives are call-by-value (therefore they all behave as procedures: if and
    or , for example, cannot be primitives) and have a fixed in-arity, which in
@@ -494,20 +573,6 @@ struct jitterlisp_primitive
 
 
 
-/* S-expression representation: procedures.
- * ************************************************************************** */
-
-/* "Procedures" don't exist as objects with a tag of their own: a procedure is
-   either a closure or a primitive.  Of course they are implemented differently
-   but from the user's point of view they are interchangeable, which is why
-   this type checking is useful. */
-#define JITTERLISP_IS_PROCEDURE(_jitterlisp_tagged_object)  \
-  (JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)         \
-   || JITTERLISP_IS_PRIMITIVE(_jitterlisp_tagged_object))
-
-
-
-
 /* S-expression representation: vectors.
  * ************************************************************************** */
 
@@ -554,8 +619,9 @@ struct jitterlisp_vector
 /* [FIXME: tentative] Non-primitive macros.
  * ************************************************************************** */
 
-/* Non-primitive (low-level) macros are implemented exactly like closures using
-   struct jitterlisp_closure , with a different tag. */
+/* Non-primitive (low-level) macros are implemented exactly like interpreted
+   closures using struct jitterlisp_interpreted_closure , with a different
+   tag. */
 
 #define JITTERLISP_NON_PRIMITIVE_MACRO_TAG_BIT_NO    3
 #define JITTERLISP_NON_PRIMITIVE_MACRO_TAG           0b101
@@ -571,7 +637,7 @@ struct jitterlisp_vector
                         JITTERLISP_NON_PRIMITIVE_MACRO_TAG,                              \
                         JITTERLISP_NON_PRIMITIVE_MACRO_TAG_BIT_NO)
 #define JITTERLISP_NON_PRIMITIVE_MACRO_DECODE(_jitterlisp_tagged_non_primitive_macro)  \
-  ((struct jitterlisp_closure *)                                                       \
+  ((struct jitterlisp_interpreted_closure *)                                                       \
    (JITTER_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_non_primitive_macro),               \
                                JITTERLISP_NON_PRIMITIVE_MACRO_TAG,                     \
                                JITTERLISP_NON_PRIMITIVE_MACRO_TAG_BIT_NO)))
@@ -646,6 +712,25 @@ struct jitterlisp_ast;
 
 
 
+/* Printed representation recursivity.
+ * ************************************************************************** */
+
+/* Expand to an r-value evaluating to a C boolean, non-false iff the argument
+   evaluates to a Lisp object of a type which may contain other Lisp objects in
+   its printed representation.  The argument may be evaluated multiple times.
+
+   Rationale: this is used to avoid circularity checks when printing, for types
+   which cannot be recursive. */
+#define JITTERLISP_IS_RECURSIVE(_jitterlisp_object)  \
+  (JITTERLISP_IS_CONS(_jitterlisp_object)            \
+   || JITTERLISP_IS_CLOSURE(_jitterlisp_object)      \
+   || JITTERLISP_IS_MACRO(_jitterlisp_object)        \
+   || JITTERLISP_IS_VECTOR(_jitterlisp_object)       \
+   || JITTERLISP_IS_AST(_jitterlisp_object))
+
+
+
+
 /* Alignment requirement.
  * ************************************************************************** */
 
@@ -668,6 +753,7 @@ struct jitterlisp_ast;
    moving GC. */
 extern jitterlisp_object jitterlisp_low_level_macro_args;
 extern jitterlisp_object jitterlisp_primitive_make_constant;
+extern jitterlisp_object jitterlisp_label;
 
 
 

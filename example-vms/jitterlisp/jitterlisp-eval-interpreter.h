@@ -46,8 +46,8 @@ jitterlisp_object
 jitterlisp_eval_globally_interpreter (jitterlisp_object form);
 
 /* Macroexpand the given JitterLisp form, and return the result of its
-   evaluation, using the given non-global environment expressed as an alist.
-   Evaluate using the non-Jittery AST interpreter. */
+   evaluation, using the given non-global environment shaped as described in
+   jitterlisp-utility.h . */
 jitterlisp_object
 jitterlisp_eval_interpreter (jitterlisp_object form, jitterlisp_object env);
 

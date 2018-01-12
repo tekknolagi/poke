@@ -1,0 +1,536 @@
+## Jitter specification for the JitterLisp VM.
+
+## Copyright (C) 2017, 2018 Luca Saiu
+## Written by Luca Saiu
+
+## This file is part of the Jittery Lisp language implementation, distributed as
+## an example along with Jitter under the same license.
+
+## Jitter is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+
+## Jitter is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+
+## You should have received a copy of the GNU General Public License
+## along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+## Global configuration.
+#################################################################
+
+vm
+  set prefix "jitterlispvm"
+  tos-stack "jitterlisp_object" "mainstack"
+
+  # FIXME: the return stack might need a different type.  Or not.
+  ntos-stack "jitterlisp_object" "returnstack"
+end
+
+
+
+
+## Register classes.
+#################################################################
+
+# We only need one register class.
+register-class r 3
+  code
+    jitterlisp_object
+  end
+end
+
+
+
+
+## Functions and globals to wrap.
+#################################################################
+
+# FIXME: these will need to grow.
+wrapped-functions
+  printf
+  jitterlisp_print_to_stream
+end
+
+wrapped-globals
+  stack_printf_format_string
+  my_stdout_p
+end
+
+early-header-c
+  code
+#   include "jitterlisp.h"
+  end
+end
+
+initialization-c
+  code
+    printf ("Hello from the Jittery VM initialization\n");
+  end
+end
+
+finalization-c
+  code
+    printf ("Hello from the Jittery VM finalization\n");
+  end
+end
+
+early-c
+  code
+#   include <stdio.h>
+  end
+end
+late-c
+  code
+    static const char *stack_printf_format_string = "%" JITTER_PRIi "\n";
+    static FILE **my_stdout_p = & stdout;
+  end
+end
+
+
+
+
+## Custom literal argument printer.
+#################################################################
+
+printer-c
+  code
+/* Print a Lisp object in Lisp notation.  This is convenient to read VM
+   programs in textual form. */
+static void
+print_object (FILE *out, jitter_uint u)
+{
+  jitterlisp_print_to_stream (out, u);
+}
+  end
+end
+
+
+
+
+## Instructions.
+#################################################################
+
+instruction nop ()
+  code
+  end
+end
+
+instruction dup ()
+  code
+    JITTER_DUP_MAINSTACK();
+  end
+end
+
+instruction drop ()
+  code
+    JITTER_DROP_MAINSTACK();
+  end
+end
+
+instruction nip ()
+  code
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction push-unspecified ()
+  code
+    JITTER_PUSH_UNSPECIFIED_MAINSTACK();
+  end
+end
+
+instruction push-register (?R)
+  code
+    jitterlisp_object k = JITTER_ARG0;
+    JITTER_PUSH_MAINSTACK(k);
+  end
+end
+
+instruction push-literal (?n print_object)
+  code
+    jitterlisp_object k = JITTER_ARGN0;
+    JITTER_PUSH_MAINSTACK(k);
+  end
+end
+
+instruction push-nil ()
+  code
+    JITTER_PUSH_MAINSTACK(JITTERLISP_EMPTY_LIST);
+  end
+end
+instruction push-zero ()
+  code
+    JITTER_PUSH_MAINSTACK(JITTERLISP_FIXNUM_ENCODE(0));
+  end
+end
+instruction push-one ()
+  code
+    JITTER_PUSH_MAINSTACK(JITTERLISP_FIXNUM_ENCODE(1));
+  end
+end
+instruction push-false ()
+  code
+    JITTER_PUSH_MAINSTACK(JITTERLISP_FALSE);
+  end
+end
+instruction push-nothing ()
+  code
+    JITTER_PUSH_MAINSTACK(JITTERLISP_NOTHING);
+  end
+end
+
+instruction pop-to-register (!R)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_ARG0 = top;
+  end
+end
+
+instruction copy-to-register (!R)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_ARG0 = top;
+  end
+end
+
+instruction copy-from-register (?R)
+  code
+    JITTER_TOP_MAINSTACK() = JITTER_ARG0;
+  end
+end
+
+instruction copy-from-literal (?n print_object)
+  code
+    JITTER_TOP_MAINSTACK() = JITTER_ARGN0;
+  end
+end
+
+instruction literal-to-register (?n print_object, !R)
+  code
+    JITTER_ARG1 = JITTER_ARGN0;
+  end
+end
+
+instruction register-to-register (?R, !R)
+  code
+    JITTER_ARG1 = JITTER_ARG0;
+  end
+end
+
+instruction branch (?f)
+  code
+    JITTER_BRANCH_FAST(JITTER_ARGF0);
+  end
+end
+
+instruction branch-if-false (?f)
+  code
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_EQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
+  end
+end
+
+instruction branch-if-null (?f)
+  code
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_EQUAL(top, JITTERLISP_EMPTY_LIST, JITTER_ARGF0);
+  end
+end
+
+instruction canonicalize-boolean ()
+  code
+    JITTERLISP_BOOLEAN_CANONICALIZE_(JITTER_TOP_MAINSTACK(),
+                                     JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction not ()
+  code
+    JITTERLISP_NOT_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction branch-if-true (?f)
+  code
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
+  end
+end
+
+# The first argument is a primitive function pointer.
+# The second is its in-arity.
+instruction primitive (?n, ?n 0 1 2 3 4)
+  code
+    jitterlisp_primitive_function p
+      = (jitterlisp_primitive_function) JITTER_ARGP0;
+    const jitter_uint in_arity = JITTER_ARGN1;
+    JITTER_PUSH_UNSPECIFIED_MAINSTACK();
+    jitterlisp_object *first_arg
+      = (& JITTER_UNDER_TOP_MAINSTACK()) - (in_arity - 1);
+    jitterlisp_object res = p (first_arg);
+    int i;
+    for (i = 0; i < in_arity; i ++)
+      JITTER_NIP_MAINSTACK();
+    JITTER_TOP_MAINSTACK() = res;
+    /*
+    top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
+    */
+  end
+end
+
+instruction plus ()
+  code
+    JITTERLISP_PLUS_(JITTER_TOP_MAINSTACK(),
+                     JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction one-plus ()
+  code
+    JITTERLISP_1PLUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction one-minus ()
+  code
+    JITTERLISP_1MINUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction car ()
+  code
+    JITTERLISP_CAR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction cdr ()
+  code
+    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction cadddr ()
+  code
+    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_CAR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction nullp ()
+  code
+    JITTERLISP_NULLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction nothingp ()
+  code
+    JITTERLISP_NOTHINGP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction fixnump ()
+  code
+    JITTERLISP_FIXNUMP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction characterp ()
+  code
+    JITTERLISP_CHARACTERP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction consp ()
+  code
+    JITTERLISP_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction non-consp ()
+  code
+    JITTERLISP_NON_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction return ()
+  code
+    /* FIXME: unimplemented. */
+  end
+end
+
+instruction save-register (?R)
+  code
+    JITTER_PUSH_RETURNSTACK(JITTER_ARG0);
+  end
+end
+
+instruction restore-register (!R)
+  code
+    JITTER_ARG0 = JITTER_TOP_RETURNSTACK();
+    JITTER_DROP_RETURNSTACK();
+  end
+end
+
+
+
+
+## Optimization rewrites.
+#################################################################
+
+rule
+  rewrite
+    pop-to-register $a; push-register $b
+  into
+    copy-to-register $a; copy-from-register $b
+end
+
+rule
+  rewrite
+    push-literal $a; pop-to-register R $b
+  into
+    literal-to-register $a, $b
+end
+
+rule
+  rewrite
+    drop; push-register R $a
+  into
+    copy-from-register $a
+end
+
+rule
+  rewrite
+    drop; push-literal $a
+  into
+    copy-from-literal $a
+end
+
+rule
+  rewrite
+    push-register R $a; pop-to-register R $b
+  into
+    register-to-register $a, $b
+end
+
+rule
+  rewrite
+    copy-from-register R $a; pop-to-register R $b
+  into
+    register-to-register $a, $b; drop
+end
+
+rule
+  rewrite
+    copy-from-literal $a; pop-to-register R $b
+  into
+    literal-to-register $a, $b; drop
+end
+
+rule
+  rewrite
+    push-register $a; push-register $a
+  into
+    push-register $a; dup
+end
+
+rule
+  rewrite
+    copy-from-register $a; push-register $a
+  into
+    copy-from-register $a; dup
+end
+
+rule
+  rewrite
+    copy-to-register $a; copy-from-register $a
+  into
+    copy-to-register $a
+end
+
+
+rule
+  rewrite
+    push-literal $a; push-literal $a
+  into
+    push-literal $a; dup
+end
+
+rule
+  rewrite
+    copy-from-literal $a; push-literal $a
+  into
+    copy-from-literal $a; dup
+end
+
+rule
+  rewrite
+    push-register $a; drop
+  into
+    # Nothing.
+end
+
+rule
+  rewrite
+    push-literal $a; drop
+  into
+    # Nothing.
+end
+
+rule
+  rewrite
+    pop-to-register $a; copy-from-register $a
+  into
+    copy-to-register $a; nip
+end
+
+rule
+  rewrite
+    pop-to-register $a; drop
+  into
+    nip; pop-to-register $a
+end
+
+rule
+  rewrite
+    drop; drop
+  into
+    nip; drop
+end
+
+# Having copy-to-register at the end might make it possible to combine
+# with some other instruction; nip is not easy to combine, and in fact
+# I currently have no other rule with nip on the left.
+rule
+  rewrite
+    copy-to-register $a; nip
+  into
+    nip; copy-to-register $a
+end
+
+rule
+  rewrite
+    pop-to-register $a; return
+  into
+    drop; return
+end
+
+rule
+  rewrite
+    copy-to-register $a; return
+  into
+    return
+end

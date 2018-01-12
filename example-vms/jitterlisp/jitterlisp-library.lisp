@@ -37,6 +37,16 @@
 
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Stuff to be probably made into primitives.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (closure-in-arity closure)
+  (length (interpreted-closure-formals closure)))
+
+
+
+
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Type checking.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -126,6 +136,46 @@
 
 
 
+;;;; Composed cons updaters.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Length 2.
+(define-constant (set-caar! c x) (set-car! (car c) x))
+(define-constant (set-cadr! c x) (set-car! (cdr c) x))
+(define-constant (set-cdar! c x) (set-cdr! (car c) x))
+(define-constant (set-cddr! c x) (set-cdr! (cdr c) x))
+
+;; Length 3.
+(define-constant (set-caaar! c x) (set-car! (caar c) x))
+(define-constant (set-caadr! c x) (set-car! (cadr c) x))
+(define-constant (set-cadar! c x) (set-car! (cdar c) x))
+(define-constant (set-caddr! c x) (set-car! (cddr c) x))
+(define-constant (set-cdaar! c x) (set-cdr! (caar c) x))
+(define-constant (set-cdadr! c x) (set-cdr! (cadr c) x))
+(define-constant (set-cddar! c x) (set-cdr! (cdar c) x))
+(define-constant (set-cdddr! c x) (set-cdr! (cddr c) x))
+
+;; Length 4.
+(define-constant (set-caaaar! c x) (set-car! (caaar c) x))
+(define-constant (set-caaadr! c x) (set-car! (caadr c) x))
+(define-constant (set-caadar! c x) (set-car! (cadar c) x))
+(define-constant (set-caaddr! c x) (set-car! (caddr c) x))
+(define-constant (set-cadaar! c x) (set-car! (cdaar c) x))
+(define-constant (set-cadadr! c x) (set-car! (cdadr c) x))
+(define-constant (set-caddar! c x) (set-car! (cddar c) x))
+(define-constant (set-cadddr! c x) (set-car! (cdddr c) x))
+(define-constant (set-cdaaar! c x) (set-cdr! (caaar c) x))
+(define-constant (set-cdaadr! c x) (set-cdr! (caadr c) x))
+(define-constant (set-cdadar! c x) (set-cdr! (cadar c) x))
+(define-constant (set-cdaddr! c x) (set-cdr! (caddr c) x))
+(define-constant (set-cddaar! c x) (set-cdr! (cdaar c) x))
+(define-constant (set-cddadr! c x) (set-cdr! (cdadr c) x))
+(define-constant (set-cdddar! c x) (set-cdr! (cddar c) x))
+(define-constant (set-cddddr! c x) (set-cdr! (cdddr c) x))
+
+
+
+
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Quasiquoting.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -138,11 +188,11 @@
 ;;; Define temporary list functions of a few different arities.  It is
 ;;; not worth the trouble to define list as a variadic macro without
 ;;; high-level macros or quasiquoting.
-(define-constant (list0)         '())
-(define-constant (list1 x)       (cons x '()))
-(define-constant (list2 x y)     (cons x (cons y '())))
-(define-constant (list3 x y z)   (cons x (cons y (cons z '()))))
-(define-constant (list4 x y z t) (cons x (cons y (cons z (cons t '())))))
+(define-constant (list0)         ())
+(define-constant (list1 x)       (cons x ()))
+(define-constant (list2 x y)     (cons x (cons y ())))
+(define-constant (list3 x y z)   (cons x (cons y (cons z ()))))
+(define-constant (list4 x y z t) (cons x (cons y (cons z (cons t ())))))
 
 (define-constant (qq-append xs ys)
   (if (list? xs)
@@ -205,7 +255,7 @@
 ;;; call to the list function of the given arguments.
 (define-constant (qq-variadic-list-expression args)
   (if (null? args)
-      ''()
+      '()
       ;;`(cons ,(car args) ,(qq-variadic-list-expression (cdr args)))))
       (list3 'cons
              (car args)
@@ -214,7 +264,7 @@
 ;;; Same as qq-variadic-list-expression but for a variadic append.
 (define-constant (qq-variadic-append-expression args)
   (if (null? args)
-      ''()
+      '()
       ;;`(append ,(car args) ,(qq-variadic-append-expression (cdr args)))))
       (list3 'qq-append
              (car args)
@@ -300,7 +350,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (singleton x)
-  (cons x '()))
+  (cons x ()))
 
 
 
@@ -374,7 +424,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (replicate-iterative n x)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (> n 0)
       (set! res (cons x res))
       (set! n (1- n)))
@@ -385,11 +435,11 @@
       acc
       (replicate-tail-recursive-helper (1- n) x (cons x acc))))
 (define-constant (replicate-tail-recursive n x)
-  (replicate-tail-recursive-helper n x '()))
+  (replicate-tail-recursive-helper n x ()))
 
 (define-constant (replicate-non-tail-recursive n x)
   (if (zero? n)
-      '()
+      ()
       (cons x (replicate-non-tail-recursive (1- n) x))))
 
 (define-constant (replicate n x)
@@ -484,7 +534,7 @@
 
 (define-constant (all-but-last-non-empty-non-tail-recursive xs)
   (if (null? (cdr xs))
-      '()
+      ()
       (cons (car xs)
             (all-but-last-non-empty-non-tail-recursive (cdr xs)))))
 (define-constant (all-but-last-non-tail-recursive xs)
@@ -552,19 +602,19 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (reverse-iterative xs)
-  (append-reversed-iterative xs '()))
+  (append-reversed-iterative xs ()))
 
 ;; This uses append instead of append-non-tail-recursive .
 (define-constant (reverse-non-tail-recursive xs)
   (if (null? xs)
-      '()
+      ()
       (append (reverse-non-tail-recursive (cdr xs))
               (singleton (car xs)))))
 
 ;; This uses append-non-tail-recursive instead of append .
 (define-constant (reverse-really-non-tail-recursive xs)
   (if (null? xs)
-      '()
+      ()
       (append-non-tail-recursive (reverse-non-tail-recursive (cdr xs))
                                  (singleton (car xs)))))
 
@@ -574,7 +624,7 @@
       (reverse-tail-recursive-helper (cdr xs)
                                      (cons (car xs) acc))))
 (define-constant (reverse-tail-recursive xs)
-  (reverse-tail-recursive-helper xs '()))
+  (reverse-tail-recursive-helper xs ()))
 
 (define-constant (reverse xs)
   (reverse-iterative xs))
@@ -587,8 +637,8 @@
 
 (define-constant (reverse!-iterative xs)
   (if (null? xs)
-      '()
-      (let* ((previous-list '())
+      ()
+      (let* ((previous-list ())
              (the-cons xs)
              (following-list #f))
         (while (not (null? the-cons))
@@ -609,8 +659,8 @@
                                         old-non-null-inner-list-cdr))))
 (define-constant (reverse!-tail-recursive xs)
   (if (null? xs)
-      '()
-      (reverse!-tail-recursive-helper '() xs)))
+      ()
+      (reverse!-tail-recursive-helper () xs)))
 
 (define-constant (reverse! xs)
   (reverse!-iterative xs))
@@ -667,7 +717,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (flatten-reversed-iterative list-of-lists)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (non-null? list-of-lists)
       (set! res (append-iterative (car list-of-lists) res))
       (set! list-of-lists (cdr list-of-lists)))
@@ -680,7 +730,7 @@
           (cdr reversed-list)
           (append-tail-recursive (car reversed-list) acc))))
 (define-constant (flatten-reversed-tail-recursive reversed-list)
-  (flatten-reversed-tail-recursive-helper reversed-list '()))
+  (flatten-reversed-tail-recursive-helper reversed-list ()))
 
 (define-constant (flatten-reversed reversed-list)
   (flatten-reversed-iterative reversed-list))
@@ -692,7 +742,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (flatten-reversed!-iterative list-of-lists)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (non-null? list-of-lists)
       (set! res (append!-iterative (car list-of-lists) res))
       (set! list-of-lists (cdr list-of-lists)))
@@ -715,7 +765,7 @@
 
 (define-constant (flatten-non-tail-recursive list-of-lists)
   (if (null? list-of-lists)
-      '()
+      ()
       (append-non-tail-recursive
           (car list-of-lists)
           (flatten-non-tail-recursive (cdr list-of-lists)))))
@@ -737,7 +787,7 @@
 
 (define-constant (flatten!-non-tail-recursive list-of-lists)
   (if (null? list-of-lists)
-      '()
+      ()
       ;; I don't have an append!-non-tail-recursive, as it doesn't seem very
       ;; reasonable.
       (append! (car list-of-lists)
@@ -757,7 +807,7 @@
 
 (define-constant (list-copy-iterative xs)
   (if (null? xs)
-      '()
+      ()
       (let* ((res (cons (car xs) #f))
              (last-cons res)
              (new-cons #f))
@@ -767,7 +817,7 @@
           (set-cdr! last-cons new-cons)
           (set! last-cons new-cons)
           (set! xs (cdr xs)))
-        (set-cdr! last-cons '())
+        (set-cdr! last-cons ())
         res)))
 
 (define-constant (list-copy-tail-recursive xs)
@@ -775,7 +825,7 @@
 
 (define-constant (list-copy-non-tail-recursive xs)
   (if (null? xs)
-      '()
+      ()
       (cons (car xs)
             (list-copy-non-tail-recursive (cdr xs)))))
 
@@ -864,7 +914,7 @@
 
 ;; A break or return form would be useful here.
 (define-constant (take-reversed-iterative xs n)
-  (let* ((res '())
+  (let* ((res ())
          (go-on #t))
     (while go-on
       (cond ((null? xs)
@@ -884,9 +934,9 @@
 
 (define-constant (take-non-tail-recursive xs n)
   (cond ((zero? n)
-         '())
+         ())
         ((null? xs)
-         '())
+         ())
         (#t
          (cons (car xs) (take-non-tail-recursive (cdr xs) (1- n))))))
 
@@ -900,7 +950,7 @@
                                               (1- n)
                                               (cons (car xs) acc)))))
 (define-constant (take-reversed-tail-recursive xs n)
-  (take-reversed-tail-recursive-helper xs n '()))
+  (take-reversed-tail-recursive-helper xs n ()))
 
 (define-constant (take-reversed xs n)
   (take-reversed-iterative xs n))
@@ -926,13 +976,13 @@
   (cond ((= n 1)
          (if (null? xs)
              'do-nothing
-             (set-cdr! xs '())))
+             (set-cdr! xs ())))
         ((null? xs))
         (#t
          (take!-tail-recursive-helper (cdr xs) (1- n)))))
 (define-constant (take!-tail-recursive xs n)
   (if (zero? n)
-      '()
+      ()
       (begin
         (take!-tail-recursive-helper xs n)
         xs)))
@@ -963,7 +1013,7 @@
   (cond ((zero? n)
          xs)
         ((null? xs)
-         '())
+         ())
         (#t
          (drop-tail-recursive (cdr xs) (1- n)))))
 
@@ -1168,26 +1218,45 @@
         (#t
          (rassq value (cdr alist)))))
 
-(define-constant (del-assq object alist)
+;;; Return a new alist, possibly sharing structure with alist, without the
+;;; first binding of the given object, if any.
+(define-constant (del-assq-1-noncopying object alist)
   (cond ((null? alist)
-         '())
+         ())
         ((eq? (caar alist) object)
-         (del-assq object (cdr alist)))
+         (cdr alist))
         (#t
-         (cons (car alist) (del-assq object (cdr alist))))))
+         (cons (car alist) (del-assq-1-noncopying object (cdr alist))))))
+
+(define-constant (del-assq-1 object alist)
+  (del-assq-1-noncopying object (list-copy alist)))
+
+(define-constant (del-assq-noncopying object alist)
+  (cond ((null? alist)
+         ())
+        ((eq? (caar alist) object)
+         (del-assq-noncopying object (cdr alist)))
+        (#t
+         (cons (car alist) (del-assq-noncopying object (cdr alist))))))
+
+(define-constant (del-assq object alist)
+  (del-assq-noncopying object (list-copy alist)))
 
 ;;; An obvious extension of del-assq, returning a copy of the alist with the
 ;;; bindings for all of the given keys removed.
-(define-constant (del-assq-list objects alist)
+(define-constant (del-assq-list-noncopying objects alist)
   (if (null? objects)
       alist
-      (del-assq-list (cdr objects)
-                     (del-assq (car objects) alist))))
+      (del-assq-list-noncopying (cdr objects)
+                                (del-assq-noncopying (car objects) alist))))
+
+(define-constant (del-assq-list objects alist)
+  (del-assq-list-noncopying objects (list-copy alist)))
 
 ;; FIXME: implement del-assq! .
 
 (define-constant (alist-copy alist)
-  (let* ((res '())
+  (let* ((res ())
          (first-cons #f))
     (while (non-null? alist)
       (set! first-cons (car alist))
@@ -1352,7 +1421,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (map-reversed-iterative f xs)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (non-null? xs)
       (set! res (cons (f (car xs)) res))
       (set! xs (cdr xs)))
@@ -1366,7 +1435,7 @@
                                           (cons (f (car xs))
                                                 acc))))
 (define-constant (map-reversed-tail-recursive f xs)
-  (map-reversed-tail-recursive-helper f xs '()))
+  (map-reversed-tail-recursive-helper f xs ()))
 
 (define-constant (map-reversed f xs)
   (map-reversed-iterative f xs))
@@ -1382,7 +1451,7 @@
 
 (define-constant (map-non-tail-recursive f xs)
   (if (null? xs)
-      '()
+      ()
       (cons (f (car xs))
             (map-non-tail-recursive f (cdr xs)))))
 
@@ -1535,7 +1604,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (filter-reversed-iterative p xs)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (non-null? xs)
       (if (p (car xs))
           (set! res (cons (car xs) res))
@@ -1548,7 +1617,7 @@
 
 (define-constant (filter-non-tail-recursive p xs)
   (cond ((null? xs)
-         '())
+         ())
         ((p (car xs))
          (cons (car xs) (filter-non-tail-recursive p (cdr xs))))
         (#t
@@ -1562,7 +1631,7 @@
         (#t
          (filter-reversed-tail-recursive-helper p (cdr xs) acc))))
 (define-constant (filter-reversed-tail-recursive p xs)
-  (filter-reversed-tail-recursive-helper p xs '()))
+  (filter-reversed-tail-recursive-helper p xs ()))
 
 (define-constant (filter-tail-recursive p xs)
   (reverse!-tail-recursive (filter-reversed-tail-recursive p xs)))
@@ -1581,7 +1650,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (range-reversed-iterative a b)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (<= a b)
       (set! res (cons a res))
       (set! a (1+ a)))
@@ -1589,7 +1658,7 @@
 
 (define-constant (range-reversed-non-tail-recursive a b)
   (if (> a b)
-      '()
+      ()
       (cons b (range-reversed-non-tail-recursive a (1- b)))))
 
 (define-constant (range-reversed-tail-recursive-helper a b acc)
@@ -1597,7 +1666,7 @@
       acc
       (range-reversed-tail-recursive-helper (1+ a) b (cons a acc))))
 (define-constant (range-reversed-tail-recursive a b)
-  (range-reversed-tail-recursive-helper a b '()))
+  (range-reversed-tail-recursive-helper a b ()))
 
 (define-constant (range-reversed a b)
   (range-reversed-iterative a b))
@@ -1609,7 +1678,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (range-iterative a b)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (<= a b)
       (set! res (cons b res))
       (set! b (1- b)))
@@ -1617,7 +1686,7 @@
 
 (define-constant (range-non-tail-recursive a b)
   (if (> a b)
-      '()
+      ()
       (cons a (range-non-tail-recursive (1+ a) b))))
 
 (define-constant (range-tail-recursive-helper a b acc)
@@ -1625,7 +1694,7 @@
       acc
       (range-tail-recursive-helper a (1- b) (cons b acc))))
 (define-constant (range-tail-recursive a b)
-  (range-tail-recursive-helper a b '()))
+  (range-tail-recursive-helper a b ()))
 
 (define-constant (range a b)
   (range-iterative a b))
@@ -1637,7 +1706,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (iota-iterative n)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (> n 0)
       (set! n (1- n))
       (set! res (cons n res)))
@@ -1648,7 +1717,7 @@
       acc
       (iota-tail-recursive-helper (1- n) (cons n acc))))
 (define-constant (iota-tail-recursive n)
-  (iota-tail-recursive-helper (1- n) '()))
+  (iota-tail-recursive-helper (1- n) ()))
 
 (define-constant (iota-non-tail-recursive n)
   (range-non-tail-recursive 0 (1- n)))
@@ -1670,7 +1739,7 @@
 
 ;;; FIXME: a return or break form would be nice here.
 (define-constant (insert-iterative x xs)
-  (let* ((smaller-elements-reversed '())
+  (let* ((smaller-elements-reversed ())
          (go-on #t))
     (while go-on
       (cond ((null? xs)
@@ -1698,7 +1767,7 @@
                                        (cons (car xs)
                                              smaller-elements-reversed)))))
 (define-constant (insert-tail-recursive x xs)
-  (insert-tail-recursive-helper x xs '()))
+  (insert-tail-recursive-helper x xs ()))
 
 (define-constant (insert-non-tail-recursive x xs)
   (cond ((null? xs)
@@ -1774,7 +1843,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (insertion-sort-iterative xs)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (non-null? xs)
       (set! res (insert!-iterative (car xs) res))
       (set! xs (cdr xs)))
@@ -1787,7 +1856,7 @@
                                             (insert!-tail-recursive (car xs)
                                                                     acc))))
 (define-constant (insertion-sort-tail-recursive xs)
-  (insertion-sort-tail-recursive-helper xs '()))
+  (insertion-sort-tail-recursive-helper xs ()))
 
 (define-constant (insertion-sort xs)
   (insertion-sort-iterative xs))
@@ -1913,7 +1982,7 @@
 ;;; The code below is okay, but should be moved up.
 
 
-;;;; all-different?.
+;;;; list-has?.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (list-has? xs x)
@@ -1923,6 +1992,109 @@
          #t)
         (#t
          (list-has? (cdr xs) x))))
+
+
+
+
+;;;; list-without.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return a copy of the list xs, which may share structure with it, without the
+;;; first element which is eq? to x (if any), in the same order.
+
+(define-constant (list-without-iterative xs x)
+  (let* ((reversed-prefix ())
+         (go-on #t)) ;; A return statement would be nice.
+    (while go-on
+      (cond ((null? xs)
+             (set! go-on #f))
+            ((eq? (car xs) x)
+             (set! xs (cdr xs))
+             (set! go-on #f))
+            (#t
+             (set! reversed-prefix (cons (car xs) reversed-prefix))
+             (set! xs (cdr xs)))))
+    (append!-iterative (reverse!-iterative reversed-prefix) xs)))
+
+(define-constant (list-without-tail-recursive-helper xs x acc)
+  (cond ((null? xs)
+         (reverse!-tail-recursive acc))
+        ((eq? (car xs) x)
+         (append!-tail-recursive (reverse!-tail-recursive acc)
+                                 (cdr xs)))
+        (#t
+         (list-without-tail-recursive-helper (cdr xs)
+                                             x
+                                             (cons (car xs) acc)))))
+(define-constant (list-without-tail-recursive xs x)
+  (list-without-tail-recursive-helper xs x ()))
+
+(define-constant (list-without-non-tail-recursive xs x)
+  (cond ((null? xs)
+         ())
+        ((eq? (car xs) x)
+         (cdr xs))
+        (#t
+         (cons (car xs)
+               (list-without-non-tail-recursive (cdr xs) x)))))
+
+(define-constant (list-without xs x)
+  (list-without-iterative xs x))
+
+
+
+
+;;;; list-without!.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Return the first cons of the list xs whose cadr is eq? to x, or () if no such
+;; cons exists.  In other word, return the cons containing the predecessor
+;; element of x in xs, or the list suffix whose second element is eq? to x.
+;; Assume that xs has at least one element.
+(define-constant (cons-before-or-nil xs x)
+  (let* ((go-on #t) ;; A break or return form would be nice here.
+         (next-cons (cdr xs)))
+    (while go-on
+      (cond ((null? next-cons)
+             (set! xs ())
+             (set! go-on #f))
+            ((eq? (car next-cons) x)
+             (set! go-on #f))
+            (#t
+             (set! xs next-cons)
+             (set! next-cons (cdr next-cons)))))
+    ;; Now xs is either the predecessor we were looking for or ().
+    xs))
+
+;;; Return a list equal to xs except that the first element eq? to x, if any,
+;;; has been removed.  This may destructively modify xs, and the result may
+;;; share structure with it.
+(define-constant (list-without! xs x)
+  (cond ((null? xs)
+         ;; Empty list: there is nothing to remove.
+         ())
+        ((null? (cdr xs))
+         ;; Singleton: return an empty list or xs unchanged.
+         (if (eq? (car xs) x)
+             ()
+             xs))
+        ((eq? (car xs) x)
+         ;; Special case: if the equal element is the first then we cannot
+         ;; modify xs to turn it into the result, but we already have the
+         ;; result as a substructure of xs.
+         (cdr xs))
+        (#t
+         ;; Here we may have the opportunity to actually modify the list.
+         ;; Find the predecessor cons, if any.
+         (let* ((predecessor-or-nil (cons-before-or-nil xs x)))
+           ;; If we found a predecessor then we just have to modify its cdr to
+           ;; skip the cons having x as car.  If we didn't find it there is
+           ;; nothing to remove.
+           (if (non-null? predecessor-or-nil) ;; We don't have when yet.
+               ;; Notice that cddr is safe here, as predecessor-or-nil is the
+               ;; predecessor of another element.
+               (set-cdr! predecessor-or-nil (cddr predecessor-or-nil)))
+           xs))))
 
 
 
@@ -1941,7 +2113,6 @@
 
 
 
-
 
 ;;;; High-level syntax: one-way conditionals.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2127,27 +2298,31 @@
 ;;;; Variadic list operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-macro (improper-list final-element . other-elements)
+;;; Given one or more arguments return their right-deep nested conses in order,
+;;; ending with the last element.  Evaluate elements in the given order.
+;;; Examples:
+;;;   (improper-list 1)      ==> 1
+;;;   (improper-list 1 2 3)  ==> (cons 1 (cons 2 3))
+;;;   (improper-list 1 2 ()) ==> (cons 1 (cons 2 ()))
+(define-macro (improper-list first-element . other-elements)
   (if (null? other-elements)
-      final-element
-      `(cons ,(car other-elements)
-             (improper-list ,final-element ,@(cdr other-elements)))))
+      first-element
+      `(cons ,first-element
+             (improper-list ,@other-elements))))
 
 (define-macro (list . elements)
-  `(improper-list () ,@elements))
+  `(improper-list ,@elements ()))
 
 (define-macro (circular-list first-element . other-elements)
   (let* ((res-name (gensym))
          (cdr-name (gensym)))
     `(let* ((,res-name (cons ,first-element #f))
-            (,cdr-name (improper-list ,res-name ,@other-elements)))
+            (,cdr-name (improper-list ,@other-elements ,res-name)))
        (set-cdr! ,res-name ,cdr-name)
        ,res-name)))
 
 
-
 
-
 
 ;;;; High-level syntax: case form.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2223,6 +2398,18 @@
          (set! ,variable (car ,list-name))
          ,@body-forms
          (set! ,list-name (cdr ,list-name)))
+       ,@result-forms)))
+
+;; An alternative version of dolist , with the same semantics.  This definition
+;; is likely more natural and should generate better compiled code, but will be
+;; worse on the current AST interpreter where let requires heap allocation.
+(define-macro (dolist-alt (variable list . result-forms) . body-forms)
+  (let ((list-name (gensym)))
+    `(let* ((,list-name ,list))
+       (while (non-null? ,list-name)
+         (let* ((,variable (car ,list-name)))
+           ,@body-forms
+           (set! ,list-name (cdr ,list-name))))
        ,@result-forms)))
 
 (define-macro (do bindings (end-condition . result-forms) . body-forms)
@@ -2438,7 +2625,7 @@
 ;;; evaluated left-to-right.  Duplicates are removed.
 (define-macro (set . elements)
   (if (null? elements)
-      '()
+      ()
       ;; This is slightly complicated by the need to keep the evaluation order
       ;; intuitive: macro arguments are to be evaluated left-to-right.
       (let ((element-name (gensym))
@@ -2590,7 +2777,7 @@
 
 
 
-;;;; Tentative: free variables in an AST.
+;;;; Compute the set of variables occurring free in an AST.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Return a set-as-list of the variables occurring free in the given AST.
@@ -2642,7 +2829,7 @@
 
 
 
-;;;; Free variables in an AST.
+;;;; Check whether a given variable occurs free in an AST.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Return non-#f iff the given variable occurs free in the given AST.
@@ -2801,13 +2988,112 @@
 
 
 
+;;;; Non-locally used variables in an AST.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Check whether a variable is accessed non-locally, thru a lambda occurring
+;;; within the given AST.  For the purposes of this definition nested lets do
+;;; not count: only lambdas introduce the kind of non-locality we care about.
+;;; Variables shadowed in the lambda don't count eihter (but there shouldn't
+;;; be any, as this is supposed to be used on an already alpha-converted AST).
+
+;;; Return non-#f iff any free occurrence of the given variable occurs free in a
+;;; lambda syntactically contained within the given AST.
+(define-constant (ast-nonlocally-uses? ast x)
+  (cond ((ast-literal? ast)
+         #f)
+        ((ast-variable? ast)
+         #f)
+        ((ast-define? ast)
+         ;; The defined variable is global, and therefore irrelevant here.
+         (ast-nonlocally-uses? (ast-define-body ast) x))
+        ((ast-if? ast)
+         (or (ast-nonlocally-uses? (ast-if-condition ast) x)
+             (ast-nonlocally-uses? (ast-if-then ast) x)
+             (ast-nonlocally-uses? (ast-if-else ast) x)))
+        ((ast-set!? ast)
+         ;; By itself this assignment, even if it were on x, is irrelevant
+         ;; because it's not within a lambda.  However the set! body might
+         ;; contain a lambda using x.
+         (ast-nonlocally-uses? (ast-set!-body ast) x))
+        ((ast-while? ast)
+         (or (ast-nonlocally-uses? (ast-while-guard ast) x)
+             (ast-nonlocally-uses? (ast-while-body ast) x)))
+        ((ast-primitive? ast)
+         (ast-nonlocally-uses?-list (ast-primitive-operands ast) x))
+        ((ast-call? ast)
+         (or (ast-nonlocally-uses? (ast-call-operator ast) x)
+             (ast-nonlocally-uses?-list (ast-call-operands ast) x)))
+        ((ast-lambda? ast)
+         ;; This is the interesting case.
+         (if (set-has? (ast-lambda-formals ast) x)
+             ;; Shadowing: any occurrence of x within the lambda doesn't refer
+             ;; the same x.
+             #f
+             ;; The lambda formals don't shadow x.  Check whether x occurs free
+             ;; in the lambda body, which includes any sub-lambda.  Checking for
+             ;; only free occurrences is essential: we don't want the analysis
+             ;; to be fooled by deeper shadowing within the lambda.
+             (ast-has-free? (ast-lambda-body ast) x)))
+        ((ast-let? ast)
+         ;; If this let shadows x then we don't care about its body, but we do
+         ;; care about the bound form, which might contain a lambda using x.
+         ;; Otherwise we care about both the bound form and the body.
+         (if (eq? (ast-let-bound-name ast) x)
+             (ast-nonlocally-uses? (ast-let-bound-form ast) x)
+             (or (ast-nonlocally-uses? (ast-let-bound-form ast) x)
+                 (ast-nonlocally-uses? (ast-let-body ast) x))))
+        ((ast-sequence? ast)
+         (or (ast-nonlocally-uses? (ast-sequence-first ast) x)
+             (ast-nonlocally-uses? (ast-sequence-second ast) x)))))
+
+;;; An extension of ast-nonlocally-uses? to a list of ASTs.
+(define-constant (ast-nonlocally-uses?-list asts x)
+  (and (non-null? asts)
+       (or (ast-nonlocally-uses? (car asts) x)
+           (ast-nonlocally-uses?-list (cdr asts) x))))
+
+
+
+
+;;;; Boxed variables in an AST.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; This check is used to implement what David A. Kranz called "Assignment
+;;; Conversion" in his thesis about the Orbit compiler.
+
+;;; Check if a given local variable is at the same time *used* nonlocally
+;;; (assigned or not, it doesn't matter) and assigned (locally or not, it
+;;; doesn't matter): that is the case where a variable needs to be boxed.  Here,
+;;; like in the section above, non-locally means within a lambda contained,
+;;; directly or not, within the given AST.
+;;; We are looking at free occurrences of the variable, not at inner bindings
+;;; shadowing outer variables with the same name.
+;;;
+;;; A let block doesn't count for these purposes, as by itself a let within the
+;;; same procedure doesn't require boxing and I can keep a let-bound variable in
+;;; a register without any indirections, as long as assignments to the variable
+;;; don't need to be visible across lambdas.
+;;;
+;;; This is, of course, conservative: it would be possible to do better in some
+;;; cases, for example when a variable is assigned only locally and *before* the
+;;; lambda using it is reached.
+
+;;; Return non-#f iff the given variable needs to be boxed in the given AST.
+(define-constant (ast-requires-boxing-for? ast x)
+  (and (ast-nonlocally-uses? ast x)
+       (ast-has-assigned? ast x)))
+
+
+
+
 ;;;; Non-locally assigned variables in an AST.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; FIXME: no, this idea is not what I need.  I need to check if a given local
 ;;; is at the same time *used* nonlocally (assigned or not, it doesn't matter)
 ;;; and assigned (locally or not, it doesn't matter).  That is the case where
-;;; a variable needs to be boxed.
+;;; a variable needs to be boxed.  Remove this section.
 
 ;;; Check whether a variable is assigned non-locally in a lambda occurring
 ;;; within the given AST.  For the purposes of this definition nested lets do
@@ -3161,6 +3447,7 @@
        primitive-non-symbol?
        primitive-cons?
        primitive-non-cons?
+       primitive-box?
        primitive-closure?
        primitive-primitive?
        primitive-ast?
@@ -3317,12 +3604,13 @@
 
 ;;; Return a rewritten call having the given closure as the original (literal)
 ;;; operator, and the ASTs in the given list as operands.
-(define-constant (ast-simplify-call-helper closure actuals)
+(define-constant (ast-simplify-known-closure-call-helper closure actuals)
   ;; FIXME: would it be a problem for termination if I used ast-optimize instead
-  ;; of ast-simplify-call-helper in recursive calls?  Would it help?
-  (let ((environment (closure-environment closure))
-        (formals (closure-formals closure))
-        (body (closure-body closure)))
+  ;; of ast-simplify-known-closure-call-helper in recursive calls?  Would it
+  ;; help?
+  (let ((environment (interpreted-closure-environment closure))
+        (formals (interpreted-closure-formals closure))
+        (body (interpreted-closure-body closure)))
     (cond ((non-null? environment)
            ;; We currently don't rewrite if the environment is non-empty.
            (ast-call (ast-literal closure) actuals))
@@ -3372,9 +3660,9 @@
 ;;; Notice that wrapper closures by definition have a leaf body and an empty
 ;;; environment, so they are always considered for inlining.
 (define-constant (closure-wrapper? closure)
-  (let ((environment (closure-environment closure))
-        (formals (closure-formals closure))
-        (body (closure-body closure)))
+  (let ((environment (interpreted-closure-environment closure))
+        (formals (interpreted-closure-formals closure))
+        (body (interpreted-closure-body closure)))
     (cond ((non-null? environment)
            ;; This could be generalized, but is probably not worth the trouble
            ;; yet: right now we refuse to consider a closure to be a wrapper if
@@ -3451,6 +3739,30 @@
                (ast-nested-let (cdr formals) (cdr actual-asts)
                                body-ast))))
 
+;;; Return the rewritten form of a call to the lambda operator shaped like
+;;; ((lambda FORMALS BODY-AST) . ACTUALS-ASTS) , using nested let forms.
+(define-constant (ast-simplify-lambda-call formals actual-asts body-ast)
+  (if (<> (length formals) (length actual-asts))
+      ;; Don't rewrite in case of arity mismatch: the code will fail
+      ;; if reached.
+      (begin
+        ;; FIXME: warn more cleanly.
+        (display `(WARNING: in-arity mismatch in call to lambda
+                            with formals ,formals and body ,body-ast))
+        (newline)
+        (ast-call (ast-lambda formals body-ast) actual-asts))
+      ;; Generate two layers of nested lets, the outer layer binding fresh
+      ;; identifiers to actuals, the inner layer binding the original lambda
+      ;; formals to the fresh identifiers of the outer layer.  This may be
+      ;; needed to avoid capture, and is the same trick used to rewrite
+      ;; one Lisp-style multiple-binding let into nested AST-style
+      ;; one-binding lets.
+      (let* ((fresh-variables (map (lambda (useless) (gensym)) formals))
+             (fresh-variable-asts (map ast-variable fresh-variables)))
+        (ast-nested-let (append fresh-variables formals)
+                        (append actual-asts fresh-variable-asts)
+                        body-ast))))
+
 ;;; Return a copy of the given AST where calls to closure literals are
 ;;; rewritten into let forms where possible.  The AST is assumed to be
 ;;; already alpha-converted.
@@ -3485,23 +3797,34 @@
                ;; may contain calls.
                (simplified-operands
                 (ast-simplify-calls-list (ast-call-operands ast))))
-           (if (and (ast-literal? simplified-operator)
-                    (closure? (ast-literal-value simplified-operator))
-                    (or ;; This may be too aggressive: I currently inline every
-                        ;; call to a known leaf closure, independently from the
-                        ;; body size.
-                        (ast-leaf? (closure-body (ast-literal-value
-                                                  simplified-operator)))
-                        ;; In order to make this not too aggressive as well,
-                        ;; I require procedure wrapper bodies to be leaves;
-                        ;; otherwise a procedure wrapper which is recursive
-                        ;; on the operator side would cause an infinite
-                        ;; expansion here.
-                        (closure-wrapper? (ast-literal-value
-                                           simplified-operator))))
-               (ast-simplify-call-helper (ast-literal-value simplified-operator)
-                                         simplified-operands)
-               (ast-call simplified-operator simplified-operands))))
+           (cond ((ast-lambda? simplified-operator)
+                  ;;; This can always be rewritten into nested let forms, as
+                  ;;; long as the arity matches.
+                  (ast-simplify-lambda-call (ast-lambda-formals
+                                             simplified-operator)
+                                            simplified-operands
+                                            (ast-lambda-body
+                                             simplified-operator)))
+                 ;; FIXME: support compiled closures as well, somehow.
+                 ((and (ast-literal? simplified-operator)
+                       (interpreted-closure? (ast-literal-value simplified-operator))
+                       (or ;; This may be too aggressive: I currently inline
+                           ;; every call to a known leaf closure, independently
+                           ;; from the body size.
+                           (ast-leaf? (interpreted-closure-body (ast-literal-value
+                                                                 simplified-operator)))
+                           ;; In order to make this not too aggressive as well,
+                           ;; I require procedure wrapper bodies to be leaves;
+                           ;; otherwise a procedure wrapper which is recursive
+                           ;; on the operator side would cause an infinite
+                           ;; expansion here.
+                           (closure-wrapper? (ast-literal-value
+                                              simplified-operator))))
+                  (ast-simplify-known-closure-call-helper (ast-literal-value
+                                                           simplified-operator)
+                                                          simplified-operands))
+                 (#t
+                  (ast-call simplified-operator simplified-operands)))))
         ((ast-lambda? ast)
          (ast-lambda (ast-lambda-formals ast)
                      (ast-simplify-calls (ast-lambda-body ast))))
@@ -3877,6 +4200,12 @@
          ;; [primitive not E].
          (ast-optimize-primitive primitive-not operands))
         ;; The following cases are obvious.
+        ((eq? primitive primitive-null?)
+         ;; [primitive not [primitive null? . Es]] ==> [primitive non-null? . Es]
+         (ast-optimize-primitive primitive-non-null? operands))
+        ((eq? primitive primitive-non-null?)
+         ;; [primitive not [primitive non-null? . Es]] ==> [primitive null? . Es]
+         (ast-optimize-primitive primitive-null? operands))
         ((eq? primitive primitive-eq?)
          ;; [primitive not [primitive eq? . Es]] ==> [primitive not-eq? . Es]
          (ast-optimize-primitive primitive-not-eq? operands))
@@ -3999,6 +4328,7 @@
         (list primitive-non-symbol? anything?)
         (list primitive-cons? anything?)
         (list primitive-non-cons? anything?)
+        (list primitive-box? anything?)
         (list primitive-primitive? anything?)
         (list primitive-closure? anything?)
         (list primitive-vector? anything?)
@@ -4046,13 +4376,14 @@
         (list primitive-boolean-canonicalize anything?)
 
         ;; Conses.
-        ;; Notice that cons is *not* safe to evaluate at rewrite time, as it
-        ;; needs to allocate a fresh object at every use.
-        ;; The fact that conses are mutable is not a problem here: this list is
-        ;; only consulted when a primitive use has literals as all of its
-        ;; actuals, which happens in rewritten program only when safe.
-        (list primitive-car cons?) ;; no, because of mutability.
-        (list primitive-cdr cons?) ;; no, because of mutability.
+        ;; It is *not* safe to evaluate cons at rewrite time, as it needs
+        ;; to allocate a different fresh object at every use.
+        ;; More subtly, it's also unsafe to evaluate selectors at rewrite time,
+        ;; as the data structures involved might be destructively updated
+        ;; at run time between initialization and selection.
+
+        ;; Boxes.
+        ;; The comment above about cons selectors is valid for boxes as well.
         ))
 
 
@@ -4095,9 +4426,9 @@
 ;;; - the new body.
 (define-constant (closure-alpha-convert closure)
   ;; Bind the fields from the unoptimized closure.
-  (let ((env (closure-environment closure))
-        (formals (closure-formals closure))
-        (body (closure-body closure)))
+  (let ((env (interpreted-closure-environment closure))
+        (formals (interpreted-closure-formals closure))
+        (body (interpreted-closure-body closure)))
     ;; Compute new fields.
     (let* ((unary-gensym (lambda (useless) (gensym)))
            (nonlocals (map car env))
@@ -4125,10 +4456,11 @@
     ;; operation would be dangerous as the closure we are updating might be
     ;; used in the update process itself, which would make visible fields in a
     ;; temporarily inconsistent state.
-    (closure-set! closure
-                  alpha-converted-env
-                  alpha-converted-formals
-                  alpha-converted-body)))
+    (interpreted-closure-set! closure
+                              alpha-converted-env
+                              alpha-converted-formals
+                              alpha-converted-body
+                  )))
 
 ;;; Destructively modify the given closure, replacing its fields with a
 ;;; semantically equivalent optimized version.
@@ -4144,10 +4476,11 @@
                                               (map car alpha-converted-env)))
            (optimized-body (ast-optimize alpha-converted-body
                                          alpha-converted-bounds)))
-      (closure-set! closure
-                    alpha-converted-env
-                    alpha-converted-formals
-                    optimized-body))))
+      (interpreted-closure-set! closure
+                                alpha-converted-env
+                                alpha-converted-formals
+                                optimized-body
+                                ))))
 
 
 
@@ -4184,7 +4517,7 @@
               (optimize-when-closure! ,value-name))))
         ((or (not (symbols? thing))
              (not (all-different? (cdr thing))))
-         (error `(define-optimizing: ill-defined defined thing ,thing)))
+         (error `(define-optimizing: ill-formed defined thing ,thing)))
         (#t
          (let ((value-name (gensym))
                (thing-name (car thing))
@@ -4213,33 +4546,40 @@
 ;;;; Retroactive optimization.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Optimize composed cons selectors.  Those are important for performance, and
+;;; Optimize composed cons accessors.  Those are important for performance, and
 ;;; the rewriting itself, which should be fast.
-(define-constant (optimize-cons-selectors-retroactively!)
-  ;; I want to flatten composed cons selectors, making them all leaf procedures
+(define-constant (optimize-cons-accessors-retroactively!)
+  ;; I want to flatten composed cons accessors, making them all leaf procedures
   ;; each only using primitives and one variable.
-  ;; First inline cons selectors of size 2, which will flatten them; then do the
-  ;; same with cons selectors of size 3 (defined using selectors of size 2),
-  ;; which will flatten them as well; then cons selectors of size 4.
-  (let ((2-selectors (list caar cadr cdar cddr))
-        (3-selectors (list caaar caadr cadar caddr
-                           cdaar cdadr cddar cdddr))
-        (4-selectors (list caaaar caaadr caadar caaddr
+  ;; First inline cons accessors of size 2, which will flatten them; then do the
+  ;; same with cons accessors of size 3 (defined using accessors of size 2),
+  ;; which will flatten them as well; then cons accessors of size 4.
+  (let ((2-accessors (list caar cadr cdar cddr
+                           set-caar! set-cadr! set-cdar! set-cddr!))
+        (3-accessors (list caaar caadr cadar caddr
+                           cdaar cdadr cddar cdddr
+                           set-caaar! set-caadr! set-cadar! set-caddr!
+                           set-cdaar! set-cdadr! set-cddar! set-cdddr!))
+        (4-accessors (list caaaar caaadr caadar caaddr
                            cadaar cadadr caddar cadddr
                            cdaaar cdaadr cdadar cdaddr
-                           cddaar cddadr cdddar cddddr)))
-    (dolist (selector 2-selectors)
-      (closure-optimize! selector))
-    (dolist (selector 3-selectors)
-      (closure-optimize! selector))
-    (dolist (selector 4-selectors)
-      (closure-optimize! selector))))
+                           cddaar cddadr cdddar cddddr
+                           set-caaaar! set-caaadr! set-caadar! set-caaddr!
+                           set-cadaar! set-cadadr! set-caddar! set-cadddr!
+                           set-cdaaar! set-cdaadr! set-cdadar! set-cdaddr!
+                           set-cddaar! set-cddadr! set-cdddar! set-cddddr!)))
+    (dolist (accessor 2-accessors)
+      (closure-optimize! accessor))
+    (dolist (accessor 3-accessors)
+      (closure-optimize! accessor))
+    (dolist (accessor 4-accessors)
+      (closure-optimize! accessor))))
 
 ;;; Optimize every globally defined closure, constant or not, therefore
 ;;; retroactively optimizing the code defined up to this point.
 ;;; This is defined in a procedure to make it easy to disable, as the
 ;;; optimization process itself may be relatively inefficient.
-(define-constant (optimize-closures-retroactively!)
+(define-constant (optimize-global-closures-retroactively!)
   ;; AST rewriting will inline leaf calls, and therefore rewriting may turn a
   ;; non-leaf procedure into a leaf procedure, enabling more rewriting.  Doing
   ;; this systematically until no more leaf inlining is possible would require
@@ -4251,16 +4591,17 @@
   (dolist (symbol (interned-symbols))
     (when (and (defined? symbol)
                (closure? (symbol-global symbol)))
+      (display `(optimizing ,symbol)) (newline)
       (closure-optimize! (symbol-global symbol)))))
 
-;;; Flatten composed cons selectors and optimize everything else once.
+;;; Flatten composed cons accessors and optimize everything else once.
 (define-constant (optimize-retroactively!)
-  (optimize-cons-selectors-retroactively!)
-  (optimize-closures-retroactively!))
+  (optimize-cons-accessors-retroactively!)
+  (optimize-global-closures-retroactively!))
 
 ;; Perform the retroactive rewriting.  This is the call to disable if a low
 ;; startup latency matters more than execution speed.
-(optimize-retroactively!)
+;;(optimize-retroactively!)
 
 
 
@@ -4270,20 +4611,20 @@
 
 (define-macro (eval form . optional-environment)
   (if (null? optional-environment)
-      `(primordial-eval ,form '())
+      `(primordial-eval ,form ())
       `(primordial-eval ,form ,@optional-environment)))
 (define-macro (eval-interpreter form . optional-environment)
   (if (null? optional-environment)
-      `(primordial-eval-interpreter ,form '())
+      `(primordial-eval-interpreter ,form ())
       `(primordial-eval-interpreter ,form ,@optional-environment)))
 (define-macro (eval-vm form . optional-environment)
   (if (null? optional-environment)
-      `(primordial-eval-vm ,form '())
+      `(primordial-eval-vm ,form ())
       `(primordial-eval-vm ,form ,@optional-environment)))
 
 (define-macro (macroexpand form . optional-environment)
   (if (null? optional-environment)
-      `(primordial-macroexpand ,form '())
+      `(primordial-macroexpand ,form ())
       `(primordial-macroexpand ,form ,@optional-environment)))
 
 
@@ -4295,138 +4636,390 @@
 
 
 
-;;;; Compiler: tentative code.
+;;;; Compiler utility code.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Scratch, for debugging.
-(define-constant (print-list xs)
-  (dolist (x xs)
-    (when (and (list? x)
-               (not-eq? (car x) 'label))
-      (dotimes (i 4)
-        (character-display #\space)))
-    (display x)
-    (newline)))
+;;; Given a set-as-list of fixnums, return the minimum non-negative fixnum not
+;;; within the set.
+(define-constant (compiler-smallest-not-in set)
+  (let loop ((candidate 0))
+    (if (set-has? set candidate)
+        (loop (1+ candidate))
+        candidate)))
+
+
+
+
+;;;; Compiler state structure.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (compiler-make-state)
-  (list ()   ;; bindings
-        ()   ;; instructions
-        0   ;; label-no
-        ))
+  (list ()                          ;; instructions
+        0                           ;; next-label
+        ()                          ;; bindings
+        (compiler-flags-default)))  ;; flags
 
-(define-constant (compiler-bindings state)
+(define-constant (compiler-reversed-instructions state)
   (car state))
-(define-constant (compiler-set-bindings! state new-field)
+(define-constant (compiler-set-reversed-instructions! state new-field)
   (set-car! state new-field))
 
-(define-constant (compiler-instructions state)
+(define-constant (compiler-next-label state)
   (cadr state))
-(define-constant (compiler-set-instructions! state new-field)
-  (set-car! (cdr state) new-field))
+(define-constant (compiler-set-next-label! state new-field)
+  (set-cadr! state new-field))
+
+(define-constant (compiler-bindings state)
+  (caddr state))
+(define-constant (compiler-set-bindings! state new-field)
+  (set-caddr! state new-field))
+
+(define-constant (compiler-flags state)
+  (cadddr state))
+(define-constant (compiler-set-flags! state new-field)
+  (set-cadddr! state new-field))
+
+
+
+
+;;;; Compiler state: generating instructions.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (compiler-add-instruction! state new-instruction)
-  (let ((instructions (compiler-instructions state)))
-    (compiler-set-instructions! state
-                                      (append! instructions
-                                               (singleton new-instruction)))))
+  (let ((reversed-instructions (compiler-reversed-instructions state)))
+    (compiler-set-reversed-instructions! state
+                                         (cons new-instruction
+                                               reversed-instructions))))
 
 
-(define-constant (compiler-label-no state)
-  (caddr state))
-(define-constant (compiler-set-label-no! state new-field)
-  (set-car! (cddr state) new-field))
+
+
+;;;; Compiler state: labels.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (compiler-new-label state)
-  (let* ((old-count (compiler-label-no state)))
-    (compiler-set-label-no! state (1+ old-count))
+  (let* ((old-count (compiler-next-label state)))
+    (compiler-set-next-label! state (1+ old-count))
     old-count))
 
-(define-constant (compiler-register-no state)
-  (length (compiler-bindings state)))
+;;; Return a set-of-list of the labels occurring in the given compiler state.
+(define-constant (compiler-used-labels state)
+  (let* ((reversed-instructions (compiler-reversed-instructions state))
+         (label-instructions (filter-reversed (lambda (i) (eq? (car i) 'label))
+                                              reversed-instructions))
+         (labels (map-reversed cadr label-instructions)))
+    ;; A sanity check which should be very cheap.  FIXME: possibly remove.
+    (unless (= (length labels) (length (list->set labels)))
+      (error `(duplicate labels among ,labels)))
+    labels))
+
+
+
+;;;; Compiler state: bindings.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; The bindings field of the compiler state is an ordered list (the first
+;;; binding takes precedence) of elements, each element holding information
+;;; about where a variable or the closure environment is stored.
+;;; If the compiled code is alpha-converted then the keys will be unique,
+;;; but correctness doesn't rely on this.
+;;;
+;;; Each binding list element is a cons of one of the following
+;;; two shapes:
+;;; - (#t . REGISTER)
+;;; - (VARIABLE . PLACE)
+;;; where REGISTER is a non-negative fixnum (the index of register holding
+;;; the closure environment), VARIABLE is a variable name as a symbol and
+;;; PLACE has of one of the shapes:
+;;; - (local-unboxed REGISTER)
+;;; - (local-boxed REGISTER)
+;;;      where REGISTER is a fixnum (the register index);
+;;; - (nonlocal-unboxed INDEX)
+;;; - (nonlocal-boxed INDEX)
+;;;      where INDEX is a fixnum (the 0-based index of the matching value in
+;;;      the closure environment).
+;;; Globals are not stored in the bindings, but when looked up
+;;; their PLACE looks like
+;;; - global
+;;;      , just a symbol.
+;;; .
+
+;;; Return non-#f iff the given place is a local place, either boxed or unboxed.
+(define-constant (compiler-place-local? place)
+  (and (cons? place)
+       (or (eq? (car place) 'local-boxed)
+           (eq? (car place) 'local-unboxed))))
+
+;;; A "register place" is either a local or the non-local environment register.
+;;; Return non-#f iff the given place is a register place.
+(define-constant (compiler-place-register? place)
+  (or (compiler-place-local? place)
+      (fixnum? place)))
+
+;;; Return non-#f iff the given place is a nonlocal place, either boxed or
+;;; unboxed.
+(define-constant (compiler-place-nonlocal? place)
+  (and (cons? place)
+       (or (eq? (car place) 'nonlocal-boxed)
+           (eq? (car place) 'nonlocal-unboxed))))
+
+;;; Return non-#f iff the given place is a global place.
+(define-constant (compiler-place-global? place)
+  (eq? place 'global))
+
+;;; Given a non-global place as held in the bindings field of a compiler state,
+;;; return the register index as a fixnum.
+(define-constant (compiler-place->register place)
+  (cond ((compiler-place-local? place)
+         ;; Here place must have either the shape (local-unboxed REGISTER-INDEX)
+         ;; or the shape (local-boxed REGISTER-INDEX) .
+         (cadr place))
+        ((fixnum? place)
+         ;; This is the register environment place.
+         place)
+        ((eq? place 'global)
+         ;; We don't have a register to return.
+         (error '(compiler-place->register: globals not supported)))
+        (#t
+         ;; Nonlocals don't have an associated register.
+         (error '(compiler-place->register: place ,place supported)))))
+
+;;; Return a fresh set-as-list of the register indices used in the given state.
+(define-constant (compiler-used-registers state)
+  (let* ((places (map cdr (compiler-bindings state)))
+         (register-places (filter compiler-place-register? places))
+         (register-list (map! compiler-place->register register-places)))
+    (list->set register-list)))
+
+(define-constant (compiler-fresh-register state)
+  (let ((used-registers (compiler-used-registers state)))
+    (compiler-smallest-not-in used-registers)))
+
+;;; Return the register index for nonlocals, or error out if none is bound.
+(define-constant (compiler-nonlocal-register state)
+  (let ((cons-or-nil (assq #t (compiler-bindings state))))
+    (if (null? cons-or-nil)
+        (error '(compiler-nonlocal-register: no nonlocal in ,state))
+        (cdr cons-or-nil))))
 
 (define-constant (compiler-bound-variable? state variable)
   (assq variable (compiler-bindings state)))
 
 (define-constant (compiler-lookup-variable state variable)
-  (cdr (assq variable (compiler-bindings state))))
+  (let ((cons-or-false (assq variable (compiler-bindings state))))
+    (if cons-or-false
+        (cdr cons-or-false)
+        'global)))
 
-(define-constant (compiler-bind-local! state variable-name)
-  (let ((bindings (compiler-bindings state))
-        (new-register-index (compiler-register-no state)))
+(define-constant (compiler-bind! state variable-or-true place)
+  (let ((bindings (compiler-bindings state)))
     (compiler-set-bindings! state
-                            (cons (cons variable-name new-register-index)
-                                  bindings))
-    new-register-index))
+                            (cons (cons variable-or-true place)
+                                  bindings))))
 
-(define-constant (compile-literal! s value)
-  (compiler-add-instruction! s `(push-literal ,value)))
+(define-constant (compiler-unbind! state variable-or-true)
+  (let ((bindings (compiler-bindings state))
+        (place (compiler-lookup-variable state variable-or-true)))
+    (unless (compiler-place-local? place)
+      ;; It only makes sense to unbind local-unboxed and local-boxed variables.
+      (error `(cannot unbind ,variable-or-true from ,place)))
+    (compiler-set-bindings! state
+                            (del-assq-1-noncopying variable-or-true
+                                                   bindings))))
 
-(define-constant (compile-variable! s name)
-  (if (compiler-bound-variable? s name)
-      (compiler-add-instruction!
-          s
-          `(push-register ,(compiler-lookup-variable s name)))
-      (compiler-add-instruction!
-          s
-          `(push-global ,name))))
+(define-constant (compiler-bind-local-helper! state variable-name wrapper)
+  (let* ((register (compiler-fresh-register state))
+         (place (wrapper register)))
+    (compiler-bind! state variable-name place)
+    place))
+(define-constant (compiler-bind-local-unboxed! state variable-name)
+  (compiler-bind-local-helper! state
+                               variable-name
+                               (lambda (register) `(local-unboxed ,register))))
+(define-constant (compiler-bind-local-boxed! state variable-name)
+  (compiler-bind-local-helper! state
+                               variable-name
+                               (lambda (register) `(local-boxed ,register))))
 
-(define-constant (compile-define s name body)
-  (compile-ast! s body)
-  (compiler-add-instruction! s `(pop-global ,name)))
 
-(define-constant (compile-if! s condition then else)
-  (let ((after-then-label (compiler-new-label s))
-        (after-else-label (compiler-new-label s)))
-    (compile-ast! s condition)
-    (compiler-add-instruction! s `(branch-if-false ,after-then-label))
-    (compile-ast! s then)
-    (compiler-add-instruction! s `(branch ,after-else-label))
-    (compiler-add-instruction! s `(label ,after-then-label))
-    (compile-ast! s else)
-    (compiler-add-instruction! s `(label ,after-else-label))))
+
 
-(define-constant (compile-infinite-loop s body)
-  (let ((before-body-label (compiler-new-label s)))
-    (compiler-add-instruction! s `(label ,before-body-label))
-    (compile-ast! s body)
-    (compiler-add-instruction! s `(drop))
-    (compiler-add-instruction! s `(branch ,before-body-label))))
+;;;; Compiler state: flags.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant (compile-while-ordinary s guard body)
-  (let ((before-body-label (compiler-new-label s))
-        (before-guard-label (compiler-new-label s)))
-    (compiler-add-instruction! s `(branch ,before-guard-label))
-    (compiler-add-instruction! s `(label ,before-body-label))
-    (compile-ast! s body)
-    (compiler-add-instruction! s `(drop))
-    (compiler-add-instruction! s `(label ,before-guard-label))
-    (compile-ast! s guard)
-    (compiler-add-instruction! s `(branch-if-true ,before-body-label))))
+;;; State flags are stored in an alist with unique keys and no default values.
 
-(define-constant (compile-while s guard body)
-  (if (and (ast-literal? guard)
-           (ast-literal-value guard))
-      (compile-infinite-loop s body)
-      (compile-while-ordinary s guard body)))
+;;; The initial flags for a fresh compiler state.
+(define-constant compiler-flags-default-original
+  '(;; The tail flag is non-#f iff the AST being compiled is in a tail
+    ;; context.
+    (tail . #t)
+    ;; The used-result flag is non-#f iff the AST being compiled is in a
+    ;; context where its result will be used; in particular it will be #f
+    ;; when compiling the first form in a sequence.
+    ;; Rationale: without using this flag I could always push a #<nothing>
+    ;; literal at the end of the compilation of forms with unused results, with
+    ;; the #<nothing> result being correctly dropped by a (drop) instruction
+    ;; from the compilation of the sequence form.  However it's not always
+    ;; possible to optimize away those trivial sequences by Jitter-level
+    ;; rewriting, since the push-literal instruction might not occur immediately
+    ;; before the drop instruction; that happens frequently with non-tail
+    ;; conditionals in imperative code.
+    (used-result . #t)))
 
-(define-constant (compile-primitive s operator operands)
-  (dolist (operand operands)
-    (compile-ast! s operand))
-  (compiler-add-instruction! s `(primitive ,operator)))
+;;; Return a fresh copy of the compiler default flags.  Since the alist is
+;;; updated destructively it's important to avoid sharing, both in the spine and
+;;; in the elements.
+(define-constant (compiler-flags-default)
+  (map-reversed (lambda (c) (cons (car c) (cdr c)))
+                compiler-flags-default-original))
 
-(define-constant (compile-let s bound-name bound-form body)
-  (compile-ast! s bound-form)
-  (let ((register (compiler-bind-local! s bound-name)))
-    (compiler-add-instruction! s `(pop-to-register ,register))
-    (compile-ast! s body)
-    ;; FIXME: (compiler-unbind-local! s bound-name)
-    ))
+;;; Return the value associated to the given key.
+(define-constant (compiler-flags-get flags name)
+  (let ((cons-to-read (assq name flags)))
+    (unless (cons? cons-to-read)
+      (error `(compiler-flags-get: unbound flag ,name)))
+    (cdr cons-to-read)))
 
-(define-constant (compile-sequence s first second)
-  (compile-ast! s first)
-  (compiler-add-instruction! s '(drop))
-  (compile-ast! s second))
+;;; Destructivlely update the given flags, setting the given key to the given
+;;; value.  Error out if the key is not already bound.
+(define-constant (compiler-flags-set! flags name value)
+  (let ((cons-to-update (assq name flags)))
+    (unless (cons? cons-to-update)
+      (error `(compiler-flags-set!: unbound flag ,name)))
+    (set-cdr! cons-to-update value)))
 
+;;; Convenience flag accessors.
+(define-constant (compiler-flag state flag-name)
+  (compiler-flags-get (compiler-flags state) flag-name))
+(define-constant (compiler-set-flag! state flag-name flag-value)
+  (compiler-flags-set! (compiler-flags state) flag-name flag-value))
+
+;;; Convenience flag accessors for specific flags.
+(define-constant (compiler-tail? state)
+  (compiler-flag state 'tail))
+(define-constant (compiler-set-tail! state value)
+  (compiler-set-flag! state 'tail value))
+(define-constant (compiler-used-result? state)
+  (compiler-flag state 'used-result))
+(define-constant (compiler-set-used-result! state value)
+  (compiler-set-flag! state 'used-result value))
+
+;;; Execute the given BODY-FORMS with the given compiler FLAG-NAME temporarily
+;;; changed to FLAG-VALUE in the STATE , then reset FLAG-NAME to its original
+;;; setting and return the result of the last form.
+;;; FLAG-NAME must be a symbol, and is not evaluated.
+;;; I guess this would be a good place to use dynamically-scoped variables,
+;;; if they existed in JitterLisp.
+(define-macro (compiler-with-flag state flag-name flag-value . body-forms)
+  (let ((state-name (gensym))
+        (outer-value-name (gensym))
+        (flag-value-name (gensym))
+        (result-name (gensym)))
+    `(let* ((,state-name ,state)
+            (,flag-value-name ,flag-value)
+            (,outer-value-name (compiler-flag ,state-name ',flag-name)))
+       (compiler-set-flag! ,state-name ',flag-name ,flag-value-name)
+       (let ((,result-name ,@body-forms))
+         (compiler-set-flag! ,state-name ',flag-name ,outer-value-name)
+         ,result-name))))
+
+;;; Temporarily flag changes for specific flags.
+(define-macro (compiler-with-non-tail state . body-forms)
+  `(compiler-with-flag ,state tail #f ,@body-forms))
+(define-macro (compiler-with-used-result state . body-forms)
+  `(compiler-with-flag ,state used-result #t ,@body-forms))
+(define-macro (compiler-with-unused-result state . body-forms)
+  `(compiler-with-flag ,state used-result #f ,@body-forms))
+
+;; (define-macro (compiler-with-unused-result state . body-forms)
+;;   (let ((state-name (gensym)))
+;;     `(let ((,state-name ,state))
+;;        (compiler-with-flag ,state-name tail #f
+;;          (compiler-with-flag ,state-name used-result #f ,@body-forms)))))
+
+
+
+
+;;;; Stuff to move.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (compiler-emit-return-when-tail! s)
+  (when (compiler-tail? s)
+    (compiler-add-instruction! s '(return))))
+
+;;; Generate the appropriate instructions to bind the top of the stack to the
+;;; given variable, as used free in the given body.  This procedure determines
+;;; whether the variable needs boxing, no boxing, or no binding whatsoever.
+;;; Return the place where variable-name is held, or the symbol nowhere .
+(define-constant (compiler-pop-and-bind! s variable-name body)
+  (cond ((not (ast-has-free? body variable-name))
+         ;; The variable is not used.
+         (compiler-add-instruction! s '(drop))
+         'nowhere)
+        ((ast-requires-boxing-for? body variable-name)
+         ;; The variable is used and requires boxing.
+         (compiler-add-instruction! s '(box))
+         (let ((place (compiler-bind-local-boxed! s variable-name)))
+           (compiler-add-instruction! s `(pop-to-register ,(cadr place)))
+           place))
+        (#t
+         ;; The variable is used and doesn't require boxing.
+         (let ((place (compiler-bind-local-unboxed! s variable-name)))
+           (compiler-add-instruction! s `(pop-to-register ,(cadr place)))
+           place))))
+
+;; FIXME: factor the compilation of lambda and of existing closures into
+;; this, if indeed there is anything to factor.
+(define-constant (compiler-bind-nonlocals! s ??? formals body)
+  ???)
+
+
+;;; Bind the nonlocal environment from the closure on the top of the stack, if
+;;; needed; in either case drop the top element.
+;;; This should be called right after popping actuals, when the top of the
+;;; stack contains the called closure.
+(define-constant (compiler-bind-closure-environment! s)
+  (when (exists? (lambda (binding) (compiler-place-nonlocal? (cdr binding)))
+                 (compiler-bindings s))
+    (let ((register (compiler-fresh-register s)))
+      (compiler-bind! s #t register)
+      (compiler-add-instruction! s `(nonlocals-to-register ,register))))
+  (compiler-add-instruction! s '(drop)))
+
+;;; Remove actuals from the stack and bind them to the given formals (here given
+;;; in the order in which they occur in a lambda, which is the evaluation order
+;;; -- to be popped right-to-left), simply dropping the ones which are not used
+;;; in the body.
+(define-constant (compiler-pop-formals! s formals body)
+  (dolist (formal (reverse formals))
+    (compiler-pop-and-bind! s formal body)))
+
+;;; Generate an instruction pushing a #<nothing> literal.
+(define-constant (compiler-push-nothing! s)
+  (compiler-add-instruction! s `(push-literal ,(begin))))
+
+;;; Generate instructions saving the contents of the given set-of-list of
+;;; registers as fixnums, in a conventional order.
+(define-constant (compiler-save-registers! s registers)
+  (dolist (register (sort registers))
+    (compiler-add-instruction! s `(save-register ,register))))
+
+;;; Generate instructions saving the contents of the given set-of-list of
+;;; registers, in a conventional order compatible with (which is to say,
+;;; opposite to) the instructions generated by compiler-save-registers! .
+(define-constant (compiler-restore-registers! s registers)
+  (dolist (register (reverse (sort registers)))
+    (compiler-add-instruction! s `(restore-register ,register))))
+
+
+
+
+;;;; Compiling an AST.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Compile the given AST in the given state.  This works by calling the
+;;; appropriate helper according to the AST case.
 (define-constant (compile-ast! s ast)
   (cond ((ast-literal? ast)
          (compile-literal! s (ast-literal-value ast)))
@@ -4442,40 +5035,345 @@
                       (ast-if-then ast)
                       (ast-if-else ast)))
         ((ast-set!? ast)
-         (error 'unimplemented-set!))
+         (compile-set!! s
+                        (ast-set!-name ast)
+                        (ast-set!-body ast)))
         ((ast-while? ast)
-         (compile-while s
+         (compile-while! s
                         (ast-while-guard ast)
                         (ast-while-body ast)))
         ((ast-primitive? ast)
-         (compile-primitive s
+         (compile-primitive! s
                             (ast-primitive-operator ast)
                             (ast-primitive-operands ast)))
         ((ast-call? ast)
-         (error 'unimplemented-call))
+         (compile-call! s
+                       (ast-call-operator ast)
+                       (ast-call-operands ast)))
         ((ast-lambda? ast)
-         (error 'unimplemented-lambda))
+         (compile-lambda! s
+                         (ast-lambda-formals ast)
+                         (ast-lambda-body ast)))
         ((ast-let? ast)
-         (compile-let s
+         (compile-let! s
                       (ast-let-bound-name ast)
                       (ast-let-bound-form ast)
                       (ast-let-body ast)))
         ((ast-sequence? ast)
-         (compile-sequence s
+         (compile-sequence! s
                            (ast-sequence-first ast)
                            (ast-sequence-second ast)))))
 
-(define-macro (t . forms)
-  `(let* ((s (compiler-make-state))
-          (ast (macroexpand '(begin ,@forms)))
-          (optimized-ast (ast-optimize ast ())))
-     (display ast)
-     (newline)
-     (display optimized-ast)
-     (newline)
-     (compile-ast! s optimized-ast)
-     (print-list (compiler-instructions s))
-     (newline)))
+(define-constant (compile-literal! s value)
+  (when (compiler-used-result? s)
+    (compiler-add-instruction! s `(push-literal ,value))
+    (compiler-emit-return-when-tail! s)))
+
+(define-constant (compile-variable! s name)
+  (let ((place (compiler-lookup-variable s name)))
+    (cond ((eq? place 'global)
+           (if (constant? name)
+               (let ((value (symbol-global name)))
+                 (when (compiler-used-result? s)
+                   (compiler-add-instruction! s `(push-literal ,value))))
+               (begin
+                 (compiler-add-instruction! s `(check-global-defined ,name))
+                 (when (compiler-used-result? s)
+                   (compiler-add-instruction! s `(push-global ,name))))))
+          ((compiler-place-local? place)
+           (when (compiler-used-result? s)
+             (compiler-add-instruction! s `(push-register ,(cadr place)))
+             (when (eq? (car place) 'local-boxed)
+               (compiler-add-instruction! s `(unbox)))))
+          ((compiler-place-nonlocal? place)
+           (when (compiler-used-result? s)
+             (let ((nonlocal-register (compiler-nonlocal-register s))
+                   (nonlocal-index (cadr place)))
+               (compiler-add-instruction! s `(push-register ,nonlocal-register))
+               (compiler-add-instruction! s `(nonlocal ,nonlocal-index))
+               (when (eq? (car place) 'nonlocal-boxed)
+                 (compiler-add-instruction! s `(unbox))))))
+          (#t
+           (error `(unimplemented variable place ,place)))))
+  (compiler-emit-return-when-tail! s))
+
+(define-constant (compile-define s name body)
+  (compiler-with-non-tail s
+    (compiler-with-used-result s
+      (compile-ast! s body)))
+  (compiler-add-instruction! s `(check-global-non-constant ,name))
+  (compiler-add-instruction! s `(pop-to-global ,name))
+  (when (compiler-used-result? s)
+    (compiler-push-nothing! s))
+  (compiler-emit-return-when-tail! s))
+
+(define-constant (compile-if! s condition then else)
+  (let ((after-then-label (compiler-new-label s))
+        (after-else-label (compiler-new-label s)))
+    (compiler-with-non-tail s
+      (compiler-with-used-result s
+        (compile-ast! s condition)))
+    (compiler-add-instruction! s `(branch-if-false ,after-then-label))
+    (compile-ast! s then)
+    (unless (compiler-tail? s)
+      (compiler-add-instruction! s `(branch ,after-else-label)))
+    (compiler-add-instruction! s `(label ,after-then-label))
+    (compile-ast! s else)
+    (unless (compiler-tail? s)
+      (compiler-add-instruction! s `(label ,after-else-label)))))
+
+(define-constant (compile-set!! s name body)
+  (let ((place (compiler-lookup-variable s name)))
+    (compiler-with-non-tail s
+      (compiler-with-used-result s
+        (compile-ast! s body)))
+    (cond ((compiler-place-global? place)
+           (compiler-add-instruction! s `(check-global-defined ,name))
+           (compiler-add-instruction! s `(check-global-non-constant ,name))
+           (compiler-add-instruction! s `(pop-to-global ,name)))
+          ((eq? (car place) 'local-unboxed)
+           (compiler-add-instruction! s `(pop-to-register ,(cadr place))))
+          ((eq? (car place) 'local-boxed)
+           (compiler-add-instruction! s `(pop-to-register-box ,(cadr place))))
+          ((eq? (car place) 'nonlocal-unboxed)
+           (error `(compile-set!!: ,name is nonlocal-unboxed but is assigned)))
+          ((eq? (car place) 'nonlocal-boxed)
+           (let ((nonlocal-register (compiler-nonlocal-register s))
+                 (index (cadr place)))
+             (compiler-add-instruction! s `(push-register ,nonlocal-register))
+             (compiler-add-instruction! s `(set-nonlocal ,index))))
+          (#t
+           (error `(unsupported set! place ,place)))))
+  (when (compiler-used-result? s)
+    (compiler-push-nothing! s))
+  (compiler-emit-return-when-tail! s))
+
+(define-constant (compile-infinite-loop! s body)
+  (let ((before-body-label (compiler-new-label s)))
+    (compiler-add-instruction! s `(label ,before-body-label))
+    (compiler-with-non-tail s
+      (compiler-with-unused-result s
+        (compile-ast! s body)))
+    (compiler-add-instruction! s `(branch ,before-body-label))
+    ;; At this point I would normally emit one instruction to push #<nothing>
+    ;; when the result is used, and a return when the context is tail; but in
+    ;; this case they would be unreachable after an infinite loop.
+    ))
+
+(define-constant (compile-while-ordinary! s guard body)
+  (let ((before-body-label (compiler-new-label s))
+        (before-guard-label (compiler-new-label s)))
+    (compiler-add-instruction! s `(branch ,before-guard-label))
+    (compiler-add-instruction! s `(label ,before-body-label))
+    (compiler-with-non-tail s
+      (compiler-with-unused-result s
+        (compile-ast! s body)))
+    (compiler-add-instruction! s `(label ,before-guard-label))
+    (compiler-with-non-tail s
+      (compiler-with-used-result s
+        (compile-ast! s guard)))
+    (compiler-add-instruction! s `(branch-if-true ,before-body-label)))
+  (when (compiler-used-result? s)
+    (compiler-push-nothing! s))
+  (compiler-emit-return-when-tail! s))
+
+(define-constant (compile-while! s guard body)
+  (if (and (ast-literal? guard)
+           (ast-literal-value guard))
+      (compile-infinite-loop! s body)
+      (compile-while-ordinary! s guard body)))
+
+(define-constant (compile-primitive! s operator operands)
+  (dolist (operand operands)
+    (compiler-with-non-tail s
+      (compiler-with-used-result s
+        (compile-ast! s operand))))
+  (compiler-add-instruction! s `(primitive ,operator))
+  (unless (compiler-used-result? s)
+    (compiler-add-instruction! s '(drop)))
+  (compiler-emit-return-when-tail! s))
+
+(define-constant (compile-call! s operator operands)
+  (let ((known-closure
+         ;; Bind known-closure to the called closure if I can resolve it
+         ;; at this time, or to #f otherwise.
+         (cond ((and (ast-literal? operator)
+                     (closure? (ast-literal-value operator)))
+                ;; The operator is a literal closure.
+                (ast-literal-value operator))
+               ((and (ast-variable? operator)
+                     (not (compiler-bound-variable? s (ast-variable-name
+                                                       operator)))
+                     (constant? (ast-variable-name operator)))
+                ;; The operator is a variable globally bound to a constant
+                ;; and not shadowed.
+                (symbol-global (ast-variable-name operator)))
+               (#t
+                ;; The closure is not known: I can't omit run-time checks.
+                #f))))
+    (compiler-with-non-tail s
+      (compiler-with-used-result s
+        (compile-ast! s operator)))
+    (unless known-closure
+      (compiler-add-instruction! s `(check-closure)))
+    (unless (and known-closure
+                 (= (closure-in-arity known-closure) (length operands)))
+      (when known-closure
+        ;; FIXME: warn more cleanly.
+        (display `(WARNING: in-arity mismatch in call to known closure
+                            ,operator with actuals ,operands))
+        (newline))
+      (compiler-add-instruction! s `(check-in-arity ,(length operands)))))
+  (dolist (operand operands)
+    (compiler-with-non-tail s
+      (compiler-with-used-result s
+        (compile-ast! s operand))))
+  (if (compiler-tail? s)
+      (compiler-add-instruction! s `(tail-call ,(length operands)))
+      (let ((used-registers (compiler-used-registers s)))
+        ;; The registers being used at this point are a superset of the ones
+        ;; live at return.  This is a conservative approximation, crude but
+        ;; correct.  Doing better would require a liveness analysis pass.
+        (compiler-save-registers! s used-registers)
+        (compiler-add-instruction! s `(call ,(length operands)))
+        (compiler-restore-registers! s used-registers)
+        (unless (compiler-used-result? s)
+          (compiler-add-instruction! s '(drop))))))
+
+(define-constant (compile-let! s bound-name bound-form body)
+  (compiler-with-non-tail s
+    (compiler-with-used-result s
+      (compile-ast! s bound-form)))
+  (let ((place (compiler-pop-and-bind! s bound-name body)))
+    (compile-ast! s body)
+    (unless (eq? place 'nowhere)
+      (compiler-unbind! s bound-name))))
+
+(define-constant (compile-lambda! s formals body)
+  (when (compiler-used-result? s)
+    (compiler-add-instruction! s '(LAMBDA-UNIMPLEMENTED))
+    (compiler-emit-return-when-tail! s)))
+
+(define-constant (compile-sequence! s first second)
+  (compiler-with-non-tail s
+    (compiler-with-unused-result s
+      (compile-ast! s first)))
+  (compile-ast! s second))
+
+
+
+
+;;;; Compiling a closure (very tentative, non-destructive).
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (closure-compile c)
+  (let ((env (interpreted-closure-environment c))
+        (formals (interpreted-closure-formals c))
+        (body (interpreted-closure-body c)))
+    ;; FIXME: check that the closure is not already compiled.
+    (unless (alist? env)
+      (error `(closure ,c has a non-alist environment)))
+    (let ((s (compiler-make-state))
+          (next-nonlocal-index 0)
+          (bound-nonlocal-names set-empty)
+          (reversed-nonlocal-values ()))
+      ;; Bind every nonlocal which is not shadowed by a formal and which is
+      ;; actually used.
+      ;; Since here we are compiling an existing interpreted closure which used
+      ;; boxing for every nonlocal we will use boxing in the compiled version as
+      ;; well: there is no way of knowing which nonlocal actually needs boxing
+      ;; to be shared correctly with other code.
+      ;; Ignore non-local occurrences of already bound non-locals: only the
+      ;; first binding counts for each variable, since what we find first
+      ;; has been bound in the innermost context.
+      (dolist (env-binding env)
+        (when (and (not (set-has? formals (car env-binding)))
+                   (not (set-has? bound-nonlocal-names (car env-binding)))
+                   (ast-has-free? body (car env-binding)))
+          (compiler-bind! s
+                          (car env-binding)
+                          `(nonlocal-boxed ,next-nonlocal-index))
+          (set! next-nonlocal-index (+ next-nonlocal-index 1))
+          (set! reversed-nonlocal-values
+                (cons (cdr env-binding)
+                      reversed-nonlocal-values))))
+      ;; Bind formals: for each actual generate either a pop instruction to
+      ;; get the actual value, or a drop instruction to ignore it in case the
+      ;; formal is not used.
+      (compiler-pop-formals! s formals body)
+      ;; Generate an instruction to bind the closure environment, if needed,
+      ;; then another to drop the closure.
+      (compiler-bind-closure-environment! s)
+      ;; Now the state contains bindings for every non-global bound in the
+      ;; body AST, and we can compile it.  Any remaining variable occurring
+      ;; in the body but not in the state bindings is a global.
+      (compile-ast! s body)
+      ;; FIXME: use reversed-nonlocal-values
+      (display `(reversed-nonlocal-values is ,reversed-nonlocal-values)) (newline)
+      (print-compiler-state s)
+      ;;; ????
+      (compile! c
+                (length formals)
+                (reverse! reversed-nonlocal-values)
+                (reverse (compiler-reversed-instructions s)))
+      (newline)
+      (compiled-closure-print c)
+      (newline)
+      (compiled-closure-disassemble c)
+      )))
+
+
+
+
+;;;; Compiler scratch code.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Scratch, for debugging.
+(define-constant (print-reversed-instructions xs)
+  (dolist (x (reverse xs))
+    (when (and (list? x)
+               (not-eq? (car x) 'label))
+      (dotimes (i 4)
+        (character-display #\space)))
+    (display x)
+    (newline)))
+
+(define-constant (print-compiler-state s)
+  (display `(USED LABELS: ,@(sort (compiler-used-labels s))))
+  (newline)
+  (print-reversed-instructions (compiler-reversed-instructions s)))
+
+;; Temporary testing procedure: unoptimized version.
+(define (tup ast)
+  (let ((s (compiler-make-state)))
+    (display 'ast:) (dotimes (i 1) (character-display #\space))
+    (display ast)
+    (newline)
+    (compile-ast! s ast)
+    (print-compiler-state s)
+    (newline)))
+
+;; Temporary testing procedure: optimized version.
+(define (top ast)
+  (let ((s (compiler-make-state))
+        (optimized-ast (ast-optimize ast ())))
+    (display 'original:) (dotimes (i 2) (character-display #\space))
+    (display ast)
+    (newline)
+    (display 'rewritten:) (dotimes (i 1) (character-display #\space))
+    (display optimized-ast)
+    (newline)
+    (compile-ast! s optimized-ast)
+    (print-compiler-state s)
+    (newline)))
+
+;; Temporary testing macro: unoptimized.
+(define-macro (tu . forms)
+  `(tup (macroexpand '(begin ,@forms))))
+
+;; Temporary testing macro: optimized.
+(define-macro (to . forms)
+  `(top (macroexpand '(begin ,@forms))))
 
 
 
@@ -4496,19 +5394,78 @@
 ;;;; Scratch.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define-macro (c lambda)
+  (let ((closure-name (gensym)))
+    `(let ((,closure-name ,lambda))
+       (closure-optimize! ,closure-name)
+       (closure-compile ,closure-name))))
+
 (define-constant (fibo n)
   (if (< n 2)
       n
       (+ (fibo (- n 2))
          (fibo (- n 1)))))
 
+(define-constant (euclid a b)
+  (cond ((= a b)
+         a)
+        ((< a b)
+         (euclid a (- b a)))
+        (#t
+         (euclid (- a b) b))))
+(define-constant (euclid-i a b)
+  (while (<> a b)
+    (if (< a b)
+        (set! b (- b a))
+        (set! a (- a b))))
+  a)
+
+(define-constant (average-procedure a b)
+  (/ (+ a b) 2))
+
+(define-constant (fact n)
+  (if (zero? n)
+      1
+      (* n (fact (- n 1)))))
+(define-constant (fact-i n)
+  (let ((res 1))
+    (while (not (zero? n))
+      (set! res (* res n))
+      (set! n (- n 1)))
+    res))
+
+(define-constant (count a)
+  (if (zero? a)
+      0
+      (count (- a 1))))
+(define-constant (count-i a)
+  (while (not (zero? a))
+    (set! a (- a 1)))
+  a)
+
+(define-constant (count2 a b)
+  (if (zero? a)
+      b
+      (count2 (- a 1) (+ b 1))))
+(define-constant (count2-i a b)
+  (while (not (zero? a))
+    (set! a (- a 1))
+    (set! b (+ b 1)))
+  b)
+
+(define-macro (average . things)
+  (when (zero? (length things))
+    (error '(average: zero arguments)))
+  `(/ (+ ,@things)
+      ,(length things)))
+
 ;;;  OK
 ;;; (define q (macroexpand '(let ((a a) (b a)) a))) q (ast-alpha-convert q)
 ;;; (define q (macroexpand '(f x (+ 2 3)))) q (ast-optimize q ())
 
 ;;; OK
-;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define x y) x 7))) ())
-;;; [sequence [define x [variable y]] [let #<u443> [variable x] [primitive #<2-ary primitive cons> [literal 3] [variable #<u443>]]]]
+;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define-unoptimizing x y) x 7))) ())
+;;; [primitive #<2-ary primitive cons> [literal 3] [sequence [define x [variable y]] [variable x]]]
 
 ;;; OK
 ;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define x y) x 7))) '(x))
@@ -4547,12 +5504,15 @@
 ;; OK(ast-optimize (macroexpand '(begin2 x y z)) ())
 ;;   {  [sequence [variable x] [sequence [variable z] [variable y]]] is WRONG }
 ;; OK(ast-optimize (macroexpand '(let ((a (f 1)) (b a)) 4)) ())
-;;   {  [let #<u263> [call [variable f] [literal 1]] [literal 4]] is WRONG:
-;;      a is non-bound and non-constant, so its reference is effectful and
-;;      cannot be optimized away. }
-;; OK(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) 4)) ())
-;;   {  [let #<u267> [call [variable f] [literal 1]] [literal 4]] is CORRECT
-;;      but subptimal: the let AST should become a sequence AST. }
+;;   {  [let #<u263> [call [variable f] [literal 1]] [literal 4]] would be
+;;      wrong: a is non-bound and non-constant, so its reference is effectful
+;;      and cannot be optimized away.
+;;      [sequence [call [variable f] [literal 1]] [sequence [variable a] [literal 4]]]
+;;      is GOOD. }
+;; GOOD(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) 4)) ())
+;;   {  [let #<u267> [call [variable f] [literal 1]] [literal 4]] would be
+;;      correct but subptimal: the let AST should become a sequence AST.
+;;      [sequence [call [variable f] [literal 1]] [literal 4]] is GOOD.  }
 ;; OK(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) b)) ())
 ;;   {  [call [variable f] [literal 1]] }
 
@@ -4614,6 +5574,48 @@
 ;; Indeed, cadr is not a wrapper according to my definition, and my inlining
 ;; procedure for wrappers wouldn't work on it.
 
+;; OK(ast-optimize (macroexpand '((lambda (x y) (+ x y)) 3 5)) ())
+;;   {  [literal 8]  }
+;; OK(ast-optimize (macroexpand '((lambda (x y) (+ x Q)) 3 5)) ())
+;;   {  [primitive #<2-ary primitive primordial-+> [literal 3] [variable Q]]  }
+;; OK(ast-optimize (macroexpand '((lambda (x y) (+ x 3)) 10 a)) ())
+;;   {  [sequence [variable a] [literal 13]]  }
+
+;; GOOD-EVEN-IF-IT-LOOKS-WRONG(to (let ((c '(1 2))) (set-car! c 42) c))
+;;   {  This rewrites to
+;;         [sequence [primitive #<2-ary primitive set-car!> [literal (1 2)] [literal 42]] [literal ...]]
+;;      Notice the shared literal, which is of course the same list initially
+;;      built as (1 2).  The block returns a literal, but the literal is
+;;      actually a pointer to something which gets destructively changed, so the
+;;      effect of the assignment is not lost.  As long as returning literals is
+;;      efficient independently from their type (which has always been assumed
+;;      up to this point -- even if it will almost certainly change with a
+;;      moving GC) this is a good, fast solution.  JitterLisp conses are
+;;      always mutable.
+;;   }
+
+;; FIXME: implement a few more rewritings.
+;; optimizing this requires an equality predicate for ASTs.  In practice
+;; it will be fast.
+;; SUBOPTIMAL(ast-optimize (macroexpand '(lambda (a) (and a #f))) ())
+;;   { [lambda (#<u1228>) [if [variable #<u1228>] [literal #f] [literal #f]]]
+;;     This is always correct: [if E1 E2 E2] => [sequence E1 E2] }
+;; A more subtle, but possibly more useful case to optimize:
+;; SUBOPTIMAL(ast-optimize (macroexpand '(lambda (a) (and a a))) ())
+;;   { [lambda (#<u1229>) [if [variable #<u1229>] [variable #<u1229>] [literal #f]]]
+;;     Here the idea is that [if E E #f] can be rewritten to E when E is
+;;     non-effectful.  }
+;; SUBOPTIMAL(ast-optimize (macroexpand '(lambda (a) (lispy-or a a))) ())
+;;   { [lambda (#<u1234>) [if [variable #<u1234>] [variable #<u1234>] [variable #<u1234>]]]
+;;     There should be no need for an explicit rewrite
+;;       [if E E E] => E when E is non-effectful
+;;     ; this is subsumed by the new rule above and sequence semplification,
+;;     using [sequence E E] as an intermediate step. }
+;; After implementing the rule above check:
+;; SUBOPTIMAL(ast-optimize (macroexpand '(lambda (a) (lispy-or a a a))) ())
+;;   { [lambda (#<u1250>) [if [variable #<u1250>] [variable #<u1250>] [if [variable #<u1250>] [variable #<u1250>] [variable #<u1250>]]]] }
+
+
 ;; (and a b c) => (if a (if b c #f) #f)
 ;; (and a b c) => (not (or (not a) (not b) (not c)))
 (define-macro (and2 . clauses)
@@ -4628,3 +5630,33 @@
                  (#t
                   (set! ,res-name ,(last clauses))))
            ,res-name))))
+
+;; (define-constant (length-do xs)
+;;   (do ((res 0 (1+ res))
+;;        (xs xs (cdr xs)))
+;;       ((null? xs) res)))
+;; (declaim ;;(ftype (function (list) fixnum) length-do)
+;;          (optimize (safety 0) (debug 0) (space 0) (speed 3))
+;;          (inline + -))
+;; (defun length-do (xs)
+;;   (declare (type list xs))
+;;   (do ((res 0 (1+ res))
+;;        (xs xs (cdr xs)))
+;;       ((null xs) res)
+;;     (declare (type fixnum res))
+;;     ))
+;; (defmacro while (guard &rest body-forms)
+;;   `(do ()
+;;        ((not ,guard))
+;;      ,@body-forms))
+;; (defun length-while (xs)
+;;   (declare (type list xs))
+;;   (let ((res 0))
+;;     (declare (type fixnum res))
+;;     (while (not (null xs))
+;;       (setq res (1+ res))
+;;       (setq xs (cdr xs)))
+;;     res))
+
+;; A good test case for the used-result flag.
+;; (c (lambda (a b) (when a (set! b a)) b))

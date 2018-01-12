@@ -155,13 +155,18 @@ jitterlisp_symbol_make_interned (const char *name)
 
 
 
+
 /* Non-primitive macro allocation.
  * ************************************************************************** */
 
-/* Expand to an rvalue of type struct jitterlisp_closure * whose evaluation
-   points to a just allocated and uninitialized closure. */
-#define JITTERLISP_NON_PRIMITIVE_MACRO_MAKE_UNINITIALIZED_UNENCODED()  \
-  JITTERLISP_CLOSURE_MAKE_UNINITIALIZED_UNENCODED()
+/* Expand to an rvalue of type struct jitterlisp_interpreted_closure * whose
+   evaluation points to a just allocated and uninitialized interpreted
+   closure, to be used for a non-primitive macro. */
+#define JITTERLISP_NON_PRIMITIVE_MACRO_MAKE_UNINITIALIZED_UNENCODED()      \
+  /* FIXME: this works, but of course the implementation is temporary. */  \
+  ((struct jitterlisp_interpreted_closure*)                                \
+   (jitterlisp_allocate (JITTERLISP_ALIGNED_SIZEOF(                        \
+                            struct jitterlisp_interpreted_closure))))
 
 
 

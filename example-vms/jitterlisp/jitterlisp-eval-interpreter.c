@@ -1,6 +1,6 @@
 /* Jittery Lisp: interpreter: naïve C version.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -88,10 +88,17 @@ jitterlisp_eval_interpreter_ast_call
      them to the closure formals, in order, starting from the closure
      environment.  Unfortunately we have to check the arity at run time,
      differently from the primitive case. */
-  struct jitterlisp_closure *closure = JITTERLISP_CLOSURE_DECODE(rator_value);
-  jitterlisp_object formals = closure->formals;
-  jitterlisp_object body_env = closure->environment;
+  struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(rator_value);
+  if (c->kind != jitterlisp_closure_type_interpreted)
+    jitterlisp_error_cloned ("jitterlisp_eval_interpreter_ast_call: non-interpreted closure: unimplemented");
+  struct jitterlisp_interpreted_closure *ic = & c->interpreted;
+  jitterlisp_object formals = ic->formals;
+  jitterlisp_object body_env = ic->environment;
   int i;
+  // FIXME: shall I check the arity *before* evaluating actuals or after, as
+  // the code does now?
+  // In either case compiled code must have the same semantics.  Do whatever
+  // is faster on compiled code.
   for (i = 1; i < rator_and_rand_no; i ++)
     {
       if (JITTERLISP_IS_EMPTY_LIST(formals))
@@ -119,7 +126,7 @@ jitterlisp_eval_interpreter_ast_call
 
   /* Return the evaluation of the closure body in the extended closure
      environment. */
-  jitterlisp_object body_ast = closure->body;
+  jitterlisp_object body_ast = ic->body;
   return jitterlisp_eval_interpreter_ast (body_ast, body_env);
 }
 
@@ -134,7 +141,8 @@ jitterlisp_eval_interpreter_ast (jitterlisp_object o,
                                  jitterlisp_object env)
 {
   /* No need to validate o: if it comes from macroexpansion it's definitely an
-     encoded AST, and its subs are well-formed as well. */
+     encoded AST, and its subs are well-formed as well.  No need to validate
+     env for the same reason. */
   const struct jitterlisp_ast *ast = JITTERLISP_AST_DECODE(o);
   const jitter_uint sub_no = ast->sub_no;
   const jitterlisp_object * const subs = ast->subs;
@@ -286,9 +294,11 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
                               jitterlisp_object operands_as_list)
 {
   /* Decode the closure and keep its fields in automatic C variables. */
-  struct jitterlisp_closure *closure = JITTERLISP_CLOSURE_DECODE(closure_value);
-  jitterlisp_object formals = closure->formals;
-  jitterlisp_object body_env = closure->environment;
+  struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(closure_value);
+  if (c->kind != jitterlisp_closure_type_interpreted)
+    jitterlisp_error_cloned ("jitterlisp_apply_interpreter: non-interpreted closure: unimplemented");
+  jitterlisp_object formals = c->interpreted.formals;
+  jitterlisp_object body_env = c->interpreted.environment;
 
   /* Bind operands to formals in the closure environment. */
   while (! JITTERLISP_IS_EMPTY_LIST (operands_as_list))
@@ -323,6 +333,6 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
 
   /* Return the evaluation of the closure body in the extended closure
      environment. */
-  jitterlisp_object body_ast = closure->body;
+  jitterlisp_object body_ast = c->interpreted.body;
   return jitterlisp_eval_interpreter_ast (body_ast, body_env);
 }

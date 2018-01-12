@@ -1,6 +1,6 @@
 /* Jittery Lisp: main header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -34,6 +34,7 @@
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-allocator.h"
 #include "jitterlisp-ast.h"
+#include "jitterlisp-code-generator.h"
 #include "jitterlisp-error.h"
 #include "jitterlisp-operations.h"
 #include "jitterlisp-reader.h"

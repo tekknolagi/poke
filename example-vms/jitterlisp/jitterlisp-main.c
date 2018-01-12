@@ -1,6 +1,6 @@
 /* Jittery Lisp: driver.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -36,6 +36,8 @@
 #include <jitter/jitter-fatal.h>
 
 #include "jitterlisp.h"
+
+#include "jitterlispvm-vm.h"
 
 
 /* Command line handling using argp.
@@ -265,6 +267,10 @@ main (int argc, char **argv)
   argp_parse (& argp, argc, argv, 0, 0, & jitterlisp_settings);
   struct jitterlisp_settings * const sp = & jitterlisp_settings;
 
+  /* Initialize the Jittery VM, unless disabled. */
+  if (sp->vm)
+    jitterlispvm_initialize ();
+
   /* Run input files and s-expressions from the command-line, halting at the
      first error; still free the resources before exiting, even in case of
      error.
@@ -305,6 +311,10 @@ main (int argc, char **argv)
      needed right before exiting, but is convenient when checking for memory
      leaks with Valgrind which this way won't show false positives. */
   jitterlisp_finalize ();
+
+  /* Finalize the Jittery VM, unless it was disabled. */
+  if (sp->vm)
+    jitterlispvm_finalize ();
 
   /* Return success or failure, as we decided before.  Yes, we go to the trouble
      of freeing resources even on fatal errors: see the comment above. */

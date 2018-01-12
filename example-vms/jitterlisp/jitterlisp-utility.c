@@ -1,6 +1,6 @@
 /* Jittery Lisp: utility functions.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -44,6 +44,23 @@ jitterlisp_is_list (jitterlisp_object o)
       o = JITTERLISP_EXP_C_A_CDR(o);
     }
   return true;
+}
+
+bool
+jitterlisp_is_list_of_length (jitterlisp_object o, size_t required_length)
+{
+  size_t actual_length = 0;
+  while (! JITTERLISP_IS_EMPTY_LIST(o))
+    {
+      if (! JITTERLISP_IS_CONS(o))
+        return false;
+
+      o = JITTERLISP_EXP_C_A_CDR(o);
+
+      if (++ actual_length > required_length)
+        return false;;
+    }
+  return required_length == actual_length;
 }
 
 bool
@@ -129,16 +146,16 @@ jitterlisp_is_list_of_distinct_symbols (jitterlisp_object o)
 }
 
 bool
-jitterlisp_is_alist (jitterlisp_object o)
+jitterlisp_is_environment (jitterlisp_object o)
 {
   while (! JITTERLISP_IS_EMPTY_LIST(o))
     {
       if (! JITTERLISP_IS_CONS(o))
         return false;
       jitterlisp_object element = JITTERLISP_EXP_C_A_CAR(o);
-      if (! JITTERLISP_IS_CONS(element))
-        return false;
-      if (! JITTERLISP_IS_SYMBOL(JITTERLISP_EXP_C_A_CAR(element)))
+      if (! JITTERLISP_IS_CONS(element)
+          || ! JITTERLISP_IS_SYMBOL(JITTERLISP_EXP_C_A_CAR(element))
+          || ! JITTERLISP_IS_BOX(JITTERLISP_EXP_C_A_CDR(element)))
         return false;
 
       o = JITTERLISP_EXP_C_A_CDR(o);
@@ -164,6 +181,13 @@ jitterlisp_validate_symbol (jitterlisp_object o)
 {
   if (! JITTERLISP_IS_SYMBOL(o))
     jitterlisp_error_cloned ("jitterlisp_validate_symbol: non-symbol argument");
+}
+
+void
+jitterlisp_validate_box (jitterlisp_object o)
+{
+  if (! JITTERLISP_IS_BOX(o))
+    jitterlisp_error_cloned ("jitterlisp_validate_box: non-box argument");
 }
 
 void
@@ -211,11 +235,12 @@ jitterlisp_validate_asts (jitterlisp_object list)
 }
 
 void
-jitterlisp_validate_alist (jitterlisp_object o)
+jitterlisp_validate_environment (jitterlisp_object o)
 {
-  if (! jitterlisp_is_alist (o))
-    jitterlisp_error_cloned ("jitterlisp_validate_alist: not an a-list with "
-                             "symbols as keys");
+  if (! jitterlisp_is_environment (o))
+    jitterlisp_error_cloned ("jitterlisp_validate_environment: not a "
+                             "non-global environment (an alist with symbols "
+                             "as keys and boxes as values)");
 }
 
 
@@ -268,6 +293,9 @@ jitterlisp_cdr (jitterlisp_object cons)
     jitterlisp_error_cloned ("jitterlisp_cdr: non-cons argument");
   return JITTERLISP_EXP_C_A_CDR(cons);
 }
+
+
+
 
 /* Composed selectors.
  * ************************************************************************** */
@@ -362,6 +390,29 @@ jitterlisp_list_4 (jitterlisp_object o0, jitterlisp_object o1,
   return jitterlisp_cons (o0, jitterlisp_list_3 (o1, o2, o3));
 }
 
+jitterlisp_object
+jitterlisp_box (jitterlisp_object o)
+{
+  jitterlisp_object res;
+  JITTERLISP_BOX_(res, o);
+  return res;
+}
+
+jitterlisp_object
+jitterlisp_box_get (jitterlisp_object box)
+{
+  jitterlisp_validate_box (box);
+  return JITTERLISP_EXP_B_A_GET(box);
+}
+
+void
+jitterlisp_box_setb (jitterlisp_object box, jitterlisp_object new_content)
+{
+  jitterlisp_validate_box (box);
+  jitterlisp_object useless __attribute__ ((unused));
+  JITTERLISP_BOX_SETB_(useless, box, new_content);
+}
+
 
 
 
@@ -375,7 +426,8 @@ jitterlisp_object
 jitterlisp_environment_bind (jitterlisp_object env, jitterlisp_object name,
                              jitterlisp_object value)
 {
-  return jitterlisp_cons (jitterlisp_cons (name, value), env);
+  jitterlisp_object box = jitterlisp_box (value);
+  return jitterlisp_cons (jitterlisp_cons (name, box), env);
 }
 
 jitterlisp_object
@@ -391,7 +443,10 @@ jitterlisp_environment_lookup (jitterlisp_object env, jitterlisp_object name)
       jitterlisp_object next_cons = JITTERLISP_EXP_C_A_CAR(env_rest);
       jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
       if (next_name == name)
-        return JITTERLISP_EXP_C_A_CDR(next_cons);
+        {
+          jitterlisp_object cdr = JITTERLISP_EXP_C_A_CDR(next_cons);
+          return JITTERLISP_EXP_B_A_GET(cdr);
+        }
     }
 
   /* ...The symbol is not bound in the given local environment.  Look it up as a
@@ -444,7 +499,10 @@ jitterlisp_define (jitterlisp_object name, jitterlisp_object new_value)
   unencoded_name->global_value = new_value;
 }
 
-void
+/* Destructively update the global binding for the given symbol, which must
+   be already globally bound and non-constant, to the new value.  Error out
+   if the name is not globally bound or is a global constant. */
+static void
 jitterlisp_global_setb (jitterlisp_object name, jitterlisp_object new_value)
 {
   struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
@@ -478,7 +536,8 @@ jitterlisp_environment_setb (jitterlisp_object env, jitterlisp_object name,
       jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
       if (next_name == name)
         {
-          JITTERLISP_SET_CDRB_(useless, next_cons, new_value);
+          jitterlisp_object cdr = JITTERLISP_EXP_C_A_CDR(next_cons);
+          JITTERLISP_BOX_SETB_(useless, cdr, new_value);
           return;
         }
     }

@@ -1,0 +1,360 @@
+/* Jittery Lisp: Jittery VM code generator.
+
+   Copyright (C) 2018 Luca Saiu
+   Written by Luca Saiu
+
+   This file is part of the Jittery Lisp language implementation, distributed as
+   an example along with Jitter under the same license.
+
+   Jitter is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   Jitter is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
+
+
+#include "jitterlisp-code-generator.h"
+
+#include <stdio.h> // FIXME: remove unless needed.
+#include <string.h> // FIXME: remove unless needed.
+
+#include "jitterlisp.h"
+#include <jitter/jitter-hash.h>
+
+#include "jitterlispvm-vm.h"
+
+
+
+
+/* Code generation: (pseudo-) instruction validation.
+ * ************************************************************************** */
+
+/* This section contains internal utility functions to check that VM
+   instructions and labels are encoded correctly in s-expressions.  We need to
+   validate VM code coming from Lisp, which might come from the user and contain
+   mistakes. */
+
+/* FIXME: don't leak on compilation errors, and don't break the closure
+   provided by the user. */
+static void
+jitterlisp_compilation_error (char *message)
+{
+  printf ("compile-time failure:\n");
+  jitterlisp_error_cloned (message);
+}
+
+/* First advance the given list l-value, assigning it to the cdr of its current
+   value; then assign the given element l-value to be the car of the new list
+   value, checking that the car type (given as an uppercase suffix) is as
+   required.
+   Error out if the type doesn't match of the given list is not actually a list.
+
+   This is meant to be called (usually thru JITTERLISP_ARGUMENT_DECODED ) on a
+   Lisp-encoded instruction once per argument, in order, to both extract their
+   content and validate them, in a single pass; JITTERLISP_NO_MORE_ARGUMENTS
+   should be called at the end to ensure that there are no excess arguments.
+   Each macro call will consume the current car (the opcode at the first call),
+   which has already been checked before. */
+#define JITTERLISP_ARGUMENT(_jitterlisp_element,                               \
+                            _jitterlisp_list,                                  \
+                            _jitterlisp_uppercase_type)                        \
+  JITTER_BEGIN_                                                                \
+    if (! JITTERLISP_IS_CONS(_jitterlisp_list))                                \
+      jitterlisp_compilation_error ("non-cons VM instruction substructure");   \
+    (_jitterlisp_list) = JITTERLISP_EXP_C_A_CDR(_jitterlisp_list);             \
+    jitterlisp_object _jitterlisp_car_tmp                                      \
+      = JITTERLISP_EXP_C_A_CAR(_jitterlisp_list);                              \
+    if (! JITTER_CONCATENATE_TWO(JITTERLISP_IS_, _jitterlisp_uppercase_type)(  \
+               (_jitterlisp_car_tmp)))                                         \
+      jitterlisp_compilation_error ("non-"                                     \
+                                    JITTER_STRINGIFY(                          \
+                                       _jitterlisp_uppercase_type)             \
+                                    " VM instruction argument");               \
+    (_jitterlisp_element) = _jitterlisp_car_tmp;                               \
+  JITTER_END_
+
+/* Like JITTERLISP_ARGUMENT but set the element lvalue to a decoded Lisp
+   value, by calling the appropriate JITTERLISP_*_DECODE macro. */
+#define JITTERLISP_ARGUMENT_DECODED(_jitterlisp_element,                 \
+                                    _jitterlisp_list,                    \
+                                    _jitterlisp_uppercase_type)          \
+  JITTER_BEGIN_                                                          \
+    jitterlisp_object _jitterlisp_encoded_element;                       \
+    JITTERLISP_ARGUMENT(_jitterlisp_encoded_element,                     \
+                        _jitterlisp_list,                                \
+                        _jitterlisp_uppercase_type);                     \
+    (_jitterlisp_element)                                                \
+      = JITTER_CONCATENATE_THREE(JITTERLISP_,                            \
+                                 _jitterlisp_uppercase_type,             \
+                                 _DECODE)(_jitterlisp_encoded_element);  \
+  JITTER_END_
+
+/* Error out if the given argument is not a singleton list.  See the comment
+   before JITTERLISP_ARGUMENT for rationale. */
+#define JITTERLISP_NO_MORE_ARGUMENTS(_jitterlisp_list_exp)                    \
+  JITTER_BEGIN_                                                               \
+    jitterlisp_object _jitterlisp_list = (_jitterlisp_list_exp);              \
+    if (! JITTERLISP_IS_CONS(_jitterlisp_list))                               \
+      jitterlisp_compilation_error ("non-cons VM instruction substructure");  \
+    (_jitterlisp_list) = JITTERLISP_EXP_C_A_CDR(_jitterlisp_list);            \
+    if (! JITTERLISP_IS_EMPTY_LIST(_jitterlisp_list))                         \
+      {                                                                       \
+        if (JITTERLISP_IS_CONS(_jitterlisp_list))                             \
+          jitterlisp_compilation_error ("excess instruction argument");       \
+        else                                                                  \
+          jitterlisp_compilation_error ("non-cons in instruction");           \
+      }                                                                       \
+  JITTER_END_
+
+/* Return the name of the given instruction as a C string, shared with the
+   internal symbol representation.  Error out if the instruction is
+   ill-formed. */
+static const char *
+jitterlisp_instruction_name (jitterlisp_object insn)
+{
+  /* Validate the pseudo-instruction, checking that it's a cons with an interned
+     symbol as its car. */
+  if (! JITTERLISP_IS_CONS(insn))
+    jitterlisp_compilation_error ("non-cons VM instruction");
+  jitterlisp_object car = JITTERLISP_EXP_C_A_CAR(insn);
+  if (! JITTERLISP_IS_SYMBOL(car))
+    jitterlisp_compilation_error ("non-symbol VM instruction car");
+  struct jitterlisp_symbol *s = JITTERLISP_SYMBOL_DECODE(car);
+  if (s->name_or_NULL == NULL)
+    jitterlisp_compilation_error ("uninterned instruction name");
+
+  /* Now we can be sure that the symbol name is a string. */
+  return s->name_or_NULL;
+}
+
+
+
+
+/* Code generation: label handling.
+ * ************************************************************************** */
+
+/* I use a hash to keep a mapping from each fixnum label as occurring in the
+   Lisp representation to a jitterlispvm_label . */
+
+/* Return the Jitter label associated to the given Lisp label, adding a fresh
+   binding to the table if the Lisp label was unknown before. */
+static jitterlispvm_label
+jitterlisp_lookup_label (struct jitterlispvm_program *p,
+                         struct jitter_hash_table *map,
+                         jitterlisp_object lisp_tagged_label)
+{
+  if (! JITTERLISP_IS_FIXNUM(lisp_tagged_label))
+    jitterlisp_compilation_error ("non-fixnum label");
+  jitter_int lisp_label = JITTERLISP_FIXNUM_DECODE(lisp_tagged_label);
+
+  /* If the Lisp label is already known return its value; otherwise add a
+     new binding, and return the new value. */
+  jitterlispvm_label res;
+  if (jitter_word_hash_table_has (map, lisp_label))
+    res = jitter_word_hash_table_get (map, lisp_label).fixnum;
+  else
+    {
+      res = jitterlispvm_fresh_label (p);
+      union jitter_word value = { .fixnum = res };
+      jitter_word_hash_table_add (map, lisp_label, value);
+    }
+  return res;
+}
+
+
+
+
+/* Code generation: extracting label pseudo-instruction from the Lisp side.
+ * ************************************************************************** */
+
+/* FIXME: handle GC roots. */
+
+/* Add the given pseudo-instruction translated from its Lisp encoding into the
+   pointed Jittery VM program, validating it in the process.  Use the pointed
+   map associating Lisp labels to Jitter labels. */
+static void
+jitterlisp_translate_instruction (struct jitterlispvm_program *p,
+                                  struct jitter_hash_table *map,
+                                  jitterlisp_object insn)
+{
+  const char *name = jitterlisp_instruction_name (insn);
+  jitterlisp_object label_arg, literal_arg;
+  jitter_uint register_arg;
+  struct jitterlisp_primitive *primitive_arg;
+  jitterlispvm_label label;
+  if (! strcmp (name, "label"))
+    {
+      JITTERLISP_ARGUMENT(label_arg, insn, FIXNUM);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      label = jitterlisp_lookup_label (p, map, label_arg);
+      jitterlispvm_append_label (p, label);
+    }
+  else if (! strcmp (name, "drop"))
+    {
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      JITTERLISPVM_APPEND_INSTRUCTION(p, drop);
+    }
+  else if (! strcmp (name, "push-literal"))
+    {
+      JITTERLISP_ARGUMENT(literal_arg, insn, ANYTHING);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      JITTERLISPVM_APPEND_INSTRUCTION(p, push_mliteral);
+      jitterlispvm_append_unsigned_literal_parameter (p, literal_arg);
+    }
+  else if (! strcmp (name, "push-register"))
+    {
+      JITTERLISP_ARGUMENT_DECODED(register_arg, insn, FIXNUM);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      JITTERLISPVM_APPEND_INSTRUCTION(p, push_mregister);
+      JITTERLISPVM_APPEND_REGISTER_PARAMETER (p, r, register_arg);
+    }
+  else if (! strcmp (name, "save-register"))
+    {
+      JITTERLISP_ARGUMENT_DECODED(register_arg, insn, FIXNUM);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      JITTERLISPVM_APPEND_INSTRUCTION(p, save_mregister);
+      JITTERLISPVM_APPEND_REGISTER_PARAMETER (p, r, register_arg);
+    }
+  else if (! strcmp (name, "restore-register"))
+    {
+      JITTERLISP_ARGUMENT_DECODED(register_arg, insn, FIXNUM);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      JITTERLISPVM_APPEND_INSTRUCTION(p, restore_mregister);
+      JITTERLISPVM_APPEND_REGISTER_PARAMETER (p, r, register_arg);
+    }
+  else if (! strcmp (name, "pop-to-register"))
+    {
+      JITTERLISP_ARGUMENT_DECODED(register_arg, insn, FIXNUM);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      JITTERLISPVM_APPEND_INSTRUCTION(p, pop_mto_mregister);
+      JITTERLISPVM_APPEND_REGISTER_PARAMETER (p, r, register_arg);
+    }
+  else if (! strcmp (name, "branch"))
+    {
+      JITTERLISP_ARGUMENT(label_arg, insn, FIXNUM);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      label = jitterlisp_lookup_label (p, map, label_arg);
+      JITTERLISPVM_APPEND_INSTRUCTION(p, branch);
+      jitterlispvm_append_label_parameter (p, label);
+    }
+  else if (! strcmp (name, "branch-if-true"))
+    {
+      JITTERLISP_ARGUMENT(label_arg, insn, FIXNUM);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      label = jitterlisp_lookup_label (p, map, label_arg);
+      JITTERLISPVM_APPEND_INSTRUCTION(p, branch_mif_mtrue);
+      jitterlispvm_append_label_parameter (p, label);
+    }
+  else if (! strcmp (name, "branch-if-false"))
+    {
+      JITTERLISP_ARGUMENT(label_arg, insn, FIXNUM);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      label = jitterlisp_lookup_label (p, map, label_arg);
+      JITTERLISPVM_APPEND_INSTRUCTION(p, branch_mif_mfalse);
+      jitterlispvm_append_label_parameter (p, label);
+    }
+  else if (! strcmp (name, "primitive"))
+    {
+      JITTERLISP_ARGUMENT_DECODED(primitive_arg, insn, PRIMITIVE);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+
+      jitterlisp_primitive_function f = primitive_arg->function;
+      jitter_uint in_arity = primitive_arg->in_arity;
+      JITTERLISPVM_APPEND_INSTRUCTION(p, primitive);
+      jitterlispvm_append_pointer_literal_parameter (p, f);
+      jitterlispvm_append_unsigned_literal_parameter (p, in_arity);
+    }
+  else if (! strcmp (name, "return"))
+    {
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      JITTERLISPVM_APPEND_INSTRUCTION(p, return);
+    }
+  else
+    {
+      printf ("About the Lisp instruction ");
+      jitterlisp_print_to_stream (stdout, insn);
+      printf ("\n");
+      printf ("WARNING: unknown instruction named %s:\n", name);
+      //printf ("About an instruction named %s:\n", name);
+      //jitterlisp_compilation_error ("unknown instruction");
+    }
+}
+
+/* Add each pseudo-instruction translated from its Lisp encoding into the
+   pointed Jittery VM program, validating it in the process.  Use the pointed
+   map associating Lisp labels to Jitter labels.
+   The given Lisp instructions are assumed to be a Lisp list, as this function
+   is called after a primitive has already validated its arguments. */
+static void
+jitterlisp_translate_instructions (struct jitterlispvm_program *p,
+                                   struct jitter_hash_table *map,
+                                   jitterlisp_object insns)
+{
+  jitterlisp_object rest;
+  for (rest = insns;
+       rest != JITTERLISP_EMPTY_LIST;
+       rest = JITTERLISP_EXP_C_A_CDR(rest))
+    jitterlisp_translate_instruction (p, map, JITTERLISP_EXP_C_A_CAR(rest));
+}
+
+/* Given the Lisp encoding of the VM program, generate the Jittery version. */
+static struct jitterlispvm_program *
+jitterlisp_generate_jittery (jitterlisp_object code_as_sexpression)
+{
+  struct jitterlispvm_program *res
+    = jitterlispvm_make_program ();
+
+  struct jitter_hash_table map;
+  jitter_hash_initialize (& map);
+  jitterlisp_translate_instructions (res, & map, code_as_sexpression);
+  jitter_word_hash_finalize (& map, jitter_do_nothing_on_word);
+
+  jitterlispvm_specialize_program (res);
+  return res;
+}
+
+void
+jitterlisp_compile (struct jitterlisp_closure *c,
+                    jitter_int in_arity,
+                    jitterlisp_object nonlocals,
+                    jitterlisp_object code_as_sexpression)
+{
+  /* Error out if the Jittery VM is disabled. */
+  if (! jitterlisp_settings.vm)
+    jitterlisp_error_cloned ("can't compile: Jittery VM disabled");
+
+  c->kind = jitterlisp_closure_type_compiled;
+  struct jitterlisp_compiled_closure * const cc = & c->compiled;
+  cc->in_arity = in_arity;
+  cc->nonlocals = nonlocals;
+  // FIXME: don't leak.
+  cc->code = jitterlisp_generate_jittery (code_as_sexpression);
+}
+
+
+
+
+/* Code generation debugging.
+ * ************************************************************************** */
+
+void
+jitterlisp_print_compiled_closure (struct jitterlisp_compiled_closure *cc)
+{
+  struct jitterlispvm_program *p = (struct jitterlispvm_program *) cc->code;
+  jitterlispvm_print_program (stdout, p);
+}
+
+/* Disassemble native code from the given compiled closure. */
+void
+jitterlisp_disassemble_compiled_closure (struct jitterlisp_compiled_closure *cc)
+{
+  struct jitterlispvm_program *p = (struct jitterlispvm_program *) cc->code;
+  jitterlispvm_disassemble_program (p, true, JITTER_CROSS_OBJDUMP, NULL);
+}
