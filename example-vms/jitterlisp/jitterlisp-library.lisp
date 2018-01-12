@@ -334,6 +334,8 @@
   (list?-iterative xs))
 
 
+
+
 ;;;; symbols?.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -2014,8 +2016,9 @@
                   ,first-name
                   (lispy-or ,@(cdr args))))))))
 
-;;; A variadic left-to-right short-circuit logical conjunction, following the
-;;; Lisp convention.
+;;; A variadic left-to-right short-circuit logical conjunction, returning the
+;;; result of the last clause in case of a non-#f result according to the Lisp
+;;; convention.
 ;;; This is provided just for symmetry, since JitterLisp's default and operator
 ;;; is already efficient, and differently from JitterLisp's or follows the Lisp
 ;;; convention.
@@ -4463,12 +4466,14 @@
                            (ast-sequence-second ast)))))
 
 (define-macro (t . forms)
-  `(let ((s (compiler-make-state))
-         (ast (ast-optimize (macroexpand '(begin ,@forms))
-                            ())))
+  `(let* ((s (compiler-make-state))
+          (ast (macroexpand '(begin ,@forms)))
+          (optimized-ast (ast-optimize ast ())))
      (display ast)
      (newline)
-     (compile-ast! s ast)
+     (display optimized-ast)
+     (newline)
+     (compile-ast! s optimized-ast)
      (print-list (compiler-instructions s))
      (newline)))
 
@@ -4608,3 +4613,18 @@
 ;; #f
 ;; Indeed, cadr is not a wrapper according to my definition, and my inlining
 ;; procedure for wrappers wouldn't work on it.
+
+;; (and a b c) => (if a (if b c #f) #f)
+;; (and a b c) => (not (or (not a) (not b) (not c)))
+(define-macro (and2 . clauses)
+  (if (null? clauses)
+      '#t
+      (let ((res-name (gensym)))
+        `(let ((,res-name #t))
+           (cond ,@(map (lambda (clause)
+                          `((not ,clause)
+                            (set! ,res-name #f)))
+                        (all-but-last clauses))
+                 (#t
+                  (set! ,res-name ,(last clauses))))
+           ,res-name))))
