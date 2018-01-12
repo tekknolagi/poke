@@ -646,6 +646,25 @@ struct jitterlisp_ast;
 
 
 
+/* Printed representation recursivity.
+ * ************************************************************************** */
+
+/* Expand to an r-value evaluating to a C boolean, non-false iff the argument
+   evaluates to a Lisp object of a type which may contain other Lisp objects in
+   its printed representation.  The argument may be evaluated multiple times.
+
+   Rationale: this is used to avoid circularity checks when printing, for types
+   which cannot be recursive. */
+#define JITTERLISP_IS_RECURSIVE(_jitterlisp_object)  \
+  (JITTERLISP_IS_CONS(_jitterlisp_object)            \
+   || JITTERLISP_IS_CLOSURE(_jitterlisp_object)      \
+   || JITTERLISP_IS_MACRO(_jitterlisp_object)        \
+   || JITTERLISP_IS_VECTOR(_jitterlisp_object)       \
+   || JITTERLISP_IS_AST(_jitterlisp_object))
+
+
+
+
 /* Alignment requirement.
  * ************************************************************************** */
 

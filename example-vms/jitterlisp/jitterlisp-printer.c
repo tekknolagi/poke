@@ -37,6 +37,60 @@
 
 
 
+/* Sharing-recognition hashing.
+ * ************************************************************************** */
+
+/* This hash table data structure serves to avoid infinite loops when printing
+   circular structures, and to show which substructures are shared (currently
+   without showing *what* is shared, but this can be improved).
+   Since this data structure and the printing process in general doesn't use
+   Lisp heap allocation in this case it's safe to simply hash on tagged
+   objects, even if they are pointers, even with a moving GC -- which is not
+   there yet but should come at some point. */
+
+/* Initialize a sharing table, already allocated by the user.  This is
+   intended to be used on a pointer to an automatic variable. */
+static void
+jitterlisp_sharing_table_initialize (struct jitter_hash_table *t)
+{
+  jitter_hash_initialize (t);
+}
+
+/* Finalize a sharing table, already allocated by the user.  This is
+   intended to be used on a pointer to an automatic variable. */
+static void
+jitterlisp_sharing_table_finalize (struct jitter_hash_table *t)
+{
+  jitter_word_hash_finalize (t, jitter_do_nothing_on_word);
+}
+
+/* Return non-false iff the given object is already in the sharing table. */
+static bool
+jitterlisp_sharing_table_has (struct jitter_hash_table *t,
+                                  jitterlisp_object o)
+{
+  return jitter_word_hash_table_has (t, o);
+}
+
+/* Add the given object to the sharing table, if the object can potentially
+   be circular.  Do nothing otherwise.  This doesn't check whether the object is
+   already in the table: it would be a useless source of inefficiency.  */
+static void
+jitterlisp_sharing_table_add (struct jitter_hash_table *t,
+                                  jitterlisp_object o)
+{
+  /* A Lisp object whose printed representation cannot contain other Lisp
+     object should not be kept in the table; do nothing in that case. */
+  if (! JITTERLISP_IS_RECURSIVE(o))
+    return;
+
+  /* Add an entry to the table.  The value is not used. */
+  union jitter_word useless = { .fixnum = 0 };
+  jitter_word_hash_table_add (t, o, useless);
+}
+
+
+
 /* Character names.
  * ************************************************************************** */
 
@@ -128,6 +182,7 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 # define PRIMITIVEMACROATTR    ""
 # define VECTORATTR            ""
 # define ASTATTR               ""
+# define CIRCULARATTR          ""
 # define ERRORATTR             ""
 #else
 # define CONSATTR              LIGHTRED // LIGHTRED // WHITE //LIGHTRED // YELLOW //LIGHTMAGENTA
@@ -142,6 +197,7 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 # define PRIMITIVEMACROATTR    LIGHTMAGENTA UNDERLINE
 # define VECTORATTR            LIGHTRED ITALIC UNDERLINE
 # define ASTATTR               LIGHTMAGENTA ITALIC UNDERLINE
+# define CIRCULARATTR          WHITE
 # define ERRORATTR             RED REVERSE
 #endif // #ifdef NOTERMINAL
 
@@ -324,13 +380,33 @@ jitterlisp_print_decoration (jitterlisp_char_printer_function char_printer,
 /* S-expression printer.
  * ************************************************************************** */
 
+/* Forward declaration.  Print the given object using the given char-printer and
+   the pointed sharing table. */
+static void
+jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
+                            struct jitter_hash_table *st, jitterlisp_object o);
+
+
 /* Print o as the cdr of a cons, with the car already printed and the
    surrounding parentheses printed by the caller, using the given
    char-printer. */
 static void
 jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
-                      jitterlisp_object o)
+                      struct jitter_hash_table *st, jitterlisp_object o)
 {
+  /* Show sharing. */
+  if (jitterlisp_sharing_table_has (st, o))
+    {
+      jitterlisp_print_decoration (cp, cps, CONSATTR);
+      jitterlisp_print_string (cp, cps, " . ");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print_decoration (cp, cps, CIRCULARATTR);
+      jitterlisp_print_string (cp, cps, "...");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      return;
+    }
+  jitterlisp_sharing_table_add (st, o);
+
   if (JITTERLISP_IS_EMPTY_LIST(o))
     {
       /* There is nothing to print, not even a space: the caller has already
@@ -346,13 +422,13 @@ jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_char (cp, cps, ' ');
       jitterlisp_print_decoration (cp, cps, NOATTR);
       struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
-      jitterlisp_print (cp, cps, c->car);
+      jitterlisp_print_recursive (cp, cps, st, c->car);
 
       /* We're still within a list or improper/dotted list and so we'll keep
          using cdr notation for o's cdr, without adding more parens.  If o's cdr
          is still a cons then the recursive call will prepend a space to the
          elements. */
-      jitterlisp_print_cdr (cp, cps, c->cdr);
+      jitterlisp_print_cdr (cp, cps, st, c->cdr);
     }
   else
     {
@@ -361,7 +437,7 @@ jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_decoration (cp, cps, CONSATTR);
       jitterlisp_print_string (cp, cps, " . ");
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print (cp, cps, o);
+      jitterlisp_print_recursive (cp, cps, st, o);
     }
 }
 
@@ -370,6 +446,7 @@ jitterlisp_print_cdr (jitterlisp_char_printer_function cp, void *cps,
    separator before each element, including the first. */
 static void
 jitterlisp_print_subs (jitterlisp_char_printer_function cp, void *cps,
+                       struct jitter_hash_table *st,
                        jitterlisp_object *elements, size_t element_no)
 {
   int i;
@@ -378,14 +455,18 @@ jitterlisp_print_subs (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_decoration (cp, cps, ASTATTR);
       jitterlisp_print_char (cp, cps, ' ');
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print (cp, cps, elements [i]);
+      jitterlisp_print_recursive (cp, cps, st, elements [i]);
     }
 }
 
 static void
 jitterlisp_print_ast (jitterlisp_char_printer_function cp, void *cps,
-                      struct jitterlisp_ast *ast)
+                      struct jitter_hash_table *st, struct jitterlisp_ast *ast)
 {
+  /* There's no need to check for sharing here: this function is only called
+     by jitterlisp_print_recursive which has already done it on the same
+     argument, and the AST subs are printed thru jitterlisp_print_recursive . */
+
   jitterlisp_print_decoration (cp, cps, ASTATTR);
   jitterlisp_print_string (cp, cps, "[");
   switch (ast->case_)
@@ -429,16 +510,30 @@ jitterlisp_print_ast (jitterlisp_char_printer_function cp, void *cps,
       return;
     }
   jitterlisp_print_decoration (cp, cps, NOATTR);
-  jitterlisp_print_subs (cp, cps, ast->subs, ast->sub_no);
+  jitterlisp_print_subs (cp, cps, st, ast->subs, ast->sub_no);
   jitterlisp_print_decoration (cp, cps, ASTATTR);
   jitterlisp_print_string (cp, cps, "]");
   jitterlisp_print_decoration (cp, cps, NOATTR);
 }
 
-void
-jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
-                  jitterlisp_object o)
+static void
+jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
+                            struct jitter_hash_table *st, jitterlisp_object o)
 {
+  /* Before printing anything, check whether we have printed this object
+     already.  If so print a sharing indicator and just return; otherwise add
+     the object to the table for the next time (as long as it's a potential
+     source of sharing) and go on. */
+  if (jitterlisp_sharing_table_has (st, o))
+    {
+      jitterlisp_print_decoration (cp, cps, CIRCULARATTR);
+      jitterlisp_print_string (cp, cps, "...");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      return;
+    }
+  jitterlisp_sharing_table_add (st, o);
+
+  /* Print the object according to its type. */
   if (JITTERLISP_IS_FIXNUM(o))
     {
       jitter_int decoded = JITTERLISP_FIXNUM_DECODE(o);
@@ -507,15 +602,15 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_string (cp, cps, "#<closure ");
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print (cp, cps, closure->environment);
+      jitterlisp_print_recursive (cp, cps, st, closure->environment);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_char (cp, cps, ' ');
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print (cp, cps, closure->formals);
+      jitterlisp_print_recursive (cp, cps, st, closure->formals);
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_char (cp, cps, ' ');
-      jitterlisp_print (cp, cps, closure->body);
+      jitterlisp_print_recursive (cp, cps, st, closure->body);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_string (cp, cps, ">");
       jitterlisp_print_decoration (cp, cps, NOATTR);
@@ -527,15 +622,15 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
       jitterlisp_print_string (cp, cps, "#<macro ");
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print (cp, cps, closure->environment);
+      jitterlisp_print_recursive (cp, cps, st, closure->environment);
       jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
       jitterlisp_print_char (cp, cps, ' ');
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print (cp, cps, closure->formals);
+      jitterlisp_print_recursive (cp, cps, st, closure->formals);
       jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_char (cp, cps, ' ');
-      jitterlisp_print (cp, cps, closure->body);
+      jitterlisp_print_recursive (cp, cps, st, closure->body);
       jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
       jitterlisp_print_string (cp, cps, ">");
       jitterlisp_print_decoration (cp, cps, NOATTR);
@@ -570,8 +665,8 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_decoration (cp, cps, CONSATTR);
       jitterlisp_print_char (cp, cps, '(');
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print (cp, cps, car);
-      jitterlisp_print_cdr (cp, cps, cdr);
+      jitterlisp_print_recursive (cp, cps, st, car);
+      jitterlisp_print_cdr (cp, cps, st, cdr);
       jitterlisp_print_decoration (cp, cps, CONSATTR);
       jitterlisp_print_char (cp, cps, ')');
       jitterlisp_print_decoration (cp, cps, NOATTR);
@@ -579,7 +674,7 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
   else if (JITTERLISP_IS_AST(o))
     {
       struct jitterlisp_ast * const ast = JITTERLISP_AST_DECODE(o);
-      jitterlisp_print_ast (cp, cps, ast);
+      jitterlisp_print_ast (cp, cps, st, ast);
     }
   else if (JITTERLISP_IS_VECTOR(o))
     {
@@ -591,9 +686,13 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       int element_no = JITTERLISP_FIXNUM_DECODE(v->element_no);
       for (i = 0; i < element_no; i ++)
         {
-          jitterlisp_print (cp, cps, v->elements [i]);
+          jitterlisp_print_recursive (cp, cps, st, v->elements [i]);
           if (i < (element_no - 1))
-            jitterlisp_print_char (cp, cps, ' ');
+            {
+              jitterlisp_print_decoration (cp, cps, VECTORATTR);
+              jitterlisp_print_char (cp, cps, ' ');
+              jitterlisp_print_decoration (cp, cps, NOATTR);
+            }
         }
       jitterlisp_print_decoration (cp, cps, VECTORATTR);
       jitterlisp_print_char (cp, cps, ')');
@@ -605,6 +704,21 @@ jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_string (cp, cps, "#<invalid-or-unknown>");
       jitterlisp_print_string (cp, cps, NOATTR);
     }
+}
+
+void
+jitterlisp_print (jitterlisp_char_printer_function cp, void *cps,
+                  jitterlisp_object o)
+{
+  /* Make a sharing table. */
+  struct jitter_hash_table st;
+  jitterlisp_sharing_table_initialize (& st);
+
+  /* Print the object using the table. */
+  jitterlisp_print_recursive (cp, cps, & st, o);
+
+  /* We're done with the sharing table. */
+  jitterlisp_sharing_table_finalize (& st);
 }
 
 
