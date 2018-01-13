@@ -2023,7 +2023,6 @@
 ;; element of x in xs, or the list suffix whose second element is eq? to x.
 ;; Assume that xs has at least one element.
 (define-constant (cons-before-or-nil xs x)
-  ;; The list has at least two elements.
   (let* ((go-on #t) ;; A break or return form would be nice here.
          (next-cons (cdr xs)))
     (while go-on
@@ -2035,8 +2034,7 @@
             (#t
              (set! xs next-cons)
              (set! next-cons (cdr next-cons)))))
-    ;; At this point xs is either the predecessor we were looking for or
-    ;; ().
+    ;; Now xs is either the predecessor we were looking for or ().
     xs))
 
 ;;; Return a list equal to xs except that the first element eq? to x, if any,
@@ -2053,7 +2051,8 @@
              xs))
         ((eq? (car xs) x)
          ;; Special case: if the equal element is the first then we cannot
-         ;; modify xs to turn it into the result.
+         ;; modify xs to turn it into the result, but we already have the
+         ;; result as a substructure of xs.
          (cdr xs))
         (#t
          ;; Here we may have the opportunity to actually modify the list.
@@ -2062,13 +2061,11 @@
            ;; If we found a predecessor then we just have to modify its cdr to
            ;; skip the cons having x as car.  If we didn't find it there is
            ;; nothing to remove.
-           (if (null? predecessor-or-nil)
-               xs
-               (begin
-                 ;; Notice that cddr is safe here, as predecessor-or-nil is the
-                 ;; predecessor of another element.
-                 (set-cdr! predecessor-or-nil (cddr predecessor-or-nil))
-                 xs))))))
+           (if (non-null? predecessor-or-nil) ;; We don't have when yet.
+               ;; Notice that cddr is safe here, as predecessor-or-nil is the
+               ;; predecessor of another element.
+               (set-cdr! predecessor-or-nil (cddr predecessor-or-nil)))
+           xs))))
 
 
 
@@ -2087,7 +2084,6 @@
 
 
 
-
 
 ;;;; High-level syntax: one-way conditionals.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
