@@ -178,11 +178,11 @@
 ;;; Define temporary list functions of a few different arities.  It is
 ;;; not worth the trouble to define list as a variadic macro without
 ;;; high-level macros or quasiquoting.
-(define-constant (list0)         '())
-(define-constant (list1 x)       (cons x '()))
-(define-constant (list2 x y)     (cons x (cons y '())))
-(define-constant (list3 x y z)   (cons x (cons y (cons z '()))))
-(define-constant (list4 x y z t) (cons x (cons y (cons z (cons t '())))))
+(define-constant (list0)         ())
+(define-constant (list1 x)       (cons x ()))
+(define-constant (list2 x y)     (cons x (cons y ())))
+(define-constant (list3 x y z)   (cons x (cons y (cons z ()))))
+(define-constant (list4 x y z t) (cons x (cons y (cons z (cons t ())))))
 
 (define-constant (qq-append xs ys)
   (if (list? xs)
@@ -245,7 +245,7 @@
 ;;; call to the list function of the given arguments.
 (define-constant (qq-variadic-list-expression args)
   (if (null? args)
-      ''()
+      '()
       ;;`(cons ,(car args) ,(qq-variadic-list-expression (cdr args)))))
       (list3 'cons
              (car args)
@@ -254,7 +254,7 @@
 ;;; Same as qq-variadic-list-expression but for a variadic append.
 (define-constant (qq-variadic-append-expression args)
   (if (null? args)
-      ''()
+      '()
       ;;`(append ,(car args) ,(qq-variadic-append-expression (cdr args)))))
       (list3 'qq-append
              (car args)
@@ -340,7 +340,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (singleton x)
-  (cons x '()))
+  (cons x ()))
 
 
 
@@ -414,7 +414,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (replicate-iterative n x)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (> n 0)
       (set! res (cons x res))
       (set! n (1- n)))
@@ -425,11 +425,11 @@
       acc
       (replicate-tail-recursive-helper (1- n) x (cons x acc))))
 (define-constant (replicate-tail-recursive n x)
-  (replicate-tail-recursive-helper n x '()))
+  (replicate-tail-recursive-helper n x ()))
 
 (define-constant (replicate-non-tail-recursive n x)
   (if (zero? n)
-      '()
+      ()
       (cons x (replicate-non-tail-recursive (1- n) x))))
 
 (define-constant (replicate n x)
@@ -524,7 +524,7 @@
 
 (define-constant (all-but-last-non-empty-non-tail-recursive xs)
   (if (null? (cdr xs))
-      '()
+      ()
       (cons (car xs)
             (all-but-last-non-empty-non-tail-recursive (cdr xs)))))
 (define-constant (all-but-last-non-tail-recursive xs)
@@ -592,19 +592,19 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (reverse-iterative xs)
-  (append-reversed-iterative xs '()))
+  (append-reversed-iterative xs ()))
 
 ;; This uses append instead of append-non-tail-recursive .
 (define-constant (reverse-non-tail-recursive xs)
   (if (null? xs)
-      '()
+      ()
       (append (reverse-non-tail-recursive (cdr xs))
               (singleton (car xs)))))
 
 ;; This uses append-non-tail-recursive instead of append .
 (define-constant (reverse-really-non-tail-recursive xs)
   (if (null? xs)
-      '()
+      ()
       (append-non-tail-recursive (reverse-non-tail-recursive (cdr xs))
                                  (singleton (car xs)))))
 
@@ -614,7 +614,7 @@
       (reverse-tail-recursive-helper (cdr xs)
                                      (cons (car xs) acc))))
 (define-constant (reverse-tail-recursive xs)
-  (reverse-tail-recursive-helper xs '()))
+  (reverse-tail-recursive-helper xs ()))
 
 (define-constant (reverse xs)
   (reverse-iterative xs))
@@ -627,8 +627,8 @@
 
 (define-constant (reverse!-iterative xs)
   (if (null? xs)
-      '()
-      (let* ((previous-list '())
+      ()
+      (let* ((previous-list ())
              (the-cons xs)
              (following-list #f))
         (while (not (null? the-cons))
@@ -649,8 +649,8 @@
                                         old-non-null-inner-list-cdr))))
 (define-constant (reverse!-tail-recursive xs)
   (if (null? xs)
-      '()
-      (reverse!-tail-recursive-helper '() xs)))
+      ()
+      (reverse!-tail-recursive-helper () xs)))
 
 (define-constant (reverse! xs)
   (reverse!-iterative xs))
@@ -707,7 +707,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (flatten-reversed-iterative list-of-lists)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (non-null? list-of-lists)
       (set! res (append-iterative (car list-of-lists) res))
       (set! list-of-lists (cdr list-of-lists)))
@@ -720,7 +720,7 @@
           (cdr reversed-list)
           (append-tail-recursive (car reversed-list) acc))))
 (define-constant (flatten-reversed-tail-recursive reversed-list)
-  (flatten-reversed-tail-recursive-helper reversed-list '()))
+  (flatten-reversed-tail-recursive-helper reversed-list ()))
 
 (define-constant (flatten-reversed reversed-list)
   (flatten-reversed-iterative reversed-list))
@@ -732,7 +732,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (flatten-reversed!-iterative list-of-lists)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (non-null? list-of-lists)
       (set! res (append!-iterative (car list-of-lists) res))
       (set! list-of-lists (cdr list-of-lists)))
@@ -755,7 +755,7 @@
 
 (define-constant (flatten-non-tail-recursive list-of-lists)
   (if (null? list-of-lists)
-      '()
+      ()
       (append-non-tail-recursive
           (car list-of-lists)
           (flatten-non-tail-recursive (cdr list-of-lists)))))
@@ -777,7 +777,7 @@
 
 (define-constant (flatten!-non-tail-recursive list-of-lists)
   (if (null? list-of-lists)
-      '()
+      ()
       ;; I don't have an append!-non-tail-recursive, as it doesn't seem very
       ;; reasonable.
       (append! (car list-of-lists)
@@ -797,7 +797,7 @@
 
 (define-constant (list-copy-iterative xs)
   (if (null? xs)
-      '()
+      ()
       (let* ((res (cons (car xs) #f))
              (last-cons res)
              (new-cons #f))
@@ -807,7 +807,7 @@
           (set-cdr! last-cons new-cons)
           (set! last-cons new-cons)
           (set! xs (cdr xs)))
-        (set-cdr! last-cons '())
+        (set-cdr! last-cons ())
         res)))
 
 (define-constant (list-copy-tail-recursive xs)
@@ -815,7 +815,7 @@
 
 (define-constant (list-copy-non-tail-recursive xs)
   (if (null? xs)
-      '()
+      ()
       (cons (car xs)
             (list-copy-non-tail-recursive (cdr xs)))))
 
@@ -904,7 +904,7 @@
 
 ;; A break or return form would be useful here.
 (define-constant (take-reversed-iterative xs n)
-  (let* ((res '())
+  (let* ((res ())
          (go-on #t))
     (while go-on
       (cond ((null? xs)
@@ -924,9 +924,9 @@
 
 (define-constant (take-non-tail-recursive xs n)
   (cond ((zero? n)
-         '())
+         ())
         ((null? xs)
-         '())
+         ())
         (#t
          (cons (car xs) (take-non-tail-recursive (cdr xs) (1- n))))))
 
@@ -940,7 +940,7 @@
                                               (1- n)
                                               (cons (car xs) acc)))))
 (define-constant (take-reversed-tail-recursive xs n)
-  (take-reversed-tail-recursive-helper xs n '()))
+  (take-reversed-tail-recursive-helper xs n ()))
 
 (define-constant (take-reversed xs n)
   (take-reversed-iterative xs n))
@@ -966,13 +966,13 @@
   (cond ((= n 1)
          (if (null? xs)
              'do-nothing
-             (set-cdr! xs '())))
+             (set-cdr! xs ())))
         ((null? xs))
         (#t
          (take!-tail-recursive-helper (cdr xs) (1- n)))))
 (define-constant (take!-tail-recursive xs n)
   (if (zero? n)
-      '()
+      ()
       (begin
         (take!-tail-recursive-helper xs n)
         xs)))
@@ -1003,7 +1003,7 @@
   (cond ((zero? n)
          xs)
         ((null? xs)
-         '())
+         ())
         (#t
          (drop-tail-recursive (cdr xs) (1- n)))))
 
@@ -1210,7 +1210,7 @@
 
 (define-constant (del-assq object alist)
   (cond ((null? alist)
-         '())
+         ())
         ((eq? (caar alist) object)
          (del-assq object (cdr alist)))
         (#t
@@ -1227,7 +1227,7 @@
 ;; FIXME: implement del-assq! .
 
 (define-constant (alist-copy alist)
-  (let* ((res '())
+  (let* ((res ())
          (first-cons #f))
     (while (non-null? alist)
       (set! first-cons (car alist))
@@ -1392,7 +1392,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (map-reversed-iterative f xs)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (non-null? xs)
       (set! res (cons (f (car xs)) res))
       (set! xs (cdr xs)))
@@ -1406,7 +1406,7 @@
                                           (cons (f (car xs))
                                                 acc))))
 (define-constant (map-reversed-tail-recursive f xs)
-  (map-reversed-tail-recursive-helper f xs '()))
+  (map-reversed-tail-recursive-helper f xs ()))
 
 (define-constant (map-reversed f xs)
   (map-reversed-iterative f xs))
@@ -1422,7 +1422,7 @@
 
 (define-constant (map-non-tail-recursive f xs)
   (if (null? xs)
-      '()
+      ()
       (cons (f (car xs))
             (map-non-tail-recursive f (cdr xs)))))
 
@@ -1575,7 +1575,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (filter-reversed-iterative p xs)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (non-null? xs)
       (if (p (car xs))
           (set! res (cons (car xs) res))
@@ -1588,7 +1588,7 @@
 
 (define-constant (filter-non-tail-recursive p xs)
   (cond ((null? xs)
-         '())
+         ())
         ((p (car xs))
          (cons (car xs) (filter-non-tail-recursive p (cdr xs))))
         (#t
@@ -1602,7 +1602,7 @@
         (#t
          (filter-reversed-tail-recursive-helper p (cdr xs) acc))))
 (define-constant (filter-reversed-tail-recursive p xs)
-  (filter-reversed-tail-recursive-helper p xs '()))
+  (filter-reversed-tail-recursive-helper p xs ()))
 
 (define-constant (filter-tail-recursive p xs)
   (reverse!-tail-recursive (filter-reversed-tail-recursive p xs)))
@@ -1621,7 +1621,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (range-reversed-iterative a b)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (<= a b)
       (set! res (cons a res))
       (set! a (1+ a)))
@@ -1629,7 +1629,7 @@
 
 (define-constant (range-reversed-non-tail-recursive a b)
   (if (> a b)
-      '()
+      ()
       (cons b (range-reversed-non-tail-recursive a (1- b)))))
 
 (define-constant (range-reversed-tail-recursive-helper a b acc)
@@ -1637,7 +1637,7 @@
       acc
       (range-reversed-tail-recursive-helper (1+ a) b (cons a acc))))
 (define-constant (range-reversed-tail-recursive a b)
-  (range-reversed-tail-recursive-helper a b '()))
+  (range-reversed-tail-recursive-helper a b ()))
 
 (define-constant (range-reversed a b)
   (range-reversed-iterative a b))
@@ -1649,7 +1649,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (range-iterative a b)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (<= a b)
       (set! res (cons b res))
       (set! b (1- b)))
@@ -1657,7 +1657,7 @@
 
 (define-constant (range-non-tail-recursive a b)
   (if (> a b)
-      '()
+      ()
       (cons a (range-non-tail-recursive (1+ a) b))))
 
 (define-constant (range-tail-recursive-helper a b acc)
@@ -1665,7 +1665,7 @@
       acc
       (range-tail-recursive-helper a (1- b) (cons b acc))))
 (define-constant (range-tail-recursive a b)
-  (range-tail-recursive-helper a b '()))
+  (range-tail-recursive-helper a b ()))
 
 (define-constant (range a b)
   (range-iterative a b))
@@ -1677,7 +1677,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (iota-iterative n)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (> n 0)
       (set! n (1- n))
       (set! res (cons n res)))
@@ -1688,7 +1688,7 @@
       acc
       (iota-tail-recursive-helper (1- n) (cons n acc))))
 (define-constant (iota-tail-recursive n)
-  (iota-tail-recursive-helper (1- n) '()))
+  (iota-tail-recursive-helper (1- n) ()))
 
 (define-constant (iota-non-tail-recursive n)
   (range-non-tail-recursive 0 (1- n)))
@@ -1710,7 +1710,7 @@
 
 ;;; FIXME: a return or break form would be nice here.
 (define-constant (insert-iterative x xs)
-  (let* ((smaller-elements-reversed '())
+  (let* ((smaller-elements-reversed ())
          (go-on #t))
     (while go-on
       (cond ((null? xs)
@@ -1738,7 +1738,7 @@
                                        (cons (car xs)
                                              smaller-elements-reversed)))))
 (define-constant (insert-tail-recursive x xs)
-  (insert-tail-recursive-helper x xs '()))
+  (insert-tail-recursive-helper x xs ()))
 
 (define-constant (insert-non-tail-recursive x xs)
   (cond ((null? xs)
@@ -1814,7 +1814,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (insertion-sort-iterative xs)
-  (let* ((res '()))
+  (let* ((res ()))
     (while (non-null? xs)
       (set! res (insert!-iterative (car xs) res))
       (set! xs (cdr xs)))
@@ -1827,7 +1827,7 @@
                                             (insert!-tail-recursive (car xs)
                                                                     acc))))
 (define-constant (insertion-sort-tail-recursive xs)
-  (insertion-sort-tail-recursive-helper xs '()))
+  (insertion-sort-tail-recursive-helper xs ()))
 
 (define-constant (insertion-sort xs)
   (insertion-sort-iterative xs))
@@ -1953,7 +1953,7 @@
 ;;; The code below is okay, but should be moved up.
 
 
-;;;; all-different?.
+;;;; list-has?.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (list-has? xs x)
@@ -1963,6 +1963,112 @@
          #t)
         (#t
          (list-has? (cdr xs) x))))
+
+
+
+
+;;;; list-without.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return a copy of the list xs, which may share structure with it, without the
+;;; first element which is eq? to x (if any), in the same order.
+
+(define-constant (list-without-iterative xs x)
+  (let* ((reversed-prefix ())
+         (go-on #t)) ;; A return statement would be nice.
+    (while go-on
+      (cond ((null? xs)
+             (set! go-on #f))
+            ((eq? (car xs) x)
+             (set! xs (cdr xs))
+             (set! go-on #f))
+            (#t
+             (set! reversed-prefix (cons (car xs) reversed-prefix))
+             (set! xs (cdr xs)))))
+    (append!-iterative (reverse!-iterative reversed-prefix) xs)))
+
+(define-constant (list-without-tail-recursive-helper xs x acc)
+  (cond ((null? xs)
+         (reverse!-tail-recursive acc))
+        ((eq? (car xs) x)
+         (append!-tail-recursive (reverse!-tail-recursive acc)
+                                 (cdr xs)))
+        (#t
+         (list-without-tail-recursive-helper (cdr xs)
+                                             x
+                                             (cons (car xs) acc)))))
+(define-constant (list-without-tail-recursive xs x)
+  (list-without-tail-recursive-helper xs x ()))
+
+(define-constant (list-without-non-tail-recursive xs x)
+  (cond ((null? xs)
+         ())
+        ((eq? (car xs) x)
+         (cdr xs))
+        (#t
+         (cons (car xs)
+               (list-without-non-tail-recursive (cdr xs) x)))))
+
+(define-constant (list-without xs x)
+  (list-without-iterative xs x))
+
+
+
+
+;;;; list-without!.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Return the first cons of the list xs whose cadr is eq? to x, or () if no such
+;; cons exists.  In other word, return the cons containing the predecessor
+;; element of x in xs, or the list suffix whose second element is eq? to x.
+;; Assume that xs has at least one element.
+(define-constant (cons-before-or-nil xs x)
+  ;; The list has at least two elements.
+  (let* ((go-on #t) ;; A break or return form would be nice here.
+         (next-cons (cdr xs)))
+    (while go-on
+      (cond ((null? next-cons)
+             (set! xs ())
+             (set! go-on #f))
+            ((eq? (car next-cons) x)
+             (set! go-on #f))
+            (#t
+             (set! xs next-cons)
+             (set! next-cons (cdr next-cons)))))
+    ;; At this point xs is either the predecessor we were looking for or
+    ;; ().
+    xs))
+
+;;; Return a list equal to xs except that the first element eq? to x, if any,
+;;; has been removed.  This may destructively modify xs, and the result may
+;;; share structure with it.
+(define-constant (list-without! xs x)
+  (cond ((null? xs)
+         ;; Empty list: there is nothing to remove.
+         ())
+        ((null? (cdr xs))
+         ;; Singleton: return an empty list or xs unchanged.
+         (if (eq? (car xs) x)
+             ()
+             xs))
+        ((eq? (car xs) x)
+         ;; Special case: if the equal element is the first then we cannot
+         ;; modify xs to turn it into the result.
+         (cdr xs))
+        (#t
+         ;; Here we may have the opportunity to actually modify the list.
+         ;; Find the predecessor cons, if any.
+         (let* ((predecessor-or-nil (cons-before-or-nil xs x)))
+           ;; If we found a predecessor then we just have to modify its cdr to
+           ;; skip the cons having x as car.  If we didn't find it there is
+           ;; nothing to remove.
+           (if (null? predecessor-or-nil)
+               xs
+               (begin
+                 ;; Notice that cddr is safe here, as predecessor-or-nil is the
+                 ;; predecessor of another element.
+                 (set-cdr! predecessor-or-nil (cddr predecessor-or-nil))
+                 xs))))))
 
 
 
@@ -2478,7 +2584,7 @@
 ;;; evaluated left-to-right.  Duplicates are removed.
 (define-macro (set . elements)
   (if (null? elements)
-      '()
+      ()
       ;; This is slightly complicated by the need to keep the evaluation order
       ;; intuitive: macro arguments are to be evaluated left-to-right.
       (let ((element-name (gensym))
@@ -2837,6 +2943,74 @@
   (and (non-null? asts)
        (or (ast-has-assigned? (car asts) x)
            (ast-has-assigned?-list (cdr asts) x))))
+
+
+
+
+;;;; Non-locally used variables in an AST.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Check whether a variable is accessed non-locally, thru a lambda occurring
+;;; within the given AST.  For the purposes of this definition nested lets do
+;;; not count: only lambdas introduce the kind of non-locality we care about.
+;;; Variables shadowed in the lambda don't count eihter (but there shouldn't
+;;; be any, as this is supposed to be used on an already alpha-converted AST).
+
+;;; Return non-#f iff any free occurrence of the given variable occurs free in a
+;;; lambda syntactically contained within the given AST.
+(define-constant (ast-nonlocally-uses? ast x)
+  (cond ((ast-literal? ast)
+         #f)
+        ((ast-variable? ast)
+         #f)
+        ((ast-define? ast)
+         ;; The defined variable is global, and therefore irrelevant here.
+         (ast-nonlocally-uses? (ast-define-body ast) x))
+        ((ast-if? ast)
+         (or (ast-nonlocally-uses? (ast-if-condition ast) x)
+             (ast-nonlocally-uses? (ast-if-then ast) x)
+             (ast-nonlocally-uses? (ast-if-else ast) x)))
+        ((ast-set!? ast)
+         ;; By itself this assignment, even if it were on x, is irrelevant
+         ;; because it's not within a lambda.  However the set! body might
+         ;; contain a lambda using x.
+         (ast-nonlocally-uses? (ast-set!-body ast) x))
+        ((ast-while? ast)
+         (or (ast-nonlocally-uses? (ast-while-guard ast) x)
+             (ast-nonlocally-uses? (ast-while-body ast) x)))
+        ((ast-primitive? ast)
+         (ast-nonlocally-uses?-list (ast-primitive-operands ast) x))
+        ((ast-call? ast)
+         (or (ast-nonlocally-uses? (ast-call-operator ast) x)
+             (ast-nonlocally-uses?-list (ast-call-operands ast) x)))
+        ((ast-lambda? ast)
+         ;; This is the interesting case.
+         (if (set-has? (ast-lambda-formals ast) x)
+             ;; Shadowing: any occurrence of x within the lambda doesn't refer
+             ;; the same x.
+             #f
+             ;; The lambda formals don't shadow x.  Check whether x occurs free
+             ;; in the lambda body, which includes any sub-lambda.  Checking for
+             ;; only free occurrences is essential: we don't want the analysis
+             ;; to be fooled by deeper shadowing within the lambda.
+             (ast-has-free? (ast-lambda-body ast) x)))
+        ((ast-let? ast)
+         ;; If this let shadows x then we don't care about its body, but we do
+         ;; care about the bound form, which might contain a lambda using x.
+         ;; Otherwise we care about both the bound form and the body.
+         (if (eq? (ast-let-bound-name ast) x)
+             (ast-nonlocally-uses? (ast-let-bound-form ast) x)
+             (or (ast-nonlocally-uses? (ast-let-bound-form ast) x)
+                 (ast-nonlocally-uses? (ast-let-body ast) x))))
+        ((ast-sequence? ast)
+         (or (ast-nonlocally-uses? (ast-sequence-first ast) x)
+             (ast-nonlocally-uses? (ast-sequence-second ast) x)))))
+
+;;; An extension of ast-nonlocally-uses? to a list of ASTs.
+(define-constant (ast-nonlocally-uses?-list asts x)
+  (and (non-null? asts)
+       (or (ast-nonlocally-uses? (car asts) x)
+           (ast-nonlocally-uses?-list (cdr asts) x))))
 
 
 
@@ -4318,20 +4492,20 @@
 
 (define-macro (eval form . optional-environment)
   (if (null? optional-environment)
-      `(primordial-eval ,form '())
+      `(primordial-eval ,form ())
       `(primordial-eval ,form ,@optional-environment)))
 (define-macro (eval-interpreter form . optional-environment)
   (if (null? optional-environment)
-      `(primordial-eval-interpreter ,form '())
+      `(primordial-eval-interpreter ,form ())
       `(primordial-eval-interpreter ,form ,@optional-environment)))
 (define-macro (eval-vm form . optional-environment)
   (if (null? optional-environment)
-      `(primordial-eval-vm ,form '())
+      `(primordial-eval-vm ,form ())
       `(primordial-eval-vm ,form ,@optional-environment)))
 
 (define-macro (macroexpand form . optional-environment)
   (if (null? optional-environment)
-      `(primordial-macroexpand ,form '())
+      `(primordial-macroexpand ,form ())
       `(primordial-macroexpand ,form ,@optional-environment)))
 
 
@@ -4340,6 +4514,30 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Compiler.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;; Boxes: temporary implementation.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; I'll implement boxes as a predefined type, after I make more tags available.
+;;; This is a temporary hack.
+
+(define-constant (box-make x)
+  (circular-list x))
+
+(define-constant (box-get b)
+  (car b))
+
+(define-constant (box-set! b x)
+  (set-car! b x))
+
+;;; This is, of course, a temporary hack only useful assuming that no ther piece
+;;; of data has the same shape.
+(define-constant (box? x)
+  (and (cons? x)
+       (eq? (cdr x) x)))
+
 
 
 
@@ -4357,8 +4555,8 @@
     (newline)))
 
 (define-constant (compiler-make-state)
-  (list ()   ;; bindings
-        ()   ;; instructions
+  (list ()  ;; bindings
+        ()  ;; instructions
         0   ;; label-no
         ))
 
@@ -4389,6 +4587,18 @@
     (compiler-set-label-no! state (1+ old-count))
     old-count))
 
+;;; The bindings field of the compiler state is an ordered list (the first
+;;; binding takes precedence) whose elements are conses of the form
+;;;   (VARIABLE . PLACE)
+;;; where VARIABLE is a variable name as a symbol and PLACE is
+;;; of one of the forms:
+;;; - (local REGISTER) where REGISTER is a fixnum (the register index);
+;;; - (nonlocal INDEX) where INDEX is a fixnum (the number of cdrs to cross
+;;;                                             to reach the nonlocal).
+;;; Globals are not stored in the bindings, but when looked up
+;;; their PLACE looks like
+;;;   global
+;;; .
 (define-constant (compiler-register-no state)
   (length (compiler-bindings state)))
 
@@ -4405,6 +4615,16 @@
                             (cons (cons variable-name new-register-index)
                                   bindings))
     new-register-index))
+
+;;; Given a set of fixnums, return the minimum non-negative fixnum not within
+;;; the set.
+(define-constant (compiler-smallest-not-in set)
+  (let loop ((candidate 0))
+    (if (set-has? set candidate)
+        (loop (1+ candidate))
+        candidate)))
+
+
 
 (define-constant (compile-literal! s value)
   (compiler-add-instruction! s `(push-literal ,value)))
@@ -4449,7 +4669,8 @@
     (compiler-add-instruction! s `(drop))
     (compiler-add-instruction! s `(label ,before-guard-label))
     (compile-ast! s guard)
-    (compiler-add-instruction! s `(branch-if-true ,before-body-label))))
+    (compiler-add-instruction! s `(branch-if-true ,before-body-label))
+    (compiler-add-instruction! s `(push-literal ,(begin)))))
 
 (define-constant (compile-while s guard body)
   (if (and (ast-literal? guard)
