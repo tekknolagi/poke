@@ -67,7 +67,7 @@ jitterlisp_sharing_table_finalize (struct jitter_hash_table *t)
 /* Return non-false iff the given object is already in the sharing table. */
 static bool
 jitterlisp_sharing_table_has (struct jitter_hash_table *t,
-                                  jitterlisp_object o)
+                              jitterlisp_object o)
 {
   return jitter_word_hash_table_has (t, o);
 }
@@ -77,7 +77,7 @@ jitterlisp_sharing_table_has (struct jitter_hash_table *t,
    already in the table: it would be a useless source of inefficiency.  */
 static void
 jitterlisp_sharing_table_add (struct jitter_hash_table *t,
-                                  jitterlisp_object o)
+                              jitterlisp_object o)
 {
   /* A Lisp object whose printed representation cannot contain other Lisp
      object should not be kept in the table; do nothing in that case. */
@@ -524,15 +524,29 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
   /* Before printing anything, check whether we have printed this object
      already.  If so print a sharing indicator and just return; otherwise add
      the object to the table for the next time (as long as it's a potential
-     source of sharing) and go on. */
-  if (jitterlisp_sharing_table_has (st, o))
+     source of sharing) and go on.
+
+     A special case: ignore AST sharing when printing.  Sharing sub-ASTs,
+     particularly literals and variables, is harmless, and ASTs must not be
+     circular anyway: if they were, we'd in trouble for reasons much worse than
+     printing.  Shared literal *values* inside ASTs are treated as always.  We
+     still keep track of ASTs in the table, since the information may be needed
+     for an output notation when we print shared structures in an explicit way
+     in the future. */
+  if (JITTERLISP_IS_AST(o))
+    {
+      if (! jitterlisp_sharing_table_has (st, o))
+        jitterlisp_sharing_table_add (st, o);
+    }
+  else if (jitterlisp_sharing_table_has (st, o))
     {
       jitterlisp_print_decoration (cp, cps, CIRCULARATTR);
       jitterlisp_print_string (cp, cps, "...");
       jitterlisp_print_decoration (cp, cps, NOATTR);
       return;
     }
-  jitterlisp_sharing_table_add (st, o);
+  else
+    jitterlisp_sharing_table_add (st, o);
 
   /* Print the object according to its type. */
   if (JITTERLISP_IS_FIXNUM(o))
