@@ -3053,9 +3053,14 @@
 ;;; We are looking at free occurrences of the variable, not at inner bindings
 ;;; shadowing outer variables with the same name.
 ;;;
-;;; A let block doesn't count for these purposes, since by itself a let within
-;;; the same procedure doesn't require boxing, and keeping the variable in a
-;;; register without indirections is enough.
+;;; A let block doesn't count for these purposes, as by itself a let within the
+;;; same procedure doesn't require boxing and I can keep a let-bound variable in
+;;; a register without any indirections, as long as assignments to the variable
+;;; don't need to be visible across lambdas.
+;;;
+;;; This is, of course, conservative: it would be possible to do better in some
+;;; cases, for example when a variable is assigned only locally and *before* the
+;;; lambda using it is reached.
 
 ;;; Return non-#f iff the given variable needs to be boxed in the given AST.
 (define-constant (ast-requires-boxing-for? ast x)
@@ -4141,6 +4146,12 @@
          ;; [primitive not E].
          (ast-optimize-primitive primitive-not operands))
         ;; The following cases are obvious.
+        ((eq? primitive primitive-null?)
+         ;; [primitive not [primitive null? . Es]] ==> [primitive non-null? . Es]
+         (ast-optimize-primitive primitive-non-null? operands))
+        ((eq? primitive primitive-non-null?)
+         ;; [primitive not [primitive non-null? . Es]] ==> [primitive null? . Es]
+         (ast-optimize-primitive primitive-null? operands))
         ((eq? primitive primitive-eq?)
          ;; [primitive not [primitive eq? . Es]] ==> [primitive not-eq? . Es]
          (ast-optimize-primitive primitive-not-eq? operands))
@@ -4612,41 +4623,70 @@
     (display x)
     (newline)))
 
+;; Temporary testing macro.
+(define-macro (t . forms)
+  `(let* ((s (compiler-make-state))
+          (ast (macroexpand '(begin ,@forms)))
+          (optimized-ast (ast-optimize ast ())))
+     (display 'original:) (dotimes (i 1) (character-display #\space))
+     (display ast)
+     (newline)
+     (display 'rewritten:) (dotimes (i 0) (character-display #\space))
+     (display optimized-ast)
+     (newline)
+     (compile-ast! s optimized-ast)
+     (print-reversed-instructions (compiler-reversed-instructions s))
+     (newline)))
+
 
 
 
-;;;; Compiler: tentative code.
+;;;; Compiler state structure.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (compiler-make-state)
   (list ()  ;; instructions
         0   ;; label-no
         ()  ;; bindings
+        #t  ;; tailness
         ))
 
 (define-constant (compiler-reversed-instructions state)
   (car state))
 (define-constant (compiler-set-reversed-instructions! state new-field)
   (set-car! state new-field))
-(define-constant (compiler-add-instruction! state new-instruction)
-  (let ((reversed-instructions (compiler-reversed-instructions state)))
-    (compiler-set-reversed-instructions! state
-                                         (cons new-instruction
-                                               reversed-instructions))))
 
 (define-constant (compiler-label-no state)
   (cadr state))
 (define-constant (compiler-set-label-no! state new-field)
   (set-cadr! state new-field))
-(define-constant (compiler-new-label state)
-  (let* ((old-count (compiler-label-no state)))
-    (compiler-set-label-no! state (1+ old-count))
-    old-count))
 
 (define-constant (compiler-bindings state)
   (caddr state))
 (define-constant (compiler-set-bindings! state new-field)
   (set-caddr! state new-field))
+
+(define-constant (compiler-tailness state)
+  (cadddr state))
+(define-constant (compiler-set-tailness! state new-field)
+  (set-cadddr! state new-field))
+
+
+
+
+;;;; Compiler state: labels.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (compiler-new-label state)
+  (let* ((old-count (compiler-label-no state)))
+    (compiler-set-label-no! state (1+ old-count))
+    old-count))
+
+
+
+
+;;;; Compiler state: bindings.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; The bindings field of the compiler state is an ordered list (the first
 ;;; binding takes precedence) whose elements are conses of the form
@@ -4720,109 +4760,25 @@
                                (lambda (register) `(local-boxed ,register))))
 
 
+
 
-(define-constant (compile-literal! s value)
-  (compiler-add-instruction! s `(push-literal ,value)))
+;;;; Compiler state: generating instructions.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant (compile-variable! s name)
-  (let ((place (compiler-lookup-variable s name)))
-    (cond ((eq? place 'global)
-           (compiler-add-instruction! s `(push-global ,name)))
-          ((compiler-place-local? place)
-           (compiler-add-instruction! s `(push-register ,(cadr place)))
-           (when (eq? (car place) 'local-boxed)
-             (compiler-add-instruction! s `(unbox))))
-          (#t
-           (error '(unimplemented variable place ,place))))))
+(define-constant (compiler-add-instruction! state new-instruction)
+  (let ((reversed-instructions (compiler-reversed-instructions state)))
+    (compiler-set-reversed-instructions! state
+                                         (cons new-instruction
+                                               reversed-instructions))))
 
-(define-constant (compile-define s name body)
-  (compile-ast! s body)
-  (compiler-add-instruction! s `(pop-global ,name)))
 
-(define-constant (compile-if! s condition then else)
-  (let ((after-then-label (compiler-new-label s))
-        (after-else-label (compiler-new-label s)))
-    (compile-ast! s condition)
-    (compiler-add-instruction! s `(branch-if-false ,after-then-label))
-    (compile-ast! s then)
-    (compiler-add-instruction! s `(branch ,after-else-label))
-    (compiler-add-instruction! s `(label ,after-then-label))
-    (compile-ast! s else)
-    (compiler-add-instruction! s `(label ,after-else-label))))
+
 
-(define-constant (compile-set!! s name body)
-  (let ((place (compiler-lookup-variable s name)))
-    (compile-ast! s body)
-    (cond ((eq? place 'global)
-           (compiler-add-instruction! s `(check-non-constant-global ,name))
-           (compiler-add-instruction! s `(set-global! ,name)))
-          ((eq? (car place) 'local-unboxed)
-           (compiler-add-instruction! s `(pop-to-register ,(cadr place))))
-          ((eq? (car place) 'local-boxed)
-           (compiler-add-instruction! s `(box-set! ,(cadr place))))
-          (#t
-           (error `(unsupported set! place ,place))))
-    (compiler-add-instruction! s `(push-literal ,(begin)))))
+;;;; Compiling an AST into a state.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant (compile-infinite-loop s body)
-  (let ((before-body-label (compiler-new-label s)))
-    (compiler-add-instruction! s `(label ,before-body-label))
-    (compile-ast! s body)
-    (compiler-add-instruction! s `(drop))
-    (compiler-add-instruction! s `(branch ,before-body-label))))
-
-(define-constant (compile-while-ordinary s guard body)
-  (let ((before-body-label (compiler-new-label s))
-        (before-guard-label (compiler-new-label s)))
-    (compiler-add-instruction! s `(branch ,before-guard-label))
-    (compiler-add-instruction! s `(label ,before-body-label))
-    (compile-ast! s body)
-    (compiler-add-instruction! s `(drop))
-    (compiler-add-instruction! s `(label ,before-guard-label))
-    (compile-ast! s guard)
-    (compiler-add-instruction! s `(branch-if-true ,before-body-label))
-    (compiler-add-instruction! s `(push-literal ,(begin)))))
-
-(define-constant (compile-while s guard body)
-  (if (and (ast-literal? guard)
-           (ast-literal-value guard))
-      (compile-infinite-loop s body)
-      (compile-while-ordinary s guard body)))
-
-(define-constant (compile-primitive s operator operands)
-  (dolist (operand operands)
-    (compile-ast! s operand))
-  (compiler-add-instruction! s `(primitive ,operator)))
-
-(define-constant (compile-call s operator operands)
-  (compiler-add-instruction! s `(CALL UNIMPLEMENTED: BEGIN SCRATCH))
-  (compile-ast! s operator)
-  (dolist (operand operands)
-    (compile-ast! s operand))
-  (compiler-add-instruction! s `(call ,(length operands)))
-  (compiler-add-instruction! s `(CALL UNIMPLEMENTED: END SCRATCH)))
-
-(define-constant (compile-let s bound-name bound-form body)
-  (compile-ast! s bound-form)
-  (let* ((boxed (ast-requires-boxing-for? body bound-name))
-         (place (if boxed
-                    (compiler-bind-local-boxed! s bound-name)
-                    (compiler-bind-local-unboxed! s bound-name)))
-         (register (cadr place)))
-    (when boxed
-      (compiler-add-instruction! s `(box)))
-    (compiler-add-instruction! s `(pop-to-register ,register))
-    (compile-ast! s body)
-    (compiler-unbind! s bound-name)))
-
-(define-constant (compile-lambda s formals body)
-  (compiler-add-instruction! s '(LAMBDA-UNIMPLEMENTED)))
-
-(define-constant (compile-sequence s first second)
-  (compile-ast! s first)
-  (compiler-add-instruction! s '(drop))
-  (compile-ast! s second))
-
+;;; Compile the given AST in the given state.  This works by calling the
+;;; appropriate helper according to the AST case.
 (define-constant (compile-ast! s ast)
   (cond ((ast-literal? ast)
          (compile-literal! s (ast-literal-value ast)))
@@ -4867,17 +4823,142 @@
                            (ast-sequence-first ast)
                            (ast-sequence-second ast)))))
 
-(define-macro (t . forms)
-  `(let* ((s (compiler-make-state))
-          (ast (macroexpand '(begin ,@forms)))
-          (optimized-ast (ast-optimize ast ())))
-     (display ast)
-     (newline)
-     (display optimized-ast)
-     (newline)
-     (compile-ast! s optimized-ast)
-     (print-reversed-instructions (compiler-reversed-instructions s))
-     (newline)))
+(define-constant (compile-literal! s value)
+  (compiler-add-instruction! s `(push-literal ,value)))
+
+(define-constant (compile-variable! s name)
+  (let ((place (compiler-lookup-variable s name)))
+    (cond ((eq? place 'global)
+           (compiler-add-instruction! s `(check-global-defined ,name))
+           (compiler-add-instruction! s `(push-global ,name)))
+          ((compiler-place-local? place)
+           (compiler-add-instruction! s `(push-register ,(cadr place)))
+           (when (eq? (car place) 'local-boxed)
+             (compiler-add-instruction! s `(unbox))))
+          (#t
+           (error '(unimplemented variable place ,place))))))
+
+(define-constant (compile-define s name body)
+  (let ((outer-tailness (compiler-tailness s)))
+    (compiler-set-tailness! s #f)
+    (compile-ast! s body)
+    (compiler-add-instruction! s `(check-global-non-constant ,name))
+    (compiler-add-instruction! s `(pop-to-global ,name))
+    (compiler-set-tailness! s outer-tailness)))
+
+(define-constant (compile-if! s condition then else)
+  (let ((outer-tailness (compiler-tailness s))
+        (after-then-label (compiler-new-label s))
+        (after-else-label (compiler-new-label s)))
+    (compiler-set-tailness! s #f)
+    (compile-ast! s condition)
+    (compiler-add-instruction! s `(branch-if-false ,after-then-label))
+    (compiler-set-tailness! s outer-tailness)
+    (compile-ast! s then)
+    (compiler-add-instruction! s `(branch ,after-else-label))
+    (compiler-add-instruction! s `(label ,after-then-label))
+    (compile-ast! s else)
+    (compiler-add-instruction! s `(label ,after-else-label))))
+
+(define-constant (compile-set!! s name body)
+  (let ((outer-tailness (compiler-tailness s))
+        (place (compiler-lookup-variable s name)))
+    (compiler-set-tailness! s #f)
+    (compile-ast! s body)
+    (cond ((eq? place 'global)
+           (compiler-add-instruction! s `(check-global-defined ,name))
+           (compiler-add-instruction! s `(check-global-non-constant ,name))
+           (compiler-add-instruction! s `(pop-to-global ,name)))
+          ((eq? (car place) 'local-unboxed)
+           (compiler-add-instruction! s `(pop-to-register ,(cadr place))))
+          ((eq? (car place) 'local-boxed)
+           (compiler-add-instruction! s `(box-set! ,(cadr place))))
+          (#t
+           (error `(unsupported set! place ,place))))
+    (compiler-add-instruction! s `(push-literal ,(begin)))
+    (compiler-set-tailness! s outer-tailness)))
+
+(define-constant (compile-infinite-loop s body)
+  (let ((before-body-label (compiler-new-label s)))
+    (compiler-add-instruction! s `(label ,before-body-label))
+    (compile-ast! s body)
+    (compiler-add-instruction! s `(drop))
+    (compiler-add-instruction! s `(branch ,before-body-label))))
+
+(define-constant (compile-while-ordinary s guard body)
+  (let ((outer-tailness (compiler-tailness s))
+        (before-body-label (compiler-new-label s))
+        (before-guard-label (compiler-new-label s)))
+    (compiler-add-instruction! s `(branch ,before-guard-label))
+    (compiler-add-instruction! s `(label ,before-body-label))
+    (compile-ast! s body)
+    (compiler-add-instruction! s `(drop))
+    (compiler-add-instruction! s `(label ,before-guard-label))
+    (compiler-set-tailness! s #f)
+    (compile-ast! s guard)
+    (compiler-set-tailness! s outer-tailness)
+    (compiler-add-instruction! s `(branch-if-true ,before-body-label))
+    (compiler-add-instruction! s `(push-literal ,(begin)))))
+
+(define-constant (compile-while s guard body)
+  (if (and (ast-literal? guard)
+           (ast-literal-value guard))
+      (compile-infinite-loop s body)
+      (compile-while-ordinary s guard body)))
+
+(define-constant (compile-primitive s operator operands)
+  (let ((outer-tailness (compiler-tailness s)))
+    (compiler-set-tailness! s #f)
+    (dolist (operand operands)
+      (compile-ast! s operand))
+    (compiler-add-instruction! s `(primitive ,operator))
+    (compiler-set-tailness! s outer-tailness)))
+
+(define-constant (compile-call s operator operands)
+  (let ((outer-tailness (compiler-tailness s)))
+    (compile-ast! s operator)
+    (compiler-add-instruction! s `(check-closure))
+    (compiler-add-instruction! s `(check-in-arity ,(length operands)))
+    (compiler-set-tailness! s #f)
+    (unless outer-tailness
+      (compiler-add-instruction! s `(FIXME: save registers from
+                                            ,(compiler-bindings s))))
+    (dolist (operand operands)
+      (compile-ast! s operand))
+    (compiler-set-tailness! s outer-tailness)
+    (if outer-tailness
+        (compiler-add-instruction! s `(tail-call ,(length operands)))
+        (begin
+          (compiler-add-instruction! s `(call ,(length operands)))
+          (compiler-add-instruction! s `(FIXME: restore registers))
+          ))))
+
+(define-constant (compile-let s bound-name bound-form body)
+  (let ((outer-tailness (compiler-tailness s)))
+    (compiler-set-tailness! s #f)
+    (compile-ast! s bound-form)
+    (compiler-set-tailness! s outer-tailness))
+  (let* ((boxed (ast-requires-boxing-for? body bound-name))
+         (place (if boxed
+                    (compiler-bind-local-boxed! s bound-name)
+                    (compiler-bind-local-unboxed! s bound-name)))
+         (register (cadr place)))
+    (when boxed
+      (compiler-add-instruction! s `(box)))
+    (compiler-add-instruction! s `(pop-to-register ,register))
+    (compile-ast! s body)
+    (compiler-unbind! s bound-name)))
+
+(define-constant (compile-lambda s formals body)
+  (compiler-add-instruction! s '(LAMBDA-UNIMPLEMENTED)))
+
+(define-constant (compile-sequence s first second)
+  (let ((outer-tailness (compiler-tailness s)))
+    (compiler-set-tailness! s #f)
+    (compile-ast! s first)
+    (compiler-add-instruction! s '(drop))
+    (compiler-set-tailness! s outer-tailness))
+  (compile-ast! s second))
 
 
 
