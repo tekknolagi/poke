@@ -3733,7 +3733,7 @@
       (begin
         ;; FIXME: warn more cleanly.
         (display `(WARNING: in-arity mismatch in call to lambda
-                            with formals ,formals and body ,body))
+                            with formals ,formals and body ,body-ast))
         (newline)
         (ast-call (ast-lambda formals body-ast) actual-asts))
       ;; Generate two layers of nested lets, the outer layer binding fresh
