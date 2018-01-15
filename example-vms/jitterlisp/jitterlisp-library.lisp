@@ -3045,6 +3045,9 @@
 ;;;; Boxed variables in an AST.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; This check is used to implement what David A. Kranz called "Assignment
+;;; Conversion" in his thesis about the Orbit compiler.
+
 ;;; Check if a given local variable is at the same time *used* nonlocally
 ;;; (assigned or not, it doesn't matter) and assigned (locally or not, it
 ;;; doesn't matter): that is the case where a variable needs to be boxed.  Here,
@@ -3586,9 +3589,10 @@
 
 ;;; Return a rewritten call having the given closure as the original (literal)
 ;;; operator, and the ASTs in the given list as operands.
-(define-constant (ast-simplify-call-helper closure actuals)
+(define-constant (ast-simplify-known-closure-call-helper closure actuals)
   ;; FIXME: would it be a problem for termination if I used ast-optimize instead
-  ;; of ast-simplify-call-helper in recursive calls?  Would it help?
+  ;; of ast-simplify-known-closure-call-helper in recursive calls?  Would it
+  ;; help?
   (let ((environment (closure-environment closure))
         (formals (closure-formals closure))
         (body (closure-body closure)))
@@ -3720,6 +3724,30 @@
                (ast-nested-let (cdr formals) (cdr actual-asts)
                                body-ast))))
 
+;;; Return the rewritten form of a call to the lambda operator shaped like
+;;; ((lambda FORMALS BODY-AST) . ACTUALS-ASTS) , using nested let forms.
+(define-constant (ast-simplify-lambda-call formals actual-asts body-ast)
+  (if (<> (length formals) (length actual-asts))
+      ;; Don't rewrite in case of arity mismatch: the code will fail
+      ;; if reached.
+      (begin
+        ;; FIXME: warn more cleanly.
+        (display `(WARNING: in-arity mismatch in call to lambda
+                            with formals ,formals and body ,body))
+        (newline)
+        (ast-call (ast-lambda formals body-ast) actual-asts))
+      ;; Generate two layers of nested lets, the outer layer binding fresh
+      ;; identifiers to actuals, the inner layer binding the original lambda
+      ;; formals to the fresh identifiers of the outer layer.  This may be
+      ;; needed to avoid capture, and is the same trick used to rewrite
+      ;; one Lisp-style multiple-binding let into nested AST-style
+      ;; one-binding lets.
+      (let* ((fresh-variables (map (lambda (useless) (gensym)) formals))
+             (fresh-variable-asts (map ast-variable fresh-variables)))
+        (ast-nested-let (append fresh-variables formals)
+                        (append actual-asts fresh-variable-asts)
+                        body-ast))))
+
 ;;; Return a copy of the given AST where calls to closure literals are
 ;;; rewritten into let forms where possible.  The AST is assumed to be
 ;;; already alpha-converted.
@@ -3754,23 +3782,33 @@
                ;; may contain calls.
                (simplified-operands
                 (ast-simplify-calls-list (ast-call-operands ast))))
-           (if (and (ast-literal? simplified-operator)
-                    (closure? (ast-literal-value simplified-operator))
-                    (or ;; This may be too aggressive: I currently inline every
-                        ;; call to a known leaf closure, independently from the
-                        ;; body size.
-                        (ast-leaf? (closure-body (ast-literal-value
-                                                  simplified-operator)))
-                        ;; In order to make this not too aggressive as well,
-                        ;; I require procedure wrapper bodies to be leaves;
-                        ;; otherwise a procedure wrapper which is recursive
-                        ;; on the operator side would cause an infinite
-                        ;; expansion here.
-                        (closure-wrapper? (ast-literal-value
-                                           simplified-operator))))
-               (ast-simplify-call-helper (ast-literal-value simplified-operator)
-                                         simplified-operands)
-               (ast-call simplified-operator simplified-operands))))
+           (cond ((ast-lambda? simplified-operator)
+                  ;;; This can always be rewritten into nested let forms, as
+                  ;;; long as the arity matches.
+                  (ast-simplify-lambda-call (ast-lambda-formals
+                                             simplified-operator)
+                                            simplified-operands
+                                            (ast-lambda-body
+                                             simplified-operator)))
+                 ((and (ast-literal? simplified-operator)
+                       (closure? (ast-literal-value simplified-operator))
+                       (or ;; This may be too aggressive: I currently inline
+                           ;; every call to a known leaf closure, independently
+                           ;; from the body size.
+                           (ast-leaf? (closure-body (ast-literal-value
+                                                     simplified-operator)))
+                           ;; In order to make this not too aggressive as well,
+                           ;; I require procedure wrapper bodies to be leaves;
+                           ;; otherwise a procedure wrapper which is recursive
+                           ;; on the operator side would cause an infinite
+                           ;; expansion here.
+                           (closure-wrapper? (ast-literal-value
+                                              simplified-operator))))
+                  (ast-simplify-known-closure-call-helper (ast-literal-value
+                                                           simplified-operator)
+                                                          simplified-operands))
+                 (#t
+                  (ast-call simplified-operator simplified-operands)))))
         ((ast-lambda? ast)
          (ast-lambda (ast-lambda-formals ast)
                      (ast-simplify-calls (ast-lambda-body ast))))
@@ -4459,7 +4497,7 @@
               (optimize-when-closure! ,value-name))))
         ((or (not (symbols? thing))
              (not (all-different? (cdr thing))))
-         (error `(define-optimizing: ill-defined defined thing ,thing)))
+         (error `(define-optimizing: ill-formed defined thing ,thing)))
         (#t
          (let ((value-name (gensym))
                (thing-name (car thing))
@@ -4990,8 +5028,8 @@
 ;;; (define q (macroexpand '(f x (+ 2 3)))) q (ast-optimize q ())
 
 ;;; OK
-;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define x y) x 7))) ())
-;;; [sequence [define x [variable y]] [let #<u443> [variable x] [primitive #<2-ary primitive cons> [literal 3] [variable #<u443>]]]]
+;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define-unoptimizing x y) x 7))) ())
+;;; [primitive #<2-ary primitive cons> [literal 3] [sequence [define x [variable y]] [variable x]]]
 
 ;;; OK
 ;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define x y) x 7))) '(x))
@@ -5030,12 +5068,15 @@
 ;; OK(ast-optimize (macroexpand '(begin2 x y z)) ())
 ;;   {  [sequence [variable x] [sequence [variable z] [variable y]]] is WRONG }
 ;; OK(ast-optimize (macroexpand '(let ((a (f 1)) (b a)) 4)) ())
-;;   {  [let #<u263> [call [variable f] [literal 1]] [literal 4]] is WRONG:
-;;      a is non-bound and non-constant, so its reference is effectful and
-;;      cannot be optimized away. }
-;; OK(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) 4)) ())
-;;   {  [let #<u267> [call [variable f] [literal 1]] [literal 4]] is CORRECT
-;;      but subptimal: the let AST should become a sequence AST. }
+;;   {  [let #<u263> [call [variable f] [literal 1]] [literal 4]] would be
+;;      wrong: a is non-bound and non-constant, so its reference is effectful
+;;      and cannot be optimized away.
+;;      [sequence [call [variable f] [literal 1]] [sequence [variable a] [literal 4]]]
+;;      is GOOD. }
+;; GOOD(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) 4)) ())
+;;   {  [let #<u267> [call [variable f] [literal 1]] [literal 4]] would be
+;;      correct but subptimal: the let AST should become a sequence AST.
+;;      [sequence [call [variable f] [literal 1]] [literal 4]] is GOOD.  }
 ;; OK(ast-optimize (macroexpand '(let* ((a (f 1)) (b a)) b)) ())
 ;;   {  [call [variable f] [literal 1]] }
 
@@ -5096,6 +5137,11 @@
 ;; #f
 ;; Indeed, cadr is not a wrapper according to my definition, and my inlining
 ;; procedure for wrappers wouldn't work on it.
+
+;; OK(ast-optimize (macroexpand '((lambda (x y) (+ x y)) 3 5)) ())
+;;   {  [literal 8]  }
+;; OK(ast-optimize (macroexpand '((lambda (x y) (+ x Q)) 3 5)) ())
+;;   {  [primitive #<2-ary primitive primordial-+> [literal 3] [variable Q]]  }
 
 ;; (and a b c) => (if a (if b c #f) #f)
 ;; (and a b c) => (not (or (not a) (not b) (not c)))
