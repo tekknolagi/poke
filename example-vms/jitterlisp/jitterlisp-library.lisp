@@ -1208,21 +1208,40 @@
         (#t
          (rassq value (cdr alist)))))
 
-(define-constant (del-assq object alist)
+;;; Return a new alist, possibly sharing structure with alist, without the
+;;; first binding of the given object, if any.
+(define-constant (del-assq-1-noncopying object alist)
   (cond ((null? alist)
          ())
         ((eq? (caar alist) object)
-         (del-assq object (cdr alist)))
+         (cdr alist))
         (#t
-         (cons (car alist) (del-assq object (cdr alist))))))
+         (cons (car alist) (del-assq-1-noncopying object (cdr alist))))))
+
+(define-constant (del-assq-1 object alist)
+  (del-assq-1-noncopying object (list-copy alist)))
+
+(define-constant (del-assq-noncopying object alist)
+  (cond ((null? alist)
+         ())
+        ((eq? (caar alist) object)
+         (del-assq-noncopying object (cdr alist)))
+        (#t
+         (cons (car alist) (del-assq-noncopying object (cdr alist))))))
+
+(define-constant (del-assq object alist)
+  (del-assq-noncopying object (list-copy alist)))
 
 ;;; An obvious extension of del-assq, returning a copy of the alist with the
 ;;; bindings for all of the given keys removed.
-(define-constant (del-assq-list objects alist)
+(define-constant (del-assq-list-noncopying objects alist)
   (if (null? objects)
       alist
-      (del-assq-list (cdr objects)
-                     (del-assq (car objects) alist))))
+      (del-assq-list-noncopying (cdr objects)
+                                (del-assq-noncopying (car objects) alist))))
+
+(define-constant (del-assq-list objects alist)
+  (del-assq-list-noncopying objects (list-copy alist)))
 
 ;; FIXME: implement del-assq! .
 
@@ -2367,6 +2386,18 @@
          (set! ,list-name (cdr ,list-name)))
        ,@result-forms)))
 
+;; An alternative version of dolist , with the same semantics.  This definition
+;; is likely more natural and should generate better compiled code, but will be
+;; worse on the current AST interpreter where let requires heap allocation.
+(define-macro (dolist-alt (variable list . result-forms) . body-forms)
+  (let ((list-name (gensym)))
+    `(let* ((,list-name ,list))
+       (while (non-null? ,list-name)
+         (let* ((,variable (car ,list-name)))
+           ,@body-forms
+           (set! ,list-name (cdr ,list-name))))
+       ,@result-forms)))
+
 (define-macro (do bindings (end-condition . result-forms) . body-forms)
   `(let (,@(map (lambda (binding)
                   `(,(car binding) ,(cadr binding)))
@@ -3011,13 +3042,36 @@
 
 
 
+;;;; Boxed variables in an AST.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Check if a given local variable is at the same time *used* nonlocally
+;;; (assigned or not, it doesn't matter) and assigned (locally or not, it
+;;; doesn't matter): that is the case where a variable needs to be boxed.  Here,
+;;; like in the section above, non-locally means within a lambda contained,
+;;; directly or not, within the given AST.
+;;; We are looking at free occurrences of the variable, not at inner bindings
+;;; shadowing outer variables with the same name.
+;;;
+;;; A let block doesn't count for these purposes, since by itself a let within
+;;; the same procedure doesn't require boxing, and keeping the variable in a
+;;; register without indirections is enough.
+
+;;; Return non-#f iff the given variable needs to be boxed in the given AST.
+(define-constant (ast-requires-boxing-for? ast x)
+  (and (ast-nonlocally-uses? ast x)
+       (ast-has-assigned? ast x)))
+
+
+
+
 ;;;; Non-locally assigned variables in an AST.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; FIXME: no, this idea is not what I need.  I need to check if a given local
 ;;; is at the same time *used* nonlocally (assigned or not, it doesn't matter)
 ;;; and assigned (locally or not, it doesn't matter).  That is the case where
-;;; a variable needs to be boxed.
+;;; a variable needs to be boxed.  Remove this section.
 
 ;;; Check whether a variable is assigned non-locally in a lambda occurring
 ;;; within the given AST.  For the purposes of this definition nested lets do
@@ -4537,12 +4591,20 @@
 
 
 
-;;;; Compiler: tentative code.
+;;;; Compiler utility code.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; Given a set-as-list of fixnums, return the minimum non-negative fixnum not
+;;; within the set.
+(define-constant (compiler-smallest-not-in set)
+  (let loop ((candidate 0))
+    (if (set-has? set candidate)
+        (loop (1+ candidate))
+        candidate)))
+
 ;;; Scratch, for debugging.
-(define-constant (print-list xs)
-  (dolist (x xs)
+(define-constant (print-reversed-instructions xs)
+  (dolist (x (reverse xs))
     (when (and (list? x)
                (not-eq? (car x) 'label))
       (dotimes (i 4)
@@ -4550,75 +4612,112 @@
     (display x)
     (newline)))
 
+
+
+
+;;;; Compiler: tentative code.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define-constant (compiler-make-state)
-  (list ()  ;; bindings
-        ()  ;; instructions
+  (list ()  ;; instructions
         0   ;; label-no
+        ()  ;; bindings
         ))
 
-(define-constant (compiler-bindings state)
+(define-constant (compiler-reversed-instructions state)
   (car state))
-(define-constant (compiler-set-bindings! state new-field)
+(define-constant (compiler-set-reversed-instructions! state new-field)
   (set-car! state new-field))
-
-(define-constant (compiler-instructions state)
-  (cadr state))
-(define-constant (compiler-set-instructions! state new-field)
-  (set-cadr! state new-field))
-
 (define-constant (compiler-add-instruction! state new-instruction)
-  (let ((instructions (compiler-instructions state)))
-    (compiler-set-instructions! state
-                                (append! instructions
-                                         (singleton new-instruction)))))
-
+  (let ((reversed-instructions (compiler-reversed-instructions state)))
+    (compiler-set-reversed-instructions! state
+                                         (cons new-instruction
+                                               reversed-instructions))))
 
 (define-constant (compiler-label-no state)
-  (caddr state))
+  (cadr state))
 (define-constant (compiler-set-label-no! state new-field)
-  (set-caddr! state new-field))
-
+  (set-cadr! state new-field))
 (define-constant (compiler-new-label state)
   (let* ((old-count (compiler-label-no state)))
     (compiler-set-label-no! state (1+ old-count))
     old-count))
+
+(define-constant (compiler-bindings state)
+  (caddr state))
+(define-constant (compiler-set-bindings! state new-field)
+  (set-caddr! state new-field))
 
 ;;; The bindings field of the compiler state is an ordered list (the first
 ;;; binding takes precedence) whose elements are conses of the form
 ;;;   (VARIABLE . PLACE)
 ;;; where VARIABLE is a variable name as a symbol and PLACE is
 ;;; of one of the forms:
-;;; - (local REGISTER) where REGISTER is a fixnum (the register index);
+;;; - (local-unboxed REGISTER) where REGISTER is a fixnum (the register index);
+;;; - (local-boxed REGISTER) where REGISTER is a fixnum (the register index);
 ;;; - (nonlocal INDEX) where INDEX is a fixnum (the number of cdrs to cross
 ;;;                                             to reach the nonlocal).
 ;;; Globals are not stored in the bindings, but when looked up
 ;;; their PLACE looks like
 ;;;   global
 ;;; .
-(define-constant (compiler-register-no state)
-  (length (compiler-bindings state)))
+
+(define-constant (compiler-place-local? place)
+  (and (cons? place)
+       (or (eq? (car place) 'local-boxed)
+           (eq? (car place) 'local-unboxed))))
+
+(define-constant (compiler-used-registers state)
+  (let* ((places (map cdr (compiler-bindings state)))
+         ;; FIXME: define filter! and use it instead of filter.
+         (register-places (filter compiler-place-local?
+                                  ;; FIXME: also consider the s-link register
+                                  places))
+         (register-list (map! cadr register-places) register-places))
+    (list->set register-list)))
+
+(define-constant (compiler-fresh-register state)
+  (let ((used-registers (compiler-used-registers state)))
+    (compiler-smallest-not-in used-registers)))
 
 (define-constant (compiler-bound-variable? state variable)
   (assq variable (compiler-bindings state)))
 
 (define-constant (compiler-lookup-variable state variable)
-  (cdr (assq variable (compiler-bindings state))))
+  (let ((cons-or-false (assq variable (compiler-bindings state))))
+    (if cons-or-false
+        (cdr cons-or-false)
+        'global)))
 
-(define-constant (compiler-bind-local! state variable-name)
-  (let ((bindings (compiler-bindings state))
-        (new-register-index (compiler-register-no state)))
+(define-constant (compiler-bind! state variable-name place)
+  (let ((bindings (compiler-bindings state)))
     (compiler-set-bindings! state
-                            (cons (cons variable-name new-register-index)
-                                  bindings))
-    new-register-index))
+                            (cons (cons variable-name place)
+                                  bindings))))
 
-;;; Given a set of fixnums, return the minimum non-negative fixnum not within
-;;; the set.
-(define-constant (compiler-smallest-not-in set)
-  (let loop ((candidate 0))
-    (if (set-has? set candidate)
-        (loop (1+ candidate))
-        candidate)))
+(define-constant (compiler-unbind! state variable-name)
+  (let ((bindings (compiler-bindings state))
+        (place (compiler-lookup-variable state variable-name)))
+    (unless (compiler-place-local? place)
+      ;; It only makes sense to unbind local-unboxed and local-boxed variables.
+      (error `(cannot unbind ,variable-name from ,place)))
+    (compiler-set-bindings! state
+                            (del-assq-1-noncopying variable-name
+                                                   bindings))))
+
+(define-constant (compiler-bind-local-helper! state variable-name wrapper)
+  (let* ((register (compiler-fresh-register state))
+         (place (wrapper register)))
+    (compiler-bind! state variable-name place)
+    place))
+(define-constant (compiler-bind-local-unboxed! state variable-name)
+  (compiler-bind-local-helper! state
+                               variable-name
+                               (lambda (register) `(local-unboxed ,register))))
+(define-constant (compiler-bind-local-boxed! state variable-name)
+  (compiler-bind-local-helper! state
+                               variable-name
+                               (lambda (register) `(local-boxed ,register))))
 
 
 
@@ -4626,13 +4725,15 @@
   (compiler-add-instruction! s `(push-literal ,value)))
 
 (define-constant (compile-variable! s name)
-  (if (compiler-bound-variable? s name)
-      (compiler-add-instruction!
-          s
-          `(push-register ,(compiler-lookup-variable s name)))
-      (compiler-add-instruction!
-          s
-          `(push-global ,name))))
+  (let ((place (compiler-lookup-variable s name)))
+    (cond ((eq? place 'global)
+           (compiler-add-instruction! s `(push-global ,name)))
+          ((compiler-place-local? place)
+           (compiler-add-instruction! s `(push-register ,(cadr place)))
+           (when (eq? (car place) 'local-boxed)
+             (compiler-add-instruction! s `(unbox))))
+          (#t
+           (error '(unimplemented variable place ,place))))))
 
 (define-constant (compile-define s name body)
   (compile-ast! s body)
@@ -4648,6 +4749,20 @@
     (compiler-add-instruction! s `(label ,after-then-label))
     (compile-ast! s else)
     (compiler-add-instruction! s `(label ,after-else-label))))
+
+(define-constant (compile-set!! s name body)
+  (let ((place (compiler-lookup-variable s name)))
+    (compile-ast! s body)
+    (cond ((eq? place 'global)
+           (compiler-add-instruction! s `(check-non-constant-global ,name))
+           (compiler-add-instruction! s `(set-global! ,name)))
+          ((eq? (car place) 'local-unboxed)
+           (compiler-add-instruction! s `(pop-to-register ,(cadr place))))
+          ((eq? (car place) 'local-boxed)
+           (compiler-add-instruction! s `(box-set! ,(cadr place))))
+          (#t
+           (error `(unsupported set! place ,place))))
+    (compiler-add-instruction! s `(push-literal ,(begin)))))
 
 (define-constant (compile-infinite-loop s body)
   (let ((before-body-label (compiler-new-label s)))
@@ -4679,13 +4794,29 @@
     (compile-ast! s operand))
   (compiler-add-instruction! s `(primitive ,operator)))
 
+(define-constant (compile-call s operator operands)
+  (compiler-add-instruction! s `(CALL UNIMPLEMENTED: BEGIN SCRATCH))
+  (compile-ast! s operator)
+  (dolist (operand operands)
+    (compile-ast! s operand))
+  (compiler-add-instruction! s `(call ,(length operands)))
+  (compiler-add-instruction! s `(CALL UNIMPLEMENTED: END SCRATCH)))
+
 (define-constant (compile-let s bound-name bound-form body)
   (compile-ast! s bound-form)
-  (let ((register (compiler-bind-local! s bound-name)))
+  (let* ((boxed (ast-requires-boxing-for? body bound-name))
+         (place (if boxed
+                    (compiler-bind-local-boxed! s bound-name)
+                    (compiler-bind-local-unboxed! s bound-name)))
+         (register (cadr place)))
+    (when boxed
+      (compiler-add-instruction! s `(box)))
     (compiler-add-instruction! s `(pop-to-register ,register))
     (compile-ast! s body)
-    ;; FIXME: (compiler-unbind-local! s bound-name)
-    ))
+    (compiler-unbind! s bound-name)))
+
+(define-constant (compile-lambda s formals body)
+  (compiler-add-instruction! s '(LAMBDA-UNIMPLEMENTED)))
 
 (define-constant (compile-sequence s first second)
   (compile-ast! s first)
@@ -4707,7 +4838,9 @@
                       (ast-if-then ast)
                       (ast-if-else ast)))
         ((ast-set!? ast)
-         (error 'unimplemented-set!))
+         (compile-set!! s
+                        (ast-set!-name ast)
+                        (ast-set!-body ast)))
         ((ast-while? ast)
          (compile-while s
                         (ast-while-guard ast)
@@ -4717,9 +4850,13 @@
                             (ast-primitive-operator ast)
                             (ast-primitive-operands ast)))
         ((ast-call? ast)
-         (error 'unimplemented-call))
+         (compile-call s
+                       (ast-call-operator ast)
+                       (ast-call-operands ast)))
         ((ast-lambda? ast)
-         (error 'unimplemented-lambda))
+         (compile-lambda s
+                         (ast-lambda-formals ast)
+                         (ast-lambda-body ast)))
         ((ast-let? ast)
          (compile-let s
                       (ast-let-bound-name ast)
@@ -4739,7 +4876,7 @@
      (display optimized-ast)
      (newline)
      (compile-ast! s optimized-ast)
-     (print-list (compiler-instructions s))
+     (print-reversed-instructions (compiler-reversed-instructions s))
      (newline)))
 
 
