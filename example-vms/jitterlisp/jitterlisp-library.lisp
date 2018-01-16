@@ -4441,7 +4441,9 @@
     (closure-set! closure
                   alpha-converted-env
                   alpha-converted-formals
-                  alpha-converted-body)))
+                  alpha-converted-body
+                  (closure-code closure) ;; FIXME: is this what I want?
+                  )))
 
 ;;; Destructively modify the given closure, replacing its fields with a
 ;;; semantically equivalent optimized version.
@@ -4460,7 +4462,9 @@
       (closure-set! closure
                     alpha-converted-env
                     alpha-converted-formals
-                    optimized-body))))
+                    optimized-body
+                    (closure-code closure) ;; FIXME: is this what I want?
+                    ))))
 
 
 
@@ -4661,20 +4665,37 @@
     (display x)
     (newline)))
 
-;; Temporary testing macro.
-(define-macro (t . forms)
-  `(let* ((s (compiler-make-state))
-          (ast (macroexpand '(begin ,@forms)))
-          (optimized-ast (ast-optimize ast ())))
-     (display 'original:) (dotimes (i 1) (character-display #\space))
-     (display ast)
-     (newline)
-     (display 'rewritten:) (dotimes (i 0) (character-display #\space))
-     (display optimized-ast)
-     (newline)
-     (compile-ast! s optimized-ast)
-     (print-reversed-instructions (compiler-reversed-instructions s))
-     (newline)))
+;; Temporary testing procedure: unoptimized version.
+(define (tup ast)
+  (let ((s (compiler-make-state)))
+    (display 'ast:) (dotimes (i 1) (character-display #\space))
+    (display ast)
+    (newline)
+    (compile-ast! s ast)
+    (print-reversed-instructions (compiler-reversed-instructions s))
+    (newline)))
+
+;; Temporary testing procedure: optimized version.
+(define (top ast)
+  (let ((s (compiler-make-state))
+        (optimized-ast (ast-optimize ast ())))
+    (display 'original:) (dotimes (i 2) (character-display #\space))
+    (display ast)
+    (newline)
+    (display 'rewritten:) (dotimes (i 1) (character-display #\space))
+    (display optimized-ast)
+    (newline)
+    (compile-ast! s optimized-ast)
+    (print-reversed-instructions (compiler-reversed-instructions s))
+    (newline)))
+
+;; Temporary testing macro: unoptimized.
+(define-macro (tu . forms)
+  `(tup (macroexpand '(begin ,@forms))))
+
+;; Temporary testing macro: optimized.
+(define-macro (to . forms)
+  `(top (macroexpand '(begin ,@forms))))
 
 
 
@@ -4712,6 +4733,18 @@
 
 
 
+;;;; Compiler state: generating instructions.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (compiler-add-instruction! state new-instruction)
+  (let ((reversed-instructions (compiler-reversed-instructions state)))
+    (compiler-set-reversed-instructions! state
+                                         (cons new-instruction
+                                               reversed-instructions))))
+
+
+
+
 ;;;; Compiler state: labels.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -4727,10 +4760,13 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; The bindings field of the compiler state is an ordered list (the first
-;;; binding takes precedence) whose elements are conses of the form
-;;;   (VARIABLE . PLACE)
-;;; where VARIABLE is a variable name as a symbol and PLACE is
-;;; of one of the forms:
+;;; binding takes precedence) whose elements are conses of one of the following
+;;; two shapes:
+;;; - (#t . REGISTER)
+;;; - (VARIABLE . PLACE)
+;;; where REGISTER is a non-negative fixnum (the index of register holding
+;;; the closure environment), VARIABLE is a variable name as a symbol and
+;;; PLACE has of one of the shapes:
 ;;; - (local-unboxed REGISTER) where REGISTER is a fixnum (the register index);
 ;;; - (local-boxed REGISTER) where REGISTER is a fixnum (the register index);
 ;;; - (nonlocal INDEX) where INDEX is a fixnum (the number of cdrs to cross
@@ -4797,22 +4833,31 @@
                                variable-name
                                (lambda (register) `(local-boxed ,register))))
 
-
 
 
-;;;; Compiler state: generating instructions.
+;;;; Stuff to move.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant (compiler-add-instruction! state new-instruction)
-  (let ((reversed-instructions (compiler-reversed-instructions state)))
-    (compiler-set-reversed-instructions! state
-                                         (cons new-instruction
-                                               reversed-instructions))))
+;;; FIXME: move, factor.
+(define-constant (compiler-pop-formals! s formals body)
+  (dolist (formal (reverse formals))
+    (cond ((not (ast-has-free? body formal))
+           ;; This formal is not used.
+           (compiler-add-instruction! s '(drop)))
+          ((ast-requires-boxing-for? body formal)
+           ;; This formal is used and requires boxing.
+           (compiler-add-instruction! s '(box))
+           (let ((place (compiler-bind-local-boxed! s formal)))
+             (compiler-add-instruction! s `(pop-to-register ,(cadr place)))))
+          (#t
+           ;; This formal is used and doesn't require boxing.
+           (let ((place (compiler-bind-local-unboxed! s formal)))
+             (compiler-add-instruction! s `(pop-to-register ,(cadr place))))))))
 
 
 
 
-;;;; Compiling an AST into a state.
+;;;; Compiling an AST.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Compile the given AST in the given state.  This works by calling the
@@ -4859,7 +4904,13 @@
         ((ast-sequence? ast)
          (compile-sequence s
                            (ast-sequence-first ast)
-                           (ast-sequence-second ast)))))
+                           (ast-sequence-second ast))))
+  ;; Emit a return instruction if we are in a tail context, unless the AST we
+  ;; compiled was a call -- in which case I already emitted the tail call
+  ;; instruction, which doesn't need to be followed by a return .
+  (when (and (compiler-tailness s)
+             (not (ast-call? ast)))
+    (compiler-add-instruction! s '(return))))
 
 (define-constant (compile-literal! s value)
   (compiler-add-instruction! s `(push-literal ,value)))
@@ -4917,11 +4968,14 @@
     (compiler-set-tailness! s outer-tailness)))
 
 (define-constant (compile-infinite-loop s body)
-  (let ((before-body-label (compiler-new-label s)))
+  (let ((outer-tailness (compiler-tailness s))
+        (before-body-label (compiler-new-label s)))
+    (compiler-set-tailness! s #f)
     (compiler-add-instruction! s `(label ,before-body-label))
     (compile-ast! s body)
     (compiler-add-instruction! s `(drop))
-    (compiler-add-instruction! s `(branch ,before-body-label))))
+    (compiler-add-instruction! s `(branch ,before-body-label))
+    (compiler-set-tailness! s outer-tailness)))
 
 (define-constant (compile-while-ordinary s guard body)
   (let ((outer-tailness (compiler-tailness s))
@@ -4934,9 +4988,9 @@
     (compiler-add-instruction! s `(label ,before-guard-label))
     (compiler-set-tailness! s #f)
     (compile-ast! s guard)
-    (compiler-set-tailness! s outer-tailness)
     (compiler-add-instruction! s `(branch-if-true ,before-body-label))
-    (compiler-add-instruction! s `(push-literal ,(begin)))))
+    (compiler-add-instruction! s `(push-literal ,(begin)))
+    (compiler-set-tailness! s outer-tailness)))
 
 (define-constant (compile-while s guard body)
   (if (and (ast-literal? guard)
@@ -4954,10 +5008,10 @@
 
 (define-constant (compile-call s operator operands)
   (let ((outer-tailness (compiler-tailness s)))
+    (compiler-set-tailness! s #f)
     (compile-ast! s operator)
     (compiler-add-instruction! s `(check-closure))
     (compiler-add-instruction! s `(check-in-arity ,(length operands)))
-    (compiler-set-tailness! s #f)
     (unless outer-tailness
       (compiler-add-instruction! s `(FIXME: save registers from
                                             ,(compiler-bindings s))))
@@ -5001,6 +5055,27 @@
 
 
 
+;;;; Compiling a closure (very tentative, non-destructive).
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (closure-compile c)
+  (let ((env (closure-environment c))
+        (formals (closure-formals c))
+        (body (closure-body c))
+        (code (closure-code c)))
+    (unless (nothing? code)
+      (error `(closure ,c already compiled)))
+    (unless (alist? env)
+      (error `(closure ,c has a non-alist environment)))
+    (let ((s (compiler-make-state)))
+      (compiler-pop-formals! s formals body)
+      ;;(compiler-bind-alist! s env)
+      (compile-ast! s body)
+      (print-reversed-instructions (compiler-reversed-instructions s)))))
+
+
+
+
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; The library is now loaded.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5022,6 +5097,11 @@
       n
       (+ (fibo (- n 2))
          (fibo (- n 1)))))
+
+(define-constant (fact n)
+  (if (zero? n)
+      1
+      (* n (fact (- n 1)))))
 
 ;;;  OK
 ;;; (define q (macroexpand '(let ((a a) (b a)) a))) q (ast-alpha-convert q)
@@ -5142,6 +5222,23 @@
 ;;   {  [literal 8]  }
 ;; OK(ast-optimize (macroexpand '((lambda (x y) (+ x Q)) 3 5)) ())
 ;;   {  [primitive #<2-ary primitive primordial-+> [literal 3] [variable Q]]  }
+;; OK(ast-optimize (macroexpand '((lambda (x y) (+ x 3)) 10 a)) ())
+;;   {  [sequence [variable a] [literal 13]]  }
+
+;; GOOD-EVEN-IF-IT-LOOKS-WRONG(to (let ((c '(1 2))) (set-car! c 42) c))
+;;   {  This rewrites to
+;;         [sequence [primitive #<2-ary primitive set-car!> [literal (1 2)] [literal 42]] [literal ...]]
+;;      Notice the shared literal, which is of course the same list initially
+;;      built as (1 2).  The block returns a literal, but the literal is
+;;      actually a pointer to something which gets destructively changed, so the
+;;      effect of the assignment is not lost.  As long as returning literals is
+;;      efficient independently from their type (which has always been assumed
+;;      up to this point -- even if it will almost certainly change with a
+;;      moving GC) this is a good, fast solution.  JitterLisp conses are
+;;      always mutable.
+;;   }
+
+
 
 ;; (and a b c) => (if a (if b c #f) #f)
 ;; (and a b c) => (not (or (not a) (not b) (not c)))
@@ -5157,3 +5254,30 @@
                  (#t
                   (set! ,res-name ,(last clauses))))
            ,res-name))))
+
+;; (define-constant (length-do xs)
+;;   (do ((res 0 (1+ res))
+;;        (xs xs (cdr xs)))
+;;       ((null? xs) res)))
+;; (declaim ;;(ftype (function (list) fixnum) length-do)
+;;          (optimize (safety 0) (debug 0) (space 0) (speed 3))
+;;          (inline + -))
+;; (defun length-do (xs)
+;;   (declare (type list xs))
+;;   (do ((res 0 (1+ res))
+;;        (xs xs (cdr xs)))
+;;       ((null xs) res)
+;;     (declare (type fixnum res))
+;;     ))
+;; (defmacro while (guard &rest body-forms)
+;;   `(do ()
+;;        ((not ,guard))
+;;      ,@body-forms))
+;; (defun length-while (xs)
+;;   (declare (type list xs))
+;;   (let ((res 0))
+;;     (declare (type fixnum res))
+;;     (while (not (null xs))
+;;       (setq res (1+ res))
+;;       (setq xs (cdr xs)))
+;;     res))
