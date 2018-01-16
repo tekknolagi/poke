@@ -413,6 +413,9 @@ struct jitterlisp_closure
 
   /* The procedure body as an AST. */
   jitterlisp_object body;
+
+  /* Generated VM code.  FIXME: think about the type. */
+  jitterlisp_object code;
 };
 
 /* Closure tag checking, encoding and decoding. */
@@ -442,7 +445,7 @@ struct jitterlisp_closure
 #define JITTERLISP_PRIMITIVE_TAG           0b100
 
 /* How many arguments a primitive can take, as a maximum. */
-#define JITTERLISP_PRIMITIVE_MAX_IN_ARITY   4
+#define JITTERLISP_PRIMITIVE_MAX_IN_ARITY   6
 
 /* Primitives are call-by-value (therefore they all behave as procedures: if and
    or , for example, cannot be primitives) and have a fixed in-arity, which in
@@ -490,20 +493,6 @@ struct jitterlisp_primitive
    (JITTER_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_primitive),     \
                                JITTERLISP_PRIMITIVE_TAG,           \
                                JITTERLISP_PRIMITIVE_TAG_BIT_NO)))
-
-
-
-
-/* S-expression representation: procedures.
- * ************************************************************************** */
-
-/* "Procedures" don't exist as objects with a tag of their own: a procedure is
-   either a closure or a primitive.  Of course they are implemented differently
-   but from the user's point of view they are interchangeable, which is why
-   this type checking is useful. */
-#define JITTERLISP_IS_PROCEDURE(_jitterlisp_tagged_object)  \
-  (JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)         \
-   || JITTERLISP_IS_PRIMITIVE(_jitterlisp_tagged_object))
 
 
 

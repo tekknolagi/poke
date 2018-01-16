@@ -487,6 +487,7 @@
     _jitterlisp_tmp->environment = (_jitterlisp_in0);                \
     _jitterlisp_tmp->formals = (_jitterlisp_in1);                    \
     _jitterlisp_tmp->body = (_jitterlisp_in2);                       \
+    _jitterlisp_tmp->code = JITTERLISP_NOTHING;                      \
     (_jitterlisp_out) = JITTERLISP_CLOSURE_ENCODE(_jitterlisp_tmp);  \
   JITTER_END_
 
@@ -505,6 +506,8 @@
   JITTERLISP_CLOSURE_FIELD_(_jitterlisp_out, _jitterlisp_in0, formals)
 #define JITTERLISP_CLOSURE_BODY_(_jitterlisp_out, _jitterlisp_in0)   \
   JITTERLISP_CLOSURE_FIELD_(_jitterlisp_out, _jitterlisp_in0, body)
+#define JITTERLISP_CLOSURE_CODE_(_jitterlisp_out, _jitterlisp_in0)   \
+  JITTERLISP_CLOSURE_FIELD_(_jitterlisp_out, _jitterlisp_in0, code)
 
 /* Destructively modify all the fields in a closure.  By setting them all in
    the same operation I can guarantee that no Lisp code will see a closure
@@ -514,13 +517,15 @@
                                 _jitterlisp_in0,       \
                                 _jitterlisp_in1,       \
                                 _jitterlisp_in2,       \
-                                _jitterlisp_in3)       \
+                                _jitterlisp_in3,       \
+                                _jitterlisp_in4)       \
   JITTER_BEGIN_                                        \
     struct jitterlisp_closure *_jitterlisp_tmp         \
       = JITTERLISP_CLOSURE_DECODE(_jitterlisp_in0);    \
     _jitterlisp_tmp->environment = (_jitterlisp_in1);  \
     _jitterlisp_tmp->formals = (_jitterlisp_in2);      \
     _jitterlisp_tmp->body = (_jitterlisp_in3);         \
+    _jitterlisp_tmp->code = (_jitterlisp_in4);         \
     (_jitterlisp_out) = JITTERLISP_NOTHING;            \
   JITTER_END_
 

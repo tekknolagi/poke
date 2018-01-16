@@ -4705,7 +4705,7 @@
 
 (define-constant (compiler-make-state)
   (list ()  ;; instructions
-        0   ;; label-no
+        0   ;; next-label
         ()  ;; bindings
         #t  ;; tailness
         ))
@@ -4715,9 +4715,9 @@
 (define-constant (compiler-set-reversed-instructions! state new-field)
   (set-car! state new-field))
 
-(define-constant (compiler-label-no state)
+(define-constant (compiler-next-label state)
   (cadr state))
-(define-constant (compiler-set-label-no! state new-field)
+(define-constant (compiler-set-next-label! state new-field)
   (set-cadr! state new-field))
 
 (define-constant (compiler-bindings state)
@@ -4749,8 +4749,8 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (compiler-new-label state)
-  (let* ((old-count (compiler-label-no state)))
-    (compiler-set-label-no! state (1+ old-count))
+  (let* ((old-count (compiler-next-label state)))
+    (compiler-set-next-label! state (1+ old-count))
     old-count))
 
 
@@ -4838,6 +4838,26 @@
 ;;;; Stuff to move.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; Execute the given BODY-FORMS with the given compiler STATE tailness
+;;; temporarily changed to #f , then reset the tailness setting to its original
+;;; value and return the result of the last form.
+;;; I guess this would be a good place to use dynamically-scoped variables,
+;;; if they existed in JitterLisp.
+(define-macro (compiler-with-non-tail state . body-forms)
+  (let ((state-name (gensym))
+        (outer-tailness-name (gensym))
+        (result-name (gensym)))
+    `(let* ((,state-name ,state)
+            (,outer-tailness-name (compiler-tailness ,state-name)))
+       (compiler-set-tailness! s #f)
+       (let ((,result-name ,@body-forms))
+         (compiler-set-tailness! s ,outer-tailness-name)
+         ,result-name))))
+
+(define-constant (compiler-emit-return-when-tail! s)
+  (when (compiler-tailness s)
+    (compiler-add-instruction! s '(return))))
+
 ;;; FIXME: move, factor.
 (define-constant (compiler-pop-formals! s formals body)
   (dolist (formal (reverse formals))
@@ -4904,16 +4924,11 @@
         ((ast-sequence? ast)
          (compile-sequence s
                            (ast-sequence-first ast)
-                           (ast-sequence-second ast))))
-  ;; Emit a return instruction if we are in a tail context, unless the AST we
-  ;; compiled was a call -- in which case I already emitted the tail call
-  ;; instruction, which doesn't need to be followed by a return .
-  (when (and (compiler-tailness s)
-             (not (ast-call? ast)))
-    (compiler-add-instruction! s '(return))))
+                           (ast-sequence-second ast)))))
 
 (define-constant (compile-literal! s value)
-  (compiler-add-instruction! s `(push-literal ,value)))
+  (compiler-add-instruction! s `(push-literal ,value))
+  (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-variable! s name)
   (let ((place (compiler-lookup-variable s name)))
@@ -4925,72 +4940,84 @@
            (when (eq? (car place) 'local-boxed)
              (compiler-add-instruction! s `(unbox))))
           (#t
-           (error '(unimplemented variable place ,place))))))
+           (error '(unimplemented variable place ,place))))
+    (compiler-emit-return-when-tail! s)))
 
 (define-constant (compile-define s name body)
-  (let ((outer-tailness (compiler-tailness s)))
-    (compiler-set-tailness! s #f)
+  (compiler-with-non-tail s
     (compile-ast! s body)
     (compiler-add-instruction! s `(check-global-non-constant ,name))
-    (compiler-add-instruction! s `(pop-to-global ,name))
-    (compiler-set-tailness! s outer-tailness)))
+    (compiler-add-instruction! s `(pop-to-global ,name)))
+  (compiler-emit-return-when-tail! s))
 
-(define-constant (compile-if! s condition then else)
-  (let ((outer-tailness (compiler-tailness s))
-        (after-then-label (compiler-new-label s))
-        (after-else-label (compiler-new-label s)))
+(define-constant (compile-if-tail! s condition then else)
+  (let ((after-then-label (compiler-new-label s)))
     (compiler-set-tailness! s #f)
     (compile-ast! s condition)
     (compiler-add-instruction! s `(branch-if-false ,after-then-label))
-    (compiler-set-tailness! s outer-tailness)
+    (compiler-set-tailness! s #t)
+    (compile-ast! s then)
+    (compiler-add-instruction! s `(label ,after-then-label))
+    (compile-ast! s else)))
+
+(define-constant (compile-if-non-tail! s condition then else)
+  (let ((after-then-label (compiler-new-label s))
+        (after-else-label (compiler-new-label s)))
+    (compile-ast! s condition)
+    (compiler-add-instruction! s `(branch-if-false ,after-then-label))
     (compile-ast! s then)
     (compiler-add-instruction! s `(branch ,after-else-label))
     (compiler-add-instruction! s `(label ,after-then-label))
     (compile-ast! s else)
     (compiler-add-instruction! s `(label ,after-else-label))))
 
+(define-constant (compile-if! s condition then else)
+  (if (compiler-tailness s)
+      (compile-if-tail! s condition then else)
+      (compile-if-non-tail! s condition then else)))
+
 (define-constant (compile-set!! s name body)
-  (let ((outer-tailness (compiler-tailness s))
-        (place (compiler-lookup-variable s name)))
-    (compiler-set-tailness! s #f)
-    (compile-ast! s body)
-    (cond ((eq? place 'global)
-           (compiler-add-instruction! s `(check-global-defined ,name))
-           (compiler-add-instruction! s `(check-global-non-constant ,name))
-           (compiler-add-instruction! s `(pop-to-global ,name)))
-          ((eq? (car place) 'local-unboxed)
-           (compiler-add-instruction! s `(pop-to-register ,(cadr place))))
-          ((eq? (car place) 'local-boxed)
-           (compiler-add-instruction! s `(box-set! ,(cadr place))))
-          (#t
-           (error `(unsupported set! place ,place))))
-    (compiler-add-instruction! s `(push-literal ,(begin)))
-    (compiler-set-tailness! s outer-tailness)))
+  (compiler-with-non-tail s
+    (let ((place (compiler-lookup-variable s name)))
+      (compile-ast! s body)
+      (cond ((eq? place 'global)
+             (compiler-add-instruction! s `(check-global-defined ,name))
+             (compiler-add-instruction! s `(check-global-non-constant ,name))
+             (compiler-add-instruction! s `(pop-to-global ,name)))
+            ((eq? (car place) 'local-unboxed)
+             (compiler-add-instruction! s `(pop-to-register ,(cadr place))))
+            ((eq? (car place) 'local-boxed)
+             (compiler-add-instruction! s `(box-set! ,(cadr place))))
+            (#t
+             (error `(unsupported set! place ,place))))
+      (compiler-add-instruction! s `(push-literal ,(begin)))))
+  (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-infinite-loop s body)
-  (let ((outer-tailness (compiler-tailness s))
-        (before-body-label (compiler-new-label s)))
-    (compiler-set-tailness! s #f)
-    (compiler-add-instruction! s `(label ,before-body-label))
-    (compile-ast! s body)
-    (compiler-add-instruction! s `(drop))
-    (compiler-add-instruction! s `(branch ,before-body-label))
-    (compiler-set-tailness! s outer-tailness)))
+  (compiler-with-non-tail s
+    (let ((before-body-label (compiler-new-label s)))
+      (compiler-set-tailness! s #f)
+      (compiler-add-instruction! s `(label ,before-body-label))
+      (compile-ast! s body)
+      (compiler-add-instruction! s `(drop))
+      (compiler-add-instruction! s `(branch ,before-body-label))))
+  ;; At this point I would normally emit a return instruction when the context
+  ;; is tail, but in this case the it would be unreachable.
+  )
 
 (define-constant (compile-while-ordinary s guard body)
-  (let ((outer-tailness (compiler-tailness s))
-        (before-body-label (compiler-new-label s))
-        (before-guard-label (compiler-new-label s)))
-    (compiler-add-instruction! s `(branch ,before-guard-label))
-    (compiler-add-instruction! s `(label ,before-body-label))
-    (compile-ast! s body)
-    (compiler-add-instruction! s `(drop))
-    (compiler-add-instruction! s `(label ,before-guard-label))
-    (compiler-set-tailness! s #f)
-    (compile-ast! s guard)
-    (compiler-add-instruction! s `(branch-if-true ,before-body-label))
-    (compiler-add-instruction! s `(push-literal ,(begin)))
-    (compiler-set-tailness! s outer-tailness)))
+  (compiler-with-non-tail s
+    (let ((before-body-label (compiler-new-label s))
+          (before-guard-label (compiler-new-label s)))
+      (compiler-add-instruction! s `(branch ,before-guard-label))
+      (compiler-add-instruction! s `(label ,before-body-label))
+      (compile-ast! s body)
+      (compiler-add-instruction! s `(drop))
+      (compiler-add-instruction! s `(label ,before-guard-label))
+      (compile-ast! s guard)
+      (compiler-add-instruction! s `(branch-if-true ,before-body-label))
+      (compiler-add-instruction! s `(push-literal ,(begin)))))
+  (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-while s guard body)
   (if (and (ast-literal? guard)
@@ -4999,25 +5026,23 @@
       (compile-while-ordinary s guard body)))
 
 (define-constant (compile-primitive s operator operands)
-  (let ((outer-tailness (compiler-tailness s)))
-    (compiler-set-tailness! s #f)
+  (compiler-with-non-tail s
     (dolist (operand operands)
       (compile-ast! s operand))
-    (compiler-add-instruction! s `(primitive ,operator))
-    (compiler-set-tailness! s outer-tailness)))
+    (compiler-add-instruction! s `(primitive ,operator)))
+  (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-call s operator operands)
   (let ((outer-tailness (compiler-tailness s)))
-    (compiler-set-tailness! s #f)
-    (compile-ast! s operator)
-    (compiler-add-instruction! s `(check-closure))
-    (compiler-add-instruction! s `(check-in-arity ,(length operands)))
+    (compiler-with-non-tail s
+      (compile-ast! s operator)
+      (compiler-add-instruction! s `(check-closure))
+      (compiler-add-instruction! s `(check-in-arity ,(length operands)))
+      (dolist (operand operands)
+        (compile-ast! s operand)))
     (unless outer-tailness
       (compiler-add-instruction! s `(FIXME: save registers from
                                             ,(compiler-bindings s))))
-    (dolist (operand operands)
-      (compile-ast! s operand))
-    (compiler-set-tailness! s outer-tailness)
     (if outer-tailness
         (compiler-add-instruction! s `(tail-call ,(length operands)))
         (begin
@@ -5026,10 +5051,8 @@
           ))))
 
 (define-constant (compile-let s bound-name bound-form body)
-  (let ((outer-tailness (compiler-tailness s)))
-    (compiler-set-tailness! s #f)
-    (compile-ast! s bound-form)
-    (compiler-set-tailness! s outer-tailness))
+  (compiler-with-non-tail s
+    (compile-ast! s bound-form))
   (let* ((boxed (ast-requires-boxing-for? body bound-name))
          (place (if boxed
                     (compiler-bind-local-boxed! s bound-name)
@@ -5042,15 +5065,15 @@
     (compiler-unbind! s bound-name)))
 
 (define-constant (compile-lambda s formals body)
-  (compiler-add-instruction! s '(LAMBDA-UNIMPLEMENTED)))
+  (compiler-add-instruction! s '(LAMBDA-UNIMPLEMENTED))
+  (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-sequence s first second)
-  (let ((outer-tailness (compiler-tailness s)))
-    (compiler-set-tailness! s #f)
-    (compile-ast! s first)
-    (compiler-add-instruction! s '(drop))
-    (compiler-set-tailness! s outer-tailness))
+  (compiler-with-non-tail s
+    (compile-ast! s first))
+  (compiler-add-instruction! s '(drop))
   (compile-ast! s second))
+
 
 
 
@@ -5102,6 +5125,16 @@
   (if (zero? n)
       1
       (* n (fact (- n 1)))))
+
+(define-constant (count a)
+  (if (zero? a)
+      0
+      (count (- a 1))))
+
+(define-constant (count2 a b)
+  (if (zero? a)
+      b
+      (count2 (- a 1) (+ b 1))))
 
 ;;;  OK
 ;;; (define q (macroexpand '(let ((a a) (b a)) a))) q (ast-alpha-convert q)

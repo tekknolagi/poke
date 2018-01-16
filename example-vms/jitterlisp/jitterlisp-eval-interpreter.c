@@ -92,6 +92,10 @@ jitterlisp_eval_interpreter_ast_call
   jitterlisp_object formals = closure->formals;
   jitterlisp_object body_env = closure->environment;
   int i;
+  // FIXME: shall I check the arity *before* evaluating actuals or after, as
+  // the code does now?
+  // In either case compiled code must have the same semantics.  Do whatever
+  // is faster on compiled code.
   for (i = 1; i < rator_and_rand_no; i ++)
     {
       if (JITTERLISP_IS_EMPTY_LIST(formals))
