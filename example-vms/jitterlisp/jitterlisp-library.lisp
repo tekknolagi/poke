@@ -4800,13 +4800,17 @@
 ;;; where REGISTER is a non-negative fixnum (the index of register holding
 ;;; the closure environment), VARIABLE is a variable name as a symbol and
 ;;; PLACE has of one of the shapes:
-;;; - (local-unboxed REGISTER) where REGISTER is a fixnum (the register index);
-;;; - (local-boxed REGISTER) where REGISTER is a fixnum (the register index);
-;;; - (nonlocal INDEX) where INDEX is a fixnum (the number of cdrs to cross
-;;;                                             to reach the nonlocal).
+;;; - (local-unboxed REGISTER)
+;;; - (local-boxed REGISTER)
+;;;      where REGISTER is a fixnum (the register index);
+;;; - (nonlocal-unboxed INDEX)
+;;; - (nonlocal-boxed INDEX)
+;;;      where INDEX is a fixnum (the 0-based index of the matching value in
+;;;      the closure environment).
 ;;; Globals are not stored in the bindings, but when looked up
 ;;; their PLACE looks like
-;;;   global
+;;; - global
+;;;      , just a symbol.
 ;;; .
 
 (define-constant (compiler-place-local? place)
@@ -4827,6 +4831,12 @@
         ((eq? place 'global)
          ;; We don't have a register to return.
          (error '(compiler-place->register: globals not supported)))))
+
+;;; Return a fresh set-as-list of the register indices used in the given state.
+(define-constant (compiler-used-registers state)
+  (let* ((places (map cdr (compiler-bindings state)))
+         (register-list (map! compiler-place->register places)))
+    (list->set register-list)))
 
 (define-constant (compiler-fresh-register state)
   (let ((used-registers (compiler-used-registers state)))
@@ -4870,12 +4880,6 @@
   (compiler-bind-local-helper! state
                                variable-name
                                (lambda (register) `(local-boxed ,register))))
-
-;;; Return a fresh set-as-list of the register indices used in the given state.
-(define-constant (compiler-used-registers state)
-  (let* ((places (map cdr (compiler-bindings state)))
-         (register-list (map! compiler-place->register places)))
-    (list->set register-list)))
 
 
 
@@ -5066,8 +5070,9 @@
       (compile-ast! s body)
       (compiler-add-instruction! s `(drop))
       (compiler-add-instruction! s `(branch ,before-body-label))))
-  ;; At this point I would normally emit a return instruction when the context
-  ;; is tail, but in this case the return would be unreachable.
+  ;; At this point I would normally emit one instruction to push #<nothing>,
+  ;; and a return when the context is tail; but in this case they would be
+  ;; unreachable after an infinite loop.
   )
 
 (define-constant (compile-while-ordinary! s guard body)
@@ -5366,6 +5371,26 @@
 ;;      always mutable.
 ;;   }
 
+;; FIXME: implement a few more rewritings.
+;; optimizing this requires an equality predicate for ASTs.  In practice
+;; it will be fast.
+;; SUBOPTIMAL(ast-optimize (macroexpand '(lambda (a) (and a #f))) ())
+;;   { [lambda (#<u1228>) [if [variable #<u1228>] [literal #f] [literal #f]]]
+;;     This is always correct: [if E1 E2 E2] => [sequence E1 E2] }
+;; A more subtle, but possibly more useful case to optimize:
+;; SUBOPTIMAL(ast-optimize (macroexpand '(lambda (a) (and a a))) ())
+;;   { [lambda (#<u1229>) [if [variable #<u1229>] [variable #<u1229>] [literal #f]]]
+;;     Here the idea is that [if E E #f] can be rewritten to E when E is
+;;     non-effectful.  }
+;; SUBOPTIMAL(ast-optimize (macroexpand '(lambda (a) (lispy-or a a))) ())
+;;   { [lambda (#<u1234>) [if [variable #<u1234>] [variable #<u1234>] [variable #<u1234>]]]
+;;     There should be no need for an explicit rewrite
+;;       [if E E E] => E when E is non-effectful
+;;     ; this is subsumed by the new rule above and sequence semplification,
+;;     using [sequence E E] as an intermediate step. }
+;; After implementing the rule above check:
+;; SUBOPTIMAL(ast-optimize (macroexpand '(lambda (a) (lispy-or a a a))) ())
+;;   { [lambda (#<u1250>) [if [variable #<u1250>] [variable #<u1250>] [if [variable #<u1250>] [variable #<u1250>] [variable #<u1250>]]]] }
 
 
 ;; (and a b c) => (if a (if b c #f) #f)
