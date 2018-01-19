@@ -5121,6 +5121,11 @@
         (compiler-add-instruction! s `(check-closure)))
       (unless (and known-closure
                    (= (closure-in-arity known-closure) (length operands)))
+        (when known-closure
+          ;; FIXME: warn more cleanly.
+          (display `(WARNING: in-arity mismatch in call to known closure
+                              ,operator with actuals ,operands))
+          (newline))
         (compiler-add-instruction! s `(check-in-arity ,(length operands)))))
     (dolist (operand operands)
       (compile-ast! s operand)))
