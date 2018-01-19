@@ -4723,11 +4723,10 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (compiler-make-state)
-  (list ()  ;; instructions
-        0   ;; next-label
-        ()  ;; bindings
-        #t  ;; tailness
-        ))
+  (list ()                          ;; instructions
+        0                           ;; next-label
+        ()                          ;; bindings
+        (compiler-flags-default)))  ;; flags
 
 (define-constant (compiler-reversed-instructions state)
   (car state))
@@ -4744,9 +4743,9 @@
 (define-constant (compiler-set-bindings! state new-field)
   (set-caddr! state new-field))
 
-(define-constant (compiler-tailness state)
+(define-constant (compiler-flags state)
   (cadddr state))
-(define-constant (compiler-set-tailness! state new-field)
+(define-constant (compiler-set-flags! state new-field)
   (set-cadddr! state new-field))
 
 
@@ -4884,27 +4883,106 @@
 
 
 
+;;;; Compiler state: flags.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; State flags are stored in an alist with unique keys and no default values.
+
+;;; The initial flags for a fresh compiler state.
+(define-constant compiler-flags-default-original
+  '(;; The tail flag is non-#f iff the AST being compiled is in a tail
+    ;; context.
+    (tail . #t)
+    ;; The used-result flag is non-#f iff the AST being compiled is in a
+    ;; context where its result will be used; in particular it will be #f
+    ;; when compiling the first form in a sequence.
+    ;; Rationale: without using this flag I could always push a #<nothing>
+    ;; literal at the end of the compilation of forms with unused results, with
+    ;; the #<nothing> result being correctly dropped by a (drop) instruction
+    ;; from the compilation of the sequence form.  However it's not always
+    ;; possible to optimize away those trivial sequences by Jitter-level
+    ;; rewriting, since the push-literal instruction might not occur immediately
+    ;; before the drop instruction; that happens frequently with non-tail
+    ;; conditionals in imperative code.
+    (used-result . #t)))
+
+;;; Return a fresh copy of the compiler default flags.  Since the alist is
+;;; updated destructively it's important to avoid sharing, both in the spine and
+;;; in the elements.
+(define-constant (compiler-flags-default)
+  (map-reversed (lambda (c) (cons (car c) (cdr c)))
+                compiler-flags-default-original))
+
+;;; Return the value associated to the given key.
+(define-constant (compiler-flags-get flags name)
+  (let ((cons-to-read (assq name flags)))
+    (unless (cons? cons-to-read)
+      (error `(compiler-flags-get: unbound flag ,name)))
+    (cdr cons-to-read)))
+
+;;; Destructivlely update the given flags, setting the given key to the given
+;;; value.  Error out if the key is not already bound.
+(define-constant (compiler-flags-set! flags name value)
+  (let ((cons-to-update (assq name flags)))
+    (unless (cons? cons-to-update)
+      (error `(compiler-flags-set!: unbound flag ,name)))
+    (set-cdr! cons-to-update value)))
+
+;;; Convenience flag accessors.
+(define-constant (compiler-flag state flag-name)
+  (compiler-flags-get (compiler-flags state) flag-name))
+(define-constant (compiler-set-flag! state flag-name flag-value)
+  (compiler-flags-set! (compiler-flags state) flag-name flag-value))
+
+;;; Convenience flag accessors for specific flags.
+(define-constant (compiler-tail? state)
+  (compiler-flag state 'tail))
+(define-constant (compiler-set-tail! state value)
+  (compiler-set-flag! state 'tail value))
+(define-constant (compiler-used-result? state)
+  (compiler-flag state 'used-result))
+(define-constant (compiler-set-used-result! state value)
+  (compiler-set-flag! state 'used-result value))
+
+;;; Execute the given BODY-FORMS with the given compiler FLAG-NAME temporarily
+;;; changed to FLAG-VALUE in the STATE , then reset FLAG-NAME to its original
+;;; setting and return the result of the last form.
+;;; FLAG-NAME must be a symbol, and is not evaluated.
+;;; I guess this would be a good place to use dynamically-scoped variables,
+;;; if they existed in JitterLisp.
+(define-macro (compiler-with-flag state flag-name flag-value . body-forms)
+  (let ((state-name (gensym))
+        (outer-value-name (gensym))
+        (flag-value-name (gensym))
+        (result-name (gensym)))
+    `(let* ((,state-name ,state)
+            (,flag-value-name ,flag-value)
+            (,outer-value-name (compiler-flag ,state-name ',flag-name)))
+       (compiler-set-flag! ,state-name ',flag-name ,flag-value-name)
+       (let ((,result-name ,@body-forms))
+         (compiler-set-flag! ,state-name ',flag-name ,outer-value-name)
+         ,result-name))))
+
+;;; Temporarily flag changes for specific flags.  Notice that setting
+;;; used-result to #f implies setting tail to #f.
+(define-macro (compiler-with-non-tail state . body-forms)
+  `(compiler-with-flag ,state tail #f ,@body-forms))
+(define-macro (compiler-with-used-result state . body-forms)
+  `(compiler-with-flag ,state used-result #t ,@body-forms))
+(define-macro (compiler-with-unused-result state . body-forms)
+  (let ((state-name (gensym)))
+    `(let ((,state-name ,state))
+       (compiler-with-flag ,state-name tail #f
+         (compiler-with-flag ,state-name used-result #f ,@body-forms)))))
+
+
+
+
 ;;;; Stuff to move.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Execute the given BODY-FORMS with the given compiler STATE tailness
-;;; temporarily changed to #f , then reset the tailness setting to its original
-;;; value and return the result of the last form.
-;;; I guess this would be a good place to use dynamically-scoped variables,
-;;; if they existed in JitterLisp.
-(define-macro (compiler-with-non-tail state . body-forms)
-  (let ((state-name (gensym))
-        (outer-tailness-name (gensym))
-        (result-name (gensym)))
-    `(let* ((,state-name ,state)
-            (,outer-tailness-name (compiler-tailness ,state-name)))
-       (compiler-set-tailness! s #f)
-       (let ((,result-name ,@body-forms))
-         (compiler-set-tailness! s ,outer-tailness-name)
-         ,result-name))))
-
 (define-constant (compiler-emit-return-when-tail! s)
-  (when (compiler-tailness s)
+  (when (compiler-tail? s)
     (compiler-add-instruction! s '(return))))
 
 ;;; Generate the appropriate instructions to bind the top of the stack to the
@@ -5003,31 +5081,37 @@
                            (ast-sequence-second ast)))))
 
 (define-constant (compile-literal! s value)
-  (compiler-add-instruction! s `(push-literal ,value))
-  (compiler-emit-return-when-tail! s))
+  (when (compiler-used-result? s)
+    (compiler-add-instruction! s `(push-literal ,value))
+    (compiler-emit-return-when-tail! s)))
 
 (define-constant (compile-variable! s name)
   (let ((place (compiler-lookup-variable s name)))
     (cond ((eq? place 'global)
            (if (constant? name)
                (let ((value (symbol-global name)))
-                 (compiler-add-instruction! s `(push-literal ,value)))
+                 (when (compiler-used-result? s)
+                   (compiler-add-instruction! s `(push-literal ,value))))
                (begin
                  (compiler-add-instruction! s `(check-global-defined ,name))
-                 (compiler-add-instruction! s `(push-global ,name)))))
+                 (when (compiler-used-result? s)
+                   (compiler-add-instruction! s `(push-global ,name))))))
           ((compiler-place-local? place)
-           (compiler-add-instruction! s `(push-register ,(cadr place)))
-           (when (eq? (car place) 'local-boxed)
-             (compiler-add-instruction! s `(unbox))))
+           (when (compiler-used-result? s)
+             (compiler-add-instruction! s `(push-register ,(cadr place)))
+             (when (eq? (car place) 'local-boxed)
+               (compiler-add-instruction! s `(unbox)))))
           (#t
            (error '(unimplemented variable place ,place)))))
   (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-define s name body)
   (compiler-with-non-tail s
-    (compile-ast! s body)
-    (compiler-add-instruction! s `(check-global-non-constant ,name))
-    (compiler-add-instruction! s `(pop-to-global ,name))
+    (compiler-with-used-result s
+      (compile-ast! s body)))
+  (compiler-add-instruction! s `(check-global-non-constant ,name))
+  (compiler-add-instruction! s `(pop-to-global ,name))
+  (when (compiler-used-result? s)
     (compiler-push-nothing! s))
   (compiler-emit-return-when-tail! s))
 
@@ -5035,58 +5119,63 @@
   (let ((after-then-label (compiler-new-label s))
         (after-else-label (compiler-new-label s)))
     (compiler-with-non-tail s
-      (compile-ast! s condition))
+      (compiler-with-used-result s
+        (compile-ast! s condition)))
     (compiler-add-instruction! s `(branch-if-false ,after-then-label))
     (compile-ast! s then)
-    (unless (compiler-tailness s)
+    (unless (compiler-tail? s)
       (compiler-add-instruction! s `(branch ,after-else-label)))
     (compiler-add-instruction! s `(label ,after-then-label))
     (compile-ast! s else)
-    (unless (compiler-tailness s)
+    (unless (compiler-tail? s)
       (compiler-add-instruction! s `(label ,after-else-label)))))
 
 (define-constant (compile-set!! s name body)
-  (compiler-with-non-tail s
-    (let ((place (compiler-lookup-variable s name)))
-      (compile-ast! s body)
-      (cond ((eq? place 'global)
-             (compiler-add-instruction! s `(check-global-defined ,name))
-             (compiler-add-instruction! s `(check-global-non-constant ,name))
-             (compiler-add-instruction! s `(pop-to-global ,name)))
-            ((eq? (car place) 'local-unboxed)
-             (compiler-add-instruction! s `(pop-to-register ,(cadr place))))
-            ((eq? (car place) 'local-boxed)
-             (compiler-add-instruction! s `(pop-to-register-box ,(cadr place))))
-            (#t
-             (error `(unsupported set! place ,place))))
-      (compiler-push-nothing! s)))
+  (let ((place (compiler-lookup-variable s name)))
+    (compiler-with-non-tail s
+      (compiler-with-used-result s
+        (compile-ast! s body)))
+    (cond ((eq? place 'global)
+           (compiler-add-instruction! s `(check-global-defined ,name))
+           (compiler-add-instruction! s `(check-global-non-constant ,name))
+           (compiler-add-instruction! s `(pop-to-global ,name)))
+          ((eq? (car place) 'local-unboxed)
+           (compiler-add-instruction! s `(pop-to-register ,(cadr place))))
+          ((eq? (car place) 'local-boxed)
+           (compiler-add-instruction! s `(pop-to-register-box ,(cadr place))))
+          (#t
+           (error `(unsupported set! place ,place)))))
+  (when (compiler-used-result? s)
+    (compiler-push-nothing! s))
   (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-infinite-loop! s body)
-  (compiler-with-non-tail s
-    (let ((before-body-label (compiler-new-label s)))
-      (compiler-set-tailness! s #f)
-      (compiler-add-instruction! s `(label ,before-body-label))
-      (compile-ast! s body)
-      (compiler-add-instruction! s `(drop))
-      (compiler-add-instruction! s `(branch ,before-body-label))))
-  ;; At this point I would normally emit one instruction to push #<nothing>,
-  ;; and a return when the context is tail; but in this case they would be
-  ;; unreachable after an infinite loop.
-  )
+  (let ((before-body-label (compiler-new-label s)))
+    (compiler-add-instruction! s `(label ,before-body-label))
+    (compiler-with-non-tail s
+      (compiler-with-unused-result s
+        (compile-ast! s body)))
+    (compiler-add-instruction! s `(branch ,before-body-label))
+    ;; At this point I would normally emit one instruction to push #<nothing>
+    ;; when the result is used, and a return when the context is tail; but in
+    ;; this case they would be unreachable after an infinite loop.
+    ))
 
 (define-constant (compile-while-ordinary! s guard body)
-  (compiler-with-non-tail s
-    (let ((before-body-label (compiler-new-label s))
-          (before-guard-label (compiler-new-label s)))
-      (compiler-add-instruction! s `(branch ,before-guard-label))
-      (compiler-add-instruction! s `(label ,before-body-label))
-      (compile-ast! s body)
-      (compiler-add-instruction! s `(drop))
-      (compiler-add-instruction! s `(label ,before-guard-label))
-      (compile-ast! s guard)
-      (compiler-add-instruction! s `(branch-if-true ,before-body-label))
-      (compiler-push-nothing! s)))
+  (let ((before-body-label (compiler-new-label s))
+        (before-guard-label (compiler-new-label s)))
+    (compiler-add-instruction! s `(branch ,before-guard-label))
+    (compiler-add-instruction! s `(label ,before-body-label))
+    (compiler-with-non-tail s
+      (compiler-with-unused-result s
+        (compile-ast! s body)))
+    (compiler-add-instruction! s `(label ,before-guard-label))
+    (compiler-with-non-tail s
+      (compiler-with-used-result s
+        (compile-ast! s guard)))
+    (compiler-add-instruction! s `(branch-if-true ,before-body-label)))
+  (when (compiler-used-result? s)
+    (compiler-push-nothing! s))
   (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-while! s guard body)
@@ -5096,72 +5185,81 @@
       (compile-while-ordinary! s guard body)))
 
 (define-constant (compile-primitive! s operator operands)
-  (compiler-with-non-tail s
-    (dolist (operand operands)
-      (compile-ast! s operand))
-    (compiler-add-instruction! s `(primitive ,operator)))
+  (dolist (operand operands)
+    (compiler-with-non-tail s
+      (compiler-with-used-result s
+        (compile-ast! s operand))))
+  (compiler-add-instruction! s `(primitive ,operator))
+  (unless (compiler-used-result? s)
+    (compiler-add-instruction! s '(drop)))
   (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-call! s operator operands)
-  (compiler-with-non-tail s
-    (let ((known-closure
-           ;; Bind known-closure to the called closure if I can resolve it
-           ;; at this time, or to #f otherwise.
-           (cond ((and (ast-literal? operator)
-                       (closure? (ast-literal-value operator)))
-                  ;; The operator is a literal closure.
-                  (ast-literal-value operator))
-                 ((and (ast-variable? operator)
-                       (not (compiler-bound-variable? s (ast-variable-name
-                                                         operator)))
-                       (constant? (ast-variable-name operator)))
-                  ;; The operator is a variable globally bound to a constant
-                  ;; and not shadowed.
-                  (symbol-global (ast-variable-name operator)))
-                 (#t
-                  ;; The closure is not known: I can't omit run-time checks.
-                  #f))))
-      (compile-ast! s operator)
-      (unless known-closure
-        (compiler-add-instruction! s `(check-closure)))
-      (unless (and known-closure
-                   (= (closure-in-arity known-closure) (length operands)))
-        (when known-closure
-          ;; FIXME: warn more cleanly.
-          (display `(WARNING: in-arity mismatch in call to known closure
-                              ,operator with actuals ,operands))
-          (newline))
-        (compiler-add-instruction! s `(check-in-arity ,(length operands)))))
-    (dolist (operand operands)
-      (compile-ast! s operand)))
-  (if (compiler-tailness s)
+  (let ((known-closure
+         ;; Bind known-closure to the called closure if I can resolve it
+         ;; at this time, or to #f otherwise.
+         (cond ((and (ast-literal? operator)
+                     (closure? (ast-literal-value operator)))
+                ;; The operator is a literal closure.
+                (ast-literal-value operator))
+               ((and (ast-variable? operator)
+                     (not (compiler-bound-variable? s (ast-variable-name
+                                                       operator)))
+                     (constant? (ast-variable-name operator)))
+                ;; The operator is a variable globally bound to a constant
+                ;; and not shadowed.
+                (symbol-global (ast-variable-name operator)))
+               (#t
+                ;; The closure is not known: I can't omit run-time checks.
+                #f))))
+    (compiler-with-non-tail s
+      (compiler-with-used-result s
+        (compile-ast! s operator)))
+    (unless known-closure
+      (compiler-add-instruction! s `(check-closure)))
+    (unless (and known-closure
+                 (= (closure-in-arity known-closure) (length operands)))
+      (when known-closure
+        ;; FIXME: warn more cleanly.
+        (display `(WARNING: in-arity mismatch in call to known closure
+                            ,operator with actuals ,operands))
+        (newline))
+      (compiler-add-instruction! s `(check-in-arity ,(length operands)))))
+  (dolist (operand operands)
+    (compiler-with-non-tail s
+      (compiler-with-used-result s
+        (compile-ast! s operand))))
+  (if (compiler-tail? s)
       (compiler-add-instruction! s `(tail-call ,(length operands)))
       (let ((used-registers (compiler-used-registers s)))
         ;; The registers being used at this point are a superset of the ones
-        ;; live at return.  This is a conservative approximation, correct but
-        ;; crude; doing better would require a liveness analysis pass.
+        ;; live at return.  This is a conservative approximation, crude but
+        ;; correct.  Doing better would require a liveness analysis pass.
         (compiler-save-registers! s used-registers)
         (compiler-add-instruction! s `(call ,(length operands)))
-        (compiler-restore-registers! s used-registers))))
+        (compiler-restore-registers! s used-registers)
+        (unless (compiler-used-result? s)
+          (compiler-add-instruction! s '(drop))))))
 
 (define-constant (compile-let! s bound-name bound-form body)
   (compiler-with-non-tail s
-    (compile-ast! s bound-form))
+    (compiler-with-used-result s
+      (compile-ast! s bound-form)))
   (let ((place (compiler-pop-and-bind! s bound-name body)))
     (compile-ast! s body)
     (unless (eq? place 'nowhere)
       (compiler-unbind! s bound-name))))
 
 (define-constant (compile-lambda! s formals body)
-  (compiler-add-instruction! s '(LAMBDA-UNIMPLEMENTED))
-  (compiler-emit-return-when-tail! s))
+  (when (compiler-used-result? s)
+    (compiler-add-instruction! s '(LAMBDA-UNIMPLEMENTED))
+    (compiler-emit-return-when-tail! s)))
 
 (define-constant (compile-sequence! s first second)
-  (compiler-with-non-tail s
-    (compile-ast! s first))
-  (compiler-add-instruction! s '(drop))
+  (compiler-with-non-tail s ;; FIXME: remove?
+    (compiler-with-unused-result s
+      (compile-ast! s first)))
   (compile-ast! s second))
-
 
 
 
@@ -5214,6 +5312,9 @@
       n
       (+ (fibo (- n 2))
          (fibo (- n 1)))))
+
+(define-constant (average a b)
+  (/ (+ a b) 2))
 
 (define-constant (fact n)
   (if (zero? n)
@@ -5434,3 +5535,6 @@
 ;;       (setq res (1+ res))
 ;;       (setq xs (cdr xs)))
 ;;     res))
+
+;; A good test case for the used-result flag.
+;; (c (lambda (a b) (when a (set! b a)) b))
