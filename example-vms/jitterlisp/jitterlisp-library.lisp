@@ -5100,7 +5100,7 @@
 (define-constant (compile-call! s operator operands)
   (compiler-with-non-tail s
     (let ((known-closure
-           ;; Bind known-closure to a closure object if we know the operator
+           ;; Bind known-closure to the called closure if I can resolve it
            ;; at this time, or to #f otherwise.
            (cond ((and (ast-literal? operator)
                        (closure? (ast-literal-value operator)))
