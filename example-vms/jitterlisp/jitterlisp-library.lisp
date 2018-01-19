@@ -5099,11 +5099,24 @@
 
 (define-constant (compile-call! s operator operands)
   (compiler-with-non-tail s
-    (compile-ast! s operator)
-    (let ((known-closure (if (and (ast-literal? operator)
-                                  (closure? (ast-literal-value operator)))
-                             (ast-literal-value operator)
-                             #f)))
+    (let ((known-closure
+           ;; Bind known-closure to a closure object if we know the operator
+           ;; at this time, or to #f otherwise.
+           (cond ((and (ast-literal? operator)
+                       (closure? (ast-literal-value operator)))
+                  ;; The operator is a literal closure.
+                  (ast-literal-value operator))
+                 ((and (ast-variable? operator)
+                       (not (compiler-bound-variable? s (ast-variable-name
+                                                         operator)))
+                       (constant? (ast-variable-name operator)))
+                  ;; The operator is a variable globally bound to a constant
+                  ;; and not shadowed.
+                  (symbol-global (ast-variable-name operator)))
+                 (#t
+                  ;; The closure is not known: I can't omit run-time checks.
+                  #f))))
+      (compile-ast! s operator)
       (unless known-closure
         (compiler-add-instruction! s `(check-closure)))
       (unless (and known-closure
@@ -5206,6 +5219,12 @@
   (if (zero? a)
       b
       (count2 (- a 1) (+ b 1))))
+
+(define-constant (count2-i a b)
+  (while (not (zero? a))
+    (set! a (- a 1))
+    (set! b (+ b 1)))
+  b)
 
 ;;;  OK
 ;;; (define q (macroexpand '(let ((a a) (b a)) a))) q (ast-alpha-convert q)
