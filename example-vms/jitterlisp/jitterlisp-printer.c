@@ -188,16 +188,16 @@ jitterlisp_stream_char_printer_function (void *file_star, char c)
 #else
 # define CONSATTR              LIGHTRED // LIGHTRED // WHITE //LIGHTRED // YELLOW //LIGHTMAGENTA
 # define CHARACTERATTR         BROWN UNDERLINE ITALIC
-# define FIXNUMATTR            LIGHTCYAN UNDERLINE
+# define FIXNUMATTR            LIGHTCYAN
 # define INTERNEDSYMBOLATTR    LIGHTGREEN
 # define UNINTERNEDSYMBOLATTR  LIGHTGREEN ITALIC UNDERLINE
-# define UNIQUEATTR            YELLOW UNDERLINE //LIGHTMAGENTA UNDERLINE ITALIC //LIGHTMAGENTA UNDERLINE ITALIC
+# define UNIQUEATTR            LIGHTCYAN ITALIC UNDERLINE //LIGHTMAGENTA UNDERLINE ITALIC //LIGHTMAGENTA UNDERLINE ITALIC
 # define CLOSUREATTR           LIGHTMAGENTA ITALIC // WHITE
 # define NONPRIMITIVEMACROATTR LIGHTMAGENTA ITALIC UNDERLINE // WHITE
 # define PRIMITIVEATTR         LIGHTMAGENTA
 # define PRIMITIVEMACROATTR    LIGHTMAGENTA UNDERLINE
 # define VECTORATTR            LIGHTRED ITALIC UNDERLINE
-# define ASTATTR               LIGHTMAGENTA ITALIC UNDERLINE
+# define ASTATTR               YELLOW ITALIC UNDERLINE
 # define CIRCULARATTR          WHITE
 # define ERRORATTR             RED REVERSE
 #endif // #ifdef NOTERMINAL
@@ -659,11 +659,11 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
       struct jitterlisp_primitive * const primitive
         = JITTERLISP_PRIMITIVE_DECODE(o);
       jitterlisp_print_decoration (cp, cps, PRIMITIVEATTR);
-      jitterlisp_print_string (cp, cps, "#<");
-      jitterlisp_print_long_long (cp, cps, primitive->in_arity, false, 10);
-      jitterlisp_print_string (cp, cps, "-ary primitive ");
+      jitterlisp_print_string (cp, cps, "#<primitive ");
       jitterlisp_print_string (cp, cps, primitive->name);
-      jitterlisp_print_string (cp, cps, ">");
+      jitterlisp_print_string (cp, cps, " ");
+      jitterlisp_print_long_long (cp, cps, primitive->in_arity, false, 10);
+      jitterlisp_print_string (cp, cps, "-ary>");
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_PRIMITIVE_MACRO(o))
