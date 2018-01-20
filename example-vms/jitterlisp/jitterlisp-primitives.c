@@ -458,13 +458,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_formals, CLOSURE,
   { JITTERLISP_CLOSURE_FORMALS_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_body, CLOSURE,
   { JITTERLISP_CLOSURE_BODY_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_code, CLOSURE,
-  { JITTERLISP_CLOSURE_CODE_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_5_(closure_setb, CLOSURE, ALIST, SYMBOLS, AST,
-                                 ANYTHING /* FIXME: think of the code field
-                                             type */,
-  { JITTERLISP_CLOSURE_SET_(res, args [0],
-                            args [1], args [2], args [3], args [4]); })
+JITTERLISP_PRIMITIVE_FUNCTION_4_(closure_setb, CLOSURE, ALIST, SYMBOLS, AST,
+  { JITTERLISP_CLOSURE_SET_(res, args [0], args [1], args [2], args [3]); })
 /* Vector operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
   { JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]); })
@@ -697,8 +692,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-formals", 1,
                                              closure_formals),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-body", 1, closure_body),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-code", 1, closure_code),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-set!", 5, closure_setb),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-set!", 4, closure_setb),
       /* Vector operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */

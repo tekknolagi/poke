@@ -4459,7 +4459,6 @@
                   alpha-converted-env
                   alpha-converted-formals
                   alpha-converted-body
-                  (closure-code closure) ;; FIXME: is this what I want?
                   )))
 
 ;;; Destructively modify the given closure, replacing its fields with a
@@ -4480,7 +4479,6 @@
                     alpha-converted-env
                     alpha-converted-formals
                     optimized-body
-                    (closure-code closure) ;; FIXME: is this what I want?
                     ))))
 
 

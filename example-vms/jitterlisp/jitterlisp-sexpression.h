@@ -428,9 +428,6 @@ struct jitterlisp_closure
 
   /* The procedure body as an AST. */
   jitterlisp_object body;
-
-  /* Generated VM code.  FIXME: think about the type. */
-  jitterlisp_object code;
 };
 
 /* Tentative: a compiled closure structure. */

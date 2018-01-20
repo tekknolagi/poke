@@ -629,11 +629,7 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_recursive (cp, cps, st, closure->body);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_char (cp, cps, ' ');
-      jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print_recursive (cp, cps, st, closure->code);
-      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_string (cp, cps, ">");
+      jitterlisp_print_char (cp, cps, '>');
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_NON_PRIMITIVE_MACRO(o))
