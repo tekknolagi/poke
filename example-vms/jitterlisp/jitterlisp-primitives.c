@@ -425,16 +425,16 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(car, CONS,
   { JITTERLISP_CAR_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(cdr, CONS,
   { JITTERLISP_CDR_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_2_(set_car_b, CONS, ANYTHING,
+JITTERLISP_PRIMITIVE_FUNCTION_2_(set_carb, CONS, ANYTHING,
   { JITTERLISP_SET_CARB_(res, args [0], args [1]); })
-JITTERLISP_PRIMITIVE_FUNCTION_2_(set_cdr_b, CONS, ANYTHING,
+JITTERLISP_PRIMITIVE_FUNCTION_2_(set_cdrb, CONS, ANYTHING,
   { JITTERLISP_SET_CDRB_(res, args [0], args [1]); })
 /* Box operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(box, ANYTHING,
   { JITTERLISP_BOX_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(box_get, BOX,
   { JITTERLISP_BOX_GET_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_2_(box_set_b, BOX, ANYTHING,
+JITTERLISP_PRIMITIVE_FUNCTION_2_(box_setb, BOX, ANYTHING,
   { JITTERLISP_BOX_SETB_(res, args [0], args [1]); })
 /* Symbol operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_0_(gensym,
@@ -671,12 +671,12 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("cons", 2, cons),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("car", 1, car),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("cdr", 1, cdr),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("set-car!", 2, set_car_b),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("set-cdr!", 2, set_cdr_b),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("set-car!", 2, set_carb),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("set-cdr!", 2, set_cdrb),
       /* Box operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("box", 1, box),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("box-get", 1, box_get),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("box-set!", 2, box_set_b),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("box-set!", 2, box_setb),
       /* Symbol operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("gensym", 0, gensym),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("constant?", 1, constantp),
