@@ -1,6 +1,6 @@
 /* Jittery Lisp: s-expression header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -392,6 +392,21 @@ struct jitterlisp_cons
                                JITTERLISP_CONS_TAG,           \
                                JITTERLISP_CONS_TAG_BIT_NO)))
 
+
+
+
+/* S-expression representation: boxes.
+ * ************************************************************************** */
+
+/* This implementation of boxes is a temporary hack.  Boxed should have their
+   own tag, and not just be conses with a particular shape. */
+
+#define JITTERLISP_IS_BOX(_jitterlisp_tagged_object)     \
+  (JITTERLISP_IS_CONS(_jitterlisp_tagged_object)         \
+   && (JITTERLISP_EXP_C_A_CDR(_jitterlisp_tagged_object) \
+       == JITTERLISP_NOTHING))
+
+
 
 
 /* S-expression representation: closures.
@@ -416,6 +431,24 @@ struct jitterlisp_closure
 
   /* Generated VM code.  FIXME: think about the type. */
   jitterlisp_object code;
+};
+
+/* Tentative: a compiled closure structure. */
+struct jitterlisp_compiled_closure
+{
+  /* How many arguments this closure takes. */
+  jitter_uint in_arity;
+
+  /* VM code.  FIXME: think about the type. */
+  jitterlisp_object code;
+
+  /* How many nonlocals there are.  FIXME: remove this unless it's needed
+     for garbage collection. */
+  jitter_uint nonlocal_no;
+
+  /* Nonlocals as used in compiled code, with no names and with boxed nonlocals
+     are stored as boxes; NULL if no nonlocals are needed. */
+  jitterlisp_object *nonlocals;
 };
 
 /* Closure tag checking, encoding and decoding. */

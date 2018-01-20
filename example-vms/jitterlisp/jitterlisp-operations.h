@@ -294,6 +294,20 @@
   JITTERLISP_EXP_C_A_CDR(JITTERLISP_EXP_C_A_CDDDR(_jitterlisp_tagged_cons))
 
 
+/* Box expression operations.
+ * ************************************************************************** */
+
+/* Box selection is definable as an expression as it doesn't require heap
+   allocation.  (That is not the case for box construction.) */
+
+// FIXME: this implementation is, of course, temporary.
+
+/* Expand to an r-value expression evaluating to the tagged content of the
+   given tagged box operand. */
+#define JITTERLISP_EXP_B_A_GET(_jitterlisp_tagged_box)   \
+  (JITTERLISP_CONS_DECODE(_jitterlisp_tagged_box)->car)
+
+
 
 
 /* FIXME: move
@@ -469,6 +483,37 @@
     _jitterlisp_tmp->cdr = (_jitterlisp_new_cdr);  \
     (_jitterlisp_out) = JITTERLISP_NOTHING;        \
   JITTER_END_
+
+
+
+
+/* Box operations.
+ * ************************************************************************** */
+
+// FIXME: reimplement with the correct box struct.
+
+#define JITTERLISP_BOX_(_jitterlisp_out, _jitterlisp_in0)         \
+  JITTER_BEGIN_                                                   \
+    struct jitterlisp_cons *_jitterlisp_tmp                       \
+      = JITTERLISP_CONS_MAKE_UNINITIALIZED_UNENCODED();           \
+    _jitterlisp_tmp->car = (_jitterlisp_in0);                     \
+    _jitterlisp_tmp->cdr = JITTERLISP_NOTHING;                    \
+    (_jitterlisp_out) = JITTERLISP_CONS_ENCODE(_jitterlisp_tmp);  \
+  JITTER_END_
+
+#define JITTERLISP_BOX_GET_(_jitterlisp_out, _jitterlisp_in0)  \
+  JITTER_BEGIN_                                                \
+    jitterlisp_object _jitterlisp_tmp                          \
+      = JITTERLISP_EXP_B_A_GET(_jitterlisp_in0);               \
+    (_jitterlisp_out) = _jitterlisp_tmp;                       \
+  JITTER_END_
+
+#define JITTERLISP_BOX_SETB_(_jitterlisp_out,          \
+                             _jitterlisp_box,          \
+                             _jitterlisp_new_content)  \
+  JITTERLISP_SET_CARB_(_jitterlisp_out,                \
+                       _jitterlisp_box,                \
+                       _jitterlisp_new_content)
 
 
 
@@ -790,6 +835,13 @@
   JITTER_BEGIN_                                                            \
     (_jitterlisp_out)                                                      \
       = JITTERLISP_BOOLEAN_ENCODE(! JITTERLISP_IS_CONS(_jitterlisp_in0));  \
+  JITTER_END_
+
+/* Compute a tagged boolean, #t iff the given in-argument is a box . */
+#define JITTERLISP_BOXP_(_jitterlisp_out, _jitterlisp_in0)              \
+  JITTER_BEGIN_                                                         \
+    (_jitterlisp_out)                                                   \
+      = JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_BOX(_jitterlisp_in0));  \
   JITTER_END_
 
 /* Compute a tagged boolean, #t iff the given in-argument is a symbol . */

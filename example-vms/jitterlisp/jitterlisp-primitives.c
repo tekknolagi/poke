@@ -350,6 +350,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(non_symbolp, ANYTHING,
   { JITTERLISP_NON_SYMBOLP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(consp, ANYTHING,
   { JITTERLISP_CONSP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(boxp, ANYTHING,
+  { JITTERLISP_BOXP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(non_consp, ANYTHING,
   { JITTERLISP_NON_CONSP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(closurep, ANYTHING,
@@ -427,6 +429,13 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(set_car_b, CONS, ANYTHING,
   { JITTERLISP_SET_CARB_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(set_cdr_b, CONS, ANYTHING,
   { JITTERLISP_SET_CDRB_(res, args [0], args [1]); })
+/* Box operations. */
+JITTERLISP_PRIMITIVE_FUNCTION_1_(box, ANYTHING,
+  { JITTERLISP_BOX_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(box_get, BOX,
+  { JITTERLISP_BOX_GET_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(box_set_b, BOX, ANYTHING,
+  { JITTERLISP_BOX_SETB_(res, args [0], args [1]); })
 /* Symbol operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_0_(gensym,
   { JITTERLISP_GENSYM_(res); })
@@ -627,6 +636,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-symbol?", 1, non_symbolp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("cons?", 1, consp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-cons?", 1, non_consp),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("box?", 1, boxp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure?", 1, closurep),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primitive?", 1, primitivep),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast?", 1, astp),
@@ -668,6 +678,10 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("cdr", 1, cdr),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("set-car!", 2, set_car_b),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("set-cdr!", 2, set_cdr_b),
+      /* Box operations. */
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("box", 1, box),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("box-get", 1, box_get),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("box-set!", 2, box_set_b),
       /* Symbol operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("gensym", 0, gensym),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("constant?", 1, constantp),
