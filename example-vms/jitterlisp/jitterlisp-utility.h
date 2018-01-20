@@ -208,13 +208,15 @@ jitterlisp_box_setb (jitterlisp_object box, jitterlisp_object new_content);
    variables are handled differently, with a value directly stored in the symbol
    data structure.  Non-global bindings have precedence over global bindings.
 
-   Variables are encoding as symbols and compared by identity.  This
-   functionality is for this compilation unit's internal use, not exported in a
-   header: the VM implementation will need something similar but not identical,
-   and I still have to figure out the details.
+   Variables are encoded as symbols and compared by identity.
 
    This is an ordinary a-list implemented as an s-expression; set! modifies it
-   destructively.  An inefficient but very simple solution. */
+   destructively.  An inefficient but very simple solution.
+
+   The functions in this section assume non-global environments to be
+   well-formed, and don't validate it.  The assumption is correct if these are
+   called from eval which is called from primitives, after validation has
+   already been perforemd. */
 
 /* The empty non-global environment. */
 extern const jitterlisp_object
@@ -245,12 +247,6 @@ jitterlisp_environment_has (jitterlisp_object env, jitterlisp_object name);
 void
 jitterlisp_environment_setb (jitterlisp_object env, jitterlisp_object name,
                              jitterlisp_object new_value);
-
-/* Destructively update the global binding for the given symbol, which must
-   be already globally bound and non-constant, to the new value.  Error out
-   if the name is not globally bound or is a global constant. */
-void
-jitterlisp_global_setb (jitterlisp_object name, jitterlisp_object new_value);
 
 /* Like jitterlisp_global_set , but do not error out if the symbol has no
    previous binding.  Do error out if the symbol is bound to a global

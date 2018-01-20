@@ -276,6 +276,9 @@ jitterlisp_cdr (jitterlisp_object cons)
   return JITTERLISP_EXP_C_A_CDR(cons);
 }
 
+
+
+
 /* Composed selectors.
  * ************************************************************************** */
 
@@ -405,7 +408,14 @@ jitterlisp_object
 jitterlisp_environment_bind (jitterlisp_object env, jitterlisp_object name,
                              jitterlisp_object value)
 {
-  return jitterlisp_cons (jitterlisp_cons (name, value), env);
+  jitterlisp_object cdr;
+#ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
+  cdr = jitterlisp_box (value);
+#else
+  cdr = value;
+#endif // #ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
+
+  return jitterlisp_cons (jitterlisp_cons (name, cdr), env);
 }
 
 jitterlisp_object
@@ -421,7 +431,14 @@ jitterlisp_environment_lookup (jitterlisp_object env, jitterlisp_object name)
       jitterlisp_object next_cons = JITTERLISP_EXP_C_A_CAR(env_rest);
       jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
       if (next_name == name)
-        return JITTERLISP_EXP_C_A_CDR(next_cons);
+        {
+          jitterlisp_object cdr = JITTERLISP_EXP_C_A_CDR(next_cons);
+#ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
+          return JITTERLISP_EXP_B_A_GET(cdr);
+#else
+          return cdr;
+#endif // #ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
+        }
     }
 
   /* ...The symbol is not bound in the given local environment.  Look it up as a
@@ -474,7 +491,10 @@ jitterlisp_define (jitterlisp_object name, jitterlisp_object new_value)
   unencoded_name->global_value = new_value;
 }
 
-void
+/* Destructively update the global binding for the given symbol, which must
+   be already globally bound and non-constant, to the new value.  Error out
+   if the name is not globally bound or is a global constant. */
+static void
 jitterlisp_global_setb (jitterlisp_object name, jitterlisp_object new_value)
 {
   struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
@@ -508,7 +528,12 @@ jitterlisp_environment_setb (jitterlisp_object env, jitterlisp_object name,
       jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
       if (next_name == name)
         {
+#ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
+          jitterlisp_object cdr = JITTERLISP_EXP_C_A_CDR(next_cons);
+          JITTERLISP_BOX_SETB_(useless, cdr, new_value);
+#else
           JITTERLISP_SET_CDRB_(useless, next_cons, new_value);
+#endif // #ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
           return;
         }
     }
