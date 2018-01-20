@@ -1,6 +1,6 @@
 /* Jittery Lisp: utility functions.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -164,6 +164,13 @@ jitterlisp_validate_symbol (jitterlisp_object o)
 {
   if (! JITTERLISP_IS_SYMBOL(o))
     jitterlisp_error_cloned ("jitterlisp_validate_symbol: non-symbol argument");
+}
+
+void
+jitterlisp_validate_box (jitterlisp_object o)
+{
+  if (! JITTERLISP_IS_BOX(o))
+    jitterlisp_error_cloned ("jitterlisp_validate_box: non-box argument");
 }
 
 void
@@ -360,6 +367,29 @@ jitterlisp_list_4 (jitterlisp_object o0, jitterlisp_object o1,
                    jitterlisp_object o2, jitterlisp_object o3)
 {
   return jitterlisp_cons (o0, jitterlisp_list_3 (o1, o2, o3));
+}
+
+jitterlisp_object
+jitterlisp_box (jitterlisp_object o)
+{
+  jitterlisp_object res;
+  JITTERLISP_BOX_(res, o);
+  return res;
+}
+
+jitterlisp_object
+jitterlisp_box_get (jitterlisp_object box)
+{
+  jitterlisp_validate_box (box);
+  return JITTERLISP_EXP_B_A_GET(box);
+}
+
+void
+jitterlisp_box_setb (jitterlisp_object box, jitterlisp_object new_content)
+{
+  jitterlisp_validate_box (box);
+  jitterlisp_object useless __attribute__ ((unused));
+  JITTERLISP_BOX_SETB_(useless, box, new_content);
 }
 
 

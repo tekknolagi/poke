@@ -83,6 +83,10 @@ jitterlisp_validate_empty_list (jitterlisp_object o);
 void
 jitterlisp_validate_symbol (jitterlisp_object o);
 
+/* Error out if the given encoded s-expression is not a box. */
+void
+jitterlisp_validate_box (jitterlisp_object o);
+
 /* Error out if the given encoded s-expression is not a primitive. */
 void
 jitterlisp_validate_primitive (jitterlisp_object o);
@@ -123,7 +127,7 @@ jitterlisp_length (jitterlisp_object list);
 
 
 
-/* S-expression constructors and selectors.
+/* S-expression constructors and accessors.
  * ************************************************************************** */
 
 /* Return a fresh cons of the given car and cdr. */
@@ -178,6 +182,19 @@ jitterlisp_object
 jitterlisp_list_4 (jitterlisp_object o0, jitterlisp_object o1,
                    jitterlisp_object o2, jitterlisp_object o3);
 
+/* Return a fresh encoded box containing the given encoded object. */
+jitterlisp_object
+jitterlisp_box (jitterlisp_object o);
+
+/* Return the encoded content of the given encoded box.  Error out if the
+   argument is not a box. */
+jitterlisp_object
+jitterlisp_box_get (jitterlisp_object box);
+
+/* Destructively update the given encoded box, setting it to contain the given
+   encoded object.  Error out if the box argument is not actually box.*/
+void
+jitterlisp_box_setb (jitterlisp_object box, jitterlisp_object new_content);
 
 
 
