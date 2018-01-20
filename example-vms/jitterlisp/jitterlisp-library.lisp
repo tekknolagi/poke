@@ -3447,6 +3447,7 @@
        primitive-non-symbol?
        primitive-cons?
        primitive-non-cons?
+       primitive-box?
        primitive-closure?
        primitive-primitive?
        primitive-ast?
@@ -4326,6 +4327,7 @@
         (list primitive-non-symbol? anything?)
         (list primitive-cons? anything?)
         (list primitive-non-cons? anything?)
+        (list primitive-box? anything?)
         (list primitive-primitive? anything?)
         (list primitive-closure? anything?)
         (list primitive-vector? anything?)
@@ -4373,13 +4375,14 @@
         (list primitive-boolean-canonicalize anything?)
 
         ;; Conses.
-        ;; Notice that cons is *not* safe to evaluate at rewrite time, as it
-        ;; needs to allocate a fresh object at every use.
-        ;; The fact that conses are mutable is not a problem here: this list is
-        ;; only consulted when a primitive use has literals as all of its
-        ;; actuals, which happens in rewritten program only when safe.
-        (list primitive-car cons?) ;; no, because of mutability.
-        (list primitive-cdr cons?) ;; no, because of mutability.
+        ;; It is *not* safe to evaluate cons at rewrite time, as it needs
+        ;; to allocate a different fresh object at every use.
+        ;; More subtly, it's also unsafe to evaluate selectors at rewrite time,
+        ;; as the data structures involved might be destructively updated
+        ;; at run time between initialization and selection.
+
+        ;; Boxes.
+        ;; The comment above about cons selectors is valid for boxes as well.
         ))
 
 
@@ -4631,30 +4634,6 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Compiler.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-;;;; Boxes: temporary implementation.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; I'll implement boxes as a predefined type, after I make more tags available.
-;;; This is a temporary hack.
-
-(define-constant (box-make x)
-  (circular-list x))
-
-(define-constant (box-get b)
-  (car b))
-
-(define-constant (box-set! b x)
-  (set-car! b x))
-
-;;; This is, of course, a temporary hack only useful assuming that no ther piece
-;;; of data has the same shape.
-(define-constant (box? x)
-  (and (cons? x)
-       (eq? (cdr x) x)))
-
 
 
 
@@ -4963,17 +4942,19 @@
          (compiler-set-flag! ,state-name ',flag-name ,outer-value-name)
          ,result-name))))
 
-;;; Temporarily flag changes for specific flags.  Notice that setting
-;;; used-result to #f implies setting tail to #f.
+;;; Temporarily flag changes for specific flags.
 (define-macro (compiler-with-non-tail state . body-forms)
   `(compiler-with-flag ,state tail #f ,@body-forms))
 (define-macro (compiler-with-used-result state . body-forms)
   `(compiler-with-flag ,state used-result #t ,@body-forms))
 (define-macro (compiler-with-unused-result state . body-forms)
-  (let ((state-name (gensym)))
-    `(let ((,state-name ,state))
-       (compiler-with-flag ,state-name tail #f
-         (compiler-with-flag ,state-name used-result #f ,@body-forms)))))
+  `(compiler-with-flag ,state used-result #f ,@body-forms))
+
+;; (define-macro (compiler-with-unused-result state . body-forms)
+;;   (let ((state-name (gensym)))
+;;     `(let ((,state-name ,state))
+;;        (compiler-with-flag ,state-name tail #f
+;;          (compiler-with-flag ,state-name used-result #f ,@body-forms)))))
 
 
 
@@ -5256,7 +5237,7 @@
     (compiler-emit-return-when-tail! s)))
 
 (define-constant (compile-sequence! s first second)
-  (compiler-with-non-tail s ;; FIXME: remove?
+  (compiler-with-non-tail s
     (compiler-with-unused-result s
       (compile-ast! s first)))
   (compile-ast! s second))
@@ -5313,7 +5294,7 @@
       (+ (fibo (- n 2))
          (fibo (- n 1)))))
 
-(define-constant (average a b)
+(define-constant (average-procedure a b)
   (/ (+ a b) 2))
 
 (define-constant (fact n)
@@ -5336,6 +5317,12 @@
     (set! a (- a 1))
     (set! b (+ b 1)))
   b)
+
+(define-macro (average . things)
+  (when (zero? (length things))
+    (error '(average: zero arguments)))
+  `(/ (+ ,@things)
+      ,(length things)))
 
 ;;;  OK
 ;;; (define q (macroexpand '(let ((a a) (b a)) a))) q (ast-alpha-convert q)
