@@ -44,11 +44,14 @@ jitterlisp_is_list_of_symbols (jitterlisp_object o);
 bool
 jitterlisp_is_list_of_distinct_symbols (jitterlisp_object o);
 
-/* Return non-false iff the given s-expression is an a-list of the kind used for
-   macroexpand and eval from Lisp.  This means that the a-list keys must be
-   symbols. */
+/* Return non-false iff the given s-expression is a non-global environment of
+   the shape defined below, as used by the AST interpreter and by eval and
+   macroexpand in Lisp.
+   A well-formed environment is an a-list with symbols as keys and boxes as
+   values.  There is no restriction on the box content (which may contain other
+   boxes), and the symbols are not required to be unique. */
 bool
-jitterlisp_is_alist (jitterlisp_object o);
+jitterlisp_is_environment (jitterlisp_object o);
 
 /* A macro wrapper around jitterlisp_is_list , convenient for type-checking
    primitive arguments.  This calls jitterlisp_is_list . */
@@ -61,10 +64,10 @@ jitterlisp_is_alist (jitterlisp_object o);
 #define JITTERLISP_IS_SYMBOLS(x)  \
   (jitterlisp_is_list_of_symbols (x))
 
-/* A macro wrapper around jitterlisp_is_alist , convenient for type-checking
-   primitive arguments.  This calls jitterlisp_is_alist . */
-#define JITTERLISP_IS_ALIST(x)  \
-  (jitterlisp_is_alist (x))
+/* A macro wrapper around jitterlisp_is_environment , convenient for
+   type-checking primitive arguments.  This calls jitterlisp_is_environment . */
+#define JITTERLISP_IS_ENVIRONMENT(x)  \
+  (jitterlisp_is_environment (x))
 
 
 
@@ -108,10 +111,11 @@ jitterlisp_validate_distinct_symbols (jitterlisp_object list);
 void
 jitterlisp_validate_asts (jitterlisp_object list);
 
-/* Error out if the given encoded s-expression is not an a-list.  This is meant
-   for validating the arguments of eval and macroexpand , as used from Lisp. */
+/* Error out if the given encoded s-expression is not a non-global environment
+   as per jitterlisp_is_environment .  This is meant for validating the
+   arguments of eval and macroexpand , as used from Lisp. */
 void
-jitterlisp_validate_alist (jitterlisp_object o);
+jitterlisp_validate_environment (jitterlisp_object o);
 
 
 
@@ -199,24 +203,31 @@ jitterlisp_box_setb (jitterlisp_object box, jitterlisp_object new_content);
 
 
 
-/* Non-global environments.
+/* Non-global environments (for the AST interpreter only).
  * ************************************************************************** */
 
 /* This data structure holds a binding from variable to value representing a
-   non-global environment.  Non-global means local (procedure arguments, let)
-   plus non-local (locals from outer static contexts) variables.  Global
-   variables are handled differently, with a value directly stored in the symbol
-   data structure.  Non-global bindings have precedence over global bindings.
+   non-global environment for the AST interpreter.
 
-   Variables are encoded as symbols and compared by identity.
+   Non-global means local (procedure arguments, let) plus non-local (locals from
+   outer static contexts) variables.  Global variables are handled differently,
+   with a value directly stored in the symbol data structure.  Non-global
+   bindings have precedence over global bindings.
 
-   This is an ordinary a-list implemented as an s-expression; set! modifies it
-   destructively.  An inefficient but very simple solution.
+   Variables are encoded as symbols and compared by identity.  Each associated
+   value is a box, whose content is updated by set! operations on non-global
+   variables.  This indirection thru a box has a cost and may seem overkill
+   as conses are already mutable and may be shared, but the box becomes
+   necessary when assigned variables are shared between the interpreter and
+   compiled procedures, which don't use this data structure to represent
+   environments; compiled procedures in fact avoid boxes when possible, but
+   their more efficient representation relies on a code analysis which the
+   interpreter cannot afford at every variable binding.
 
    The functions in this section assume non-global environments to be
-   well-formed, and don't validate it.  The assumption is correct if these are
-   called from eval which is called from primitives, after validation has
-   already been perforemd. */
+   well-formed, and don't validate them.  The assumption is correct if the
+   functions are called from eval which is in its turn called from C code or
+   from primitives, after validation has already been perforemd. */
 
 /* The empty non-global environment. */
 extern const jitterlisp_object
@@ -231,7 +242,9 @@ jitterlisp_environment_bind (jitterlisp_object env, jitterlisp_object name,
 
 /* Return the value bound to the given name in the local environment and,
    failing that, in the global environment.  Error out if the name is not bound
-   in the global environment either. */
+   in the global environment either.  This returns the box content, not the box
+   -- of course the box content may be another box, and this function only
+   performes *one* unboxing operation. */
 jitterlisp_object
 jitterlisp_environment_lookup (jitterlisp_object env, jitterlisp_object name);
 
@@ -248,9 +261,8 @@ void
 jitterlisp_environment_setb (jitterlisp_object env, jitterlisp_object name,
                              jitterlisp_object new_value);
 
-/* Like jitterlisp_global_set , but do not error out if the symbol has no
-   previous binding.  Do error out if the symbol is bound to a global
-   constant. */
+/* Set the global binding for the given symbol, replacing the previous global
+   binding in case one was present.  Error out if the symbol is constant. */
 void
 jitterlisp_define (jitterlisp_object name, jitterlisp_object new_value);
 

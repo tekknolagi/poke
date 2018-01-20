@@ -23,26 +23,6 @@
 #ifndef JITTERLISP_SEXPRESSION_H_
 #define JITTERLISP_SEXPRESSION_H_
 
-/* Feature macros.
- * ************************************************************************** */
-
-// FIXME: this should probably be enabled unconditionally.  Move the comment
-// below to the utility header, implementing non-global environments.
-
-/* If JITTERLISP_BOXING_IN_ALIST_ENVS is defined then use boxes for values in
-   non-global environment alists.
-   This is in order not to miss sharing when an interpreted closure is
-   destructively updated into a compiled closure: we want to keep sharing
-   between the closed nonlocals and any interpreted closure (or still running
-   interpreted code) using the same values: assignments must be visible across
-   the "compilation barrier", which requires a level of indirection.  In
-   compiled code this is handled per-variable, adding a box only where needed;
-   interpreted code can't afford a code analysis before each binding, and
-   therefore needs to always box. */
-#define JITTERLISP_BOXING_IN_ALIST_ENVS   1
-
-
-
 
 /* Include headers.
  * ************************************************************************** */

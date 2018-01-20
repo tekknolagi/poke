@@ -250,38 +250,10 @@ jitterlisp_eval_globally_interpreter (jitterlisp_object unexpanded_form)
                                       jitterlisp_empty_environment);
 }
 
-/* Return a copy of the given non-global environment, which is assumed to be an
-   a-list of symbol keys (not checked) where each value is wrapped in a fresh
-   box if JITTERLISP_BOXING_IN_ALIST_ENVS is defined ; return env , not copied,
-   otherwise. */
-static jitterlisp_object
-jitterlisp_adapt_nonglobal_environment (jitterlisp_object env)
-{
-#ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
-  if (JITTERLISP_IS_EMPTY_LIST(env))
-    return JITTERLISP_EMPTY_LIST;
-  else
-    {
-      jitterlisp_object first_cons = JITTERLISP_EXP_C_A_CAR(env);
-      jitterlisp_object key = JITTERLISP_EXP_C_A_CAR(first_cons);
-      jitterlisp_object unwrapped_value = JITTERLISP_EXP_C_A_CDR(first_cons);
-      jitterlisp_object rest = JITTERLISP_EXP_C_A_CDR(env);
-      return jitterlisp_cons
-                (jitterlisp_cons (key, jitterlisp_box (unwrapped_value)),
-                 jitterlisp_adapt_nonglobal_environment (rest));
-    }
-#else
-  return env;
-#endif // #ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
-}
-
 jitterlisp_object
 jitterlisp_eval_interpreter (jitterlisp_object unexpanded_form,
                              jitterlisp_object env)
 {
-  /* Add boxes to the environment, if needed. */
-  env = jitterlisp_adapt_nonglobal_environment (env);
-
   if (jitterlisp_settings.verbose)
     {
       printf ("Macroexpanding ");

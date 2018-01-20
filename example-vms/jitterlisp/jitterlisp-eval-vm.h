@@ -45,8 +45,8 @@ jitterlisp_object
 jitterlisp_eval_globally_vm (jitterlisp_object form);
 
 /* Macroexpand the given JitterLisp form, and return the result of its
-   evaluation, using the given non-global environment expressed as an alist.
-   Evaluate using the Jittery VM. */
+   evaluation, using the given non-global environment shaped as described in
+   jitterlisp-utility.h .  Evaluate using the Jittery VM. */
 jitterlisp_object
 jitterlisp_eval_vm (jitterlisp_object form, jitterlisp_object env);
 

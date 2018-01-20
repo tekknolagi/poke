@@ -129,16 +129,16 @@ jitterlisp_is_list_of_distinct_symbols (jitterlisp_object o)
 }
 
 bool
-jitterlisp_is_alist (jitterlisp_object o)
+jitterlisp_is_environment (jitterlisp_object o)
 {
   while (! JITTERLISP_IS_EMPTY_LIST(o))
     {
       if (! JITTERLISP_IS_CONS(o))
         return false;
       jitterlisp_object element = JITTERLISP_EXP_C_A_CAR(o);
-      if (! JITTERLISP_IS_CONS(element))
-        return false;
-      if (! JITTERLISP_IS_SYMBOL(JITTERLISP_EXP_C_A_CAR(element)))
+      if (! JITTERLISP_IS_CONS(element)
+          || ! JITTERLISP_IS_SYMBOL(JITTERLISP_EXP_C_A_CAR(element))
+          || ! JITTERLISP_IS_BOX(JITTERLISP_EXP_C_A_CDR(element)))
         return false;
 
       o = JITTERLISP_EXP_C_A_CDR(o);
@@ -218,11 +218,12 @@ jitterlisp_validate_asts (jitterlisp_object list)
 }
 
 void
-jitterlisp_validate_alist (jitterlisp_object o)
+jitterlisp_validate_environment (jitterlisp_object o)
 {
-  if (! jitterlisp_is_alist (o))
-    jitterlisp_error_cloned ("jitterlisp_validate_alist: not an a-list with "
-                             "symbols as keys");
+  if (! jitterlisp_is_environment (o))
+    jitterlisp_error_cloned ("jitterlisp_validate_environment: not a "
+                             "non-global environment (an alist with symbols "
+                             "as keys and boxes as values)");
 }
 
 
@@ -408,14 +409,8 @@ jitterlisp_object
 jitterlisp_environment_bind (jitterlisp_object env, jitterlisp_object name,
                              jitterlisp_object value)
 {
-  jitterlisp_object cdr;
-#ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
-  cdr = jitterlisp_box (value);
-#else
-  cdr = value;
-#endif // #ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
-
-  return jitterlisp_cons (jitterlisp_cons (name, cdr), env);
+  jitterlisp_object box = jitterlisp_box (value);
+  return jitterlisp_cons (jitterlisp_cons (name, box), env);
 }
 
 jitterlisp_object
@@ -433,11 +428,7 @@ jitterlisp_environment_lookup (jitterlisp_object env, jitterlisp_object name)
       if (next_name == name)
         {
           jitterlisp_object cdr = JITTERLISP_EXP_C_A_CDR(next_cons);
-#ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
           return JITTERLISP_EXP_B_A_GET(cdr);
-#else
-          return cdr;
-#endif // #ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
         }
     }
 
@@ -528,12 +519,8 @@ jitterlisp_environment_setb (jitterlisp_object env, jitterlisp_object name,
       jitterlisp_object next_name = JITTERLISP_EXP_C_A_CAR(next_cons);
       if (next_name == name)
         {
-#ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
           jitterlisp_object cdr = JITTERLISP_EXP_C_A_CDR(next_cons);
           JITTERLISP_BOX_SETB_(useless, cdr, new_value);
-#else
-          JITTERLISP_SET_CDRB_(useless, next_cons, new_value);
-#endif // #ifdef JITTERLISP_BOXING_IN_ALIST_ENVS
           return;
         }
     }

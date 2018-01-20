@@ -1,6 +1,6 @@
 /* Jittery Lisp: eval wrapper header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -38,7 +38,8 @@ jitterlisp_object
 jitterlisp_eval_globally (jitterlisp_object form);
 
 /* Macroexpand the given JitterLisp form, and return the result of its
-   evaluation, using the given non-global environment expressed as an alist. */
+   evaluation, using the given non-global environment shaped as described in
+   jitterlisp-utility.h . */
 jitterlisp_object
 jitterlisp_eval (jitterlisp_object form, jitterlisp_object env);
 
