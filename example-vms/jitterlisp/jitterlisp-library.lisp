@@ -5250,8 +5250,7 @@
   (let ((env (closure-environment c))
         (formals (closure-formals c))
         (body (closure-body c)))
-    (unless (nothing? code)
-      (error `(closure ,c already compiled)))
+    ;; FIXME: check that the closure is not already compiled.
     (unless (alist? env)
       (error `(closure ,c has a non-alist environment)))
     (let ((s (compiler-make-state)))
