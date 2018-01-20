@@ -1,6 +1,6 @@
 /* Jittery Lisp: Lisp macros.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -46,6 +46,7 @@ jitterlisp_macroexpand_multiple (jitterlisp_object os,
         {
           printf ("About "); // FIXME: integrate with the error function
           jitterlisp_print_to_stream (stdout, os);
+          printf (":\n");
           jitterlisp_error_cloned ("jitterlisp_macroexpand_multiple: non-list "
                                    "argument");
         }
@@ -94,10 +95,6 @@ jitterlisp_macroexpand_macro_call (jitterlisp_object macro,
                                    jitterlisp_object cdr,
                                    jitterlisp_object env)
 {
-  /*
-  printf ("%% macroexpanding macro call to ");
-  jitterlisp_print_to_stream (stdout, macro); printf ("...\n");
-  */
   if (JITTERLISP_IS_PRIMITIVE_MACRO(macro))
     {
       struct jitterlisp_primitive *p = JITTERLISP_PRIMITIVE_MACRO_DECODE(macro);
@@ -121,23 +118,9 @@ jitterlisp_macroexpand_macro_call (jitterlisp_object macro,
                                        jitterlisp_low_level_macro_args,
                                        cdr);
       /* Evaluate the macro body in the extended environment. */
-      /*
-      printf ("About to eval the macro body ");
-      jitterlisp_print_to_stream (stdout, macro_ast); printf ("\n");
-      printf (" in the environment ");
-      jitterlisp_print_to_stream (stdout, expansion_env); printf ("\n");
-      printf ("\n");
-      */
       jitterlisp_object first_result
         = jitterlisp_eval_interpreter_ast (macro_ast, expansion_env);
-      /*
-      printf ("Macroexpanding the call to ");
-      jitterlisp_print_to_stream (stdout, macro); printf ("\n");
-      printf (" yielded ");
-      jitterlisp_print_to_stream (stdout, result); printf ("\n");
-      printf ("\n");
-      */
-      //jitterlisp_error_cloned ("macroexpanding non-primitive macro call: unimplemented");
+
       /* The result can be any Lisp object, which may need to be macroexpanded
          in its turn. */
       return jitterlisp_macroexpand (first_result, env);
@@ -151,14 +134,7 @@ jitterlisp_macroexpand_cons (jitterlisp_object o, jitterlisp_object env)
 {
   jitterlisp_object car = JITTERLISP_EXP_C_A_CAR(o);
   jitterlisp_object cdr = JITTERLISP_EXP_C_A_CDR(o);
-  /*
-  printf ("* jitterlisp_macroexpand_cons: car is ");
-  jitterlisp_print_to_stream (stdout, car); printf ("\n");
-  printf ("  jitterlisp_macroexpand_cons: cdr is ");
-  jitterlisp_print_to_stream (stdout, cdr); printf ("\n");
-  printf ("  jitterlisp_macroexpand_cons: env is ");
-  jitterlisp_print_to_stream (stdout, env); printf ("\n");
-  */
+
   /* If the car is a symbol bound to a macro then the cons encodes a macro call.
      Macroexpand it as such. */
   if (JITTERLISP_IS_SYMBOL (car) &&
