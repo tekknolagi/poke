@@ -678,6 +678,16 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_string (cp, cps, ">");
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
+  else if (JITTERLISP_IS_BOX(o))
+    {
+      jitterlisp_print_decoration (cp, cps, BOXATTR);
+      jitterlisp_print_string (cp, cps, "#<box ");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print_recursive (cp, cps, st, JITTERLISP_EXP_B_A_GET(o));
+      jitterlisp_print_decoration (cp, cps, BOXATTR);
+      jitterlisp_print_char (cp, cps, '>');
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
   else if (JITTERLISP_IS_CONS(o))
     {
       struct jitterlisp_cons * const c = JITTERLISP_CONS_DECODE(o);
@@ -690,16 +700,6 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_cdr (cp, cps, st, cdr);
       jitterlisp_print_decoration (cp, cps, CONSATTR);
       jitterlisp_print_char (cp, cps, ')');
-      jitterlisp_print_decoration (cp, cps, NOATTR);
-    }
-  else if (JITTERLISP_IS_BOX(o))
-    {
-      jitterlisp_print_decoration (cp, cps, BOXATTR);
-      jitterlisp_print_string (cp, cps, "#<box ");
-      jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print_recursive (cp, cps, st, JITTERLISP_EXP_B_A_GET(o));
-      jitterlisp_print_decoration (cp, cps, BOXATTR);
-      jitterlisp_print_char (cp, cps, '>');
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_AST(o))
