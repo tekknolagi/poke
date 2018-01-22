@@ -2777,7 +2777,7 @@
 
 
 
-;;;; Tentative: free variables in an AST.
+;;;; Compute the set of variables occurring free in an AST.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Return a set-as-list of the variables occurring free in the given AST.
@@ -2829,7 +2829,7 @@
 
 
 
-;;;; Free variables in an AST.
+;;;; Check whether a given variable occurs free in an AST.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Return non-#f iff the given variable occurs free in the given AST.
@@ -4646,53 +4646,6 @@
         (loop (1+ candidate))
         candidate)))
 
-;;; Scratch, for debugging.
-(define-constant (print-reversed-instructions xs)
-  (dolist (x (reverse xs))
-    (when (and (list? x)
-               (not-eq? (car x) 'label))
-      (dotimes (i 4)
-        (character-display #\space)))
-    (display x)
-    (newline)))
-
-(define-constant (print-compiler-state s)
-  (display `(USED LABELS: ,@(sort (compiler-used-labels s))))
-  (newline)
-  (print-reversed-instructions (compiler-reversed-instructions s)))
-
-;; Temporary testing procedure: unoptimized version.
-(define (tup ast)
-  (let ((s (compiler-make-state)))
-    (display 'ast:) (dotimes (i 1) (character-display #\space))
-    (display ast)
-    (newline)
-    (compile-ast! s ast)
-    (print-compiler-state s)
-    (newline)))
-
-;; Temporary testing procedure: optimized version.
-(define (top ast)
-  (let ((s (compiler-make-state))
-        (optimized-ast (ast-optimize ast ())))
-    (display 'original:) (dotimes (i 2) (character-display #\space))
-    (display ast)
-    (newline)
-    (display 'rewritten:) (dotimes (i 1) (character-display #\space))
-    (display optimized-ast)
-    (newline)
-    (compile-ast! s optimized-ast)
-    (print-compiler-state s)
-    (newline)))
-
-;; Temporary testing macro: unoptimized.
-(define-macro (tu . forms)
-  `(tup (macroexpand '(begin ,@forms))))
-
-;; Temporary testing macro: optimized.
-(define-macro (to . forms)
-  `(top (macroexpand '(begin ,@forms))))
-
 
 
 
@@ -4767,7 +4720,8 @@
 ;;; The bindings field of the compiler state is an ordered list (the first
 ;;; binding takes precedence) of elements, each element holding information
 ;;; about where a variable or the closure environment is stored.
-;;; If the compiled code is alpha-converted then the keys will be unique.
+;;; If the compiled code is alpha-converted then the keys will be unique,
+;;; but correctness doesn't rely on this.
 ;;;
 ;;; Each binding list element is a cons of one of the following
 ;;; two shapes:
@@ -4789,15 +4743,29 @@
 ;;;      , just a symbol.
 ;;; .
 
+;;; Return non-#f iff the given place is a local place, either boxed or unboxed.
 (define-constant (compiler-place-local? place)
   (and (cons? place)
        (or (eq? (car place) 'local-boxed)
            (eq? (car place) 'local-unboxed))))
 
+;;; A "register place" is either a local or the non-local environment register.
+;;; Return non-#f iff the given place is a register place.
+(define-constant (compiler-place-register? place)
+  (or (compiler-place-local? place)
+      (fixnum? place)))
+
+;;; Return non-#f iff the given place is a nonlocal place, either boxed or
+;;; unboxed.
+(define-constant (compiler-place-nonlocal? place)
+  (and (cons? place)
+       (or (eq? (car place) 'nonlocal-boxed)
+           (eq? (car place) 'nonlocal-unboxed))))
+
 ;;; Given a non-global place as held in the bindings field of a compiler state,
 ;;; return the register index as a fixnum.
 (define-constant (compiler-place->register place)
-  (cond ((cons? place)
+  (cond ((compiler-place-local? place)
          ;; Here place must have either the shape (local-unboxed REGISTER-INDEX)
          ;; or the shape (local-boxed REGISTER-INDEX) .
          (cadr place))
@@ -4806,12 +4774,16 @@
          place)
         ((eq? place 'global)
          ;; We don't have a register to return.
-         (error '(compiler-place->register: globals not supported)))))
+         (error '(compiler-place->register: globals not supported)))
+        (#t
+         ;; Nonlocals don't have an associated register.
+         (error '(compiler-place->register: place ,place supported)))))
 
 ;;; Return a fresh set-as-list of the register indices used in the given state.
 (define-constant (compiler-used-registers state)
   (let* ((places (map cdr (compiler-bindings state)))
-         (register-list (map! compiler-place->register places)))
+         (register-places (filter compiler-place-register? places))
+         (register-list (map! compiler-place->register register-places)))
     (list->set register-list)))
 
 (define-constant (compiler-fresh-register state)
@@ -4827,20 +4799,20 @@
         (cdr cons-or-false)
         'global)))
 
-(define-constant (compiler-bind! state variable-name place)
+(define-constant (compiler-bind! state variable-or-true place)
   (let ((bindings (compiler-bindings state)))
     (compiler-set-bindings! state
-                            (cons (cons variable-name place)
+                            (cons (cons variable-or-true place)
                                   bindings))))
 
-(define-constant (compiler-unbind! state variable-name)
+(define-constant (compiler-unbind! state variable-or-true)
   (let ((bindings (compiler-bindings state))
-        (place (compiler-lookup-variable state variable-name)))
+        (place (compiler-lookup-variable state variable-or-true)))
     (unless (compiler-place-local? place)
       ;; It only makes sense to unbind local-unboxed and local-boxed variables.
-      (error `(cannot unbind ,variable-name from ,place)))
+      (error `(cannot unbind ,variable-or-true from ,place)))
     (compiler-set-bindings! state
-                            (del-assq-1-noncopying variable-name
+                            (del-assq-1-noncopying variable-or-true
                                                    bindings))))
 
 (define-constant (compiler-bind-local-helper! state variable-name wrapper)
@@ -4985,7 +4957,26 @@
            (compiler-add-instruction! s `(pop-to-register ,(cadr place)))
            place))))
 
-;;; FIXME: move.
+(define-constant (compiler-bind-nonlocals! s ??? formals body)
+  ???)
+
+
+;;; Bind the nonlocal environment from the closure on the top of the stack, if
+;;; needed; in either case drop the top element.
+;;; This should be called right after popping actuals, when the top of the
+;;; stack contains the called closure.
+(define-constant (compiler-bind-closure-environment! s)
+  (when (exists? (lambda (binding) (compiler-place-nonlocal? (cdr binding)))
+                 (compiler-bindings s))
+    (let ((register (compiler-fresh-register s)))
+      (compiler-bind! s #t register)
+      (compiler-add-instruction! s `(nonlocals-to-register ,register))))
+  (compiler-add-instruction! s '(drop)))
+
+;;; Remove actuals from the stack and bind them to the given formals (here given
+;;; in the order in which they occur in a lambda, which is the evaluation order
+;;; -- to be popped right-to-left), simply dropping the ones which are not used
+;;; in the body.
 (define-constant (compiler-pop-formals! s formals body)
   (dolist (formal (reverse formals))
     (compiler-pop-and-bind! s formal body)))
@@ -5081,7 +5072,11 @@
              (when (eq? (car place) 'local-boxed)
                (compiler-add-instruction! s `(unbox)))))
           (#t
-           (error '(unimplemented variable place ,place)))))
+           ;; FIXME: add a new case for nonlocals, and reactivate the error in
+           ;; the default case.
+           (compiler-add-instruction! s `(UNIMPLEMENTED VARIABLE PLACE ,place))
+           ;;(error `(unimplemented variable place ,place))
+           )))
   (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-define s name body)
@@ -5253,11 +5248,97 @@
     ;; FIXME: check that the closure is not already compiled.
     (unless (alist? env)
       (error `(closure ,c has a non-alist environment)))
-    (let ((s (compiler-make-state)))
+    (let ((s (compiler-make-state))
+          (next-nonlocal-index 0)
+          (bound-nonlocal-names set-empty)
+          (reversed-nonlocal-values))
+      ;; Bind every nonlocal which is not shadowed by a formal and which is
+      ;; actually used.
+      ;; Since here we are compiling an existing interpreted closure which used
+      ;; boxing for every nonlocal we will use boxing in the compiled version as
+      ;; well: there is no way of knowing which nonlocal actually needs boxing
+      ;; to be shared correctly with other code.
+      ;; Ignore non-local occurrences of already bound non-locals: only the
+      ;; first binding counts for each variable, since what we find first
+      ;; has been bound in the innermost context.
+      (dolist (env-binding env)
+        (when (and (not (set-has? formals (car env-binding)))
+                   (not (set-has? bound-nonlocal-names (car env-binding)))
+                   (ast-has-free? body (car env-binding)))
+          (compiler-bind! s
+                          (car env-binding)
+                          `(nonlocal-boxed ,next-nonlocal-index))
+          (set! next-nonlocal-index (+ next-nonlocal-index 1))
+          (set! reversed-nonlocal-values
+                (cons (cdr env-binding)
+                      reversed-nonlocal-values))
+          ;; FIXME: use reversed-nonlocal-values
+          ))
+      ;; Bind formals: for each actual generate either a pop instruction to
+      ;; get the actual value, or a drop instruction to ignore it in case the
+      ;; formal is not used.
       (compiler-pop-formals! s formals body)
-      ;;(compiler-bind-alist! s env)
+      ;; Generate an instruction to bind the closure environment, if needed,
+      ;; then another to drop the closure.
+      (compiler-bind-closure-environment! s)
+      ;; Now the state contains bindings for every non-global bound in the
+      ;; body AST, and we can compile it.  Any remaining variable occurring
+      ;; in the body but not in the state bindings is a global.
       (compile-ast! s body)
       (print-compiler-state s))))
+
+
+
+
+;;;; Compiler scratch code.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Scratch, for debugging.
+(define-constant (print-reversed-instructions xs)
+  (dolist (x (reverse xs))
+    (when (and (list? x)
+               (not-eq? (car x) 'label))
+      (dotimes (i 4)
+        (character-display #\space)))
+    (display x)
+    (newline)))
+
+(define-constant (print-compiler-state s)
+  (display `(USED LABELS: ,@(sort (compiler-used-labels s))))
+  (newline)
+  (print-reversed-instructions (compiler-reversed-instructions s)))
+
+;; Temporary testing procedure: unoptimized version.
+(define (tup ast)
+  (let ((s (compiler-make-state)))
+    (display 'ast:) (dotimes (i 1) (character-display #\space))
+    (display ast)
+    (newline)
+    (compile-ast! s ast)
+    (print-compiler-state s)
+    (newline)))
+
+;; Temporary testing procedure: optimized version.
+(define (top ast)
+  (let ((s (compiler-make-state))
+        (optimized-ast (ast-optimize ast ())))
+    (display 'original:) (dotimes (i 2) (character-display #\space))
+    (display ast)
+    (newline)
+    (display 'rewritten:) (dotimes (i 1) (character-display #\space))
+    (display optimized-ast)
+    (newline)
+    (compile-ast! s optimized-ast)
+    (print-compiler-state s)
+    (newline)))
+
+;; Temporary testing macro: unoptimized.
+(define-macro (tu . forms)
+  `(tup (macroexpand '(begin ,@forms))))
+
+;; Temporary testing macro: optimized.
+(define-macro (to . forms)
+  `(top (macroexpand '(begin ,@forms))))
 
 
 
@@ -5297,17 +5378,26 @@
   (if (zero? n)
       1
       (* n (fact (- n 1)))))
+(define-constant (fact-i n)
+  (let ((res 1))
+    (while (not (zero? n))
+      (set! res (* res n))
+      (set! n (- n 1)))
+    res))
 
 (define-constant (count a)
   (if (zero? a)
       0
       (count (- a 1))))
+(define-constant (count-i a b)
+  (while (not (zero? a))
+    (set! a (- a 1)))
+  a)
 
 (define-constant (count2 a b)
   (if (zero? a)
       b
       (count2 (- a 1) (+ b 1))))
-
 (define-constant (count2-i a b)
   (while (not (zero? a))
     (set! a (- a 1))
