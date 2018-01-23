@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in .
-# Copyright (C) 2016, 2017 Luca Saiu
+# Copyright (C) 2016, 2017, 2018 Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -1053,7 +1053,7 @@ BUILT_SOURCES += \
 # A sed script turning an arbitrary text into a C string literal with proper
 # delimiters and escapes..
 JITTERLISP_SED_STRINGIFY = \
-  's/\\/\\\\/g;s/"/\\"/g;s/^/  "/g;s/$$/\\n"/g'
+  's/\\/\\\\/g;s/"/\\"/g;s/^/  "/g;s/$$/\\n"/g;s/?/?""/g'
 
 $(srcdir)/example-vms/jitterlisp/jitterlisp-constant-strings.c: example-vms/jitterlisp/jitterlisp-library.lisp NO-WARRANTY COPYING
 	(echo "/* This C file is machine-generated, and is not the actual source. */"; \
