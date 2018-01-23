@@ -136,19 +136,71 @@ jitterlisp_generate_jittery (jitterlisp_object code_as_sexpression)
   printf ("Labels are %i\n", (int) label_no);
 
   JITTERLISPVM_APPEND_INSTRUCTION(res, drop);
-  JITTERLISPVM_APPEND_INSTRUCTION(res, pop_mto_mregister);
-  JITTERLISPVM_APPEND_REGISTER_PARAMETER (res, r, 2);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, nip);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, push_munspecified);
   jitterlispvm_append_label (res, labels [0]);
   JITTERLISPVM_APPEND_INSTRUCTION(res, push_mliteral);
   jitterlispvm_append_unsigned_literal_parameter (res, JITTERLISP_FIXNUM_ENCODE(42));
   JITTERLISPVM_APPEND_INSTRUCTION(res, push_mnil);
   JITTERLISPVM_APPEND_INSTRUCTION(res, push_mzero);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, push_mone);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, push_mfalse);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, push_mnothing);
   JITTERLISPVM_APPEND_INSTRUCTION(res, branch);
   jitterlispvm_append_label_parameter (res, labels [0]);
   JITTERLISPVM_APPEND_INSTRUCTION(res, dup);
   JITTERLISPVM_APPEND_INSTRUCTION(res, branch_mif_mfalse);
   jitterlispvm_append_label_parameter (res, labels [0]);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, branch_mif_mtrue);
+  jitterlispvm_append_label_parameter (res, labels [0]);
 
+  JITTERLISPVM_APPEND_INSTRUCTION(res, push_mregister);
+  JITTERLISPVM_APPEND_REGISTER_PARAMETER (res, r, 0);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, pop_mto_mregister);
+  JITTERLISPVM_APPEND_REGISTER_PARAMETER (res, r, 0);
+
+
+  JITTERLISPVM_APPEND_INSTRUCTION(res, copy_mto_mregister);
+  JITTERLISPVM_APPEND_REGISTER_PARAMETER (res, r, 0);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, copy_mto_mregister);
+  JITTERLISPVM_APPEND_REGISTER_PARAMETER (res, r, 1);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, copy_mto_mregister);
+  JITTERLISPVM_APPEND_REGISTER_PARAMETER (res, r, 2);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, copy_mfrom_mregister);
+  JITTERLISPVM_APPEND_REGISTER_PARAMETER (res, r, 0);
+
+  JITTERLISPVM_APPEND_INSTRUCTION(res, primitive);
+  jitterlispvm_append_pointer_literal_parameter (res, 0);
+  jitterlispvm_append_unsigned_literal_parameter (res, 0);
+
+  JITTERLISPVM_APPEND_INSTRUCTION(res, primitive);
+  jitterlispvm_append_pointer_literal_parameter (res, 0);
+  jitterlispvm_append_unsigned_literal_parameter (res, 1);
+
+  JITTERLISPVM_APPEND_INSTRUCTION(res, primitive);
+  jitterlispvm_append_pointer_literal_parameter (res, 0);
+  jitterlispvm_append_unsigned_literal_parameter (res, 2);
+
+  JITTERLISPVM_APPEND_INSTRUCTION(res, plus);
+
+  JITTERLISPVM_APPEND_INSTRUCTION(res, one_mplus);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, one_mminus);
+
+  JITTERLISPVM_APPEND_INSTRUCTION(res, car);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, cdr);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, cadddr);
+
+  JITTERLISPVM_APPEND_INSTRUCTION(res, nullp);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, nothingp);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, fixnump);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, characterp);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, consp);
+  JITTERLISPVM_APPEND_INSTRUCTION(res, non_mconsp);
+
+  JITTERLISPVM_APPEND_INSTRUCTION(res, branch_mif_mnull);
+  jitterlispvm_append_label_parameter (res, labels [0]);
+
+  JITTERLISPVM_APPEND_INSTRUCTION(res, canonicalize_mboolean);
 
   jitterlispvm_specialize_program (res);
   jitterlispvm_print_program (stdout, res);

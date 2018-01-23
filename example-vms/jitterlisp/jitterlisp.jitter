@@ -28,7 +28,7 @@ vm
   tos-stack "jitterlisp_object" "mainstack"
 
   # FIXME: the return stack might need a different type.  Or not.
-  tos-stack "jitterlisp_object" "returnstack"
+#  ntos-stack "jitterlisp_object" "returnstack"
 end
 
 
@@ -36,9 +36,9 @@ end
 #################################################################
 
 # We only need one register class.
-register-class r 2
+register-class r 3
   code
-    union jitter_word
+    jitterlisp_object
   end
 end
 
@@ -49,10 +49,12 @@ end
 # FIXME: these will need to grow.
 wrapped-functions
   printf
+  jitterlisp_print_to_stream
 end
 
 wrapped-globals
   stack_printf_format_string
+  my_stdout_p
 end
 
 early-header-c
@@ -81,6 +83,7 @@ end
 late-c
   code
     static const char *stack_printf_format_string = "%" JITTER_PRIi "\n";
+    static FILE **my_stdout_p = & stdout;
   end
 end
 
@@ -121,9 +124,28 @@ instruction drop ()
   end
 end
 
+instruction nip ()
+  code
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction push-unspecified ()
+  code
+    JITTER_PUSH_UNSPECIFIED_MAINSTACK();
+  end
+end
+
+instruction push-register (?R)
+  code
+    jitterlisp_object k = JITTER_ARG0;
+    JITTER_PUSH_MAINSTACK(k);
+  end
+end
+
 instruction push-literal (?n print_object)
   code
-    jitter_int k = JITTER_ARGN0;
+    jitterlisp_object k = JITTER_ARGN0;
     JITTER_PUSH_MAINSTACK(k);
   end
 end
@@ -138,12 +160,40 @@ instruction push-zero ()
     JITTER_PUSH_MAINSTACK(JITTERLISP_FIXNUM_ENCODE(0));
   end
 end
+instruction push-one ()
+  code
+    JITTER_PUSH_MAINSTACK(JITTERLISP_FIXNUM_ENCODE(1));
+  end
+end
+instruction push-false ()
+  code
+    JITTER_PUSH_MAINSTACK(JITTERLISP_FALSE);
+  end
+end
+instruction push-nothing ()
+  code
+    JITTER_PUSH_MAINSTACK(JITTERLISP_NOTHING);
+  end
+end
 
 instruction pop-to-register (!R)
   code
     jitter_int top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
-    JITTER_ARGN0 = top;
+    JITTER_ARG0 = top;
+  end
+end
+
+instruction copy-to-register (!R)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_ARG0 = top;
+  end
+end
+
+instruction copy-from-register (?R)
+  code
+    JITTER_TOP_MAINSTACK() = JITTER_ARG0;
   end
 end
 
@@ -155,16 +205,131 @@ end
 
 instruction branch-if-false (?f)
   code
-    jitter_int top = JITTER_TOP_MAINSTACK();
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
     JITTER_BRANCH_FAST_IF_EQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
   end
 end
 
+instruction branch-if-null (?f)
+  code
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_EQUAL(top, JITTERLISP_EMPTY_LIST, JITTER_ARGF0);
+  end
+end
+
+instruction canonicalize-boolean ()
+  code
+    JITTERLISP_BOOLEAN_CANONICALIZE_(JITTER_TOP_MAINSTACK(),
+                                     JITTER_TOP_MAINSTACK());
+  end
+end
+
 instruction branch-if-true (?f)
   code
-    jitter_int top = JITTER_TOP_MAINSTACK();
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
     JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
+  end
+end
+
+# The first argument is a primitive function pointer.
+# The second is its in-arity.
+instruction primitive (?n, ?n 0 1 2 3 4)
+  code
+    jitterlisp_primitive_function p
+      = (jitterlisp_primitive_function) JITTER_ARGP0;
+    const jitter_uint in_arity = JITTER_ARGN1;
+    JITTER_PUSH_UNSPECIFIED_MAINSTACK();
+    jitterlisp_object *first_arg
+      = (& JITTER_UNDER_TOP_MAINSTACK()) - (in_arity - 1);
+    jitterlisp_object res = p (first_arg);
+    int i;
+    for (i = 0; i < in_arity; i ++)
+      JITTER_NIP_MAINSTACK();
+    JITTER_TOP_MAINSTACK() = res;
+    /*
+    top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
+    */
+  end
+end
+
+instruction plus ()
+  code
+    JITTERLISP_PLUS_(JITTER_TOP_MAINSTACK(),
+                     JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction one-plus ()
+  code
+    JITTERLISP_1PLUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction one-minus ()
+  code
+    JITTERLISP_1MINUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction car ()
+  code
+    JITTERLISP_CAR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction cdr ()
+  code
+    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction cadddr ()
+  code
+    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_CAR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction nullp ()
+  code
+    JITTERLISP_NULLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction nothingp ()
+  code
+    JITTERLISP_NOTHINGP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction fixnump ()
+  code
+    JITTERLISP_FIXNUMP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction characterp ()
+  code
+    JITTERLISP_CHARACTERP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction consp ()
+  code
+    JITTERLISP_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction non-consp ()
+  code
+    JITTERLISP_NON_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
