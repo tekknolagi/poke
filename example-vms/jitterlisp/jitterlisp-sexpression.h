@@ -421,8 +421,18 @@ struct jitterlisp_cons
 #define JITTERLISP_CLOSURE_TAG_BIT_NO    3
 #define JITTERLISP_CLOSURE_TAG           0b011
 
-/* A closure datum. */
-struct jitterlisp_closure
+/* A C type specifying the kind of a closure. */
+enum jitterlisp_closure_kind
+  {
+    /* An interpreted closure, run using the AST interpreter. */
+    jitterlisp_closure_type_interpreted,
+
+    /* A compiled closure, run using the Jittery VM. */
+    jitterlisp_closure_type_compiled
+  };
+
+/* The fields of an intepreted closure object. */
+struct jitterlisp_interpreted_closure
 {
   /* The non-global environment, as an a-list. */
   jitterlisp_object environment;
@@ -434,14 +444,11 @@ struct jitterlisp_closure
   jitterlisp_object body;
 };
 
-/* Tentative: a compiled closure structure. */
+/* The fields of a compiled closure object. */
 struct jitterlisp_compiled_closure
 {
   /* How many arguments this closure takes. */
   jitter_uint in_arity;
-
-  /* VM code.  FIXME: think about the type. */
-  jitterlisp_object code;
 
   /* How many nonlocals there are.  FIXME: remove this unless it's needed
      for garbage collection. */
@@ -449,8 +456,33 @@ struct jitterlisp_compiled_closure
 
   /* Nonlocals as used in compiled code, with no names and with boxed nonlocals
      are stored as boxes; NULL if no nonlocals are needed. */
-  jitterlisp_object *nonlocals;
+  jitterlisp_object nonlocals;
+
+  /* VM code.  FIXME: think about the type. */
+  //struct jitterlispvm_program *code;
+  // This is declared as a void * to simplify inter-header dependencies.
+  void *code; // FIXME: comment better.
 };
+
+/* A closure datum. */
+struct jitterlisp_closure
+{
+  /* The kind of this closure. */
+  enum jitterlisp_closure_kind kind;
+
+  /* The kind determines which field of the anonymous union is actually used.
+     Notice that it's allowed, and useful, for a closure to change kind at run
+     time without changing its identity. */
+  union
+  {
+    /* An interpreted closure. */
+    struct jitterlisp_interpreted_closure interpreted;
+
+    /* An compiled closure. */
+    struct jitterlisp_compiled_closure compiled;
+  };
+};
+
 
 /* Closure tag checking, encoding and decoding. */
 #define JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)  \
@@ -466,6 +498,16 @@ struct jitterlisp_compiled_closure
    (JITTER_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_closure),     \
                                JITTERLISP_CLOSURE_TAG,           \
                                JITTERLISP_CLOSURE_TAG_BIT_NO)))
+
+/* Closure tag and kind checking. */
+#define JITTERLISP_IS_INTERPRETED_CLOSURE(_jitterlisp_tagged_object)  \
+  (JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)                   \
+   && (JITTERLISP_CLOSURE_DECODE(_jitterlisp_tagged_object)->kind     \
+       == jitterlisp_closure_type_interpreted))
+#define JITTERLISP_IS_COMPILED_CLOSURE(_jitterlisp_tagged_object)  \
+  (JITTERLISP_IS_CLOSURE(_jitterlisp_tagged_object)                   \
+   && (JITTERLISP_CLOSURE_DECODE(_jitterlisp_tagged_object)->kind     \
+       == jitterlisp_closure_type_compiled))
 
 
 
@@ -577,8 +619,9 @@ struct jitterlisp_vector
 /* [FIXME: tentative] Non-primitive macros.
  * ************************************************************************** */
 
-/* Non-primitive (low-level) macros are implemented exactly like closures using
-   struct jitterlisp_closure , with a different tag. */
+/* Non-primitive (low-level) macros are implemented exactly like interpreted
+   closures using struct jitterlisp_interpreted_closure , with a different
+   tag. */
 
 #define JITTERLISP_NON_PRIMITIVE_MACRO_TAG_BIT_NO    3
 #define JITTERLISP_NON_PRIMITIVE_MACRO_TAG           0b101
@@ -594,7 +637,7 @@ struct jitterlisp_vector
                         JITTERLISP_NON_PRIMITIVE_MACRO_TAG,                              \
                         JITTERLISP_NON_PRIMITIVE_MACRO_TAG_BIT_NO)
 #define JITTERLISP_NON_PRIMITIVE_MACRO_DECODE(_jitterlisp_tagged_non_primitive_macro)  \
-  ((struct jitterlisp_closure *)                                                       \
+  ((struct jitterlisp_interpreted_closure *)                                                       \
    (JITTER_WITH_TAG_SUBTRACTED((_jitterlisp_tagged_non_primitive_macro),               \
                                JITTERLISP_NON_PRIMITIVE_MACRO_TAG,                     \
                                JITTERLISP_NON_PRIMITIVE_MACRO_TAG_BIT_NO)))
@@ -710,6 +753,7 @@ struct jitterlisp_ast;
    moving GC. */
 extern jitterlisp_object jitterlisp_low_level_macro_args;
 extern jitterlisp_object jitterlisp_primitive_make_constant;
+extern jitterlisp_object jitterlisp_label;
 
 
 

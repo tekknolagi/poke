@@ -613,28 +613,55 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
         }
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
-  else if (JITTERLISP_IS_CLOSURE(o))
+  else if (JITTERLISP_IS_COMPILED_CLOSURE(o))
     {
-      struct jitterlisp_closure * const closure = JITTERLISP_CLOSURE_DECODE(o);
+      struct jitterlisp_compiled_closure *cc
+        = & JITTERLISP_CLOSURE_DECODE(o)->compiled;
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, "#<compiled-closure ");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_long_long (cp, cps, cc->in_arity, false, 10);
+      jitterlisp_print_string (cp, cps, "-ary");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, " nonlocals:");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+      jitterlisp_print_recursive (cp, cps, st, cc->nonlocals);
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, " code:");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+
+      //jitterlisp_print_recursive (cp, cps, st, cc->code);
+      jitterlisp_print_string (cp, cps, " OMITTED");
+
+      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
+      jitterlisp_print_string (cp, cps, ">");
+      jitterlisp_print_decoration (cp, cps, NOATTR);
+    }
+  else if (JITTERLISP_IS_INTERPRETED_CLOSURE(o))
+    {
+      struct jitterlisp_interpreted_closure * const ic
+        = & JITTERLISP_CLOSURE_DECODE(o)->interpreted;
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_string (cp, cps, "#<closure ");
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print_recursive (cp, cps, st, closure->environment);
+      jitterlisp_print_recursive (cp, cps, st, ic->environment);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_char (cp, cps, ' ');
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print_recursive (cp, cps, st, closure->formals);
+      jitterlisp_print_recursive (cp, cps, st, ic->formals);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_char (cp, cps, ' ');
       jitterlisp_print_decoration (cp, cps, NOATTR);
-      jitterlisp_print_recursive (cp, cps, st, closure->body);
+      jitterlisp_print_recursive (cp, cps, st, ic->body);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_char (cp, cps, '>');
       jitterlisp_print_decoration (cp, cps, NOATTR);
     }
   else if (JITTERLISP_IS_NON_PRIMITIVE_MACRO(o))
     {
-      struct jitterlisp_closure * const closure
+      struct jitterlisp_interpreted_closure * const closure
         = JITTERLISP_NON_PRIMITIVE_MACRO_DECODE(o);
       jitterlisp_print_decoration (cp, cps, NONPRIMITIVEMACROATTR);
       jitterlisp_print_string (cp, cps, "#<macro ");

@@ -103,7 +103,7 @@ jitterlisp_macroexpand_macro_call (jitterlisp_object macro,
     }
   else if (JITTERLISP_IS_NON_PRIMITIVE_MACRO(macro))
     {
-      struct jitterlisp_closure *macro_closure
+      struct jitterlisp_interpreted_closure *macro_closure
         = JITTERLISP_NON_PRIMITIVE_MACRO_DECODE(macro);
       jitterlisp_object expansion_env = macro_closure->environment;
       /* We can ignore macro formals: low-level macros only have one formal

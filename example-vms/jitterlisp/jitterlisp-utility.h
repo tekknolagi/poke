@@ -35,6 +35,11 @@
 bool
 jitterlisp_is_list (jitterlisp_object o);
 
+/* Return non-false iff the given s-expression is a list having exactly the
+   given length. */
+bool
+jitterlisp_is_list_of_length (jitterlisp_object o, size_t length);
+
 /* Return non-false iff the given s-expression is a list of symbols. */
 bool
 jitterlisp_is_list_of_symbols (jitterlisp_object o);

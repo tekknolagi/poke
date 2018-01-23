@@ -88,9 +88,12 @@ jitterlisp_eval_interpreter_ast_call
      them to the closure formals, in order, starting from the closure
      environment.  Unfortunately we have to check the arity at run time,
      differently from the primitive case. */
-  struct jitterlisp_closure *closure = JITTERLISP_CLOSURE_DECODE(rator_value);
-  jitterlisp_object formals = closure->formals;
-  jitterlisp_object body_env = closure->environment;
+  struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(rator_value);
+  if (c->kind != jitterlisp_closure_type_interpreted)
+    jitterlisp_error_cloned ("jitterlisp_eval_interpreter_ast_call: non-interpreted closure: unimplemented");
+  struct jitterlisp_interpreted_closure *ic = & c->interpreted;
+  jitterlisp_object formals = ic->formals;
+  jitterlisp_object body_env = ic->environment;
   int i;
   // FIXME: shall I check the arity *before* evaluating actuals or after, as
   // the code does now?
@@ -123,7 +126,7 @@ jitterlisp_eval_interpreter_ast_call
 
   /* Return the evaluation of the closure body in the extended closure
      environment. */
-  jitterlisp_object body_ast = closure->body;
+  jitterlisp_object body_ast = ic->body;
   return jitterlisp_eval_interpreter_ast (body_ast, body_env);
 }
 
@@ -291,9 +294,11 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
                               jitterlisp_object operands_as_list)
 {
   /* Decode the closure and keep its fields in automatic C variables. */
-  struct jitterlisp_closure *closure = JITTERLISP_CLOSURE_DECODE(closure_value);
-  jitterlisp_object formals = closure->formals;
-  jitterlisp_object body_env = closure->environment;
+  struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(closure_value);
+  if (c->kind != jitterlisp_closure_type_interpreted)
+    jitterlisp_error_cloned ("jitterlisp_apply_interpreter: non-interpreted closure: unimplemented");
+  jitterlisp_object formals = c->interpreted.formals;
+  jitterlisp_object body_env = c->interpreted.environment;
 
   /* Bind operands to formals in the closure environment. */
   while (! JITTERLISP_IS_EMPTY_LIST (operands_as_list))
@@ -328,6 +333,6 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
 
   /* Return the evaluation of the closure body in the extended closure
      environment. */
-  jitterlisp_object body_ast = closure->body;
+  jitterlisp_object body_ast = c->interpreted.body;
   return jitterlisp_eval_interpreter_ast (body_ast, body_env);
 }

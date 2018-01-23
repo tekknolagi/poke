@@ -1,0 +1,170 @@
+## Jitter specification for the JitterLisp VM.
+
+## Copyright (C) 2017, 2018 Luca Saiu
+## Written by Luca Saiu
+
+## This file is part of the Jittery Lisp language implementation, distributed as
+## an example along with Jitter under the same license.
+
+## Jitter is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+
+## Jitter is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+
+## You should have received a copy of the GNU General Public License
+## along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+## Global configuration.
+#################################################################
+
+vm
+  set prefix "jitterlispvm"
+  tos-stack "jitterlisp_object" "mainstack"
+
+  # FIXME: the return stack might need a different type.  Or not.
+  tos-stack "jitterlisp_object" "returnstack"
+end
+
+
+## Register classes.
+#################################################################
+
+# We only need one register class.
+register-class r 2
+  code
+    union jitter_word
+  end
+end
+
+
+## Functions and globals to wrap.
+#################################################################
+
+# FIXME: these will need to grow.
+wrapped-functions
+  printf
+end
+
+wrapped-globals
+  stack_printf_format_string
+end
+
+early-header-c
+  code
+#   include "jitterlisp.h"
+  end
+end
+
+initialization-c
+  code
+    printf ("Hello from the Jittery VM initialization\n");
+  end
+end
+
+finalization-c
+  code
+    printf ("Hello from the Jittery VM finalization\n");
+  end
+end
+
+early-c
+  code
+#   include <stdio.h>
+  end
+end
+late-c
+  code
+    static const char *stack_printf_format_string = "%" JITTER_PRIi "\n";
+  end
+end
+
+
+## Custom literal argument printer.
+#################################################################
+
+printer-c
+  code
+/* Print a Lisp object in Lisp notation.  This is convenient to read VM
+   programs in textual form. */
+static void
+print_object (FILE *out, jitter_uint u)
+{
+  jitterlisp_print_to_stream (out, u);
+}
+  end
+end
+
+
+## Instructions.
+#################################################################
+
+instruction nop ()
+  code
+  end
+end
+
+instruction dup ()
+  code
+    JITTER_DUP_MAINSTACK();
+  end
+end
+
+instruction drop ()
+  code
+    JITTER_DROP_MAINSTACK();
+  end
+end
+
+instruction push-literal (?n print_object)
+  code
+    jitter_int k = JITTER_ARGN0;
+    JITTER_PUSH_MAINSTACK(k);
+  end
+end
+
+instruction push-nil ()
+  code
+    JITTER_PUSH_MAINSTACK(JITTERLISP_EMPTY_LIST);
+  end
+end
+instruction push-zero ()
+  code
+    JITTER_PUSH_MAINSTACK(JITTERLISP_FIXNUM_ENCODE(0));
+  end
+end
+
+instruction pop-to-register (!R)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_ARGN0 = top;
+  end
+end
+
+instruction branch (?f)
+  code
+    JITTER_BRANCH_FAST(JITTER_ARGF0);
+  end
+end
+
+instruction branch-if-false (?f)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_EQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
+  end
+end
+
+instruction branch-if-true (?f)
+  code
+    jitter_int top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
+  end
+end

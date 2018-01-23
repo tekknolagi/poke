@@ -32,23 +32,26 @@
 /* Eval wrapper.
  * ************************************************************************** */
 
+// FIXME: remove the commented-out part.  This idea of having two interpreters
+// selectable by the user is fundamentally wrong.
+
 jitterlisp_object
 jitterlisp_eval_globally (jitterlisp_object form)
 {
-  /* Just call the appropriate jitterlisp_eval_globally_* function. */
-  if (jitterlisp_settings.vm)
-    return jitterlisp_eval_globally_vm (form);
-  else
+  /* /\* Just call the appropriate jitterlisp_eval_globally_* function. *\/ */
+  /* if (jitterlisp_settings.vm) */
+  /*   return jitterlisp_eval_globally_vm (form); */
+  /* else */
     return jitterlisp_eval_globally_interpreter (form);
 }
 
 jitterlisp_object
 jitterlisp_eval (jitterlisp_object form, jitterlisp_object env)
 {
-  /* Just call the appropriate jitterlisp_eval_* function. */
-  if (jitterlisp_settings.vm)
-    return jitterlisp_eval_vm (form, env);
-  else
+  /* /\* Just call the appropriate jitterlisp_eval_* function. *\/ */
+  /* if (jitterlisp_settings.vm) */
+  /*   return jitterlisp_eval_vm (form, env); */
+  /* else */
     return jitterlisp_eval_interpreter (form, env);
 }
 
@@ -56,9 +59,9 @@ jitterlisp_object
 jitterlisp_apply (jitterlisp_object closure_value,
                   jitterlisp_object operands_as_list)
 {
-  /* Just call the appropriate jitterlisp_apply_* function. */
-  if (jitterlisp_settings.vm)
-    return jitterlisp_apply_vm (closure_value, operands_as_list);
-  else
+  /* /\* Just call the appropriate jitterlisp_apply_* function. *\/ */
+  /* if (jitterlisp_settings.vm) */
+  /*   return jitterlisp_apply_vm (closure_value, operands_as_list); */
+  /* else */
     return jitterlisp_apply_interpreter (closure_value, operands_as_list);
 }

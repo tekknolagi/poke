@@ -47,6 +47,23 @@ jitterlisp_is_list (jitterlisp_object o)
 }
 
 bool
+jitterlisp_is_list_of_length (jitterlisp_object o, size_t required_length)
+{
+  size_t actual_length = 0;
+  while (! JITTERLISP_IS_EMPTY_LIST(o))
+    {
+      if (! JITTERLISP_IS_CONS(o))
+        return false;
+
+      o = JITTERLISP_EXP_C_A_CDR(o);
+
+      if (++ actual_length > required_length)
+        return false;;
+    }
+  return required_length == actual_length;
+}
+
+bool
 jitterlisp_is_list_of_symbols (jitterlisp_object o)
 {
   while (! JITTERLISP_IS_EMPTY_LIST(o))

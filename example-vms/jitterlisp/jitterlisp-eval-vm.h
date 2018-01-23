@@ -25,12 +25,30 @@
 
 #include "jitterlisp-sexpression.h"
 
+
 
 
 /* Jittery engine.
  * ************************************************************************** */
 
 /* This is the evaluation engine using the Jittery VM. */
+
+
+
+
+/* Code generator: C part.
+ * ************************************************************************** */
+
+/* Make the pointed closure compiled, if it's not compiled already.  In either
+   case replace all of its fields, generating VM code from the given arguments.
+   The function accepts in_arity arguments, and uses the nonlocals in the given
+   list, in order; the code is encoded as an s-expression, meant to be obtained
+   from Lisp code. */
+void
+jitterlisp_compile (struct jitterlisp_closure *c,
+                    jitter_int in_arity,
+                    jitterlisp_object nonlocals,
+                    jitterlisp_object code_as_sexpression);
 
 
 

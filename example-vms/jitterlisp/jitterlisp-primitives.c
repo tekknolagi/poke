@@ -356,6 +356,10 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(non_consp, ANYTHING,
   { JITTERLISP_NON_CONSP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(closurep, ANYTHING,
   { JITTERLISP_CLOSUREP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(interpreted_closurep, ANYTHING,
+  { JITTERLISP_INTERPRETED_CLOSUREP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(compiled_closurep, ANYTHING,
+  { JITTERLISP_COMPILED_CLOSUREP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(primitivep, ANYTHING,
   { JITTERLISP_PRIMITIVEP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(astp, ANYTHING,
@@ -452,14 +456,19 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(undefine, SYMBOL,
 JITTERLISP_PRIMITIVE_FUNCTION_0_(interned_symbols,
   { JITTERLISP_INTERNED_SYMBOLS_(res); })
 /* Closure operations. */
-JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_environment, CLOSURE,
-  { JITTERLISP_CLOSURE_ENVIRONMENT_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_formals, CLOSURE,
-  { JITTERLISP_CLOSURE_FORMALS_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_body, CLOSURE,
-  { JITTERLISP_CLOSURE_BODY_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_4_(closure_setb, CLOSURE, ENVIRONMENT, SYMBOLS, AST,
-  { JITTERLISP_CLOSURE_SET_(res, args [0], args [1], args [2], args [3]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(interpreted_closure_environment,
+                                 INTERPRETED_CLOSURE,
+  { JITTERLISP_INTERPRETED_CLOSURE_ENVIRONMENT_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(interpreted_closure_formals,
+                                 INTERPRETED_CLOSURE,
+  { JITTERLISP_INTERPRETED_CLOSURE_FORMALS_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(interpreted_closure_body,
+                                 INTERPRETED_CLOSURE,
+  { JITTERLISP_INTERPRETED_CLOSURE_BODY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_4_(interpreted_closure_setb,
+                                 INTERPRETED_CLOSURE, ENVIRONMENT, SYMBOLS, AST,
+  { JITTERLISP_INTERPRETED_CLOSURE_SET_(res, args [0], args [1], args [2],
+                                        args [3]); })
 /* Vector operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
   { JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]); })
@@ -586,6 +595,9 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(apply, CLOSURE, LIST,
   { JITTERLISP_APPLY_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(apply_primitive, PRIMITIVE, LIST,
   { JITTERLISP_APPLY_PRIMITIVE_(res, args [0], args [1]); })
+/* Compilation operations. */
+JITTERLISP_PRIMITIVE_FUNCTION_4_(compileb, CLOSURE, FIXNUM, LIST, LIST,
+  { JITTERLISP_COMPILEB_(res, args [0], args [1], args [2], args [3]); })
 /* Operations to display legal notices. */
 JITTERLISP_PRIMITIVE_FUNCTION_0_(copying,
   { printf ("%s\n", jitterlisp_gpl); })
@@ -633,6 +645,10 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-cons?", 1, non_consp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("box?", 1, boxp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure?", 1, closurep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interpreted-closure?", 1,
+                                             interpreted_closurep),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compiled-closure?", 1,
+                                             compiled_closurep),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primitive?", 1, primitivep),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast?", 1, astp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("macro?", 1, macrop),
@@ -687,12 +703,14 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interned-symbols", 0,
                                              interned_symbols),
       /* Closure operations. */
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-environment", 1,
-                                             closure_environment),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-formals", 1,
-                                             closure_formals),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-body", 1, closure_body),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-set!", 4, closure_setb),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interpreted-closure-environment", 1,
+                                             interpreted_closure_environment),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interpreted-closure-formals", 1,
+                                             interpreted_closure_formals),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interpreted-closure-body", 1,
+                                             interpreted_closure_body),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interpreted-closure-set!", 4,
+                                             interpreted_closure_setb),
       /* Vector operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */
@@ -765,6 +783,8 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply", 2, apply),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply-primitive", 2,
                                              apply_primitive),
+      /* Compilation operations. */
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compile!", 4, compileb),
       /* Operations to display legal notices. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("copying", 0, copying),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("no-warranty", 0, no_warranty),

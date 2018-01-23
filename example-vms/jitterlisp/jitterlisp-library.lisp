@@ -41,7 +41,7 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (closure-in-arity closure)
-  (length (closure-formals closure)))
+  (length (interpreted-closure-formals closure)))
 
 
 
@@ -3608,9 +3608,9 @@
   ;; FIXME: would it be a problem for termination if I used ast-optimize instead
   ;; of ast-simplify-known-closure-call-helper in recursive calls?  Would it
   ;; help?
-  (let ((environment (closure-environment closure))
-        (formals (closure-formals closure))
-        (body (closure-body closure)))
+  (let ((environment (interpreted-closure-environment closure))
+        (formals (interpreted-closure-formals closure))
+        (body (interpreted-closure-body closure)))
     (cond ((non-null? environment)
            ;; We currently don't rewrite if the environment is non-empty.
            (ast-call (ast-literal closure) actuals))
@@ -3660,9 +3660,9 @@
 ;;; Notice that wrapper closures by definition have a leaf body and an empty
 ;;; environment, so they are always considered for inlining.
 (define-constant (closure-wrapper? closure)
-  (let ((environment (closure-environment closure))
-        (formals (closure-formals closure))
-        (body (closure-body closure)))
+  (let ((environment (interpreted-closure-environment closure))
+        (formals (interpreted-closure-formals closure))
+        (body (interpreted-closure-body closure)))
     (cond ((non-null? environment)
            ;; This could be generalized, but is probably not worth the trouble
            ;; yet: right now we refuse to consider a closure to be a wrapper if
@@ -3805,13 +3805,14 @@
                                             simplified-operands
                                             (ast-lambda-body
                                              simplified-operator)))
+                 ;; FIXME: support compiled closures as well, somehow.
                  ((and (ast-literal? simplified-operator)
-                       (closure? (ast-literal-value simplified-operator))
+                       (interpreted-closure? (ast-literal-value simplified-operator))
                        (or ;; This may be too aggressive: I currently inline
                            ;; every call to a known leaf closure, independently
                            ;; from the body size.
-                           (ast-leaf? (closure-body (ast-literal-value
-                                                     simplified-operator)))
+                           (ast-leaf? (interpreted-closure-body (ast-literal-value
+                                                                 simplified-operator)))
                            ;; In order to make this not too aggressive as well,
                            ;; I require procedure wrapper bodies to be leaves;
                            ;; otherwise a procedure wrapper which is recursive
@@ -4425,9 +4426,9 @@
 ;;; - the new body.
 (define-constant (closure-alpha-convert closure)
   ;; Bind the fields from the unoptimized closure.
-  (let ((env (closure-environment closure))
-        (formals (closure-formals closure))
-        (body (closure-body closure)))
+  (let ((env (interpreted-closure-environment closure))
+        (formals (interpreted-closure-formals closure))
+        (body (interpreted-closure-body closure)))
     ;; Compute new fields.
     (let* ((unary-gensym (lambda (useless) (gensym)))
            (nonlocals (map car env))
@@ -4455,10 +4456,10 @@
     ;; operation would be dangerous as the closure we are updating might be
     ;; used in the update process itself, which would make visible fields in a
     ;; temporarily inconsistent state.
-    (closure-set! closure
-                  alpha-converted-env
-                  alpha-converted-formals
-                  alpha-converted-body
+    (interpreted-closure-set! closure
+                              alpha-converted-env
+                              alpha-converted-formals
+                              alpha-converted-body
                   )))
 
 ;;; Destructively modify the given closure, replacing its fields with a
@@ -4475,11 +4476,11 @@
                                               (map car alpha-converted-env)))
            (optimized-body (ast-optimize alpha-converted-body
                                          alpha-converted-bounds)))
-      (closure-set! closure
-                    alpha-converted-env
-                    alpha-converted-formals
-                    optimized-body
-                    ))))
+      (interpreted-closure-set! closure
+                                alpha-converted-env
+                                alpha-converted-formals
+                                optimized-body
+                                ))))
 
 
 
@@ -4762,6 +4763,10 @@
        (or (eq? (car place) 'nonlocal-boxed)
            (eq? (car place) 'nonlocal-unboxed))))
 
+;;; Return non-#f iff the given place is a global place.
+(define-constant (compiler-place-global? place)
+  (eq? place 'global))
+
 ;;; Given a non-global place as held in the bindings field of a compiler state,
 ;;; return the register index as a fixnum.
 (define-constant (compiler-place->register place)
@@ -4789,6 +4794,13 @@
 (define-constant (compiler-fresh-register state)
   (let ((used-registers (compiler-used-registers state)))
     (compiler-smallest-not-in used-registers)))
+
+;;; Return the register index for nonlocals, or error out if none is bound.
+(define-constant (compiler-nonlocal-register state)
+  (let ((cons-or-nil (assq #t (compiler-bindings state))))
+    (if (null? cons-or-nil)
+        (error '(compiler-nonlocal-register: no nonlocal in ,state))
+        (cdr cons-or-nil))))
 
 (define-constant (compiler-bound-variable? state variable)
   (assq variable (compiler-bindings state)))
@@ -4957,6 +4969,8 @@
            (compiler-add-instruction! s `(pop-to-register ,(cadr place)))
            place))))
 
+;; FIXME: factor the compilation of lambda and of existing closures into
+;; this, if indeed there is anything to factor.
 (define-constant (compiler-bind-nonlocals! s ??? formals body)
   ???)
 
@@ -5071,12 +5085,16 @@
              (compiler-add-instruction! s `(push-register ,(cadr place)))
              (when (eq? (car place) 'local-boxed)
                (compiler-add-instruction! s `(unbox)))))
+          ((compiler-place-nonlocal? place)
+           (when (compiler-used-result? s)
+             (let ((nonlocal-register (compiler-nonlocal-register s))
+                   (nonlocal-index (cadr place)))
+               (compiler-add-instruction! s `(push-register ,nonlocal-register))
+               (compiler-add-instruction! s `(nonlocal ,nonlocal-index))
+               (when (eq? (car place) 'nonlocal-boxed)
+                 (compiler-add-instruction! s `(unbox))))))
           (#t
-           ;; FIXME: add a new case for nonlocals, and reactivate the error in
-           ;; the default case.
-           (compiler-add-instruction! s `(UNIMPLEMENTED VARIABLE PLACE ,place))
-           ;;(error `(unimplemented variable place ,place))
-           )))
+           (error `(unimplemented variable place ,place)))))
   (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-define s name body)
@@ -5109,7 +5127,7 @@
     (compiler-with-non-tail s
       (compiler-with-used-result s
         (compile-ast! s body)))
-    (cond ((eq? place 'global)
+    (cond ((compiler-place-global? place)
            (compiler-add-instruction! s `(check-global-defined ,name))
            (compiler-add-instruction! s `(check-global-non-constant ,name))
            (compiler-add-instruction! s `(pop-to-global ,name)))
@@ -5117,6 +5135,13 @@
            (compiler-add-instruction! s `(pop-to-register ,(cadr place))))
           ((eq? (car place) 'local-boxed)
            (compiler-add-instruction! s `(pop-to-register-box ,(cadr place))))
+          ((eq? (car place) 'nonlocal-unboxed)
+           (error `(compile-set!!: ,name is nonlocal-unboxed but is assigned)))
+          ((eq? (car place) 'nonlocal-boxed)
+           (let ((nonlocal-register (compiler-nonlocal-register s))
+                 (index (cadr place)))
+             (compiler-add-instruction! s `(push-register ,nonlocal-register))
+             (compiler-add-instruction! s `(set-nonlocal ,index))))
           (#t
            (error `(unsupported set! place ,place)))))
   (when (compiler-used-result? s)
@@ -5242,16 +5267,16 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (closure-compile c)
-  (let ((env (closure-environment c))
-        (formals (closure-formals c))
-        (body (closure-body c)))
+  (let ((env (interpreted-closure-environment c))
+        (formals (interpreted-closure-formals c))
+        (body (interpreted-closure-body c)))
     ;; FIXME: check that the closure is not already compiled.
     (unless (alist? env)
       (error `(closure ,c has a non-alist environment)))
     (let ((s (compiler-make-state))
           (next-nonlocal-index 0)
           (bound-nonlocal-names set-empty)
-          (reversed-nonlocal-values))
+          (reversed-nonlocal-values ()))
       ;; Bind every nonlocal which is not shadowed by a formal and which is
       ;; actually used.
       ;; Since here we are compiling an existing interpreted closure which used
@@ -5271,9 +5296,7 @@
           (set! next-nonlocal-index (+ next-nonlocal-index 1))
           (set! reversed-nonlocal-values
                 (cons (cdr env-binding)
-                      reversed-nonlocal-values))
-          ;; FIXME: use reversed-nonlocal-values
-          ))
+                      reversed-nonlocal-values))))
       ;; Bind formals: for each actual generate either a pop instruction to
       ;; get the actual value, or a drop instruction to ignore it in case the
       ;; formal is not used.
@@ -5285,7 +5308,15 @@
       ;; body AST, and we can compile it.  Any remaining variable occurring
       ;; in the body but not in the state bindings is a global.
       (compile-ast! s body)
-      (print-compiler-state s))))
+      ;; FIXME: use reversed-nonlocal-values
+      (display `(reversed-nonlocal-values is ,reversed-nonlocal-values)) (newline)
+      (print-compiler-state s)
+      ;;; ????
+      (compile! c
+                (length formals)
+                (reverse! reversed-nonlocal-values)
+                (reverse (compiler-reversed-instructions s)))
+      )))
 
 
 
@@ -5389,7 +5420,7 @@
   (if (zero? a)
       0
       (count (- a 1))))
-(define-constant (count-i a b)
+(define-constant (count-i a)
   (while (not (zero? a))
     (set! a (- a 1)))
   a)

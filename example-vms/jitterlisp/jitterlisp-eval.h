@@ -32,6 +32,8 @@
 /* This is a wrapper, calling either the naïf C interpreter or a Jittery VM
    according to the global settings. */
 
+// FIXME: the comment above is now wrong.
+
 /* Macroexpand the given JitterLisp form, and return the result of its
    evaluation, using the global environment only. */
 jitterlisp_object
