@@ -1,6 +1,6 @@
 /* Jitter: Forth-style stacks with optional TOS optimization: header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -229,6 +229,19 @@ jitter_stack_finalize_backing (struct jitter_stack_backing *backing)
   (JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name) [-1])
 #define JITTER_STACK_NTOS_UNDER_UNDER_TOP(type, stack_container, name)  \
   (JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name) [-2])
+
+/* Expand to an expression evaluating to the element distance positions below
+   the top of the given stack.  Undefined behavior on underflow.  The expression
+   this macro expands to is an r-value.
+   The distance should be a constant expression for good performance. */
+#define JITTER_STACK_TOS_AT_DEPTH(type, stack_container, name, distance)    \
+  ((distance == 0)                                                          \
+   ? (JITTER_STACK_TOS_TOP(type, stack_container, name))                    \
+   : (JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)  \
+         [- (distance - 1)]))
+#define JITTER_STACK_NTOS_AT_DEPTH(type, stack_container, name, distance)  \
+  (JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)         \
+     [- (distance)])
 
 /* Expand to a statement pushing an unspecified object on top of the given
    stack.  Undefined behavior on overflow.  There is no result.  This operation

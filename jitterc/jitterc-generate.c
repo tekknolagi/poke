@@ -1,6 +1,6 @@
 /* Jitter: generator implementation.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -1320,6 +1320,7 @@ jitterc_emit_stack_operation_definitions (FILE *f, const struct jitterc_vm *vm)
       const struct jitterc_stack *stack = gl_list_get_at (vm->stacks, i);
       jitterc_emit_stack_operation_definition (f, stack, "top", 0);
       jitterc_emit_stack_operation_definition (f, stack, "under_top", 0);
+      jitterc_emit_stack_operation_definition (f, stack, "at_depth", 1);
       jitterc_emit_stack_operation_definition (f, stack, "push_unspecified", 0);
       jitterc_emit_stack_operation_definition (f, stack, "push", 1);
 

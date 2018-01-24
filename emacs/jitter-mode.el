@@ -1,6 +1,6 @@
 ;;; jitter-mode.el --- Major mode for editing Jitter VM specifications.
 
-;; Copyright (C) 2017 Luca Saiu
+;; Copyright (C) 2017, 2018 Luca Saiu
 ;; Written by Luca Saiu
 
 ;; Maintainer: Luca Saiu
@@ -319,7 +319,7 @@ Right now the mode only provides font-locking support.
        1 font-lock-preprocessor-face t)
 
       ;; Highlight stack operation prefixes, for instruction bodies.
-      ("\\<\\(JITTER_\\(?:TOP\\|UNDER_TOP\\|PUSH_UNSPECIFIED\\|PUSH\\|DROP\\|DUP\\|SWAP\\|OVER\\|NIP\\|UNARY\\|BINARY\\)_\\)\\([A-Z]+\\)\\>"
+      ("\\<\\(JITTER_\\(?:TOP\\|UNDER_TOP\\|AT_DEPTH\\|PUSH_UNSPECIFIED\\|PUSH\\|DROP\\|DUP\\|SWAP\\|OVER\\|NIP\\|UNARY\\|BINARY\\)_\\)\\([A-Z]+\\)\\>"
        (1 font-lock-preprocessor-face t)
        ;;(2 font-lock-variable-name-face t)
        )
