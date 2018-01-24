@@ -5277,6 +5277,8 @@
           (next-nonlocal-index 0)
           (bound-nonlocal-names set-empty)
           (reversed-nonlocal-values ()))
+      ;; Emit the procedure prolog.
+      (compiler-add-instruction! s '(procedure-prolog))
       ;; Bind every nonlocal which is not shadowed by a formal and which is
       ;; actually used.
       ;; Since here we are compiling an existing interpreted closure which used
