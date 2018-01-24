@@ -43,8 +43,8 @@ jitterlisp_initialize (void)
 
 #ifdef JITTER_HAS_GNU_READLINE
   /* Enable blink-matching-paren if using GNU Readline.  Some people might find
-     this default somewhat Lisp-specific, which is why it's not in
-     jitter-readline.c . */
+     this default somewhat too Lispy to be the default in Jitter, which is why
+     it's not in jitter-readline.c . */
   rl_variable_bind ("blink-matching-paren", "on");
 #endif // #ifdef JITTER_HAS_GNU_READLINE
 }

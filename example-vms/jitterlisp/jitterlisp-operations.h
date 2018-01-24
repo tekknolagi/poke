@@ -354,15 +354,30 @@
     (_jitterlisp_out)                                                          \
       = JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_in0, _jitterlisp_in1);         \
   JITTER_END_
+#define JITTERLISP_DIVIDED_UNSAFE_(_jitterlisp_out, _jitterlisp_in0,    \
+                                   _jitterlisp_in1)                     \
+  JITTER_BEGIN_                                                         \
+    (_jitterlisp_out)                                                   \
+      = JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_in0, _jitterlisp_in1);  \
+  JITTER_END_
 
 #define JITTERLISP_QUOTIENT_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1) \
   JITTERLISP_DIVIDED_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)
+#define JITTERLISP_QUOTIENT_UNSAFE_(_jitterlisp_out, _jitterlisp_in0,           \
+                                    _jitterlisp_in1)                            \
+  JITTERLISP_DIVIDED_UNSAFE_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)
 
 #define JITTERLISP_REMAINDER_(_jitterlisp_out, _jitterlisp_in0,           \
                               _jitterlisp_in1)                            \
   JITTER_BEGIN_                                                           \
     if (_jitterlisp_in1 == JITTERLISP_FIXNUM_ENCODE(0))                   \
       jitterlisp_error_cloned ("remainder of division by zero");          \
+    (_jitterlisp_out)                                                     \
+      = JITTERLISP_EXP_FF_F_REMAINDER(_jitterlisp_in0, _jitterlisp_in1);  \
+  JITTER_END_
+#define JITTERLISP_REMAINDER_UNSAFE_(_jitterlisp_out, _jitterlisp_in0,    \
+                                     _jitterlisp_in1)                     \
+  JITTER_BEGIN_                                                           \
     (_jitterlisp_out)                                                     \
       = JITTERLISP_EXP_FF_F_REMAINDER(_jitterlisp_in0, _jitterlisp_in1);  \
   JITTER_END_
@@ -379,6 +394,25 @@
       = JITTERLISP_EXP_FF_F_MINUS(_jitterlisp_in0,               \
                                   JITTERLISP_FIXNUM_ENCODE(1));  \
   JITTER_END_
+#define JITTERLISP_2TIMES_(_jitterlisp_out, _jitterlisp_in0)     \
+  JITTER_BEGIN_                                                  \
+    (_jitterlisp_out)                                            \
+      = JITTERLISP_EXP_FF_F_TIMES(_jitterlisp_in0,               \
+                                  JITTERLISP_FIXNUM_ENCODE(2));  \
+  JITTER_END_
+#define JITTERLISP_2DIVIDED_(_jitterlisp_out, _jitterlisp_in0)     \
+  JITTER_BEGIN_                                                    \
+    (_jitterlisp_out)                                              \
+      = JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_in0,               \
+                                    JITTERLISP_FIXNUM_ENCODE(2));  \
+  JITTER_END_
+#define JITTERLISP_2REMAINDER_(_jitterlisp_out, _jitterlisp_in0)     \
+  JITTER_BEGIN_                                                      \
+    (_jitterlisp_out)                                                \
+      = JITTERLISP_EXP_FF_F_REMAINDER(_jitterlisp_in0,               \
+                                      JITTERLISP_FIXNUM_ENCODE(2));  \
+  JITTER_END_
+
 #define JITTERLISP_NEGATE_(_jitterlisp_out, _jitterlisp_in0)  \
   JITTER_BEGIN_                                               \
     (_jitterlisp_out)                                         \

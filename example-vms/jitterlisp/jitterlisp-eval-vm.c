@@ -23,12 +23,15 @@
 #include "jitterlisp-eval-vm.h"
 
 #include "jitterlisp.h"
+#include "jitterlispvm-vm.h"
 
 
 
 
 /* Jittery evaluation engine.
  * ************************************************************************** */
+
+// FIXME: remove this section.
 
 /* Error out saying that the VM is not yet implemented. */
 __attribute__ ((noreturn))
@@ -57,4 +60,55 @@ jitterlisp_apply_vm (jitterlisp_object closure_value,
                      jitterlisp_object operands_as_list)
 {
   jitterlisp_vm_unimplemented ();
+}
+
+
+
+
+/* VM initialization and finalization.
+ * ************************************************************************** */
+
+struct jitterlispvm_state
+jitterlispvm_state;
+
+void
+jitterlisp_reset_vm_state (void)
+{
+  /* Finalize and then re-initialize the VM state. */
+  jitterlispvm_state_finalize (& jitterlispvm_state);
+  jitterlispvm_state_initialize (& jitterlispvm_state);
+}
+
+void
+jitterlisp_initialize_vm (void)
+{
+  /* Call the Jitter-generated function initializing the VM subsystem. */
+  jitterlispvm_initialize ();
+
+  /* Initialize the global VM state. */
+  jitterlispvm_state_initialize (& jitterlispvm_state);
+}
+
+void
+jitterlisp_finalize_vm (void)
+{
+  /* Finalize the global VM state. */
+  jitterlispvm_state_finalize (& jitterlispvm_state);
+
+  /* Call the Jitter-generated function finalizing the VM subsystem. */
+  jitterlispvm_initialize ();
+}
+
+
+
+
+/* Call into VM code.
+ * ************************************************************************** */
+
+jitterlisp_object
+jitterlisp_call_compiled (const struct jitterlisp_compiled_closure *cc,
+                          const jitterlisp_object *operand_values,
+                          size_t operand_value_no)
+{
+  jitterlisp_error_cloned ("jitterlisp_call_compiled: unimplemented");
 }

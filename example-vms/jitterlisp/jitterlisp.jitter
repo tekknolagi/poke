@@ -52,8 +52,10 @@ end
 
 # FIXME: these will need to grow.
 wrapped-functions
+  log_
   printf
   jitterlisp_print_to_stream
+  jitterlispvm_error_invalid_primitive_argument_type
 end
 
 wrapped-globals
@@ -69,13 +71,13 @@ end
 
 initialization-c
   code
-    printf ("Hello from the Jittery VM initialization\n");
+    //printf ("Hello from the Jittery per-run initialization\n");
   end
 end
 
 finalization-c
   code
-    printf ("Hello from the Jittery VM finalization\n");
+    //printf ("Hello from the Jittery per-run finalization\n");
   end
 end
 
@@ -86,6 +88,84 @@ early-c
 end
 late-c
   code
+/* Open an argument-type-checking sequence, for the given number of arguments
+   to be read from the main stack.  This is a helper macro for
+   JITTERLISPVM_CHECK_TYPES_* . */
+#define JITTERLISPVM_BEGIN_CHECK_TYPES_(_jitterlisp_vm_in_arity)  \
+  JITTER_BEGIN_                                                   \
+    int _jitterlispvm_arg_depth = (_jitterlisp_vm_in_arity) - 1;
+
+/* Check the next argument in the sequence, failing if its type doesn't match
+   the given uppercase suffix. */
+#define JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type)       \
+  {                                                                     \
+    if (! __builtin_expect(                                             \
+             JITTER_CONCATENATE_TWO(JITTERLISP_IS_,                     \
+                                    _jitterlisp_uppercase_type)(        \
+                (JITTER_AT_DEPTH_MAINSTACK(_jitterlispvm_arg_depth))),  \
+                           true))                                       \
+      jitterlispvm_error_invalid_primitive_argument_type ();            \
+    _jitterlispvm_arg_depth --;                                         \
+  }
+
+// FIXME: just a test!
+#if 0
+# undef JITTERLISPVM_CHECK_NEXT_TYPE_
+# define JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type) if (_jitterlispvm_arg_depth < 0) { /*do nothing*/ }
+#endif
+
+/* Close an argument-type-checking sequence.  This is a helper macro for
+   JITTERLISPVM_CHECK_TYPES_* . */
+#define JITTERLISPVM_END_CHECK_TYPES_  \
+  JITTER_END_
+
+/* For in-arity N, check that the topmost N arguments have the given N types
+   expressed as uppercase suffixes, respectively.  This functionality is
+   provided for a few common values of N . */
+#define JITTERLISPVM_CHECK_TYPES_1(_jitterlisp_uppercase_type_0)  \
+  JITTERLISPVM_BEGIN_CHECK_TYPES_(1)                              \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0);  \
+  JITTERLISPVM_END_CHECK_TYPES_
+#define JITTERLISPVM_CHECK_TYPES_2(_jitterlisp_uppercase_type_0,  \
+                                   _jitterlisp_uppercase_type_1)  \
+  JITTERLISPVM_BEGIN_CHECK_TYPES_(2)                              \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_1);  \
+  JITTERLISPVM_END_CHECK_TYPES_
+#define JITTERLISPVM_CHECK_TYPES_3(_jitterlisp_uppercase_type_0,  \
+                                   _jitterlisp_uppercase_type_1,  \
+                                   _jitterlisp_uppercase_type_2)  \
+  JITTERLISPVM_BEGIN_CHECK_TYPES_(3)                              \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_1);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_2);  \
+  JITTERLISPVM_END_CHECK_TYPES_
+#define JITTERLISPVM_CHECK_TYPES_4(_jitterlisp_uppercase_type_0,  \
+                                   _jitterlisp_uppercase_type_1,  \
+                                   _jitterlisp_uppercase_type_2,  \
+                                   _jitterlisp_uppercase_type_3)  \
+  JITTERLISPVM_BEGIN_CHECK_TYPES_(4)                              \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_1);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_2);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_3);  \
+  JITTERLISPVM_END_CHECK_TYPES_
+
+__attribute__ ((noreturn)) // Unfortunately this is invisible across the wrapper.
+static void
+jitterlispvm_error_invalid_primitive_argument_type (void)
+{
+  jitterlisp_error_cloned ("invalid primitive argument type");
+}
+
+/* This is convenient for testing.  FIXME: remove. */
+__attribute__ ((unused))
+static void
+log_ (long n)
+{
+  printf ("Log: %li\n", n);
+}
+
     static const char *stack_printf_format_string = "%" JITTER_PRIi "\n";
     static FILE **my_stdout_p = & stdout;
   end
@@ -158,6 +238,14 @@ instruction push-literal (?n print_object)
   end
 end
 
+instruction push-global (?n print_object)
+  code
+    jitterlisp_object tagged_symbol = JITTER_ARGN0;
+    struct jitterlisp_symbol *symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
+    JITTER_PUSH_MAINSTACK(symbol->global_value);
+  end
+end
+
 instruction push-nil ()
   code
     JITTER_PUSH_MAINSTACK(JITTERLISP_EMPTY_LIST);
@@ -186,9 +274,18 @@ end
 
 instruction pop-to-register (!R)
   code
-    jitter_int top = JITTER_TOP_MAINSTACK();
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
     JITTER_ARG0 = top;
+  end
+end
+
+instruction pop-to-global (?n print_object)
+  code
+    jitterlisp_object tagged_symbol = JITTER_ARGN0;
+    struct jitterlisp_symbol *symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
+    symbol->global_value = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
   end
 end
 
@@ -274,101 +371,346 @@ instruction primitive (?n, ?n 0 1 2 3 4)
       = (jitterlisp_primitive_function) JITTER_ARGP0;
     const jitter_uint in_arity = JITTER_ARGN1;
     JITTER_PUSH_UNSPECIFIED_MAINSTACK();
+    //asm volatile ("nop");
+// FIXME: this is conceptually horrible.  I should use a specific macro
+// to get an internal pointer from a stack.
     jitterlisp_object *first_arg
-      = (& JITTER_UNDER_TOP_MAINSTACK()) - (in_arity - 1);
+      = (& JITTER_UNDER_TOP_MAINSTACK()) - in_arity + 1;
+    //asm volatile ("nop" : : "X" (first_arg));
     jitterlisp_object res = p (first_arg);
-    int i;
+    jitter_uint i;
+    // Remove as many elements as the primitive in-arity, but not more:
+    // the top unspecified value we pushed will be replaced with the result.
     for (i = 0; i < in_arity; i ++)
       JITTER_NIP_MAINSTACK();
     JITTER_TOP_MAINSTACK() = res;
-    /*
-    top = JITTER_TOP_MAINSTACK();
-    JITTER_DROP_MAINSTACK();
-    JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
-    */
   end
 end
 
-instruction plus ()
+instruction primitive-car ()
   code
+    JITTERLISPVM_CHECK_TYPES_1(CONS);
+    JITTERLISP_CAR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-cdr ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(CONS);
+    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-eqp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(ANYTHING, ANYTHING);
+    JITTERLISP_EQP_(JITTER_TOP_MAINSTACK(),
+                    JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-not-eqp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(ANYTHING, ANYTHING);
+    JITTERLISP_NOT_EQP_(JITTER_TOP_MAINSTACK(),
+                        JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-fixnum-eqp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_EQP_(JITTER_TOP_MAINSTACK(),
+                    JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-fixnum-not-eqp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_NOT_EQP_(JITTER_TOP_MAINSTACK(),
+                        JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-zerop ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_ZEROP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-non-zerop ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_NON_ZEROP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-positivep ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_POSITIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-non-positivep ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_NON_POSITIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-negativep ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_NEGATIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-non-negativep ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_NON_NEGATIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-lessp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_LESSP_(JITTER_TOP_MAINSTACK(),
+                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-greaterp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_GREATERP_(JITTER_TOP_MAINSTACK(),
+                         JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-not-lessp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_NOTLESSP_(JITTER_TOP_MAINSTACK(),
+                         JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-not-greaterp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_NOTGREATERP_(JITTER_TOP_MAINSTACK(),
+                            JITTER_UNDER_TOP_MAINSTACK(),
+                            JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-one-plus ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_1PLUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-one-minus ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_1MINUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-two-times ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_2TIMES_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-two-divided ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_2DIVIDED_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-two-remainder ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_2REMAINDER_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-negate ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_NEGATE_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-primordial-plus ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
     JITTERLISP_PLUS_(JITTER_TOP_MAINSTACK(),
                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction one-plus ()
+instruction primitive-primordial-minus ()
   code
-    JITTERLISP_1PLUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_MINUS_(JITTER_TOP_MAINSTACK(),
+                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction one-minus ()
+instruction primitive-primordial-times ()
   code
-    JITTERLISP_1MINUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_TIMES_(JITTER_TOP_MAINSTACK(),
+                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction car ()
+instruction primitive-primordial-divided-unsafe ()
   code
-    JITTERLISP_CAR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    /* The second argument has already been validated if we are using this. */
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING);
+    JITTERLISP_DIVIDED_UNSAFE_(JITTER_TOP_MAINSTACK(),
+                               JITTER_UNDER_TOP_MAINSTACK(),
+                               JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction cdr ()
+instruction primitive-quotient-unsafe ()
   code
-    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    /* The second argument has already been validated if we are using this. */
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING);
+    JITTERLISP_QUOTIENT_UNSAFE_(JITTER_TOP_MAINSTACK(),
+                               JITTER_UNDER_TOP_MAINSTACK(),
+                               JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction cadddr ()
+instruction primitive-remainder-unsafe ()
   code
-    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
-    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
-    JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
-    JITTERLISP_CAR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    /* The second argument has already been validated if we are using this. */
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING);
+    JITTERLISP_REMAINDER_UNSAFE_(JITTER_TOP_MAINSTACK(),
+                                 JITTER_UNDER_TOP_MAINSTACK(),
+                                 JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction nullp ()
+instruction primitive-nullp ()
   code
     JITTERLISP_NULLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction nothingp ()
+instruction primitive-non-nullp ()
+  code
+    JITTERLISP_NON_NULLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-nothingp ()
   code
     JITTERLISP_NOTHINGP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction fixnump ()
+instruction primitive-fixnump ()
   code
     JITTERLISP_FIXNUMP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction characterp ()
+instruction primitive-characterp ()
   code
     JITTERLISP_CHARACTERP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction consp ()
+instruction primitive-consp ()
   code
     JITTERLISP_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction non-consp ()
+instruction primitive-non-consp ()
   code
     JITTERLISP_NON_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
+instruction primitive-not ()
+  code
+    JITTERLISP_NOT_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-boolean-canonicalize ()
+  code
+    JITTERLISP_BOOLEAN_CANONICALIZE_(JITTER_TOP_MAINSTACK(),
+                                     JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
+  caller
+  code
+    jitterlisp_object callee = JITTER_AT_DEPTH_MAINSTACK(JITTER_ARGN0);
+    struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
+    JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
+
+// FIXME: this assumes that the called closure is always compiled, and
+// crashes when calling an interpreted procedure from a compiled procedure.
+
+    // JITTER_BRANCH_AND_LINK(c->compiled.code);
+// FIXME: this is obviously wrong, as it relies on knowing Jitter's dispatching
+// mode.  I have to introduce a macro to get the first instruction from a
+// program, in whatever representation is appropriate for the dispatching
+// model.
+    JITTER_BRANCH_AND_LINK(((struct jitterlispvm_program *) c->compiled.code)->native_code);
+  end
+end
+
+instruction tail-call (?n)
+#  caller  # Commented out to make the instruction rewritable.
+  code
+    /* FIXME: this is currently a dummy instruction, always rewritten away. */
+  end
+end
+
+instruction procedure-prolog ()
+  callee
+  code
+    JITTER_TOP_RETURNSTACK() = (jitterlisp_object) JITTER_LINK;
+  end
+end
+
 instruction return ()
   code
-    /* FIXME: unimplemented. */
+    jitter_uint return_address = JITTER_TOP_RETURNSTACK();
+    JITTER_DROP_RETURNSTACK();
+    JITTER_RETURN(return_address);
   end
 end
 
@@ -391,146 +733,145 @@ end
 ## Optimization rewrites.
 #################################################################
 
-rule
-  rewrite
-    pop-to-register $a; push-register $b
-  into
-    copy-to-register $a; copy-from-register $b
+rule rewrite
+  pop-to-register $a; push-register $b
+into
+  copy-to-register $a; copy-from-register $b
 end
 
-rule
-  rewrite
-    push-literal $a; pop-to-register R $b
-  into
-    literal-to-register $a, $b
+rule rewrite
+  pop-to-register $a; push-literal $b
+into
+  copy-to-register $a; copy-from-literal $b
 end
 
-rule
-  rewrite
-    drop; push-register R $a
-  into
-    copy-from-register $a
+rule rewrite
+  push-literal $a; pop-to-register $b
+into
+  literal-to-register $a, $b
 end
 
-rule
-  rewrite
-    drop; push-literal $a
-  into
-    copy-from-literal $a
+rule rewrite
+  drop; push-register $a
+into
+  copy-from-register $a
 end
 
-rule
-  rewrite
-    push-register R $a; pop-to-register R $b
-  into
-    register-to-register $a, $b
+rule rewrite
+  drop; push-literal $a
+into
+  copy-from-literal $a
 end
 
-rule
-  rewrite
-    copy-from-register R $a; pop-to-register R $b
-  into
-    register-to-register $a, $b; drop
+rule rewrite
+  push-register $a; pop-to-register $b
+into
+  register-to-register $a, $b
 end
 
-rule
-  rewrite
-    copy-from-literal $a; pop-to-register R $b
-  into
-    literal-to-register $a, $b; drop
+rule rewrite
+  copy-from-register $a; pop-to-register $b
+into
+  register-to-register $a, $b; drop
 end
 
-rule
-  rewrite
-    push-register $a; push-register $a
-  into
-    push-register $a; dup
+rule rewrite
+  copy-from-literal $a; pop-to-register $b
+into
+  literal-to-register $a, $b; drop
 end
 
-rule
-  rewrite
-    copy-from-register $a; push-register $a
-  into
-    copy-from-register $a; dup
+rule rewrite
+  push-register $a; push-register $a
+into
+  push-register $a; dup
 end
 
-rule
-  rewrite
-    copy-to-register $a; copy-from-register $a
-  into
-    copy-to-register $a
+rule rewrite
+  copy-from-register $a; push-register $a
+into
+  copy-from-register $a; dup
 end
 
-
-rule
-  rewrite
-    push-literal $a; push-literal $a
-  into
-    push-literal $a; dup
+rule rewrite
+  copy-to-register $a; push-register $a
+into
+  copy-to-register $a; dup
 end
 
-rule
-  rewrite
-    copy-from-literal $a; push-literal $a
-  into
-    copy-from-literal $a; dup
+rule rewrite
+  copy-to-register $a; copy-from-register $a
+into
+  copy-to-register $a
 end
 
-rule
-  rewrite
-    push-register $a; drop
-  into
-    # Nothing.
+rule rewrite
+  push-literal $a; push-literal $a
+into
+  push-literal $a; dup
 end
 
-rule
-  rewrite
-    push-literal $a; drop
-  into
-    # Nothing.
+rule rewrite
+  copy-from-literal $a; push-literal $a
+into
+  copy-from-literal $a; dup
 end
 
-rule
-  rewrite
-    pop-to-register $a; copy-from-register $a
-  into
-    copy-to-register $a; nip
+rule rewrite
+  push-register $a; drop
+into
+  # Nothing.
 end
 
-rule
-  rewrite
-    pop-to-register $a; drop
-  into
-    nip; pop-to-register $a
+rule rewrite
+  push-literal $a; drop
+into
+  # Nothing.
 end
 
-rule
-  rewrite
-    drop; drop
-  into
-    nip; drop
+rule rewrite
+  pop-to-register $a; copy-from-register $a
+into
+  copy-to-register $a; nip
+end
+
+rule rewrite
+  pop-to-register $a; drop
+into
+  nip; pop-to-register $a
+end
+
+rule rewrite
+  drop; drop
+into
+  nip; drop
 end
 
 # Having copy-to-register at the end might make it possible to combine
 # with some other instruction; nip is not easy to combine, and in fact
 # I currently have no other rule with nip on the left.
-rule
-  rewrite
-    copy-to-register $a; nip
-  into
-    nip; copy-to-register $a
+rule rewrite
+  copy-to-register $a; nip
+into
+  nip; copy-to-register $a
 end
 
-rule
-  rewrite
-    pop-to-register $a; return
-  into
-    drop; return
+rule rewrite
+  pop-to-register $a; return
+into
+  drop; return
 end
 
-rule
-  rewrite
-    copy-to-register $a; return
-  into
-    return
+rule rewrite
+  copy-to-register $a; return
+into
+  return
+end
+
+# FIXME: this is a temporary kludge, to be used before I actually implement
+# tail calls.
+rule remove-tail-calls rewrite
+  tail-call $a
+into
+  call $a; return
 end
