@@ -1219,6 +1219,26 @@
     (_jitterlisp_out) = JITTERLISP_NOTHING;                         \
   JITTER_END_
 
+/* Print VM code from a compiled closure in human-readable form. */
+#define JITTERLISP_COMPILED_CLOSURE_PRINT_(_jitterlisp_out,      \
+                                           _jitterlisp_in0)      \
+  JITTER_BEGIN_                                                  \
+    struct jitterlisp_compiled_closure *_jitterlisp_cc           \
+      = & JITTERLISP_CLOSURE_DECODE(_jitterlisp_in0)->compiled;  \
+    jitterlisp_print_compiled_closure (_jitterlisp_cc);          \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;                      \
+  JITTER_END_
+
+/* Disassemble native code from a compiled closure. */
+#define JITTERLISP_COMPILED_CLOSURE_DISASSEMBLE_(_jitterlisp_out,  \
+                                                 _jitterlisp_in0)  \
+  JITTER_BEGIN_                                                    \
+    struct jitterlisp_compiled_closure *_jitterlisp_cc             \
+      = & JITTERLISP_CLOSURE_DECODE(_jitterlisp_in0)->compiled;    \
+    jitterlisp_disassemble_compiled_closure (_jitterlisp_cc);      \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;                        \
+  JITTER_END_
+
 
 
 

@@ -5316,6 +5316,10 @@
                 (length formals)
                 (reverse! reversed-nonlocal-values)
                 (reverse (compiler-reversed-instructions s)))
+      (newline)
+      (compiled-closure-print c)
+      (newline)
+      (compiled-closure-disassemble c)
       )))
 
 
@@ -5401,6 +5405,20 @@
       n
       (+ (fibo (- n 2))
          (fibo (- n 1)))))
+
+(define-constant (euclid a b)
+  (cond ((= a b)
+         a)
+        ((< a b)
+         (euclid a (- b a)))
+        (#t
+         (euclid (- a b) b))))
+(define-constant (euclid-i a b)
+  (while (<> a b)
+    (if (< a b)
+        (set! b (- b a))
+        (set! a (- a b))))
+  a)
 
 (define-constant (average-procedure a b)
   (/ (+ a b) 2))

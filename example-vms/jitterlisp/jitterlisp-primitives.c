@@ -598,6 +598,10 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(apply_primitive, PRIMITIVE, LIST,
 /* Compilation operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_4_(compileb, CLOSURE, FIXNUM, LIST, LIST,
   { JITTERLISP_COMPILEB_(res, args [0], args [1], args [2], args [3]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(compiled_closure_print, COMPILED_CLOSURE,
+  { JITTERLISP_COMPILED_CLOSURE_PRINT_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(compiled_closure_disassemble, COMPILED_CLOSURE,
+  { JITTERLISP_COMPILED_CLOSURE_DISASSEMBLE_(res, args [0]); })
 /* Operations to display legal notices. */
 JITTERLISP_PRIMITIVE_FUNCTION_0_(copying,
   { printf ("%s\n", jitterlisp_gpl); })
@@ -785,6 +789,10 @@ jitterlisp_primitives []
                                              apply_primitive),
       /* Compilation operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compile!", 4, compileb),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compiled-closure-print", 1,
+                                             compiled_closure_print),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compiled-closure-disassemble", 1,
+                                             compiled_closure_disassemble),
       /* Operations to display legal notices. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("copying", 0, copying),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("no-warranty", 0, no_warranty),

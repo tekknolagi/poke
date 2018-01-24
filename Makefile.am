@@ -1012,10 +1012,12 @@ EXTRA_PROGRAMS += $(PROGRAMS_JITTERLISP)
 SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-sexpression.c \
   example-vms/jitterlisp/jitterlisp-sexpression.h \
-  example-vms/jitterlisp/jitterlisp-ast.c \
-  example-vms/jitterlisp/jitterlisp-ast.h \
   example-vms/jitterlisp/jitterlisp-allocator.h \
   example-vms/jitterlisp/jitterlisp-allocator.c \
+  example-vms/jitterlisp/jitterlisp-ast.c \
+  example-vms/jitterlisp/jitterlisp-ast.h \
+  example-vms/jitterlisp/jitterlisp-code-generator.c \
+  example-vms/jitterlisp/jitterlisp-code-generator.h \
   example-vms/jitterlisp/jitterlisp-error.h \
   example-vms/jitterlisp/jitterlisp-error.c \
   example-vms/jitterlisp/jitterlisp-eval-interpreter.h \
