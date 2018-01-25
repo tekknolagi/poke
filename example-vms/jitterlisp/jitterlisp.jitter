@@ -667,7 +667,7 @@ instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
 end
 
 instruction tail-call (?n)
-#  caller
+#  caller  # Commented out to make the instruction rewritable.
   code
     /* FIXME: this is currently a dummy instruction, always rewritten away. */
   end
@@ -707,168 +707,145 @@ end
 ## Optimization rewrites.
 #################################################################
 
-rule
-  rewrite
-    pop-to-register $a; push-register $b
-  into
-    copy-to-register $a; copy-from-register $b
+rule rewrite
+  pop-to-register $a; push-register $b
+into
+  copy-to-register $a; copy-from-register $b
 end
 
-rule
-  rewrite
-    pop-to-register $a; push-literal $b
-  into
-    copy-to-register $a; copy-from-literal $b
+rule rewrite
+  pop-to-register $a; push-literal $b
+into
+  copy-to-register $a; copy-from-literal $b
 end
 
-rule
-  rewrite
-    push-literal $a; pop-to-register R $b
-  into
-    literal-to-register $a, $b
+rule rewrite
+  push-literal $a; pop-to-register $b
+into
+  literal-to-register $a, $b
 end
 
-rule
-  rewrite
-    drop; push-register R $a
-  into
-    copy-from-register $a
+rule rewrite
+  drop; push-register $a
+into
+  copy-from-register $a
 end
 
-rule
-  rewrite
-    drop; push-literal $a
-  into
-    copy-from-literal $a
+rule rewrite
+  drop; push-literal $a
+into
+  copy-from-literal $a
 end
 
-rule
-  rewrite
-    push-register R $a; pop-to-register R $b
-  into
-    register-to-register $a, $b
+rule rewrite
+  push-register $a; pop-to-register $b
+into
+  register-to-register $a, $b
 end
 
-rule
-  rewrite
-    copy-from-register R $a; pop-to-register R $b
-  into
-    register-to-register $a, $b; drop
+rule rewrite
+  copy-from-register $a; pop-to-register $b
+into
+  register-to-register $a, $b; drop
 end
 
-rule
-  rewrite
-    copy-from-literal $a; pop-to-register R $b
-  into
-    literal-to-register $a, $b; drop
+rule rewrite
+  copy-from-literal $a; pop-to-register $b
+into
+  literal-to-register $a, $b; drop
 end
 
-rule
-  rewrite
-    push-register $a; push-register $a
-  into
-    push-register $a; dup
+rule rewrite
+  push-register $a; push-register $a
+into
+  push-register $a; dup
 end
 
-rule
-  rewrite
-    copy-from-register $a; push-register $a
-  into
-    copy-from-register $a; dup
+rule rewrite
+  copy-from-register $a; push-register $a
+into
+  copy-from-register $a; dup
 end
 
-rule
-  rewrite
-    copy-to-register $a; push-register $a
-  into
-    copy-to-register $a; dup
+rule rewrite
+  copy-to-register $a; push-register $a
+into
+  copy-to-register $a; dup
 end
 
-rule
-  rewrite
-    copy-to-register $a; copy-from-register $a
-  into
-    copy-to-register $a
+rule rewrite
+  copy-to-register $a; copy-from-register $a
+into
+  copy-to-register $a
 end
 
-rule
-  rewrite
-    push-literal $a; push-literal $a
-  into
-    push-literal $a; dup
+rule rewrite
+  push-literal $a; push-literal $a
+into
+  push-literal $a; dup
 end
 
-rule
-  rewrite
-    copy-from-literal $a; push-literal $a
-  into
-    copy-from-literal $a; dup
+rule rewrite
+  copy-from-literal $a; push-literal $a
+into
+  copy-from-literal $a; dup
 end
 
-rule
-  rewrite
-    push-register $a; drop
-  into
-    # Nothing.
+rule rewrite
+  push-register $a; drop
+into
+  # Nothing.
 end
 
-rule
-  rewrite
-    push-literal $a; drop
-  into
-    # Nothing.
+rule rewrite
+  push-literal $a; drop
+into
+  # Nothing.
 end
 
-rule
-  rewrite
-    pop-to-register $a; copy-from-register $a
-  into
-    copy-to-register $a; nip
+rule rewrite
+  pop-to-register $a; copy-from-register $a
+into
+  copy-to-register $a; nip
 end
 
-rule
-  rewrite
-    pop-to-register $a; drop
-  into
-    nip; pop-to-register $a
+rule rewrite
+  pop-to-register $a; drop
+into
+  nip; pop-to-register $a
 end
 
-rule
-  rewrite
-    drop; drop
-  into
-    nip; drop
+rule rewrite
+  drop; drop
+into
+  nip; drop
 end
 
 # Having copy-to-register at the end might make it possible to combine
 # with some other instruction; nip is not easy to combine, and in fact
 # I currently have no other rule with nip on the left.
-rule
-  rewrite
-    copy-to-register $a; nip
-  into
-    nip; copy-to-register $a
+rule rewrite
+  copy-to-register $a; nip
+into
+  nip; copy-to-register $a
 end
 
-rule
-  rewrite
-    pop-to-register $a; return
-  into
-    drop; return
+rule rewrite
+  pop-to-register $a; return
+into
+  drop; return
 end
 
-rule
-  rewrite
-    copy-to-register $a; return
-  into
-    return
+rule rewrite
+  copy-to-register $a; return
+into
+  return
 end
 
 # FIXME: this is a temporary kludge, to be used before I actually implement
 # tail calls.
-rule
-  rewrite
-    tail-call $a
-  into
-    call $a; return
+rule remove-tail-calls rewrite
+  tail-call $a
+into
+  call $a; return
 end
