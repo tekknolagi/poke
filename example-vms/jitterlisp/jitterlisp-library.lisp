@@ -5248,11 +5248,11 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (closure-compile! c)
+  (when (compiled-closure? c)
+    (error `(closure ,c is already compiled)))
   (let ((env (interpreted-closure-environment c))
         (formals (interpreted-closure-formals c))
         (body (interpreted-closure-body c)))
-    (when (compiled-closure? c)
-      (error `(closure ,c is already compiled)))
     (let ((s (compiler-make-state))
           (next-nonlocal-index 0)
           (bound-nonlocal-names set-empty)
