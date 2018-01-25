@@ -2328,16 +2328,19 @@
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; FIXME: use let-macro
-(define-macro (case-variable-matches? variable . literals)
-  `(or ,@(map (lambda (a-literal)
-                `(eq? ,variable ,a-literal))
-              literals)))
+(define-macro (case-variable-matches? variable literals)
+  (if (or (eq? literals 'else)
+          (eq? literals '#t))
+      '#t
+      `(or ,@(map (lambda (a-literal)
+                    `(eq? ,variable ,a-literal))
+                  literals))))
 
 ;; FIXME: use let-macro
 (define-macro (case-variable variable . clauses)
   (if (null? clauses)
       '(begin)
-      `(if (case-variable-matches? ,variable ,@(caar clauses))
+      `(if (case-variable-matches? ,variable ,(caar clauses))
            (begin ,@(cdar clauses))
            (case-variable ,variable ,@(cdr clauses)))))
 
@@ -4080,16 +4083,29 @@
 (define-constant (ast-optimize-primitive primitive operands)
   ;; Here I can assume the primitive in-arity to be respected: there would
   ;; have been an error at AST creation time otherwise.
-  (cond ;; Increment and decrement.
+  (cond ;; Successor and predecessor; multiplication, division and remainder by
+        ;; two.
         ((and (eq? primitive primitive-primordial-+) (ast-one? (car operands)))
          ;; [primitive + 1 E] ==> [primitive 1+ E]
          (ast-optimize-primitive primitive-1+ (list (cadr operands))))
         ((and (eq? primitive primitive-primordial-+) (ast-one? (cadr operands)))
          ;; [primitive + E 1] ==> [primitive 1+ E]
          (ast-optimize-primitive primitive-1+ (list (car operands))))
+        ((and (eq? primitive primitive-primordial-*) (ast-two? (car operands)))
+         ;; [primitive * 2 E] ==> [primitive 2* E]
+         (ast-optimize-primitive primitive-2* (list (cadr operands))))
+        ((and (eq? primitive primitive-primordial-*) (ast-two? (cadr operands)))
+         ;; [primitive * E 2] ==> [primitive 2* E]
+         (ast-optimize-primitive primitive-2* (list (car operands))))
         ((and (eq? primitive primitive-primordial--) (ast-one? (cadr operands)))
          ;; [primitive - E 1] ==> [primitive 1- E]
          (ast-optimize-primitive primitive-1- (list (car operands))))
+        ((and (eq? primitive primitive-primordial-/) (ast-two? (cadr operands)))
+         ;; [primitive / E 2] ==> [primitive 2/ E]
+         (ast-optimize-primitive primitive-2/ (list (car operands))))
+        ((and (eq? primitive primitive-remainder) (ast-two? (cadr operands)))
+         ;; [primitive remainder E 2] ==> [primitive 2remainder E]
+         (ast-optimize-primitive primitive-2remainder (list (car operands))))
         ;; Zero tests.
         ((and (eq? primitive primitive-=) (ast-zero? (car operands)))
          ;; [primitive = 0 E] ==> [primitive zero? E]
@@ -4143,6 +4159,19 @@
         ((and (eq? primitive primitive-primordial-/) (ast-one? (cadr operands)))
          ;; [primitive / E 1] ==> E
          (car operands))
+        ;; Division and remainder by non-zero literals.
+        ((and (eq? primitive primitive-primordial-/)
+              (ast-non-zero? (cadr operands)))
+         ;; [primitive / E NZ] ==> [primitive /-unsafe E NZ]
+         (ast-optimize-primitive primitive-primordial-/-unsafe operands))
+        ((and (eq? primitive primitive-quotient)
+              (ast-non-zero? (cadr operands)))
+         ;; [primitive quotient E NZ] ==> [primitive quotient-unsafe E NZ]
+         (ast-optimize-primitive primitive-quotient-unsafe operands))
+        ((and (eq? primitive primitive-remainder)
+              (ast-non-zero? (cadr operands)))
+         ;; [primitive remainder E NZ] ==> [primitive remainder-unsafe E NZ]
+         (ast-optimize-primitive primitive-remainder-unsafe operands))
         ;; Other arithmetic simplification with particular literal operands.
         ((and (eq? primitive primitive-primordial--) (ast-zero? (car operands)))
          ;; [primitive - 0 E] ==> [primitive negate E]
@@ -4177,12 +4206,18 @@
   (and (ast-literal? ast)
        (eq? (ast-literal-value ast) value)))
 
-;;; Return non-#f iff the given AST is the literal 0.
+;;; Return non-#f iff the given AST is the literal 0, 1, 2, respectively.
 (define-constant (ast-zero? ast)
   (ast-literal-value? ast 0))
-;;; Return non-#f iff the given AST is the literal 1.
 (define-constant (ast-one? ast)
   (ast-literal-value? ast 1))
+(define-constant (ast-two? ast)
+  (ast-literal-value? ast 2))
+
+;;; Return non-#f iff the given AST is a fixnum non-zero literal.
+(define-constant (ast-non-zero? ast)
+  (and (ast-literal? ast)
+       (non-zero? (ast-literal-value ast))))
 
 ;;; A helper for ast-optimize-not-primitive.  Return the rewritten version
 ;;; of [primitive not [primitive PRIMITIVE . OPERANDS]].  The operands are
@@ -5266,7 +5301,7 @@
 ;;;; Compiling a closure (very tentative, non-destructive).
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant (closure-compile c)
+(define-constant (closure-compile! c)
   (let ((env (interpreted-closure-environment c))
         (formals (interpreted-closure-formals c))
         (body (interpreted-closure-body c)))
@@ -5310,19 +5345,12 @@
       ;; body AST, and we can compile it.  Any remaining variable occurring
       ;; in the body but not in the state bindings is a global.
       (compile-ast! s body)
-      ;; FIXME: use reversed-nonlocal-values
-      (display `(reversed-nonlocal-values is ,reversed-nonlocal-values)) (newline)
+      ;; (display `(reversed-nonlocal-values is ,reversed-nonlocal-values)) (newline)
       (print-compiler-state s)
-      ;;; ????
       (compile! c
                 (length formals)
                 (reverse! reversed-nonlocal-values)
-                (reverse (compiler-reversed-instructions s)))
-      (newline)
-      (compiled-closure-print c)
-      (newline)
-      (compiled-closure-disassemble c)
-      )))
+                (reverse (compiler-reversed-instructions s))))))
 
 
 
@@ -5400,7 +5428,11 @@
   (let ((closure-name (gensym)))
     `(let ((,closure-name ,lambda))
        (closure-optimize! ,closure-name)
-       (closure-compile ,closure-name))))
+       (closure-compile! ,closure-name)
+       (newline)
+       (compiled-closure-print ,closure-name)
+       (newline)
+       (compiled-closure-disassemble ,closure-name))))
 
 (define-constant (fibo n)
   (if (< n 2)
@@ -5454,6 +5486,14 @@
     (set! a (- a 1))
     (set! b (+ b 1)))
   b)
+
+(define-constant (month->days m)
+  (unless (and (>= m 1) (<= m 13))
+    (error `(the month ,m is not between 1 and 12)))
+  (case m
+    ((9 4 6 11) 30)
+    ((2) 28)
+    (else 31)))
 
 (define-macro (average . things)
   (when (zero? (length things))

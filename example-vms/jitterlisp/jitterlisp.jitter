@@ -402,6 +402,24 @@ instruction primitive-not-eqp ()
   end
 end
 
+instruction primitive-fixnum-eqp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_EQP_(JITTER_TOP_MAINSTACK(),
+                    JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-fixnum-not-eqp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_NOT_EQP_(JITTER_TOP_MAINSTACK(),
+                        JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
 instruction primitive-zerop ()
   code
     JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
@@ -416,12 +434,31 @@ instruction primitive-non-zerop ()
   end
 end
 
-instruction primitive-primordial-+ ()
+instruction primitive-positivep ()
   code
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
-    JITTERLISP_PLUS_(JITTER_TOP_MAINSTACK(),
-                     JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
-    JITTER_NIP_MAINSTACK();
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_POSITIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-non-positivep ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_NON_POSITIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-negativep ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_NEGATIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-non-negativep ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_NON_NEGATIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
@@ -430,6 +467,34 @@ instruction primitive-lessp ()
     JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
     JITTERLISP_LESSP_(JITTER_TOP_MAINSTACK(),
                       JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-greaterp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_GREATERP_(JITTER_TOP_MAINSTACK(),
+                         JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-not-lessp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_NOTLESSP_(JITTER_TOP_MAINSTACK(),
+                         JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-not-greaterp ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_NOTGREATERP_(JITTER_TOP_MAINSTACK(),
+                            JITTER_UNDER_TOP_MAINSTACK(),
+                            JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
@@ -448,39 +513,146 @@ instruction primitive-one-minus ()
   end
 end
 
-instruction nullp ()
+instruction primitive-two-times ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_2TIMES_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-two-divided ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_2DIVIDED_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-two-remainder ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_2REMAINDER_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-negate ()
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISP_NEGATE_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-primordial-plus ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_PLUS_(JITTER_TOP_MAINSTACK(),
+                     JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-primordial-minus ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_MINUS_(JITTER_TOP_MAINSTACK(),
+                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-primordial-times ()
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISP_TIMES_(JITTER_TOP_MAINSTACK(),
+                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-primordial-divided-unsafe ()
+  code
+    /* The second argument has already been validated if we are using this. */
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING);
+    JITTERLISP_DIVIDED_UNSAFE_(JITTER_TOP_MAINSTACK(),
+                               JITTER_UNDER_TOP_MAINSTACK(),
+                               JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-quotient-unsafe ()
+  code
+    /* The second argument has already been validated if we are using this. */
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING);
+    JITTERLISP_QUOTIENT_UNSAFE_(JITTER_TOP_MAINSTACK(),
+                               JITTER_UNDER_TOP_MAINSTACK(),
+                               JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-remainder-unsafe ()
+  code
+    /* The second argument has already been validated if we are using this. */
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING);
+    JITTERLISP_REMAINDER_UNSAFE_(JITTER_TOP_MAINSTACK(),
+                                 JITTER_UNDER_TOP_MAINSTACK(),
+                                 JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-nullp ()
   code
     JITTERLISP_NULLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction nothingp ()
+instruction primitive-non-nullp ()
+  code
+    JITTERLISP_NON_NULLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-nothingp ()
   code
     JITTERLISP_NOTHINGP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction fixnump ()
+instruction primitive-fixnump ()
   code
     JITTERLISP_FIXNUMP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction characterp ()
+instruction primitive-characterp ()
   code
     JITTERLISP_CHARACTERP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction consp ()
+instruction primitive-consp ()
   code
     JITTERLISP_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction non-consp ()
+instruction primitive-non-consp ()
   code
     JITTERLISP_NON_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-not ()
+  code
+    JITTERLISP_NOT_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-boolean-canonicalize ()
+  code
+    JITTERLISP_BOOLEAN_CANONICALIZE_(JITTER_TOP_MAINSTACK(),
+                                     JITTER_TOP_MAINSTACK());
   end
 end
 
@@ -603,6 +775,13 @@ rule
     copy-from-register $a; push-register $a
   into
     copy-from-register $a; dup
+end
+
+rule
+  rewrite
+    copy-to-register $a; push-register $a
+  into
+    copy-to-register $a; dup
 end
 
 rule

@@ -377,14 +377,26 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(times, FIXNUM, FIXNUM,
   { JITTERLISP_TIMES_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(divided, FIXNUM, FIXNUM,
   { JITTERLISP_DIVIDED_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(divided_unsafe, FIXNUM, FIXNUM,
+  { JITTERLISP_DIVIDED_UNSAFE_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(quotient, FIXNUM, FIXNUM,
   { JITTERLISP_QUOTIENT_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(quotient_unsafe, FIXNUM, FIXNUM,
+  { JITTERLISP_QUOTIENT_UNSAFE_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_2_(remainder, FIXNUM, FIXNUM,
   { JITTERLISP_REMAINDER_(res, args [0], args [1]); })
+JITTERLISP_PRIMITIVE_FUNCTION_2_(remainder_unsafe, FIXNUM, FIXNUM,
+  { JITTERLISP_REMAINDER_UNSAFE_(res, args [0], args [1]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(one_plus, FIXNUM,
   { JITTERLISP_1PLUS_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(one_minus, FIXNUM,
   { JITTERLISP_1MINUS_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(two_times, FIXNUM,
+  { JITTERLISP_2TIMES_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(two_divided, FIXNUM,
+  { JITTERLISP_2DIVIDED_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(two_remainder, FIXNUM,
+  { JITTERLISP_2REMAINDER_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(negate, FIXNUM,
   { JITTERLISP_NEGATE_(res, args [0]); })
 /* Boolean operations. */
@@ -662,10 +674,19 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial--", 2, minus),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-*", 2, times),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-/", 2, divided),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("primordial-/-unsafe", 2,
+                                             divided_unsafe),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("quotient", 2, quotient),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("quotient-unsafe", 2,
+                                             quotient_unsafe),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("remainder", 2, remainder),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("remainder-unsafe", 2,
+                                             remainder_unsafe),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("1+", 1, one_plus),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("1-", 1, one_minus),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("2*", 1, two_times),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("2/", 1, two_divided),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("2remainder", 1, two_remainder),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("negate", 1, negate),
       /* Boolean operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("not", 1, not),

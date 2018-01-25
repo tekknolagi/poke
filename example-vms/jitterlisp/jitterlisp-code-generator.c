@@ -184,10 +184,38 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
 {
   const char *name = pri->name;
   jitter_uint in_arity = pri->in_arity;
-  if (! strcmp (name, "1+"))
+  if (! strcmp (name, "null?"))
+    jitterlispvm_append_instruction_name (p, "primitive-nullp");
+  else if (! strcmp (name, "non-null?"))
+    jitterlispvm_append_instruction_name (p, "primitive-non-nullp");
+  else if (! strcmp (name, "nothing?"))
+    jitterlispvm_append_instruction_name (p, "primitive-nothingp");
+  else if (! strcmp (name, "cons?"))
+    jitterlispvm_append_instruction_name (p, "primitive-consp");
+  else if (! strcmp (name, "non-cons?"))
+    jitterlispvm_append_instruction_name (p, "primitive-non-consp");
+  else if (! strcmp (name, "fixnum?"))
+    jitterlispvm_append_instruction_name (p, "primitive-fixnump");
+  else if (! strcmp (name, "character?"))
+    jitterlispvm_append_instruction_name (p, "primitive-characterp");
+  else if (! strcmp (name, "1+"))
     jitterlispvm_append_instruction_name (p, "primitive-one-plus");
   else if (! strcmp (name, "1-"))
     jitterlispvm_append_instruction_name (p, "primitive-one-minus");
+  else if (! strcmp (name, "2*"))
+    jitterlispvm_append_instruction_name (p, "primitive-two-times");
+  else if (! strcmp (name, "2/"))
+    jitterlispvm_append_instruction_name (p, "primitive-two-divided");
+  else if (! strcmp (name, "2remainder"))
+    jitterlispvm_append_instruction_name (p, "primitive-two-remainder");
+  else if (! strcmp (name, "primordial-+"))
+    jitterlispvm_append_instruction_name (p, "primitive-primordial-plus");
+  else if (! strcmp (name, "primordial--"))
+    jitterlispvm_append_instruction_name (p, "primitive-primordial-minus");
+  else if (! strcmp (name, "primordial-*"))
+    jitterlispvm_append_instruction_name (p, "primitive-primordial-times");
+  else if (! strcmp (name, "primordial-/-unsafe"))
+    jitterlispvm_append_instruction_name (p, "primitive-primordial-divided-unsafe");
   else if (! strcmp (name, "eq?"))
     jitterlispvm_append_instruction_name (p, "primitive-eqp");
   else if (! strcmp (name, "not-eq?"))
@@ -196,12 +224,34 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
     jitterlispvm_append_instruction_name (p, "primitive-zerop");
   else if (! strcmp (name, "non-zero?"))
     jitterlispvm_append_instruction_name (p, "primitive-non-zerop");
+  else if (! strcmp (name, "positive?"))
+    jitterlispvm_append_instruction_name (p, "primitive-positivep");
+  else if (! strcmp (name, "non-positive?"))
+    jitterlispvm_append_instruction_name (p, "primitive-non-positivep");
+  else if (! strcmp (name, "negative?"))
+    jitterlispvm_append_instruction_name (p, "primitive-negativep");
+  else if (! strcmp (name, "non-negative?"))
+    jitterlispvm_append_instruction_name (p, "primitive-non-negativep");
   else if (! strcmp (name, "<"))
     jitterlispvm_append_instruction_name (p, "primitive-lessp");
+  else if (! strcmp (name, ">"))
+    jitterlispvm_append_instruction_name (p, "primitive-greaterp");
+  else if (! strcmp (name, "<="))
+    jitterlispvm_append_instruction_name (p, "primitive-not-greaterp");
+  else if (! strcmp (name, ">="))
+    jitterlispvm_append_instruction_name (p, "primitive-not-lessp");
+  else if (! strcmp (name, "="))
+    jitterlispvm_append_instruction_name (p, "primitive-fixnum-eqp");
+  else if (! strcmp (name, "<>"))
+    jitterlispvm_append_instruction_name (p, "primitive-fixnum-not-eqp");
   else if (! strcmp (name, "car")
            || ! strcmp (name, "cdr")
-           || ! strcmp (name, "1+")
-           || ! strcmp (name, "primordial-+"))
+           || ! strcmp (name, "negate")
+           || ! strcmp (name, "quotient-unsafe")
+           || ! strcmp (name, "remainder-unsafe")
+           || ! strcmp (name, "boolean-canonicalize")
+           || ! strcmp (name, "not")
+           )
     {
       char *full_name = jitter_xmalloc (strlen (name) + 100);
       sprintf (full_name, "primitive-%s", name);
