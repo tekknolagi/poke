@@ -372,8 +372,10 @@ instruction primitive (?n, ?n 0 1 2 3 4)
     const jitter_uint in_arity = JITTER_ARGN1;
     JITTER_PUSH_UNSPECIFIED_MAINSTACK();
     //asm volatile ("nop");
+// FIXME: this is conceptually horrible.  I should use a specific macro
+// to get an internal pointer from a stack.
     jitterlisp_object *first_arg
-      = (& JITTER_UNDER_TOP_MAINSTACK()) - in_arity;
+      = (& JITTER_UNDER_TOP_MAINSTACK()) - in_arity + 1;
     //asm volatile ("nop" : : "X" (first_arg));
     jitterlisp_object res = p (first_arg);
     jitter_uint i;
