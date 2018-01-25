@@ -4527,9 +4527,9 @@
 ;;; closures.
 
 ;;; Keep the previous (macro) values for define and define-constant forms .
-(define define-unoptimizing
+(define define-non-optimized
   define)
-(define define-constant-unoptimizing
+(define define-constant-non-optimized
   define-constant)
 
 ;;; Destructively optimize the argument if it's a closure; do nothing
@@ -4544,7 +4544,7 @@
   (cond ((symbol? thing)
          (let ((value-name (gensym)))
            `(let ((,value-name ,@body))
-              (define-unoptimizing ,thing ,value-name)
+              (define-non-optimized ,thing ,value-name)
               (when ,constant
                 ;; Making a globally defined closure a constant *before*
                 ;; optimizing it may help the rewrite system.
@@ -4559,7 +4559,7 @@
                (thing-formals (cdr thing)))
            `(let ((,value-name (lambda ,thing-formals
                                  ,@body)))
-              (define-unoptimizing ,thing-name ,value-name)
+              (define-non-optimized ,thing-name ,value-name)
               (when ,constant
                 ;; Again, make the thing constant before optimizing it.
                 (make-constant ',thing-name))
@@ -4570,9 +4570,9 @@
   `(define-optimizing-possibly-constant #t ,thing ,@body))
 
 ;; Re-define define and define-constant.
-(define-macro (define thing . body)
+(define-macro (Qdefine thing . body)
   `(define-optimizing ,thing ,@body))
-(define-macro (define-constant thing . body)
+(define-macro (Qdefine-constant thing . body)
   `(define-constant-optimizing ,thing ,@body))
 
 
@@ -5506,7 +5506,7 @@
 ;;; (define q (macroexpand '(f x (+ 2 3)))) q (ast-optimize q ())
 
 ;;; OK
-;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define-unoptimizing x y) x 7))) ())
+;;; (ast-optimize (macroexpand '(cons 3 (begin2 (define-non-optimized x y) x 7))) ())
 ;;; [primitive #<2-ary primitive cons> [literal 3] [sequence [define x [variable y]] [variable x]]]
 
 ;;; OK
