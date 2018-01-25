@@ -2310,6 +2310,10 @@
       `(cons ,first-element
              (improper-list ,@other-elements))))
 
+;;; This is the common Scheme name.
+(define cons*
+  improper-list)
+
 (define-macro (list . elements)
   `(improper-list ,@elements ()))
 
@@ -4520,64 +4524,6 @@
 
 
 
-;;;; Implicit optimization.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; From now on definition forms will automatically optimize new globally bound
-;;; closures.
-
-;;; Keep the previous (macro) values for define and define-constant forms .
-(define define-non-optimized
-  define)
-(define define-constant-non-optimized
-  define-constant)
-
-;;; Destructively optimize the argument if it's a closure; do nothing
-;;; otherwise.  Return nothing.
-(define-constant (optimize-when-closure! thing)
-  (when (closure? thing)
-    (closure-optimize! thing)))
-
-;;; Define the named thing, and immediately optimize it if it's a closure.  Same
-;;; syntax as define.
-(define-macro (define-optimizing-possibly-constant constant thing . body)
-  (cond ((symbol? thing)
-         (let ((value-name (gensym)))
-           `(let ((,value-name ,@body))
-              (define-non-optimized ,thing ,value-name)
-              (when ,constant
-                ;; Making a globally defined closure a constant *before*
-                ;; optimizing it may help the rewrite system.
-                (make-constant ',thing))
-              (optimize-when-closure! ,value-name))))
-        ((or (not (symbols? thing))
-             (not (all-different? (cdr thing))))
-         (error `(define-optimizing: ill-formed defined thing ,thing)))
-        (#t
-         (let ((value-name (gensym))
-               (thing-name (car thing))
-               (thing-formals (cdr thing)))
-           `(let ((,value-name (lambda ,thing-formals
-                                 ,@body)))
-              (define-non-optimized ,thing-name ,value-name)
-              (when ,constant
-                ;; Again, make the thing constant before optimizing it.
-                (make-constant ',thing-name))
-              (optimize-when-closure! ,value-name))))))
-(define-macro (define-optimizing thing . body)
-  `(define-optimizing-possibly-constant #f ,thing ,@body))
-(define-macro (define-constant-optimizing thing . body)
-  `(define-optimizing-possibly-constant #t ,thing ,@body))
-
-;; Re-define define and define-constant.
-(define-macro (Qdefine thing . body)
-  `(define-optimizing ,thing ,@body))
-(define-macro (Qdefine-constant thing . body)
-  `(define-constant-optimizing ,thing ,@body))
-
-
-
-
 ;;;; Retroactive optimization.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -5305,9 +5251,8 @@
   (let ((env (interpreted-closure-environment c))
         (formals (interpreted-closure-formals c))
         (body (interpreted-closure-body c)))
-    ;; FIXME: check that the closure is not already compiled.
-    (unless (alist? env)
-      (error `(closure ,c has a non-alist environment)))
+    (when (compiled-closure? c)
+      (error `(closure ,c is already compiled)))
     (let ((s (compiler-make-state))
           (next-nonlocal-index 0)
           (bound-nonlocal-names set-empty)
@@ -5346,7 +5291,7 @@
       ;; in the body but not in the state bindings is a global.
       (compile-ast! s body)
       ;; (display `(reversed-nonlocal-values is ,reversed-nonlocal-values)) (newline)
-      (print-compiler-state s)
+      ;; (print-compiler-state s)
       (compile! c
                 (length formals)
                 (reverse! reversed-nonlocal-values)
@@ -5404,6 +5349,65 @@
 ;; Temporary testing macro: optimized.
 (define-macro (to . forms)
   `(top (macroexpand '(begin ,@forms))))
+
+
+
+
+;;;; Implicit optimization.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; From now on definition forms will automatically optimize new globally bound
+;;; closures.
+
+;;; Keep the previous (macro) values for define and define-constant forms .
+(define define-non-optimized
+  define)
+(define define-constant-non-optimized
+  define-constant)
+
+;;; Destructively optimize the argument if it's a closure; do nothing
+;;; otherwise.  Return nothing.
+(define-constant (optimize-when-closure! thing)
+  (when (closure? thing)
+    (closure-optimize! thing)))
+
+;;; Define the named thing, and immediately optimize it if it's a closure.  Same
+;;; syntax as define.
+(define-macro (define-optimized-possibly-constant constant thing . body)
+  (cond ((symbol? thing)
+         (let ((value-name (gensym)))
+           `(let ((,value-name ,@body))
+              (define-non-optimized ,thing ,value-name)
+              (when ,constant
+                ;; Making a globally defined closure a constant *before*
+                ;; optimizing it may help the rewrite system.
+                (make-constant ',thing))
+              (optimize-when-closure! ,value-name))))
+        ((or (not (symbols? thing))
+             (not (all-different? (cdr thing))))
+         (error `(define-optimized-possibly-constant: ill-formed defined
+                   thing ,thing)))
+        (#t
+         (let ((value-name (gensym))
+               (thing-name (car thing))
+               (thing-formals (cdr thing)))
+           `(let ((,value-name (lambda ,thing-formals
+                                 ,@body)))
+              (define-non-optimized ,thing-name ,value-name)
+              (when ,constant
+                ;; Again, make the thing constant before optimizing it.
+                (make-constant ',thing-name))
+              (optimize-when-closure! ,value-name))))))
+(define-macro (define-optimized thing . body)
+  `(define-optimized-possibly-constant #f ,thing ,@body))
+(define-macro (define-constant-optimized thing . body)
+  `(define-optimized-possibly-constant #t ,thing ,@body))
+
+;; Re-define define and define-constant.
+(define-macro (define thing . body)
+  `(define-optimized ,thing ,@body))
+(define-macro (define-constant thing . body)
+  `(define-constant-optimized ,thing ,@body))
 
 
 
@@ -5475,6 +5479,13 @@
 (define-constant (count-i a)
   (while (not (zero? a))
     (set! a (- a 1)))
+  a)
+
+;;; This is useful to test run-time type checking, particularly in compiled
+;;; code.
+(define-constant (count-i-incorrect a)
+  (while (not (zero? a))
+    (set! a (- a 'b)))
   a)
 
 (define-constant (count2 a b)

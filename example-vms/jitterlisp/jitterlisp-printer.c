@@ -625,16 +625,9 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_string (cp, cps, "-ary");
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_string (cp, cps, " nonlocals:");
+      jitterlisp_print_string (cp, cps, " nonlocals ");
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_recursive (cp, cps, st, cc->nonlocals);
-      jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_string (cp, cps, " code:");
-      jitterlisp_print_decoration (cp, cps, NOATTR);
-
-      //jitterlisp_print_recursive (cp, cps, st, cc->code);
-      jitterlisp_print_string (cp, cps, " OMITTED");
-
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_string (cp, cps, ">");
       jitterlisp_print_decoration (cp, cps, NOATTR);

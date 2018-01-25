@@ -21,6 +21,7 @@
 
 
 #include "jitterlisp-eval-interpreter.h"
+#include "jitterlisp-eval-vm.h"
 
 #include "jitterlisp.h"
 
@@ -63,6 +64,70 @@ jitterlisp_eval_interpreter_ast_primitive (jitterlisp_object rator,
   return JITTERLISP_PRIMITIVE_DECODE(rator)->function (values);
 }
 
+/* A helper function for jitterlisp_eval_interpreter_ast_call .  Call the given
+   (tagged, already evaluated) compiled closure, first evaluating its actuals
+   with the AST interpreter. */
+static inline jitterlisp_object
+jitterlisp_eval_interpreter_ast_compiled_closure_call
+   (const jitterlisp_object rator_value,
+    const jitterlisp_object *rand_asts,
+    jitter_uint rand_ast_no,
+    jitterlisp_object env)
+{
+  /* Here I can be sure that operator_value is a compiled closure: decode it
+     with no checks. */
+  const struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(rator_value);
+  const struct jitterlisp_compiled_closure *cc = & c->compiled;
+
+  // FIXME: shall I check the arity *before* evaluating actuals or after?
+  // Here I do it before, but it's easy to change.
+  // In either case compiled code must have the same semantics.  Do whatever
+  // is faster on compiled code.  There are two other identical cases below.
+
+  /* Check that the arity matches. */
+  if (__builtin_expect ((cc->in_arity != rand_ast_no), false))
+    jitterlisp_error_cloned ("arity mismatch in call to compiled closure");
+
+  /* Push the compiled closure on the VM stack. */
+  JITTERLISPVM_PUSH(rator_value);
+
+  /* Evaluate actuals and push them on the VM stack. */
+  // FIXME: handle errors without leaving observable changes on the stack.
+  int i;
+  for (i = 0; i < rand_ast_no; i ++)
+    {
+      jitterlisp_object rand_value =
+        jitterlisp_eval_interpreter_ast (rand_asts [i], env);
+      JITTERLISPVM_PUSH(rand_value);
+    }
+
+  /* Call.  This is obviously a temporary, ridiculously inefficient solution. */
+  struct jitterlispvm_program *p = jitterlispvm_make_program ();
+  JITTERLISPVM_APPEND_INSTRUCTION(p, call);
+  jitterlispvm_append_unsigned_literal_parameter (p, rand_ast_no);
+  jitterlispvm_specialize_program (p);
+  /*
+  printf ("\nThe driver program is:\n");
+  jitterlispvm_disassemble_program (p, true, JITTER_CROSS_OBJDUMP, NULL);
+  printf ("\nRunning the driver program...\n\n");
+  */
+  jitterlispvm_interpret (p, & jitterlispvm_state);
+  /*
+  printf ("...Still alive after running the driver program.\n");
+  */
+  jitterlispvm_destroy_program (p);
+
+  /* Pop the result off the stack and return it. */
+  jitterlisp_object result = JITTERLISPVM_TOP();
+  /*
+  printf ("The result is: ");
+  jitterlisp_print_to_stream (stdout, result);
+  printf ("\n");
+  */
+  JITTERLISPVM_DROP();
+  return result;
+}
+
 /* Return the result of the given call in the given environment.  The operator
    is an AST, still to evaluate, and the operands are tagged ASTs in the given
    number; the operator comes first in the array.  If the operator doesn't
@@ -84,13 +149,29 @@ jitterlisp_eval_interpreter_ast_call
       jitterlisp_error_cloned ("call: non-closure operator");
     }
 
-  /* If we arrived here the operator is a closure.  Evaluate actuals binding
-     them to the closure formals, in order, starting from the closure
-     environment.  Unfortunately we have to check the arity at run time,
-     differently from the primitive case. */
+  /* If we arrived here the operator is a closure.  Is it compiled or
+     interpreted? */
   struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(rator_value);
-  if (c->kind != jitterlisp_closure_type_interpreted)
-    jitterlisp_error_cloned ("jitterlisp_eval_interpreter_ast_call: non-interpreted closure: unimplemented");
+
+  /* If the closure is compiled tail-call the helper function and ignore the
+     rest of this. */
+  // FIXME: shall I check the arity *before* evaluating actuals or after, as
+  // the code does now?
+  // In either case compiled code must have the same semantics.  Do whatever
+  // is faster on compiled code.  There is another identical case above
+  // and one more below.
+  if (__builtin_expect ((c->kind == jitterlisp_closure_type_compiled),
+                        false))
+    return jitterlisp_eval_interpreter_ast_compiled_closure_call
+              (rator_value,
+               rator_and_rand_asts + 1,
+               rator_and_rand_no - 1,
+               env);
+
+  /* The closure is interpreted.  Evaluate actuals binding them to the closure
+     formals, in order, starting from the closure environment.  Unfortunately we
+     have to check the arity at run time, differently from the primitive
+     case. */
   struct jitterlisp_interpreted_closure *ic = & c->interpreted;
   jitterlisp_object formals = ic->formals;
   jitterlisp_object body_env = ic->environment;
@@ -98,7 +179,7 @@ jitterlisp_eval_interpreter_ast_call
   // FIXME: shall I check the arity *before* evaluating actuals or after, as
   // the code does now?
   // In either case compiled code must have the same semantics.  Do whatever
-  // is faster on compiled code.
+  // is faster on compiled code.  There are two other identical cases above.
   for (i = 1; i < rator_and_rand_no; i ++)
     {
       if (JITTERLISP_IS_EMPTY_LIST(formals))
@@ -136,6 +217,7 @@ jitterlisp_eval_interpreter_ast_call
 /* Non-Jittery interpreter: AST evaluation.
  * ************************************************************************** */
 
+/* This is the main function for AST interpretation. */
 jitterlisp_object
 jitterlisp_eval_interpreter_ast (jitterlisp_object o,
                                  jitterlisp_object env)
@@ -146,12 +228,6 @@ jitterlisp_eval_interpreter_ast (jitterlisp_object o,
   const struct jitterlisp_ast *ast = JITTERLISP_AST_DECODE(o);
   const jitter_uint sub_no = ast->sub_no;
   const jitterlisp_object * const subs = ast->subs;
-  /*
-  printf ("jitterlisp_eval_interpreter_ast (case %i, %i subs): ",
-          (int) ast->case_, (int) sub_no);
-  jitterlisp_print_to_stream (stdout, JITTERLISP_AST_ENCODE(ast));
-  printf ("\n");
-  */
   switch (ast->case_)
     {
     case jitterlisp_ast_case_literal:

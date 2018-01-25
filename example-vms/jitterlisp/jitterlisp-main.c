@@ -37,8 +37,6 @@
 
 #include "jitterlisp.h"
 
-#include "jitterlispvm-vm.h"
-
 
 /* Command line handling using argp.
  * ************************************************************************** */
@@ -267,9 +265,9 @@ main (int argc, char **argv)
   argp_parse (& argp, argc, argv, 0, 0, & jitterlisp_settings);
   struct jitterlisp_settings * const sp = & jitterlisp_settings;
 
-  /* Initialize the Jittery VM, unless disabled. */
+  /* Initialize the VM substystem, unless disabled. */
   if (sp->vm)
-    jitterlispvm_initialize ();
+    jitterlisp_initialize_vm ();
 
   /* Run input files and s-expressions from the command-line, halting at the
      first error; still free the resources before exiting, even in case of
@@ -312,9 +310,9 @@ main (int argc, char **argv)
      leaks with Valgrind which this way won't show false positives. */
   jitterlisp_finalize ();
 
-  /* Finalize the Jittery VM, unless it was disabled. */
+  /* Finalize the VM substystem, unless disabled. */
   if (sp->vm)
-    jitterlispvm_finalize ();
+    jitterlisp_finalize_vm ();
 
   /* Return success or failure, as we decided before.  Yes, we go to the trouble
      of freeing resources even on fatal errors: see the comment above. */

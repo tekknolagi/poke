@@ -52,6 +52,7 @@ end
 
 # FIXME: these will need to grow.
 wrapped-functions
+  log_
   printf
   jitterlisp_print_to_stream
   jitterlispvm_error_invalid_primitive_argument_type
@@ -70,13 +71,13 @@ end
 
 initialization-c
   code
-    printf ("Hello from the Jittery VM initialization\n");
+    //printf ("Hello from the Jittery per-run initialization\n");
   end
 end
 
 finalization-c
   code
-    printf ("Hello from the Jittery VM finalization\n");
+    //printf ("Hello from the Jittery per-run finalization\n");
   end
 end
 
@@ -106,6 +107,12 @@ late-c
       jitterlispvm_error_invalid_primitive_argument_type ();            \
     _jitterlispvm_arg_depth --;                                         \
   }
+
+// FIXME: just a test!
+#if 0
+# undef JITTERLISPVM_CHECK_NEXT_TYPE_
+# define JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type) if (_jitterlispvm_arg_depth < 0) { /*do nothing*/ }
+#endif
 
 /* Close an argument-type-checking sequence.  This is a helper macro for
    JITTERLISPVM_CHECK_TYPES_* . */
@@ -149,6 +156,14 @@ static void
 jitterlispvm_error_invalid_primitive_argument_type (void)
 {
   jitterlisp_error_cloned ("invalid primitive argument type");
+}
+
+/* This is convenient for testing.  FIXME: remove. */
+__attribute__ ((unused))
+static void
+log_ (long n)
+{
+  printf ("Log: %li\n", n);
 }
 
     static const char *stack_printf_format_string = "%" JITTER_PRIi "\n";
@@ -662,7 +677,16 @@ instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
     jitterlisp_object callee = JITTER_AT_DEPTH_MAINSTACK(JITTER_ARGN0);
     struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
     JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
-    JITTER_BRANCH_AND_LINK(c->compiled.code);
+
+// FIXME: this assumes that the called closure is always compiled, and
+// crashes when calling an interpreted procedure from a compiled procedure.
+
+    // JITTER_BRANCH_AND_LINK(c->compiled.code);
+// FIXME: this is obviously wrong, as it relies on knowing Jitter's dispatching
+// mode.  I have to introduce a macro to get the first instruction from a
+// program, in whatever representation is appropriate for the dispatching
+// model.
+    JITTER_BRANCH_AND_LINK(((struct jitterlispvm_program *) c->compiled.code)->native_code);
   end
 end
 

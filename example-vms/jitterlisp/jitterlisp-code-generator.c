@@ -458,6 +458,7 @@ jitterlisp_compile (struct jitterlisp_closure *c,
   struct jitterlisp_compiled_closure * const cc = & c->compiled;
   cc->in_arity = in_arity;
   cc->nonlocals = nonlocals;
+  cc->nonlocal_no = jitterlisp_length (nonlocals);
   // FIXME: don't leak.
   cc->code = jitterlisp_generate_jittery (code_as_sexpression);
 }
