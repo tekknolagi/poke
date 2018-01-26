@@ -53,6 +53,7 @@ jitterc/jitterc-parser.h
 jitterc/jitterc-parser.output
 jitterc/jitterc-scanner.c
 jitterc/jitterc-scanner.h
+example-vms/jitterlisp/jitterlisp-constant-strings.c
 
 # Unrelated stuff I just keep here.
 
