@@ -1064,6 +1064,7 @@ $(srcdir)/example-vms/jitterlisp/jitterlispvm-vm.h: example-vms/jitterlisp/jitte
 	$(JITTER_EMULATOR) bin/jitter$(EXEEXT) \
           "$(srcdir)/example-vms/jitterlisp/jitterlisp.jitter" \
           --output "$(srcdir)/example-vms/jitterlisp/" \
+          --no-line \
           --template-directory="$(srcdir)/templates/"
 $(srcdir)/example-vms/jitterlisp/jitterlispvm-vm1.c: example-vms/jitterlisp/jitterlispvm-vm.h
 $(srcdir)/example-vms/jitterlisp/jitterlispvm-vm2.c: example-vms/jitterlisp/jitterlispvm-vm.h
