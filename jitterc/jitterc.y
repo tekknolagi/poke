@@ -1,6 +1,6 @@
 /* Jitter: Bison parser.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -28,6 +28,7 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <c-ctype.h>
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-fatal.h>
 #include <jitter/jitter-parse-int.h>
@@ -126,7 +127,7 @@ jitterc_error (YYLTYPE *locp, struct jitterc_vm *vm,
   break;
 #define KIND_CASE_DEFAULT(out, character)                   \
   default:                                                  \
-    if (isupper (character))                                \
+    if (c_isupper (character))                                \
       {                                                     \
         if (k & jitterc_instruction_argument_kind_register) \
           JITTERC_PARSE_ERROR("duplicate register kind");   \

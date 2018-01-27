@@ -1,6 +1,6 @@
 /* Jitter: jitterc identifier mangling.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -22,6 +22,7 @@
 #include <config.h>
 
 #include <ctype.h>
+#include <c-ctype.h>
 #include <string.h>
 
 #include <xalloc.h>
@@ -72,7 +73,7 @@ jitterc_mangle (const char *original)
      digit, so that the mangled version alone, even withot a prefix, is a valid
      C identifier.  Then every character including the first, even if it's a
      digit, is encoded the same way. */
-  if (length > 0 && isdigit (original [0]))
+  if (length > 0 && c_isdigit (original [0]))
     JITTERC_ADD_STRING("_q");
 
   /* Translate each character. */
@@ -126,9 +127,12 @@ jitterc_mangle (const char *original)
 
         /* Every other character can be reproduced as is... */
         default:
-          /* ...Except that it's better to play it safe. */
-          if (! isalnum (c))
-            jitter_fatal ("mangling: unsupported character '%c'", c);
+          /* ...Except that it's better to play it safe.  Here I'm using
+             Gnulib's c_isalnum function, which only works on ASCII chracters
+             independently  from the locale -- which is what I want. */
+          if (! c_isalnum (c))
+            jitter_fatal ("mangling: non-alphanumeric character '%c' "
+                          "(0x%x) in %s", c, c, original);
           JITTERC_ADD_CHARACTER(c);
         }
     }
