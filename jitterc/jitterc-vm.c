@@ -1,6 +1,6 @@
 /* Jitter: VM generation-time data structures.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <c-ctype.h>
 
 #include <xalloc.h>
 #include <gl_array_list.h>
@@ -194,12 +195,14 @@ jitterc_vm_add_setting (struct jitterc_vm *vm,
       int i;
       for (i = 0; vm->upper_case_prefix [i] != '\0'; i ++)
         {
-          if (! isalpha (vm->upper_case_prefix [i]))
-            jitter_fatal ("the prefix contains the non-alphabetic character '%c'",
-                           vm->upper_case_prefix [i]);
-          if (! islower (vm->upper_case_prefix [i]))
-            jitter_fatal ("the prefix contains the upper-case character '%c'",
-                           vm->upper_case_prefix [i]);
+          if (! c_isalpha (vm->upper_case_prefix [i]))
+            jitter_fatal ("the prefix contains the non-alphabetic character "
+                          "'%c' (0x%x)", vm->upper_case_prefix [i],
+                          vm->upper_case_prefix [i]);
+          if (! c_islower (vm->upper_case_prefix [i]))
+            jitter_fatal ("the prefix contains the upper-case character '%c' "
+                          "(0x%x)", vm->upper_case_prefix [i],
+                          vm->upper_case_prefix [i]);
           vm->upper_case_prefix [i] = toupper (vm->upper_case_prefix [i]);
         }
     }
@@ -305,12 +308,14 @@ jitterc_vm_add_stack_declaration (struct jitterc_vm *vm,
   int i;
   for (i = 0; i < name_length; i ++)
     {
-      if (! isalpha (lower_case_name [i]))
-        jitter_fatal ("the stack name \"%s\" contains the non-alphabetic character '%c'",
-                      lower_case_name, lower_case_name [i]);
-      if (! islower (lower_case_name [i]))
-        jitter_fatal ("the stack name \"%s\" contains the upper-case character '%c'",
-                      lower_case_name, lower_case_name [i]);
+      if (! c_isalpha (lower_case_name [i]))
+        jitter_fatal ("the stack name \"%s\" contains the non-alphabetic "
+                      " character '%c' (0x%x)", lower_case_name,
+                      lower_case_name [i], lower_case_name [i]);
+      if (! c_islower (lower_case_name [i]))
+        jitter_fatal ("the stack name \"%s\" contains the upper-case "
+                      "character '%c' (0x%x)", lower_case_name,
+                      lower_case_name [i], lower_case_name [i]);
       stack->upper_case_name [i] = toupper (lower_case_name [i]);
     }
 
