@@ -1,6 +1,6 @@
 /* VM library: main header file.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -558,6 +558,60 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
    jitter_rewritable_instruction_no is strictly greater than zero. */
 void
 vmprefix_rewrite (struct jitter_program *p);
+
+
+
+
+/* Program points at runtime in specialized programs.
+ * ************************************************************************** */
+
+/* The type of a program point at run time in a specialized program.  This is
+   the type of object than can be passed to JITTER_BRANCH , and its actual
+   definition depends on the dispatching model.  Notice that however, in every
+   case, a program point is a pointer-to-constant type and therefore fits in a
+   word. */
+#ifdef JITTER_DISPATCH_NO_THREADING
+  /* With no-threading dispatch a program point is the address of a machine
+     instruction -- from C, it's what a goto * statement accepts.  I don't
+     need to worry about non-GCC compilers, since no-threading relies on GCC
+     extensions. */
+  typedef void *
+  vmprefix_program_point;
+#else
+  /* On every other dispatching model a program point is a pointer to a word
+     in the specialized program -- in the case of switch dispatching that word
+     will contain a specialized opcode, with threading it will contain the
+     address of a machine instruction (see the case above) followed by the
+     VM instruction arguments. */
+  typedef const union jitter_word *
+  vmprefix_program_point;
+#endif // #ifdef JITTER_DISPATCH_NO_THREADING
+
+/* Expand to an expression evaluating to the program point of the first
+   instruction in the pointed vmprefix VM program, as some object which is
+   correct to pass to JITTER_BRANCH.  The expression type will be
+   vmprefix_program_point.
+
+   This is useful to execute a program without explicitly calling the
+   interpreter function, for example from a VM instruction jumping to the
+   beginning of another VM program.  The expansion of this macro is guaranteed
+   not to contain function calls, and is safe to use from VM instructions
+   without C function wrappers.
+
+   This assumes, without checking, that the program is already specialized. */
+#ifdef JITTER_DISPATCH_NO_THREADING
+  /* In this case the program structure contains a separate pointer to the
+     beginning of the executable region for the native program.  Of course
+     the first instruction is at the beginning of the region. */
+# define VMPREFIX_PROGRAM_BEGINNING(_jitterlisp_program_pointer)  \
+    ((_jitterlisp_program_pointer)->native_code)
+#else
+  /* With switch dispatching or threading the first program point is a pointer
+     to the beginning of the specialized program array. */
+# define VMPREFIX_PROGRAM_BEGINNING(_jitterlisp_program_pointer)   \
+    ((vmprefix_program_point)                                      \
+     ((_jitterlisp_program_pointer)->specialized_program.region))
+#endif // ifdef JITTER_DISPATCH_NO_THREADING
 
 
 
