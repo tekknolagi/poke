@@ -1,6 +1,6 @@
 /* VM default frontend for vmprefix VM.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -150,8 +150,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
           argp_error (state, "--time-limit: invalid integer %s", arg);
 #ifdef HAVE_ALARM
         if (limit < 0)
-          argp_error (state, "--time-limit: negative time %" JITTER_PRIill,
-                      limit);
+          argp_error (state, "--time-limit: negative time %s", arg);
         else if (limit > UINT_MAX)
           argp_error (state, "--time-limit: integer %s out of range", arg);
         else if (limit > 0)
