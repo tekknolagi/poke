@@ -1099,7 +1099,7 @@ $(srcdir)/example-vms/jitterlisp/jitterlisp-constant-strings.c: example-vms/jitt
          echo ";") \
           > "$@"
 
-# The JitterLisp program, with the best distpatching model...
+# The safe and unsafe JitterLisp programs, with the best dispatching model...
 PROGRAMS_JITTERLISP += bin/jitterlisp
 bin_jitterlisp_SOURCES = $(SOURCES_FOR_JITTERLISP)
 bin_jitterlisp_CPPFLAGS = \
@@ -1112,7 +1112,14 @@ bin_jitterlisp_LDADD = \
   $(AM_LDADD) $(JITTER_LDADD) $(LDADD_FOR_GNULIB)
 bin_jitterlisp_LDFLAGS = \
   $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
-# ...And its Boehm-GC version, if enabled.
+PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe
+bin_jitterlisp__unsafe_SOURCES = $(SOURCES_FOR_JITTERLISP)
+bin_jitterlisp__unsafe_CPPFLAGS = \
+  $(bin_jitterlisp_CPPFLAGS) -DJITTERLISP_UNSAFE
+bin_jitterlisp__unsafe_CFLAGS = $(bin_jitterlisp_CFLAGS)
+bin_jitterlisp__unsafe_LDADD = $(bin_jitterlisp_LDADD)
+bin_jitterlisp__unsafe_LDFLAGS = $(bin_jitterlisp_LDFLAGS)
+# ...And its safe and unsafe best-dispatch Boehm-GC version, if enabled.
 if JITTER_HAVE_BOEHM_GC
   PROGRAMS_JITTERLISP += bin/jitterlisp--boehm
   bin_jitterlisp__boehm_SOURCES = $(SOURCES_FOR_JITTERLISP)
@@ -1121,10 +1128,17 @@ if JITTER_HAVE_BOEHM_GC
   bin_jitterlisp__boehm_CFLAGS = $(bin_jitterlisp_CFLAGS)
   bin_jitterlisp__boehm_LDADD = -lgc $(bin_jitterlisp_LDADD)
   bin_jitterlisp__boehm_LDFLAGS = $(bin_jitterlisp_LDFLAGS)
+  PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--boehm
+  bin_jitterlisp__unsafe__boehm_SOURCES = $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__unsafe__boehm_CPPFLAGS = \
+    $(bin_jitterlisp__boehm_CPPFLAGS) -DJITTERLISP_UNSAFE
+  bin_jitterlisp__unsafe__boehm_CFLAGS = $(bin_jitterlisp__boehm_CFLAGS)
+  bin_jitterlisp__unsafe__boehm_LDADD = $(bin_jitterlisp__boehm_LDADD)
+  bin_jitterlisp__unsafe__boehm_LDFLAGS = $(bin_jitterlisp__boehm_LDFLAGS)
 endif # JITTER_HAVE_BOEHM_GC
 
-# The JitterLisp program, with switch dispatch...
 if JITTER_ENABLE_DISPATCH_SWITCH
+  # The safe and unsafe JitterLisp program, with switch dispatch...
   PROGRAMS_JITTERLISP += bin/jitterlisp--switch
   bin_jitterlisp__switch_SOURCES = $(SOURCES_FOR_JITTERLISP)
   bin_jitterlisp__switch_CPPFLAGS = \
@@ -1138,7 +1152,17 @@ if JITTER_ENABLE_DISPATCH_SWITCH
   bin_jitterlisp__switch_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
     $(JITTER_SWITCH_LDFLAGS)
-  # ...And its Boehm-GC version, if enabled.
+  PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--switch
+  bin_jitterlisp__unsafe__switch_SOURCES = $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__unsafe__switch_CPPFLAGS = \
+    $(bin_jitterlisp__switch_CPPFLAGS) -DJITTERLISP_UNSAFE
+  bin_jitterlisp__unsafe__switch_CFLAGS = \
+    $(bin_jitterlisp__switch_CFLAGS)
+  bin_jitterlisp__unsafe__switch_LDADD = \
+    $(bin_jitterlisp__switch_LDADD)
+  bin_jitterlisp__unsafe__switch_LDFLAGS = \
+    $(bin_jitterlisp__switch_LDFLAGS)
+  # ...And its safe and unsafe switch-dispatch Boehm-GC versions, if enabled.
 if JITTER_HAVE_BOEHM_GC
     PROGRAMS_JITTERLISP += bin/jitterlisp--boehm--switch
     bin_jitterlisp__boehm__switch_SOURCES = $(SOURCES_FOR_JITTERLISP)
@@ -1151,11 +1175,22 @@ if JITTER_HAVE_BOEHM_GC
       -lgc $(bin_jitterlisp__switch_LDADD)
     bin_jitterlisp__boehm__switch_LDFLAGS = \
       $(bin_jitterlisp__switch_LDFLAGS)
+  PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--boehm--switch
+  bin_jitterlisp__unsafe__boehm__switch_SOURCES = \
+    $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__unsafe__boehm__switch_CPPFLAGS = \
+    $(bin_jitterlisp__boehm__switch_CPPFLAGS) -DJITTERLISP_UNSAFE
+  bin_jitterlisp__unsafe__boehm__switch_CFLAGS = \
+    $(bin_jitterlisp__boehm__switch_CFLAGS)
+  bin_jitterlisp__unsafe__boehm__switch_LDADD = \
+    $(bin_jitterlisp__boehm__switch_LDADD)
+  bin_jitterlisp__unsafe__boehm__switch_LDFLAGS = \
+    $(bin_jitterlisp__boehm__switch_LDFLAGS)
 endif # JITTER_HAVE_BOEHM_GC
 endif # JITTER_ENABLE_DISPATCH_SWITCH
 
-# The JitterLisp program, with direct-threading dispatch...
 if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
+  # The safe and unsafe JitterLisp program, with direct-threading dispatch...
   PROGRAMS_JITTERLISP += bin/jitterlisp--direct-threading
   bin_jitterlisp__direct_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
   bin_jitterlisp__direct_threading_CPPFLAGS = \
@@ -1169,7 +1204,18 @@ if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
   bin_jitterlisp__direct_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
     $(JITTER_DIRECT_THREADING_LDFLAGS)
-  # ...And its Boehm-GC version, if enabled.
+  PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--direct-threading
+  bin_jitterlisp__unsafe__direct_threading_SOURCES = \
+    $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__unsafe__direct_threading_CPPFLAGS = \
+    $(bin_jitterlisp__direct_threading_CPPFLAGS) -DJITTERLISP_UNSAFE
+  bin_jitterlisp__unsafe__direct_threading_CFLAGS = \
+    $(bin_jitterlisp__direct_threading_CFLAGS)
+  bin_jitterlisp__unsafe__direct_threading_LDADD = \
+    $(bin_jitterlisp__direct_threading_LDADD)
+  bin_jitterlisp__unsafe__direct_threading_LDFLAGS = \
+    $(bin_jitterlisp__direct_threading_LDFLAGS)
+  # ...And its safe and unsafe direct-threading Boehm-GC versions, if enabled.
 if JITTER_HAVE_BOEHM_GC
     PROGRAMS_JITTERLISP += bin/jitterlisp--boehm--direct-threading
     bin_jitterlisp__boehm__direct_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
@@ -1182,11 +1228,22 @@ if JITTER_HAVE_BOEHM_GC
       -lgc $(bin_jitterlisp__direct_threading_LDADD)
     bin_jitterlisp__boehm__direct_threading_LDFLAGS = \
       $(bin_jitterlisp__direct_threading_LDFLAGS)
+  PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--boehm--direct-threading
+  bin_jitterlisp__unsafe__boehm__direct_threading_SOURCES = \
+    $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__unsafe__boehm__direct_threading_CPPFLAGS = \
+    $(bin_jitterlisp__boehm__direct_threading_CPPFLAGS) -DJITTERLISP_UNSAFE
+  bin_jitterlisp__unsafe__boehm__direct_threading_CFLAGS = \
+    $(bin_jitterlisp__boehm__direct_threading_CFLAGS)
+  bin_jitterlisp__unsafe__boehm__direct_threading_LDADD = \
+    $(bin_jitterlisp__boehm__direct_threading_LDADD)
+  bin_jitterlisp__unsafe__boehm__direct_threading_LDFLAGS = \
+    $(bin_jitterlisp__boehm__direct_threading_LDFLAGS)
 endif # JITTER_HAVE_BOEHM_GC
 endif # JITTER_ENABLE_DISPATCH_DIRECT_THREADING
 
-# The JitterLisp program, with minimal-threading dispatch...
 if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
+  # The safe and unsafe JitterLisp program, with minimal-threading dispatch...
   PROGRAMS_JITTERLISP += bin/jitterlisp--minimal-threading
   bin_jitterlisp__minimal_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
   bin_jitterlisp__minimal_threading_CPPFLAGS = \
@@ -1200,7 +1257,18 @@ if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
   bin_jitterlisp__minimal_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
     $(JITTER_MINIMAL_THREADING_LDFLAGS)
-  # ...And its Boehm-GC version, if enabled.
+  PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--minimal-threading
+  bin_jitterlisp__unsafe__minimal_threading_SOURCES = \
+    $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__unsafe__minimal_threading_CPPFLAGS = \
+    $(bin_jitterlisp__minimal_threading_CPPFLAGS) -DJITTERLISP_UNSAFE
+  bin_jitterlisp__unsafe__minimal_threading_CFLAGS = \
+    $(bin_jitterlisp__minimal_threading_CFLAGS)
+  bin_jitterlisp__unsafe__minimal_threading_LDADD = \
+    $(bin_jitterlisp__minimal_threading_LDADD)
+  bin_jitterlisp__unsafe__minimal_threading_LDFLAGS = \
+    $(bin_jitterlisp__minimal_threading_LDFLAGS)
+  # ...And its safe and unsafe minimal-threading Boehm-GC versions, if enabled.
 if JITTER_HAVE_BOEHM_GC
     PROGRAMS_JITTERLISP += bin/jitterlisp--boehm--minimal-threading
     bin_jitterlisp__boehm__minimal_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
@@ -1213,11 +1281,22 @@ if JITTER_HAVE_BOEHM_GC
       -lgc $(bin_jitterlisp__minimal_threading_LDADD)
     bin_jitterlisp__boehm__minimal_threading_LDFLAGS = \
       $(bin_jitterlisp__minimal_threading_LDFLAGS)
+  PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--boehm--minimal-threading
+  bin_jitterlisp__unsafe__boehm__minimal_threading_SOURCES = \
+    $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__unsafe__boehm__minimal_threading_CPPFLAGS = \
+    $(bin_jitterlisp__boehm__minimal_threading_CPPFLAGS) -DJITTERLISP_UNSAFE
+  bin_jitterlisp__unsafe__boehm__minimal_threading_CFLAGS = \
+    $(bin_jitterlisp__boehm__minimal_threading_CFLAGS)
+  bin_jitterlisp__unsafe__boehm__minimal_threading_LDADD = \
+    $(bin_jitterlisp__boehm__minimal_threading_LDADD)
+  bin_jitterlisp__unsafe__boehm__minimal_threading_LDFLAGS = \
+    $(bin_jitterlisp__boehm__minimal_threading_LDFLAGS)
 endif # JITTER_HAVE_BOEHM_GC
 endif # JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
 
-# The JitterLisp program, with no-threading dispatch...
 if JITTER_ENABLE_DISPATCH_NO_THREADING
+  # The safe and unsafe JitterLisp program, with no-threading dispatch...
   PROGRAMS_JITTERLISP += bin/jitterlisp--no-threading
   bin_jitterlisp__no_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
   bin_jitterlisp__no_threading_CPPFLAGS = \
@@ -1231,7 +1310,18 @@ if JITTER_ENABLE_DISPATCH_NO_THREADING
   bin_jitterlisp__no_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
     $(JITTER_NO_THREADING_LDFLAGS)
-  # ...And its Boehm-GC version, if enabled.
+  PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--no-threading
+  bin_jitterlisp__unsafe__no_threading_SOURCES = \
+    $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__unsafe__no_threading_CPPFLAGS = \
+    $(bin_jitterlisp__no_threading_CPPFLAGS) -DJITTERLISP_UNSAFE
+  bin_jitterlisp__unsafe__no_threading_CFLAGS = \
+    $(bin_jitterlisp__no_threading_CFLAGS)
+  bin_jitterlisp__unsafe__no_threading_LDADD = \
+    $(bin_jitterlisp__no_threading_LDADD)
+  bin_jitterlisp__unsafe__no_threading_LDFLAGS = \
+    $(bin_jitterlisp__no_threading_LDFLAGS)
+  # ...And its safe and unsafe no-threading Boehm-GC versions, if enabled.
 if JITTER_HAVE_BOEHM_GC
     PROGRAMS_JITTERLISP += bin/jitterlisp--boehm--no-threading
     bin_jitterlisp__boehm__no_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
@@ -1244,9 +1334,19 @@ if JITTER_HAVE_BOEHM_GC
       -lgc $(bin_jitterlisp__no_threading_LDADD)
     bin_jitterlisp__boehm__no_threading_LDFLAGS = \
       $(bin_jitterlisp__no_threading_LDFLAGS)
+  PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--boehm--no-threading
+  bin_jitterlisp__unsafe__boehm__no_threading_SOURCES = \
+    $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__unsafe__boehm__no_threading_CPPFLAGS = \
+    $(bin_jitterlisp__boehm__no_threading_CPPFLAGS) -DJITTERLISP_UNSAFE
+  bin_jitterlisp__unsafe__boehm__no_threading_CFLAGS = \
+    $(bin_jitterlisp__boehm__no_threading_CFLAGS)
+  bin_jitterlisp__unsafe__boehm__no_threading_LDADD = \
+    $(bin_jitterlisp__boehm__no_threading_LDADD)
+  bin_jitterlisp__unsafe__boehm__no_threading_LDFLAGS = \
+    $(bin_jitterlisp__boehm__no_threading_LDFLAGS)
 endif # JITTER_HAVE_BOEHM_GC
 endif # JITTER_ENABLE_DISPATCH_NO_THREADING
-
 
 # JitterLisp Lisp library.
 EXTRA_DIST += \
