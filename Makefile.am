@@ -1000,8 +1000,9 @@ EXTRA_DIST += \
 # Jittery Lisp example.
 # ################################################################
 
-PROGRAMS_JITTERLISP = \
-  bin/jitterlisp
+# Start with an empty list of JitterLisp programs.  I will add to this
+# incrementally, checking if every variant is to be built.
+PROGRAMS_JITTERLISP =
 
 # Every JitterLisp system will be a program, not built by default.
 EXTRA_PROGRAMS += $(PROGRAMS_JITTERLISP)
@@ -1076,7 +1077,6 @@ GENERATED_C_FILES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlispvm-vm2.c
 JITTER_GENERATED_FILES += $(GENERATED_C_FILES_FOR_JITTERLISP)
 
-
 # A sed script turning an arbitrary text into a C string literal with proper
 # delimiters and escapes..
 JITTERLISP_SED_STRINGIFY = \
@@ -1099,11 +1099,12 @@ $(srcdir)/example-vms/jitterlisp/jitterlisp-constant-strings.c: example-vms/jitt
          echo ";") \
           > "$@"
 
-# There is only one version for the best dispatching model, as of now.
+# The JitterLisp program, with the best distpatching model...
+PROGRAMS_JITTERLISP += bin/jitterlisp
 bin_jitterlisp_SOURCES = $(SOURCES_FOR_JITTERLISP)
 bin_jitterlisp_CPPFLAGS = \
-  $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/jitterlisp" $(CPPFLAGS_FOR_GNULIB) \
-  $(JITTER_CPPFLAGS) \
+  $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/jitterlisp" \
+  $(CPPFLAGS_FOR_GNULIB) $(JITTER_CPPFLAGS) \
   -DJITTERLISP_LITTER=1
 bin_jitterlisp_CFLAGS = \
   $(AM_CFLAGS) $(JITTER_CFLAGS)
@@ -1111,17 +1112,141 @@ bin_jitterlisp_LDADD = \
   $(AM_LDADD) $(JITTER_LDADD) $(LDADD_FOR_GNULIB)
 bin_jitterlisp_LDFLAGS = \
   $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
-
-# Define the Boehm-GC version, if we can use the library.
+# ...And its Boehm-GC version, if enabled.
 if JITTER_HAVE_BOEHM_GC
-  PROGRAMS_JITTERLISP += bin/jitterlisp-boehm
-  bin_jitterlisp_boehm_SOURCES = $(SOURCES_FOR_JITTERLISP)
-  bin_jitterlisp_boehm_CPPFLAGS = $(bin_jitterlisp_CPPFLAGS) \
+  PROGRAMS_JITTERLISP += bin/jitterlisp--boehm
+  bin_jitterlisp__boehm_SOURCES = $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__boehm_CPPFLAGS = $(bin_jitterlisp_CPPFLAGS) \
     -UJITTERLISP_LITTER -DJITTERLISP_BOEHM_GC=1
-  bin_jitterlisp_boehm_CFLAGS = $(bin_jitterlisp_CFLAGS)
-  bin_jitterlisp_boehm_LDADD = -lgc $(bin_jitterlisp_LDADD)
-  bin_jitterlisp_boehm_LDFLAGS = $(bin_jitterlisp_LDFLAGS)
+  bin_jitterlisp__boehm_CFLAGS = $(bin_jitterlisp_CFLAGS)
+  bin_jitterlisp__boehm_LDADD = -lgc $(bin_jitterlisp_LDADD)
+  bin_jitterlisp__boehm_LDFLAGS = $(bin_jitterlisp_LDFLAGS)
 endif # JITTER_HAVE_BOEHM_GC
+
+# The JitterLisp program, with switch dispatch...
+if JITTER_ENABLE_DISPATCH_SWITCH
+  PROGRAMS_JITTERLISP += bin/jitterlisp--switch
+  bin_jitterlisp__switch_SOURCES = $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__switch_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/jitterlisp" \
+    $(CPPFLAGS_FOR_GNULIB) $(JITTER_SWITCH_CPPFLAGS) \
+    -DJITTERLISP_LITTER=1
+  bin_jitterlisp__switch_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_SWITCH_CFLAGS)
+  bin_jitterlisp__switch_LDADD = \
+    $(AM_LDADD) $(JITTER_SWITCH_LDADD) $(LDADD_FOR_GNULIB)
+  bin_jitterlisp__switch_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
+    $(JITTER_SWITCH_LDFLAGS)
+  # ...And its Boehm-GC version, if enabled.
+if JITTER_HAVE_BOEHM_GC
+    PROGRAMS_JITTERLISP += bin/jitterlisp--boehm--switch
+    bin_jitterlisp__boehm__switch_SOURCES = $(SOURCES_FOR_JITTERLISP)
+    bin_jitterlisp__boehm__switch_CPPFLAGS = \
+      $(bin_jitterlisp__switch_CPPFLAGS) \
+      -UJITTERLISP_LITTER -DJITTERLISP_BOEHM_GC=1
+    bin_jitterlisp__boehm__switch_CFLAGS = \
+      $(bin_jitterlisp__switch_CFLAGS)
+    bin_jitterlisp__boehm__switch_LDADD = \
+      -lgc $(bin_jitterlisp__switch_LDADD)
+    bin_jitterlisp__boehm__switch_LDFLAGS = \
+      $(bin_jitterlisp__switch_LDFLAGS)
+endif # JITTER_HAVE_BOEHM_GC
+endif # JITTER_ENABLE_DISPATCH_SWITCH
+
+# The JitterLisp program, with direct-threading dispatch...
+if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
+  PROGRAMS_JITTERLISP += bin/jitterlisp--direct-threading
+  bin_jitterlisp__direct_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__direct_threading_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/jitterlisp" \
+    $(CPPFLAGS_FOR_GNULIB) $(JITTER_DIRECT_THREADING_CPPFLAGS) \
+    -DJITTERLISP_LITTER=1
+  bin_jitterlisp__direct_threading_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_DIRECT_THREADING_CFLAGS)
+  bin_jitterlisp__direct_threading_LDADD = \
+    $(AM_LDADD) $(JITTER_DIRECT_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+  bin_jitterlisp__direct_threading_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
+    $(JITTER_DIRECT_THREADING_LDFLAGS)
+  # ...And its Boehm-GC version, if enabled.
+if JITTER_HAVE_BOEHM_GC
+    PROGRAMS_JITTERLISP += bin/jitterlisp--boehm--direct-threading
+    bin_jitterlisp__boehm__direct_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
+    bin_jitterlisp__boehm__direct_threading_CPPFLAGS = \
+      $(bin_jitterlisp__direct_threading_CPPFLAGS) \
+      -UJITTERLISP_LITTER -DJITTERLISP_BOEHM_GC=1
+    bin_jitterlisp__boehm__direct_threading_CFLAGS = \
+      $(bin_jitterlisp__direct_threading_CFLAGS)
+    bin_jitterlisp__boehm__direct_threading_LDADD = \
+      -lgc $(bin_jitterlisp__direct_threading_LDADD)
+    bin_jitterlisp__boehm__direct_threading_LDFLAGS = \
+      $(bin_jitterlisp__direct_threading_LDFLAGS)
+endif # JITTER_HAVE_BOEHM_GC
+endif # JITTER_ENABLE_DISPATCH_DIRECT_THREADING
+
+# The JitterLisp program, with minimal-threading dispatch...
+if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
+  PROGRAMS_JITTERLISP += bin/jitterlisp--minimal-threading
+  bin_jitterlisp__minimal_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__minimal_threading_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/jitterlisp" \
+    $(CPPFLAGS_FOR_GNULIB) $(JITTER_MINIMAL_THREADING_CPPFLAGS) \
+    -DJITTERLISP_LITTER=1
+  bin_jitterlisp__minimal_threading_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_MINIMAL_THREADING_CFLAGS)
+  bin_jitterlisp__minimal_threading_LDADD = \
+    $(AM_LDADD) $(JITTER_MINIMAL_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+  bin_jitterlisp__minimal_threading_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
+    $(JITTER_MINIMAL_THREADING_LDFLAGS)
+  # ...And its Boehm-GC version, if enabled.
+if JITTER_HAVE_BOEHM_GC
+    PROGRAMS_JITTERLISP += bin/jitterlisp--boehm--minimal-threading
+    bin_jitterlisp__boehm__minimal_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
+    bin_jitterlisp__boehm__minimal_threading_CPPFLAGS = \
+      $(bin_jitterlisp__minimal_threading_CPPFLAGS) \
+      -UJITTERLISP_LITTER -DJITTERLISP_BOEHM_GC=1
+    bin_jitterlisp__boehm__minimal_threading_CFLAGS = \
+      $(bin_jitterlisp__minimal_threading_CFLAGS)
+    bin_jitterlisp__boehm__minimal_threading_LDADD = \
+      -lgc $(bin_jitterlisp__minimal_threading_LDADD)
+    bin_jitterlisp__boehm__minimal_threading_LDFLAGS = \
+      $(bin_jitterlisp__minimal_threading_LDFLAGS)
+endif # JITTER_HAVE_BOEHM_GC
+endif # JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
+
+# The JitterLisp program, with no-threading dispatch...
+if JITTER_ENABLE_DISPATCH_NO_THREADING
+  PROGRAMS_JITTERLISP += bin/jitterlisp--no-threading
+  bin_jitterlisp__no_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
+  bin_jitterlisp__no_threading_CPPFLAGS = \
+    $(AM_CPPFLAGS) -I "$(srcdir)/example-vms/jitterlisp" \
+    $(CPPFLAGS_FOR_GNULIB) $(JITTER_NO_THREADING_CPPFLAGS) \
+    -DJITTERLISP_LITTER=1
+  bin_jitterlisp__no_threading_CFLAGS = \
+    $(AM_CFLAGS) $(JITTER_NO_THREADING_CFLAGS)
+  bin_jitterlisp__no_threading_LDADD = \
+    $(AM_LDADD) $(JITTER_NO_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+  bin_jitterlisp__no_threading_LDFLAGS = \
+    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
+    $(JITTER_NO_THREADING_LDFLAGS)
+  # ...And its Boehm-GC version, if enabled.
+if JITTER_HAVE_BOEHM_GC
+    PROGRAMS_JITTERLISP += bin/jitterlisp--boehm--no-threading
+    bin_jitterlisp__boehm__no_threading_SOURCES = $(SOURCES_FOR_JITTERLISP)
+    bin_jitterlisp__boehm__no_threading_CPPFLAGS = \
+      $(bin_jitterlisp__no_threading_CPPFLAGS) \
+      -UJITTERLISP_LITTER -DJITTERLISP_BOEHM_GC=1
+    bin_jitterlisp__boehm__no_threading_CFLAGS = \
+      $(bin_jitterlisp__no_threading_CFLAGS)
+    bin_jitterlisp__boehm__no_threading_LDADD = \
+      -lgc $(bin_jitterlisp__no_threading_LDADD)
+    bin_jitterlisp__boehm__no_threading_LDFLAGS = \
+      $(bin_jitterlisp__no_threading_LDFLAGS)
+endif # JITTER_HAVE_BOEHM_GC
+endif # JITTER_ENABLE_DISPATCH_NO_THREADING
+
 
 # JitterLisp Lisp library.
 EXTRA_DIST += \
