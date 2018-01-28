@@ -1,6 +1,6 @@
 /* Jitter: VM-independent program data structures.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -235,23 +235,14 @@ jitter_close_current_instruction (struct jitter_program *p)
   p->next_uninitialized_parameter = NULL;
   p->next_expected_parameter_type = NULL;
 
-  /* If the instruction we just closed is a caller... */
-  if (p->current_instruction->meta_instruction->caller)
-    /* ...Then it's followed by an implicit label for the return address; in
-       that case it's not rewritable and the next rewritable instruction
-       sequence starts *after* it.  No rewriting is possible at this point. */
-    p->rewritable_instruction_no = 0;
-  else
-    {
-      /* The instruction we just added is a candidate for rewriting, along with
-         the previous ones which were candidate already. */
-      p->rewritable_instruction_no ++;
+  /* The instruction we just added is a candidate for rewriting, along with the
+     previous ones which were candidate already. */
+  p->rewritable_instruction_no ++;
 
-      /* Rewrite the last part of the program, using the instruction we have
-         just closed; that instruction, along with some others preceding it,
-         might very well change or disappear after rewriting is done. */
-      p->vm->rewrite (p);
-    }
+  /* Rewrite the last part of the program, using the instruction we have just
+     closed; that instruction, along with some others preceding it, might very
+     well change or disappear after rewriting is done. */
+  p->vm->rewrite (p);
 }
 
 /* Check that the pointed program's last instruction is incomplete, and that the next
