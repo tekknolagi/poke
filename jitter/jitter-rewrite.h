@@ -1,6 +1,6 @@
 /* Instruction rewrite functionality header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -30,21 +30,23 @@
 /* Rewriter API.
  * ************************************************************************** */
 
-/* This functionality is used internally by the rewriter, and not intended for
-   the user. */
+/* Instruction rewriting entails replacing a sequence of one or more
+   unspecialized instructions with another sequence of zero or more equivalent
+   unspecified instructions; each instruction in the replacement will be
+   specializable, while the original instruction might not be.
 
-/* FIXME: verify that this comment is still all correct after I actually
-   implement the system.  I suspect my ideas have evolved already since the time
-   I wrote it. */
-/* Instruction rewriting entails replacing one unspecialized instruction with a
-   sequence of zero or more equivalent unspecified instructions; each
-   instruction in the replacement will be specializable, while the original
-   instruction might not be.
+   There are two distinct use cases for rewriting:
+     (a) peephole optimization;
+     (b) reducing the number of specialized instructions in order to make the
+         generated C code smaller, possibly enabling the user of more fast
+         registers.
+   Case (b) is important, but is not exploited yet.
 
-   The rewriting mechanism is intended for reducing the number of specialized
-   instructions by removing redundant ways of describing the same operation.
-   Let us assume for example a meta-instruction add (?r, ?r, !r); then the
-   two unspecialized instructions
+   About case (b):
+   The rewriting mechanism can reduce the number of specialized instructions by
+   removing redundant ways of describing the same operation.  Let us assume for
+   example a meta-instruction add (?r, ?r, !r); then the two unspecialized
+   instructions
      add %r0, %r1, %r2
    and
      add %r1, %r0, %r2
@@ -56,7 +58,7 @@
    but affording a higher number of fast registers.
 
    Other rewritings yield slightly suboptimal code, but reduce the specialized
-  instruction set even more dramatically.  The add instruction above has O(n^3)
+   instruction set even more dramatically.  The add instruction above has O(n^3)
    specializations, but by requring the second and third arguments to be equal
    we can cut specialized instructions to O(n^2).  Assuming a register copying
    meta-instruction mov (?r, !r) such a rewriting would require replacing, for
@@ -73,8 +75,25 @@
    functions.  Rewriting can never happen "across" a label: an original
    unspecialized instruction before rewriting is replaced with a sequence, and
    both the original and the rewritten sequence lie completely before or
-   completely after each label: it is not possible, by construction, to have part
-   of the replacement before and part of the replacement after a label. */
+   completely after each label: it is not possible, by construction, to have
+   part of the replacement before and part of the replacement after a label.
+
+   As an exception the implicit label added after a callee instruction is not
+   restricted by the limitation above, at least for the purposes of case (a): it
+   is possible, and in fact useful, to rewrite a sequence containing a call
+   instruction into a more efficient sequence.  As always the user has the
+   responsibility of ensuring that her rewritten code is semantically equivalent
+   to the original, but calls seem to present no particular problem. */
+
+
+
+
+/* This API is not for the user.
+ * ************************************************************************** */
+
+/* The functions and macros delcared here are used internally by the rewriter or
+   by generated code, and not intended for the user.  The user specifies rewrite
+   rules as part of the Jitter VM speciefication, using Jitter syntax. */
 
 
 
