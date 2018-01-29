@@ -1,6 +1,6 @@
 /* Jittery Lisp: global settings: header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -31,6 +31,22 @@
 /* JitterLisp global settings.
  * ************************************************************************** */
 
+/* The type associated to the repl setting field.  After command line parsing
+   is over this can be used as a boolean. */
+enum jitterlisp_run_repl
+  {
+    /* Do not run the REPL. */
+    jitterlisp_run_repl_no = 0,
+
+    /* Run the REPL. */
+    jitterlisp_run_repl_yes = 1,
+
+    /* Run the REPL iff there are no files specified on the command line.
+       The setting value reverts to one of the other two values after
+       command-line parsing ends. */
+    jitterlisp_run_repl_default = 2,
+  };
+
 /* Global settings for JitterLisp. */
 struct jitterlisp_settings
 {
@@ -51,6 +67,11 @@ struct jitterlisp_settings
      for reading machine-rewritten ASTs. */
   bool print_compact_uninterned_symbols;
 
+  /* If true use the cross-disassembler (as found by Jitter's configure script)
+     rather than the native disassembler.  This is useful for developing using
+     emulators. */
+  bool cross_disassembler;
+
   /* Non-false iff we are to uses the Jittery VM, and not a naïf interpreter. */
   bool vm;
 
@@ -66,7 +87,7 @@ struct jitterlisp_settings
   struct jitter_dynamic_buffer input_file_path_names;
 
   /* Provide an interactive REPL. */
-  bool repl;
+  enum jitterlisp_run_repl repl;
 };
 
 /* The one global variable holding JitterLisp settings.  This is initialized

@@ -1,6 +1,6 @@
 /* Jittery Lisp: running from files, C strings, REPL.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -188,7 +188,7 @@ jitterlisp_run_from_input_files (void)
 
 /* The text to show before starting the interactive REPL. */
 static const char *
-jitterlisp_interactive_banner =
+jitterlisp_interactive_banner_text =
 "================================================================\n"
 "JitterLisp (from Jitter version " JITTER_PACKAGE_VERSION ")\n"
 "Copyright (C) 2018 Luca Saiu\n"
@@ -200,14 +200,16 @@ jitterlisp_interactive_banner =
 "================================================================\n\n";
 
 void
+jitterlisp_interactive_banner (void)
+{
+  printf ("%s", jitterlisp_interactive_banner_text);
+}
+
+void
 jitterlisp_repl (void)
 {
   if (jitterlisp_settings.verbose)
     printf ("Running the REPL...\n");
-
-  /* Since we are in interactive mode print the welcome banner also showing
-     legal notes. */
-  printf ("%s", jitterlisp_interactive_banner);
 
   /* Make a readline reader state.  It will be used to read every form
      from the REPL, even in case of parse errors. */
