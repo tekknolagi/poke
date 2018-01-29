@@ -1,7 +1,7 @@
 ## This is an -*- Autoconf -*- file to be processed with autoconf
 ## to obtain a configure script.
 
-## Copyright (C) 2016, 2017 Luca Saiu
+## Copyright (C) 2016, 2017, 2018 Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -991,8 +991,18 @@ for dispatch_model in $jitter_enabled_dispatch_models; do
         jitter_check_cc_options JITTER_FLAGS_CFLAGS -mcmodel=large
       fi
       ;;
+    ppc*|power*)
+      # GCC generates calls to intrinsics/libc functions such as memcpy to pass
+      # parameters.  At least on PowerPC GNU/Linux these resolve to calls via
+      # the GOT or PLT which then get optimized into PC-relative branch-and-link
+      # instructions, I suppose by ld.so .
+      # That is all very good in normal circumastances, but the last
+      # optimization breaks my relocatable code.  Generate inline code for such
+      # calls instead, for the kind of smallish buffer lengths one might find in
+      # VM instructions.
+      jitter_check_cc_options JITTER_FLAGS_CFLAGS -mblock-move-inline-limit=8192
+      ;;
     *)
-#      AC_MSG_ERROR([unknown dispatch model: error in configure.ac])
       true
       ;;
   esac
