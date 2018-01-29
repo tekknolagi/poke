@@ -149,6 +149,8 @@ jitterc_make_vm (void)
   res->state_runtime_struct_c_code = jitter_clone_string ("");
   res->state_initialization_c_code = jitter_clone_string ("");
   res->state_finalization_c_code = jitter_clone_string ("");
+  res->instruction_beginning_c_code = jitter_clone_string ("");
+  res->instruction_end_c_code = jitter_clone_string ("");
 
   /* No files have been written yet. */
   res->written_file_names = jitterc_make_empty_list ();

@@ -257,6 +257,7 @@ jitterc_parse_file (const char *input_file_name, bool generate_line);
 %token STATE_EARLY_C
 %token STATE_BACKING_STRUCT_C STATE_RUNTIME_STRUCT_C
 %token STATE_INITIALIZATION_C STATE_FINALIZATION_C
+%token INSTRUCTION_BEGINNING_C INSTRUCTION_END_C
 %token BARE_ARGUMENT IDENTIFIER WRAPPED_FUNCTIONS WRAPPED_GLOBALS
 %token INSTRUCTION OPEN_PAREN CLOSE_PAREN COMMA SEMICOLON IN OUT
 %token RULE WHEN REWRITE INTO TRUE FALSE RULE_PLACEHOLDER
@@ -365,6 +366,10 @@ c_section:
     { JITTERC_APPEND_CODE(vm->state_initialization_c_code, & $2); }
 | STATE_FINALIZATION_C code END /*STATE_FINALIZATION_C*/
     { JITTERC_APPEND_CODE(vm->state_finalization_c_code, & $2); }
+| INSTRUCTION_BEGINNING_C code END
+    { JITTERC_APPEND_CODE(vm->instruction_beginning_c_code, & $2); }
+| INSTRUCTION_END_C code END
+    { JITTERC_APPEND_CODE(vm->instruction_end_c_code, & $2); }
 ;
 
 wrapped_functions_section:
