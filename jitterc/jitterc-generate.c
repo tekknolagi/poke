@@ -1964,6 +1964,7 @@ jitterc_emit_interpreter_wrap
       EMIT("  typeof (%s) * const restrict _my_pointer_to_%s __attribute__ ((unused))\n",
            name, name);
       EMIT("     = _my_volatile_pointer_to_%s;\n", name);
+      EMIT("# undef %s\n", name);
       EMIT("# define %s (* _my_pointer_to_%s)\n\n", name, name);
     }
 
@@ -1982,6 +1983,7 @@ jitterc_emit_interpreter_wrap
       EMIT("  typeof (%s) * const _my_%s __attribute__ ((unused))\n",
            name, name);
       EMIT("     = * _my_volatile_pointer_to_%s;\n", name);
+      EMIT("# undef %s\n", name);
       EMIT("# define %s _my_%s\n\n", name, name);
     }
   EMIT("#endif // #ifdef JITTER_REPLICATE\n\n");
@@ -2327,11 +2329,20 @@ jitterc_emit_interpreter_ordinary_specialized_instructions
           EMIT("#endif\n\n");
         }
 
+      /* Emit the user C code for the beginning of every instruction, if any. */
+      jitterc_emit_user_c_code_to_stream
+         (vm, f, vm->instruction_beginning_c_code, "instruction-beginning-c");
+
       /* Emit user-specified code for the instruction.  We have already opened a brace, so
          another pair is not needed. */
       EMIT("\n    /* User code for %s . */\n", sins->name);
       EMIT("%s\n", uins->code);
       EMIT("    /* End of the user code for %s . */\n\n", sins->name);
+
+      /* Emit the user C code for the end of every instruction, if any.  Notice
+         that the code is not always reachable. */
+      jitterc_emit_user_c_code_to_stream (vm, f, vm->instruction_end_c_code,
+                                          "instruction-end-c");
 
       if (! is_relocatable)
         {
@@ -2434,7 +2445,7 @@ jitterc_emit_interpreter_main_function
   EMIT("static void\n");
   EMIT("vmprefix_interpret_or_initialize (bool initialize,\n");
   EMIT("                                  struct jitter_program const *p,\n");
-  EMIT("                                  struct vmprefix_state *original_state)\n");
+  EMIT("                                  struct vmprefix_state * const original_state)\n");
   EMIT("{\n");
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("  /* Save the values in the registers we reserved as global variables,\n");
@@ -2533,12 +2544,10 @@ jitterc_emit_interpreter_main_function
   EMIT("    jitter_fatal (\"could not allocate slow registers\");\n");
   EMIT("\n");
 
-  EMIT("  /* Initialize the instruction pointer from the thread array, unless the dispatching\n");
-  EMIT("      model is no-threading, in which case no thread array even exists. */\n");
+  EMIT("  /* Declare the instruction pointer from the thread array, unless the dispatching\n");
+  EMIT("     model is no-threading, in which case no thread array even exists. */\n");
   EMIT("#ifndef JITTER_DISPATCH_NO_THREADING\n");
-  EMIT("  const union jitter_word *instructions\n");
-  EMIT("    = jitter_dynamic_buffer_to_const_pointer (& p->specialized_program);\n");
-  EMIT("  const union jitter_word *ip;\n");
+  EMIT("  vmprefix_program_point ip;\n");
   EMIT("#endif // #ifndef JITTER_DISPATCH_NO_THREADING\n\n");
 
   EMIT("  /* Declare a variable to be supposedly used as a computed goto target for jumping;\n");
@@ -2620,13 +2629,8 @@ jitterc_emit_interpreter_main_function
   EMIT("     not work as intended (which prevents the use of global and static\n");
   EMIT("     variables, string literals and possibly large literal constants), and\n");
   EMIT("     GDB gets easily confused. */\n");
-  EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
-  EMIT("  // fprintf (stderr, \"Jumping to the beginning of native code: %%p.\\n\", p->native_code);\n");
-  EMIT("  goto* p->native_code;\n");
-  EMIT("#else\n");
-  EMIT("  // fprintf (stderr, \"Jumping to the first VM instruction.\\n\");\n");
-  EMIT("  JITTER_BRANCH (instructions);\n");
-  EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n");
+  EMIT("   JITTER_BRANCH(VMPREFIX_PROGRAM_BEGINNING(p));");
+  EMIT("\n");
   EMIT("\n");
   EMIT("  /* This is actually unreachable, but I use GCC inline assembly with\n");
   EMIT("     constraints declaring to jump here just to force the compiler to\n");
@@ -2817,7 +2821,7 @@ jitterc_emit_interpreter_wrappers
   EMIT("static void\n");
   EMIT("vmprefix_interpret_or_initialize (bool initialize,\n");
   EMIT("                                  struct jitter_program const *p,\n");
-  EMIT("                                  struct vmprefix_state *original_state)\n");
+  EMIT("                                  struct vmprefix_state * const original_state)\n");
   EMIT("__attribute__ ((noclone, noinline, no_reorder,\n");
   EMIT("                /* This attribute can be useful to enable, conditionally,\n");
   EMIT("                    on some architectures. */\n");

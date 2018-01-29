@@ -1,6 +1,6 @@
 /* Jitter: Flex scanner.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -200,6 +200,8 @@ CODECONTENTLINEMIDDLE3 end{LINEWHITESPACE}?[^\ \t\n\r\f#][^\n\r\f]*
 "state-struct-runtime-c"  { return STATE_RUNTIME_STRUCT_C; }
 "state-initialization-c"  { return STATE_INITIALIZATION_C; }
 "state-finalization-c"    { return STATE_FINALIZATION_C; }
+"instruction-beginning-c" { return INSTRUCTION_BEGINNING_C; }
+"instruction-end-c"       { return INSTRUCTION_END_C; }
 
 "wrapped-functions"       { return WRAPPED_FUNCTIONS; }
 "wrapped-globals"         { return WRAPPED_GLOBALS; }

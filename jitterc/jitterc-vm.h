@@ -1,6 +1,6 @@
 /* Jitter: header for VM generation-time data structures.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -677,7 +677,8 @@ struct jitterc_vm
        *initialization_c_code, *finalization_c_code,
        *state_early_c_code,
        *state_backing_struct_c_code, *state_runtime_struct_c_code,
-       *state_initialization_c_code, *state_finalization_c_code;
+       *state_initialization_c_code, *state_finalization_c_code,
+       *instruction_beginning_c_code, *instruction_end_c_code;
 
   /* These are gl_list_t of strings. */
   gl_list_t wrapped_globals, wrapped_functions;
