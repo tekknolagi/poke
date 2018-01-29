@@ -31,6 +31,9 @@ ChangeLog
 # Generated files.
 INSTALL
 config.h.in
+example-vms/jitterlisp/jitterlispvm-vm.h
+example-vms/jitterlisp/jitterlispvm-vm1.c
+example-vms/jitterlisp/jitterlispvm-vm2.c
 example-vms/structured/structured-parser.c
 example-vms/structured/structured-parser.h
 example-vms/structured/structured-scanner.c
