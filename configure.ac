@@ -991,19 +991,21 @@ for dispatch_model in $jitter_enabled_dispatch_models; do
         jitter_check_cc_options JITTER_FLAGS_CFLAGS -mcmodel=large
       fi
       ;;
-    ppc*|power*)
-      # GCC generates calls to intrinsics/libc functions such as memcpy to pass
-      # parameters.  At least on PowerPC GNU/Linux these resolve to calls via
-      # the GOT or PLT which then get optimized into PC-relative branch-and-link
-      # instructions, I suppose by ld.so .
-      # That is all very good in normal circumastances, but the last
-      # optimization breaks my relocatable code.  Generate inline code for such
-      # calls instead, for the kind of smallish buffer lengths one might find in
-      # VM instructions.
-      jitter_check_cc_options JITTER_FLAGS_CFLAGS -mblock-move-inline-limit=8192
-      ;;
     *)
-      true
+      case "$dispatch_model" in
+        minimal-threading|no-threading)
+          # GCC generates calls to intrinsics/libc functions such as memcpy to
+          # pass parameters.  At least on PowerPC GNU/Linux these resolve to
+          # calls via the GOT or PLT which then get optimized into PC-relative
+          # branch-and-link instructions, I suppose by ld.so .  That is all very
+          # good in normal circumastances, but the last optimization breaks my
+          # relocatable code.  Generate inline code for such calls instead, for
+          # the kind of smallish buffer lengths one might find in VM
+          # instructions.
+          jitter_check_cc_options JITTER_FLAGS_CFLAGS \
+             -mblock-move-inline-limit=8192
+        ;;
+      esac
       ;;
   esac
 
