@@ -149,13 +149,14 @@ jitterlisp_error (char *message_or_NULL)
 {
   jitterlisp_set_last_message_or_NULL (message_or_NULL);
 
+  // FIXME: move the print somewhere else.
+  if (message_or_NULL != NULL)
+    printf ("ERRORING OUT: %s\n", message_or_NULL);
+
   if (! jitterlisp_error_context_stack_empty ())
     {
       struct jitterlisp_error_context *jitterlisp_top_error_context
         = jitterlisp_error_context_top ();
-      // FIXME: move the print somewhere else.
-      if (message_or_NULL != NULL)
-        printf ("ERRORING OUT NON-FATALLY: %s\n", message_or_NULL);
       longjmp (jitterlisp_top_error_context->the_jmp_buf, 1);
     }
   else

@@ -1,6 +1,6 @@
 /* Jittery Lisp: running from files, C strings, REPL: header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jittery Lisp language implementation, distributed as
@@ -88,6 +88,11 @@ jitterlisp_run_from_input_files (void);
 
 /* Run s-expressions interactively from a REPL.
  * ************************************************************************** */
+
+/* Print a welcome banner also including the GPL legal notes.  This should be
+   printed on interactive runs. */
+void
+jitterlisp_interactive_banner (void);
 
 /* Run the JitterLisp interactive REPL until the reader finds #<eof>.  Treat
    errors (at either read or eval time) internally, without ever propagating

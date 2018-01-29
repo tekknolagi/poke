@@ -52,7 +52,8 @@ enum jitterlisp_negative_option
     jitterlisp_negative_option_omit_nothing = -4,
     jitterlisp_negative_option_vm = -5,
     jitterlisp_negative_option_repl = -6,
-    jitterlisp_negative_option_no_colorize = -7
+    jitterlisp_negative_option_no_colorize = -7,
+    jitterlisp_negative_option_no_cross_disassembler = -8
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
@@ -64,7 +65,8 @@ enum jitterlisp_long_only_option
     jitterlisp_long_only_option_no_omit_nothing = -22,
     jitterlisp_long_only_option_no_vm = -23,
     jitterlisp_long_only_option_no_repl = -24,
-    jitterlisp_long_only_option_dump_version = -25
+    jitterlisp_long_only_option_dump_version = -25,
+    jitterlisp_long_only_option_cross_disassembler = -26,
   };
 
 /* Command-line option specification. */
@@ -77,7 +79,8 @@ static struct argp_option jitterlisp_option_specification[] =
    /* File negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 11},
    {"repl", jitterlisp_negative_option_repl, NULL, 0,
-    "Run interactively, with a REPL (default)"},
+    "Run interactively, with a REPL (default unless files are given on the "
+    "command line)"},
    {"no-batch", '\0', NULL, OPTION_ALIAS },
 
    /* Interaction options. */
@@ -93,7 +96,7 @@ static struct argp_option jitterlisp_option_specification[] =
    {NULL, '\0', NULL, OPTION_DOC, "Command-line s-expression evaluation:", 30},
    {"eval", 'e', "SEXPRS", 0,
     "Evaluate the given s-expressions after running the files (if any) "
-    "and before running the REPL (unless the REPL is disabled)" },
+    "and before running the REPL (if enabled)" },
 
    /* Debugging options. */
    {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 40},
@@ -108,6 +111,8 @@ static struct argp_option jitterlisp_option_specification[] =
     "Don't load the Lisp library" },
    {"compact-uninterned", jitterlisp_long_only_option_compact_uninterned, NULL,
     0, "Print uninterned symbols in compact notation" },
+   {"cross-disassembler", jitterlisp_long_only_option_cross_disassembler, NULL,
+    0, "Use the cross-disassembler instead of the native disassembler" },
    /* Debugging negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 41},
    {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
@@ -121,6 +126,9 @@ static struct argp_option jitterlisp_option_specification[] =
     "Load the Lisp library (default)" },
    {"no-compact-uninterned", jitterlisp_negative_option_no_compact_uninterned,
     NULL, 0, "Don't print uninterned symbols in compact notation (default)" },
+   {"no-cross-disassembler", jitterlisp_negative_option_no_cross_disassembler,
+    NULL, 0, "Use the native disassembler instead of the cross-disassembler "
+    "(default)" },
 
    {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 50},
    {"dump-version", jitterlisp_long_only_option_dump_version, NULL, 0,
@@ -170,12 +178,12 @@ parse_opt (int key, char *arg, struct argp_state *state)
     /* File options. */
     case jitterlisp_long_only_option_no_repl:
     case 'q':
-      sp->repl = false;
+      sp->repl = jitterlisp_run_repl_no;
       break;
 
     /* File negative options. */
     case jitterlisp_negative_option_repl:
-      sp->repl = true;
+      sp->repl = jitterlisp_run_repl_yes;
       break;
 
     /* Interaction options. */
@@ -209,6 +217,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case jitterlisp_long_only_option_compact_uninterned:
       sp->print_compact_uninterned_symbols = true;
       break;
+    case jitterlisp_long_only_option_cross_disassembler:
+      sp->cross_disassembler = true;
+      break;
 
     /* Debugging negative options. */
     case jitterlisp_negative_option_no_colorize:
@@ -225,6 +236,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case jitterlisp_negative_option_no_compact_uninterned:
       sp->print_compact_uninterned_symbols = false;
+      break;
+    case jitterlisp_negative_option_no_cross_disassembler:
+      sp->cross_disassembler = false;
       break;
 
     /* Scripting options. */
@@ -263,7 +277,19 @@ main (int argc, char **argv)
      provided in the command line.  We also define the "settings pointer"
      sp as a pointer to it, for convenience. */
   argp_parse (& argp, argc, argv, 0, 0, & jitterlisp_settings);
+
+  /* In case no REPL option was given decide whether to run it: yes iff no
+     file was given. */
   struct jitterlisp_settings * const sp = & jitterlisp_settings;
+  if (sp->repl == jitterlisp_run_repl_default)
+    sp->repl = (sp->input_file_path_names.used_size != 0
+                ? jitterlisp_run_repl_no
+                : jitterlisp_run_repl_yes);
+  /* From now on sp->repl can be used as a boolean. */
+
+  /* If running interactively print the banner, as per the GPL. */
+  if (sp->repl)
+    jitterlisp_interactive_banner ();
 
   /* Initialize the VM substystem, unless disabled. */
   if (sp->vm)
