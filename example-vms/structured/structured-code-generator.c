@@ -1,6 +1,6 @@
 /* Jittery structured language example: code generator implementation.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jitter structured-language example, distributed
@@ -278,16 +278,24 @@ structured_translate_statement (struct structuredvm_program *vmp,
       }
     case structured_statement_case_while_do:
       {
+        /* I compile a while..do loop as a do..while loop, with a single
+           conditional branch at the end:
+                 b $before_guard
+              $loop_beginning:
+                 [body]
+              $before_guard:
+                 [guard]
+                 bt $loop_beginning */
+        structuredvm_label loop_beginning = structuredvm_fresh_label (vmp);
         structuredvm_label before_guard = structuredvm_fresh_label (vmp);
-        structuredvm_label after_loop = structuredvm_fresh_label (vmp);
-        structuredvm_append_label (vmp, before_guard);
-        structured_translate_expression (vmp, s->while_do_guard, env);
-        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
-        structuredvm_append_label_parameter (vmp, after_loop);
-        structured_translate_statement (vmp, s->while_do_body, env);
         STRUCTUREDVM_APPEND_INSTRUCTION(vmp, b);
         structuredvm_append_label_parameter (vmp, before_guard);
-        structuredvm_append_label (vmp, after_loop);
+        structuredvm_append_label (vmp, loop_beginning);
+        structured_translate_statement (vmp, s->while_do_body, env);
+        structuredvm_append_label (vmp, before_guard);
+        structured_translate_expression (vmp, s->while_do_guard, env);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bt);
+        structuredvm_append_label_parameter (vmp, loop_beginning);
         break;
       }
     case structured_statement_case_repeat_until:
