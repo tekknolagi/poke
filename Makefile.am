@@ -1000,6 +1000,10 @@ EXTRA_DIST += \
 # Jittery Lisp example.
 # ################################################################
 
+# The JitterLisp VM specification is the actual source.  This ensures it's
+# distributed.
+JITTER_NON_GENERATED_FILES += example-vms/jitterlisp/jitterlisp.jitter
+
 # Start with an empty list of JitterLisp programs.  I will add to this
 # incrementally, checking if every variant is to be built.
 PROGRAMS_JITTERLISP =
