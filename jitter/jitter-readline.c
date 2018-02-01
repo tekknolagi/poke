@@ -1,6 +1,6 @@
 /* Readline: either a GNU readline wrapper or a trivial emulator -- header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -32,6 +32,7 @@
 
 #ifdef JITTER_HAS_GNU_READLINE
 /* Include GNU Readline headers. */
+# include <stdio.h>
 # include <readline/readline.h>
 # include <readline/history.h>
 
