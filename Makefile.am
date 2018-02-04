@@ -1381,6 +1381,17 @@ EXTRA_DIST += \
 # Other files for JitterLisp.
 EXTRA_DIST += example-vms/jitterlisp/THANKS
 
+# JitterLisp documentation.
+info_TEXINFOS += \
+  example-vms/jitterlisp/doc/jitterlisp.texi
+example_vms_jitterlisp_doc_jitterlisp_TEXINFOS = \
+  $(srcdir)/example-vms/jitterlisp/doc/gpl.texi \
+  $(srcdir)/example-vms/jitterlisp/doc/fdl.texi
+# This is an easy way of not distributing two copies of the same two files.
+$(srcdir)/example-vms/jitterlisp/doc/gpl.texi: doc/gpl.texi
+	cp "$<" "$@"
+$(srcdir)/example-vms/jitterlisp/doc/fdl.texi: doc/fdl.texi
+	cp "$<" "$@"
 
 # Brainfuck example VM.
 # ################################################################

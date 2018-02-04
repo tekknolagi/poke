@@ -194,7 +194,10 @@ void
 jitterlisp_validate_primitive (jitterlisp_object o)
 {
   if (! JITTERLISP_IS_PRIMITIVE(o))
+    {
+printf ("About "); jitterlisp_print_to_stream (stdout, o); printf ("\n"); // FIXME: add to the error message
     jitterlisp_error_cloned ("jitterlisp_validate_primitive: non-primitive argument");
+    }
 }
 
 void

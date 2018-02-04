@@ -143,28 +143,37 @@ jitterlisp_apply_primitive (jitterlisp_object primitive,
    argument of JITTERLISP_PRIMITIVE_FUNCTION_ above.  Check that the next
    argument has the given type (which is allowed to be ANYTHING , if any
    object is accepted); error out on type error, and simply advance
-   the next-argument pointer otherwise. */
-#define JITTERLISP_CHECK_TYPE(_jitterlisp_type_suffix)                      \
-  JITTER_BEGIN_                                                             \
-    /* Error out if the next argument doesn't have the required type. */    \
-    if (! JITTER_CONCATENATE_TWO(JITTERLISP_IS_, _jitterlisp_type_suffix)(  \
-             * _jitterlisp_next_arg))                                       \
-      {                                                                     \
-        /* FIXME: integrate into jitter_error_cloned. */                    \
-        printf ("About the %i-th (0-based) actual for %s  ",                \
-                (int) (_jitterlisp_next_arg - args),                        \
-                _jitterlisp_the_name_suffix);                               \
-        jitterlisp_print_to_stream (stdout, * _jitterlisp_next_arg);        \
-        printf (":\n");                                                     \
-        jitterlisp_error_cloned ("invalid argument type for primitive "     \
-                                 "(not "                                    \
-                                 JITTER_STRINGIFY(_jitterlisp_type_suffix)  \
-                                 ")");                                      \
-      }                                                                     \
-    /* Increment the next-argumnent pointer so that the next type check */  \
-    /* affects the next argument. */                                        \
-    _jitterlisp_next_arg ++;                                                \
-  JITTER_END_
+   the next-argument pointer otherwise.
+   Notice that here we keep the type checking code even if compiling an
+   unsafe JitterLisp: the unsafety in only in compiled code, where it
+   matters. */
+#if 0//#ifdef JITTERLISP_UNSAFE
+# define JITTERLISP_CHECK_TYPE(_jitterlisp_type_suffix)  \
+    JITTER_BEGIN_                                        \
+    JITTER_END_
+#else
+# define JITTERLISP_CHECK_TYPE(_jitterlisp_type_suffix)                       \
+    JITTER_BEGIN_                                                             \
+      /* Error out if the next argument doesn't have the required type. */    \
+      if (! JITTER_CONCATENATE_TWO(JITTERLISP_IS_, _jitterlisp_type_suffix)(  \
+               * _jitterlisp_next_arg))                                       \
+        {                                                                     \
+          /* FIXME: integrate into jitter_error_cloned. */                    \
+          printf ("About the %i-th (0-based) actual for %s  ",                \
+                  (int) (_jitterlisp_next_arg - args),                        \
+                  _jitterlisp_the_name_suffix);                               \
+          jitterlisp_print_to_stream (stdout, * _jitterlisp_next_arg);        \
+          printf (":\n");                                                     \
+          jitterlisp_error_cloned ("invalid argument type for primitive "     \
+                                   "(not "                                    \
+                                   JITTER_STRINGIFY(_jitterlisp_type_suffix)  \
+                                   ")");                                      \
+        }                                                                     \
+      /* Increment the next-argumnent pointer so that the next type check     \
+         affects the next argument. */                                        \
+      _jitterlisp_next_arg ++;                                                \
+    JITTER_END_
+#endif // #ifdef JITTERLISP_UNSAFE
 
 /* Expand to a C function definition for a 0-ary primitive, using
    JITTERLISP_PRIMITIVE_FUNCTION_ . */
@@ -457,8 +466,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_0_(gensym,
   { JITTERLISP_GENSYM_(res); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(constantp, SYMBOL,
   { JITTERLISP_CONSTANTP_(res, args [0]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(make_constant, SYMBOL,
-  { JITTERLISP_MAKE_CONSTANT_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(make_constantb, SYMBOL,
+  { JITTERLISP_MAKE_CONSTANTB_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(definedp, SYMBOL,
   { JITTERLISP_DEFINEDP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(symbol_global, SYMBOL,
@@ -481,6 +490,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_4_(interpreted_closure_setb,
                                  INTERPRETED_CLOSURE, ENVIRONMENT, SYMBOLS, AST,
   { JITTERLISP_INTERPRETED_CLOSURE_SET_(res, args [0], args [1], args [2],
                                         args [3]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(compiled_closure_in_arity, COMPILED_CLOSURE,
+  { JITTERLISP_COMPILED_CLOSURE_IN_ARITY_(res, args [0]); })
 /* Vector operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
   { JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]); })
@@ -608,8 +619,10 @@ JITTERLISP_PRIMITIVE_FUNCTION_2_(apply, CLOSURE, LIST,
 JITTERLISP_PRIMITIVE_FUNCTION_2_(apply_primitive, PRIMITIVE, LIST,
   { JITTERLISP_APPLY_PRIMITIVE_(res, args [0], args [1]); })
 /* Compilation operations. */
-JITTERLISP_PRIMITIVE_FUNCTION_4_(compileb, CLOSURE, FIXNUM, LIST, LIST,
-  { JITTERLISP_COMPILEB_(res, args [0], args [1], args [2], args [3]); })
+JITTERLISP_PRIMITIVE_FUNCTION_4_(interpreted_closure_make_compiledb,
+                                 CLOSURE, FIXNUM, LIST, LIST,
+  { JITTERLISP_INTERPRETED_CLOSURE_MAKE_COMPILEDB_(res, args [0], args [1],
+                                                   args [2], args [3]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(compiled_closure_print, COMPILED_CLOSURE,
   { JITTERLISP_COMPILED_CLOSURE_PRINT_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(compiled_closure_disassemble, COMPILED_CLOSURE,
@@ -721,7 +734,7 @@ jitterlisp_primitives []
       /* Symbol operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("gensym", 0, gensym),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("constant?", 1, constantp),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-constant", 1, make_constant),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-constant!", 1, make_constantb),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("defined?", 1, definedp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("symbol-global", 1, symbol_global),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("undefine", 1, undefine),
@@ -736,6 +749,8 @@ jitterlisp_primitives []
                                              interpreted_closure_body),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interpreted-closure-set!", 4,
                                              interpreted_closure_setb),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compiled-closure-in-arity", 1,
+                                             compiled_closure_in_arity),
       /* Vector operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */
@@ -809,7 +824,9 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("apply-primitive", 2,
                                              apply_primitive),
       /* Compilation operations. */
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compile!", 4, compileb),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_(
+         "interpreted-closure-make-compiled!", 4,
+         interpreted_closure_make_compiledb),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compiled-closure-print", 1,
                                              compiled_closure_print),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compiled-closure-disassemble", 1,

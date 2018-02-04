@@ -72,4 +72,22 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
 jitterlisp_object
 jitterlisp_eval_interpreter_ast (jitterlisp_object ast, jitterlisp_object env);
 
+
+
+
+/* Call into interpreted code.
+ * ************************************************************************** */
+
+/* Call the pointed compiled closure using as arguments the pointed actuals in
+   the given number, already evaluated; return the result or error out in case
+   of problems at any point during the call extent.  Assume that the closure
+   in-arity is correct, without checking.
+
+   Rationale: this is useful to call an interpreted closure from compiled
+   code.  Compiled code checks for in-arity mismatches before the call. */
+jitterlisp_object
+jitterlisp_call_interpreted (const struct jitterlisp_interpreted_closure *ic,
+                             jitterlisp_object *actual_values,
+                             jitter_uint actual_value_no);
+
 #endif // #ifndef JITTERLISP_EVAL_INTERPRETER_H_

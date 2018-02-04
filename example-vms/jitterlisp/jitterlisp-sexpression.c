@@ -139,7 +139,7 @@ jitterlisp_make_interned (const char *name)
 
 /* Globally named object variables. */
 jitterlisp_object jitterlisp_low_level_macro_args;
-jitterlisp_object jitterlisp_primitive_make_constant;
+jitterlisp_object jitterlisp_primitive_make_constantb;
 jitterlisp_object jitterlisp_label;
 
 /* Initialize globally named object variables. */
@@ -148,7 +148,7 @@ jitterlisp_initialize_globally_named_objects (void)
 {
   jitterlisp_low_level_macro_args
     = jitterlisp_make_interned ("low-level-macro-args");
-  jitterlisp_primitive_make_constant
-    = jitterlisp_make_interned ("primitive-make-constant");;
+  jitterlisp_primitive_make_constantb
+    = jitterlisp_make_interned ("primitive-make-constant!");;
   jitterlisp_label = jitterlisp_make_interned ("label");;
 }
