@@ -38,7 +38,7 @@ end
 #################################################################
 
 # We only need one register class.
-register-class r 3
+register-class r 5
   code
     jitterlisp_object
   end
@@ -50,17 +50,44 @@ end
 ## Functions and globals to wrap.
 #################################################################
 
-# FIXME: these will need to grow.
 wrapped-functions
+  # Libc cunctions which may be implicitly called by compiled code, for
+  # example when passing parameters.
+# FIXME: no, GCC is not stupid and generates these directly in its
+# intermediate representation.  The hack doesn't work here.
+
+  # Temporary/debugging stuff.
+  debug_pointer
   log_
-  printf
+  putchar
+#  printf
   jitterlisp_print_to_stream
-  jitterlispvm_error_invalid_primitive_argument_type
+  dump_stacks
+  jitter_log_instruction
+
+  # Calling interpreted closures from compiled code.
+  jitterlisp_call_interpreted
+
+  # These are needed in operations, as per jitterlisp-operations.h .  Only
+  # the functions we call *directly* thru instructions need to be wrapped:
+  # low-priority primitives, not worth optimizing, are all called via the
+  # "primitive" VM instruction which invokes a function pointer given as an
+  # instruction argument.
+  # (None yet.)
+  # [FIXME: I'll need some function related to eval, to call interpreted
+  # code from VM code]
+
+  # Some primitives, notably cons , allocate heap memory from VM instructions.
+  jitterlisp_allocate
+
+  # Erroring out from instructions.
+  jitterlisp_fail_from_vm
+  jitterlispvm_error_invalid_primitive_argument_type_unfriendly
+  jitterlispvm_error_invalid_primitive_argument_type_friendly
 end
 
 wrapped-globals
   stack_printf_format_string
-  my_stdout_p
 end
 
 early-header-c
@@ -71,13 +98,18 @@ end
 
 initialization-c
   code
-    //printf ("Hello from the Jittery per-run initialization\n");
+    printf ("Hello from the Jittery per-run initialization...\n");
+    //jitter_log_instruction (BEFORE, 0, NULL/*& jitter_state_runtime*/, jitter_state_runtime, & original_state->vmprefix_state_backing);
+    //printf ("Done with the Jittery per-run initialization\n");
+printf ("TOP: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
+printf ("UT:  %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());
+    printf ("...Now running the code.\n");
   end
 end
 
 finalization-c
   code
-    //printf ("Hello from the Jittery per-run finalization\n");
+    printf ("Goodbye from the Jittery run\n");
   end
 end
 
@@ -88,31 +120,179 @@ early-c
 end
 late-c
   code
+// FIXME: this obviously breaks optimization, and is only for debugging.
+
+//#define the_jitter_state_runtime_pointer (& jitter_state_runtime)
+//#define the_jitter_state_runtime_pointer (jitter_state_runtime)
+#define the_jitter_state_runtime_pointer NULL
+
+#define the_jitter_state_runtime_type typeof (the_jitter_state_runtime_pointer)
+//#define the_jitter_state_runtime_type struct jitterlispvm_state_runtime
+
+#define state_runtime_selector .
+
+__attribute__ ((unused))
+void
+debug_pointer (jitter_int index, const void *pointer)
+{
+  return;
+  printf ("[DEBUG: %lli %p]\n", (long long) index, pointer);
+  fflush (stdout);
+}
+
+// FIXME: move this functionality into Jitter.
+__attribute__ ((unused))
+static void
+jitter_log_instruction (int order,
+                        jitter_int specialized_opcode,
+                        //const struct jitterlispvm_state_runtime *rp,
+                        const struct jitterlispvm_state_runtime r,
+                        const struct jitterlispvm_state_backing *b
+                        )
+{
+  static int counter = 0;
+  char *order_string;
+  switch (order)
+    {
+    case BEFORE: order_string = "Before"; break;
+    case BEGINNING: order_string = "At the beginning of"; break;
+    case END_OF: order_string = "At the end of"; break;
+    case AFTER:  order_string = "After"; break;
+    default:
+      jitter_fatal ("unknown order %i", (int) order);
+    }
+  //const struct jitterlispvm_state_runtime r = *rp;
+  printf ("%i.  %s specialized instruction %s\n",
+          counter ++,
+          order_string,
+          jitterlispvm_specialized_instruction_names [specialized_opcode]);
+
+  const struct jitter_stack_backing *mainstack_backing
+    = & b->jitter_stack_mainstack_backing;
+  const jitterlisp_object *mainstack_memory
+    = (const jitterlisp_object *) mainstack_backing->memory;
+  jitterlisp_object mainstack_top
+    = r.jitter_tos_optimized_stack_mainstack_top;
+  const jitterlisp_object *mainstack_undertop_p
+    = r.jitter_tos_optimized_stack_mainstack_under_top_p;
+
+  const struct jitter_stack_backing *returnstack_backing
+    = & b->jitter_stack_returnstack_backing;
+  const jitterlisp_object *returnstack_memory
+    = (const jitterlisp_object *) returnstack_backing->memory;
+  const jitterlisp_object *returnstack_top_p
+    = r.jitter_non_tos_optimized_stack_returnstack_top_p;
+
+  const jitterlisp_object *p;
+
+  printf ("  Main stack (height %li + 1):\n", (long int) (mainstack_undertop_p - mainstack_memory) + 1);
+  printf ("    %18s: %p\n", "Top", (void*) mainstack_top);
+  for (p = mainstack_undertop_p; p >= mainstack_memory; p --)
+    printf ("    %18p: %p\n", p, (void*) *p);
+
+  printf ("  Return stack (height %li):\n", (long int) (returnstack_top_p - returnstack_memory) + 1);
+  for (p = returnstack_top_p; p >= returnstack_memory; p --)
+    printf ("    %18p: %p\n", p, (void*) *p);
+  printf ("%%r0: %p\n", (void*) r.jitter_fast_register_r_0);
+  printf ("%%r1: %p\n", (void*) r.jitter_fast_register_r_1);
+
+  printf ("\n");
+  fflush (stdout);
+}
+
+__attribute__ ((unused))
+static void
+dump_stacks (int where, the_jitter_state_runtime_type state_runtime)
+{
+return;
+/*
+  printf ("In ");
+  switch (where)
+    {
+    case 0:
+      printf ("prolog");
+      break;
+    case 1:
+      printf ("return before popping");
+      break;
+    case 2:
+      printf ("return after popping");
+      break;
+    case 3:
+      printf ("call before making place");
+      break;
+    case 4:
+      printf ("call after making place");
+      break;
+    default:
+      printf ("unknown");
+    }
+  printf (":\n");
+  jitter_uint mainstack_top
+    = JITTER_STACK_TOS_TOP(jitterlisp_object,
+                           state_runtime state_runtime_selector,
+                           mainstack);
+  jitter_uint mainstack_undertop
+    = JITTER_STACK_TOS_UNDER_TOP(jitterlisp_object,
+                                 state_runtime state_runtime_selector,
+                                 mainstack);
+  jitter_uint returnstack_top
+    = JITTER_STACK_NTOS_TOP(jitterlisp_object,
+                            state_runtime state_runtime_selector,
+                            returnstack);
+  jitter_uint returnstack_undertop
+    = JITTER_STACK_NTOS_UNDER_TOP(jitterlisp_object,
+                                  state_runtime state_runtime_selector,
+                                  returnstack);
+  printf ("* Main:     %p %p\n",
+           (void*) mainstack_undertop, (void*) mainstack_top);
+  printf ("  Return:   %p %p\n",
+          (void*) returnstack_undertop, (void*) returnstack_top);
+
+  printf ("\n");
+  */
+}
+
 /* Open an argument-type-checking sequence, for the given number of arguments
    to be read from the main stack.  This is a helper macro for
    JITTERLISPVM_CHECK_TYPES_* . */
 #define JITTERLISPVM_BEGIN_CHECK_TYPES_(_jitterlisp_vm_in_arity)  \
   JITTER_BEGIN_                                                   \
-    int _jitterlispvm_arg_depth = (_jitterlisp_vm_in_arity) - 1;
+    int _jitterlispvm_arg_no = (_jitterlisp_vm_in_arity);         \
+    int _jitterlispvm_arg_index __attribute__ ((unused)) = 0;     \
+    int _jitterlispvm_arg_depth __attribute__ ((unused)) \
+      = _jitterlispvm_arg_no - 1;
 
 /* Check the next argument in the sequence, failing if its type doesn't match
-   the given uppercase suffix. */
-#define JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type)       \
-  {                                                                     \
-    if (! __builtin_expect(                                             \
-             JITTER_CONCATENATE_TWO(JITTERLISP_IS_,                     \
-                                    _jitterlisp_uppercase_type)(        \
-                (JITTER_AT_DEPTH_MAINSTACK(_jitterlispvm_arg_depth))),  \
-                           true))                                       \
-      jitterlispvm_error_invalid_primitive_argument_type ();            \
-    _jitterlispvm_arg_depth --;                                         \
-  }
-
-// FIXME: just a test!
-#if 0
-# undef JITTERLISPVM_CHECK_NEXT_TYPE_
-# define JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type) if (_jitterlispvm_arg_depth < 0) { /*do nothing*/ }
-#endif
+   the given uppercase suffix.  Do nothing if compiling an unsafe JitterLisp. */
+#ifdef JITTERLISP_UNSAFE
+# define JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type,    \
+                                       _jitterlisp_error_fast_label)  \
+    { /* Do nothing. */ }
+#else
+# define JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type,     \
+                                       _jitterlisp_error_fast_label)   \
+    {                                                                  \
+      bool _jitterlisp_is_valid __attribute__ ((unused))               \
+        = (JITTER_CONCATENATE_TWO(JITTERLISP_IS_,                      \
+                                  _jitterlisp_uppercase_type)(         \
+              (JITTER_AT_DEPTH_MAINSTACK(_jitterlispvm_arg_depth))));  \
+      /* FIXME: None of the following four ways of jumping is really   \
+         satisfactory.  They are all slow or bloated in different      \
+         ways, and which one is the least bad depends on the           \
+         architecture. */                                              \
+      /* JITTER_BRANCH_FAST_IF_ZERO(_jitterlisp_is_valid,              \
+                                    _jitterlisp_error_fast_label); */  \
+      if (! __builtin_expect (_jitterlisp_is_valid, true))             \
+        JITTER_BRANCH_FAST(_jitterlisp_error_fast_label);              \
+      /* if (! __builtin_expect (_jitterlisp_is_valid, true))          \
+        jitterlisp_fail_from_vm (); */                                 \
+      /* if (! __builtin_expect (_jitterlisp_is_valid, true))          \
+         JITTERLISPVM_ERROR_INVALID_PRIMITIVE_ARGUMENT_TYPE_; */       \
+      _jitterlispvm_arg_depth --;                                      \
+      _jitterlispvm_arg_index ++;                                      \
+    }
+#endif // #ifdef JITTERLISP_UNSAFE
 
 /* Close an argument-type-checking sequence.  This is a helper macro for
    JITTERLISPVM_CHECK_TYPES_* . */
@@ -122,40 +302,102 @@ late-c
 /* For in-arity N, check that the topmost N arguments have the given N types
    expressed as uppercase suffixes, respectively.  This functionality is
    provided for a few common values of N . */
-#define JITTERLISPVM_CHECK_TYPES_1(_jitterlisp_uppercase_type_0)  \
+#define JITTERLISPVM_CHECK_TYPES_1(_jitterlisp_uppercase_type_0,  \
+                                   _jitterlisp_error_fast_label)  \
   JITTERLISPVM_BEGIN_CHECK_TYPES_(1)                              \
-    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0,   \
+                                  _jitterlisp_error_fast_label);  \
   JITTERLISPVM_END_CHECK_TYPES_
 #define JITTERLISPVM_CHECK_TYPES_2(_jitterlisp_uppercase_type_0,  \
-                                   _jitterlisp_uppercase_type_1)  \
+                                   _jitterlisp_uppercase_type_1,  \
+                                   _jitterlisp_error_fast_label)  \
   JITTERLISPVM_BEGIN_CHECK_TYPES_(2)                              \
-    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0);  \
-    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_1);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0,   \
+                                  _jitterlisp_error_fast_label);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_1,   \
+                                  _jitterlisp_error_fast_label);  \
   JITTERLISPVM_END_CHECK_TYPES_
 #define JITTERLISPVM_CHECK_TYPES_3(_jitterlisp_uppercase_type_0,  \
                                    _jitterlisp_uppercase_type_1,  \
-                                   _jitterlisp_uppercase_type_2)  \
+                                   _jitterlisp_uppercase_type_2,  \
+                                   _jitterlisp_error_fast_label)  \
   JITTERLISPVM_BEGIN_CHECK_TYPES_(3)                              \
-    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0);  \
-    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_1);  \
-    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_2);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0,   \
+                                  _jitterlisp_error_fast_label);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_1,   \
+                                  _jitterlisp_error_fast_label);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_2,   \
+                                  _jitterlisp_error_fast_label);  \
   JITTERLISPVM_END_CHECK_TYPES_
 #define JITTERLISPVM_CHECK_TYPES_4(_jitterlisp_uppercase_type_0,  \
                                    _jitterlisp_uppercase_type_1,  \
                                    _jitterlisp_uppercase_type_2,  \
-                                   _jitterlisp_uppercase_type_3)  \
+                                   _jitterlisp_uppercase_type_3,  \
+                                   _jitterlisp_error_fast_label)  \
   JITTERLISPVM_BEGIN_CHECK_TYPES_(4)                              \
-    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0);  \
-    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_1);  \
-    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_2);  \
-    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_3);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_0,   \
+                                  _jitterlisp_error_fast_label);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_1,   \
+                                  _jitterlisp_error_fast_label);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_2,   \
+                                  _jitterlisp_error_fast_label);  \
+    JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type_3,   \
+                                  _jitterlisp_error_fast_label);  \
   JITTERLISPVM_END_CHECK_TYPES_
 
-__attribute__ ((noreturn)) // Unfortunately this is invisible across the wrapper.
+#if 0
+# define JITTERLISPVM_ERROR_INVALID_PRIMITIVE_ARGUMENT_TYPE_          \
+    jitterlispvm_error_invalid_primitive_argument_type_unfriendly ()
+#else
+# define JITTERLISPVM_ERROR_INVALID_PRIMITIVE_ARGUMENT_TYPE_     \
+    jitterlispvm_error_invalid_primitive_argument_type_friendly  \
+       (JITTER_SPECIALIZED_INSTRUCTION_OPCODE,                   \
+        _jitterlispvm_arg_index,                                 \
+        JITTER_AT_DEPTH_MAINSTACK(_jitterlispvm_arg_depth))
+#endif
+
+
+// Unfortunately the attribute is invisible across the wrapper.
+// This is convenient for debugging, but I don't want to use it in production:
+// passing parameters at every call makes the code much bigger, even if the
+// call is not executed.
+__attribute__ ((noreturn, unused))
 static void
-jitterlispvm_error_invalid_primitive_argument_type (void)
+jitterlispvm_error_invalid_primitive_argument_type_friendly
+   (int sins_opcode,
+    int arg_index,
+    jitterlisp_object o)
+{
+  /* Print information about the argument and its hex representation:
+     don't dare yet to print it as a Lisp object, as the printer might
+     crash if there is a bug and the object is invalid. */
+  printf ("%s: About the %i-th (0-based) primitive argument %p\n",
+          jitterlispvm_specialized_instruction_names [sins_opcode],
+          arg_index, (void *) o);
+
+  /* This shouldn't be needed on GNU, but flush stdout so that we can be
+     sure that the previous line is visible before we crash. */
+  fflush (stdout);
+
+  /* Okay, now we can print in in Lisp. */
+  printf ("  (in Lisp ");
+  jitterlisp_print_to_stream (stdout, o);
+  printf ("):\n");
+
+  jitterlisp_error_cloned ("invalid primitive argument type");
+}
+
+__attribute__ ((noreturn, unused))
+static void
+jitterlispvm_error_invalid_primitive_argument_type_unfriendly (void)
 {
   jitterlisp_error_cloned ("invalid primitive argument type");
+}
+
+static void
+jitterlisp_fail_from_vm (void)
+{
+  jitterlisp_error_cloned ("unspecified error raised by VM code");
 }
 
 /* This is convenient for testing.  FIXME: remove. */
@@ -166,8 +408,8 @@ log_ (long n)
   printf ("Log: %li\n", n);
 }
 
-    static const char *stack_printf_format_string = "%" JITTER_PRIi "\n";
-    static FILE **my_stdout_p = & stdout;
+    static const char *stack_printf_format_string __attribute__ ((unused))
+      = "%" JITTER_PRIi "\n";
   end
 end
 
@@ -186,6 +428,126 @@ print_object (FILE *out, jitter_uint u)
 {
   jitterlisp_print_to_stream (out, u);
 }
+  end
+end
+
+
+
+
+## Debugging code for instructions.
+#################################################################
+
+early-c
+  code
+#define BEFORE    1
+#define BEGINNING 2
+#define AFTER     3
+#define END_OF    4
+  end
+end
+
+late-c
+#initialization-c
+  code
+    //static
+jitter_uint last_specialized_opcode __attribute__ ((unused))
+  = -1;
+  end
+end
+
+instruction-beginning-c
+  code
+  /*
+    if (JITTER_SPECIALIZED_INSTRUCTION_OPCODE
+        != jitterlispvm_specialized_instruction_opcode_debug
+        )
+      {
+        last_specialized_opcode = JITTER_SPECIALIZED_INSTRUCTION_OPCODE;
+        jitter_log_instruction (BEGINNING,
+                                last_specialized_opcode,
+                                ((const struct jitterlispvm_state_runtime)
+                                 jitter_state_runtime),
+                                ((const struct jitterlispvm_state_backing *)
+                                 & original_state->vmprefix_state_backing));
+        asm volatile ("nop");
+        asm volatile ("nop");
+      }
+  */
+//putchar ('[');
+  end
+end
+
+instruction-end-c
+  code
+  //    putchar (']');
+  /*
+    asm volatile ("nop");
+    asm volatile ("nop");
+    jitter_log_instruction (END_OF,
+                            last_specialized_opcode,
+                            ((const struct jitterlispvm_state_runtime)
+                             jitter_state_runtime),
+                            ((const struct jitterlispvm_state_backing *)
+                             & original_state->vmprefix_state_backing));
+  */
+  end
+end
+
+instruction debug ()
+  # non-relocatable
+  cold
+  code
+    jitter_int opcode;
+opcode = last_specialized_opcode;
+//    opcode = 0;
+    // putchar ('*'); putchar ('\n');
+    jitter_log_instruction (AFTER,
+                            opcode,
+                            ((const struct jitterlispvm_state_runtime)
+                             jitter_state_runtime),
+                            ((const struct jitterlispvm_state_backing *)
+                             & original_state->vmprefix_state_backing));
+
+/*
+*/
+  //(void)previous_specialized_opcode;
+  /*
+  static int i = 0;
+  printf ("%i. After specialized instruction %s\n", i ++,
+          jitterlispvm_specialized_instruction_names [previous_specialized_opcode]);
+  struct jitterlispvm_state_backing * const b
+    = & original_state->vmprefix_state_backing;
+
+  const struct jitter_stack_backing *mainstack_backing
+    = & b->jitter_stack_mainstack_backing;
+  const jitterlisp_object *mainstack_memory
+    = (const jitterlisp_object *) mainstack_backing->memory;
+  jitterlisp_object mainstack_top
+    = jitter_state_runtime.jitter_tos_optimized_stack_mainstack_top;
+  const jitterlisp_object *mainstack_undertop_p
+    = jitter_state_runtime.jitter_tos_optimized_stack_mainstack_under_top_p;
+
+  const struct jitter_stack_backing *returnstack_backing
+    = & b->jitter_stack_returnstack_backing;
+  const jitterlisp_object *returnstack_memory
+    = (const jitterlisp_object *) returnstack_backing->memory;
+  const jitterlisp_object *returnstack_top_p
+    = jitter_state_runtime.jitter_non_tos_optimized_stack_returnstack_top_p;
+
+  const jitterlisp_object *p;
+
+  printf ("  Main stack (height %li + 1):\n", (long int) (mainstack_undertop_p - mainstack_memory) + 1);
+  printf ("    %18s: %p\n", "Top", (void*) mainstack_top);
+  for (p = mainstack_undertop_p; p >= mainstack_memory; p --)
+    printf ("    %18p: %p\n", p, (void*) *p);
+
+  printf ("  Return stack (height %li):\n", (long int) (returnstack_top_p - returnstack_memory) + 1);
+  for (p = returnstack_top_p; p >= returnstack_memory; p --)
+    printf ("    %18p: %p\n", p, (void*) *p);
+
+  printf ("\n");
+  fflush (stdout);
+*/
   end
 end
 
@@ -218,6 +580,7 @@ instruction nip ()
   end
 end
 
+# FIXME: is this ever needed?
 instruction push-unspecified ()
   code
     JITTER_PUSH_UNSPECIFIED_MAINSTACK();
@@ -246,6 +609,7 @@ instruction push-global (?n print_object)
   end
 end
 
+# FIXME: use these, in rewrites.
 instruction push-nil ()
   code
     JITTER_PUSH_MAINSTACK(JITTERLISP_EMPTY_LIST);
@@ -291,8 +655,7 @@ end
 
 instruction copy-to-register (!R)
   code
-    jitter_int top = JITTER_TOP_MAINSTACK();
-    JITTER_ARG0 = top;
+    JITTER_ARG0 = JITTER_TOP_MAINSTACK();
   end
 end
 
@@ -320,6 +683,17 @@ instruction register-to-register (?R, !R)
   end
 end
 
+# Do a check on the top element, fast-branching to the given error-handling
+# routine in case of mismatch, and do nothing otherwise.
+# This does *not* pop an operand from the stack.
+instruction check-closure (?f)
+  code
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
+    if (! JITTERLISP_IS_CLOSURE(top))
+      JITTER_BRANCH_FAST(JITTER_ARGF0);
+  end
+end
+
 instruction branch (?f)
   code
     JITTER_BRANCH_FAST(JITTER_ARGF0);
@@ -330,7 +704,49 @@ instruction branch-if-false (?f)
   code
     jitterlisp_object top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
+/*
+asm volatile (""//"add $0, %[old_top], %[new_top]"
+     : [old_top] "+X" (top)
+       , [new_top] "+X" (JITTER_TOP_MAINSTACK())
+     );
+*/
+/*
+// Not only this generates terrible code: it also makes the TOS update
+// e nd up after the branch.
+asm volatile (""
+     : [top] "+X" (top)
+     : [state] "X" (jitter_state_runtime)
+     );
+*/
+/*
+// Equally useless.
+asm volatile ("" : : : "memory");
+*/
+//asm volatile ("" : "+X" (top) : : "memory");
+asm goto ("" : : "X"(top): : after);
     JITTER_BRANCH_FAST_IF_EQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
+//__builtin_unreachable ();
+after:;
+/*asm volatile ("addi $0, $0, 20"
+     : "+X" (JITTER_TOP_MAINSTACK())
+     );*/
+//a_label: ;
+  end
+end
+
+# Just an instruction using the top, even in an incorrect way.  Testing
+# branch-if-false compilation.
+instruction dummy ()
+  code
+    printf ("%li\n", (long)JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction branch-if-true (?f)
+  code
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
   end
 end
 
@@ -349,32 +765,22 @@ instruction canonicalize-boolean ()
   end
 end
 
-instruction not ()
-  code
-    JITTERLISP_NOT_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
-  end
-end
-
-instruction branch-if-true (?f)
-  code
-    jitterlisp_object top = JITTER_TOP_MAINSTACK();
-    JITTER_DROP_MAINSTACK();
-    JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
-  end
-end
-
 # The first argument is a primitive function pointer.
 # The second is its in-arity.
-instruction primitive (?n, ?n 0 1 2 3 4)
+instruction primitive (?n, ?n 0 1 2 3 4, ?f)
+  # non-relocatable
   code
+    /* The error-handling label is not actually used in this case: the
+       primitive function, written in C, has its own handling.  It's
+       harmless to have it anyway, as it makes the C code generator
+       more uniform. */
     jitterlisp_primitive_function p
       = (jitterlisp_primitive_function) JITTER_ARGP0;
     const jitter_uint in_arity = JITTER_ARGN1;
     JITTER_PUSH_UNSPECIFIED_MAINSTACK();
     //asm volatile ("nop");
-// FIXME: this is conceptually horrible.  I should use a specific macro
-// to get an internal pointer from a stack.
     jitterlisp_object *first_arg
+      // FIXME: add a stack operator to compute this address.
       = (& JITTER_UNDER_TOP_MAINSTACK()) - in_arity + 1;
     //asm volatile ("nop" : : "X" (first_arg));
     jitterlisp_object res = p (first_arg);
@@ -387,128 +793,138 @@ instruction primitive (?n, ?n 0 1 2 3 4)
   end
 end
 
-instruction primitive-car ()
+instruction primitive-car (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(CONS);
+    JITTERLISPVM_CHECK_TYPES_1(CONS, JITTER_ARGF0);
     JITTERLISP_CAR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-cdr ()
+instruction primitive-cdr (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(CONS);
+    JITTERLISPVM_CHECK_TYPES_1(CONS, JITTER_ARGF0);
     JITTERLISP_CDR_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-eqp ()
+instruction primitive-cons (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_2(ANYTHING, ANYTHING);
+    /* When this compiles to a total of five or six instructions in the
+       fast path I'll be a happy man. */
+    JITTERLISP_CONS_(JITTER_TOP_MAINSTACK(),
+                     JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-eqp (?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_2(ANYTHING, ANYTHING, JITTER_ARGF0);
     JITTERLISP_EQP_(JITTER_TOP_MAINSTACK(),
                     JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction primitive-not-eqp ()
+instruction primitive-not-eqp (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_2(ANYTHING, ANYTHING);
+    JITTERLISPVM_CHECK_TYPES_2(ANYTHING, ANYTHING, JITTER_ARGF0);
     JITTERLISP_NOT_EQP_(JITTER_TOP_MAINSTACK(),
                         JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction primitive-fixnum-eqp ()
+instruction primitive-fixnum-eqp (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
     JITTERLISP_EQP_(JITTER_TOP_MAINSTACK(),
                     JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction primitive-fixnum-not-eqp ()
+instruction primitive-fixnum-not-eqp (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
     JITTERLISP_NOT_EQP_(JITTER_TOP_MAINSTACK(),
                         JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction primitive-zerop ()
+instruction primitive-zerop (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_ZEROP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-non-zerop ()
+instruction primitive-non-zerop (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_NON_ZEROP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-positivep ()
+instruction primitive-positivep (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_POSITIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-non-positivep ()
+instruction primitive-non-positivep (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_NON_POSITIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-negativep ()
+instruction primitive-negativep (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_NEGATIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-non-negativep ()
+instruction primitive-non-negativep (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_NON_NEGATIVEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-lessp ()
+instruction primitive-lessp (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
     JITTERLISP_LESSP_(JITTER_TOP_MAINSTACK(),
                       JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction primitive-greaterp ()
+instruction primitive-greaterp (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
     JITTERLISP_GREATERP_(JITTER_TOP_MAINSTACK(),
                          JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction primitive-not-lessp ()
+instruction primitive-not-lessp (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
     JITTERLISP_NOTLESSP_(JITTER_TOP_MAINSTACK(),
                          JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction primitive-not-greaterp ()
+instruction primitive-not-greaterp (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
     JITTERLISP_NOTGREATERP_(JITTER_TOP_MAINSTACK(),
                             JITTER_UNDER_TOP_MAINSTACK(),
                             JITTER_TOP_MAINSTACK());
@@ -516,79 +932,79 @@ instruction primitive-not-greaterp ()
   end
 end
 
-instruction primitive-one-plus ()
+instruction primitive-one-plus (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_1PLUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-one-minus ()
+instruction primitive-one-minus (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_1MINUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-two-times ()
+instruction primitive-two-times (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_2TIMES_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-two-divided ()
+instruction primitive-two-divided (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_2DIVIDED_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-two-remainder ()
+instruction primitive-two-remainder (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_2REMAINDER_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-negate ()
+instruction primitive-negate (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
     JITTERLISP_NEGATE_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-primordial-plus ()
+instruction primitive-primordial-plus (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
     JITTERLISP_PLUS_(JITTER_TOP_MAINSTACK(),
                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction primitive-primordial-minus ()
+instruction primitive-primordial-minus (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
     JITTERLISP_MINUS_(JITTER_TOP_MAINSTACK(),
                       JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction primitive-primordial-times ()
+instruction primitive-primordial-times (?f)
   code
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
     JITTERLISP_TIMES_(JITTER_TOP_MAINSTACK(),
                       JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-instruction primitive-primordial-divided-unsafe ()
+instruction primitive-primordial-divided-unsafe (?f)
   code
     /* The second argument has already been validated if we are using this. */
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING, JITTER_ARGF0);
     JITTERLISP_DIVIDED_UNSAFE_(JITTER_TOP_MAINSTACK(),
                                JITTER_UNDER_TOP_MAINSTACK(),
                                JITTER_TOP_MAINSTACK());
@@ -596,10 +1012,10 @@ instruction primitive-primordial-divided-unsafe ()
   end
 end
 
-instruction primitive-quotient-unsafe ()
+instruction primitive-quotient-unsafe (?f)
   code
     /* The second argument has already been validated if we are using this. */
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING, JITTER_ARGF0);
     JITTERLISP_QUOTIENT_UNSAFE_(JITTER_TOP_MAINSTACK(),
                                JITTER_UNDER_TOP_MAINSTACK(),
                                JITTER_TOP_MAINSTACK());
@@ -607,10 +1023,10 @@ instruction primitive-quotient-unsafe ()
   end
 end
 
-instruction primitive-remainder-unsafe ()
+instruction primitive-remainder-unsafe (?f)
   code
     /* The second argument has already been validated if we are using this. */
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING);
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, ANYTHING, JITTER_ARGF0);
     JITTERLISP_REMAINDER_UNSAFE_(JITTER_TOP_MAINSTACK(),
                                  JITTER_UNDER_TOP_MAINSTACK(),
                                  JITTER_TOP_MAINSTACK());
@@ -618,77 +1034,208 @@ instruction primitive-remainder-unsafe ()
   end
 end
 
-instruction primitive-nullp ()
+instruction primitive-nullp (?f)
   code
     JITTERLISP_NULLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-non-nullp ()
+instruction primitive-non-nullp (?f)
   code
     JITTERLISP_NON_NULLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-nothingp ()
+instruction primitive-nothingp (?f)
   code
     JITTERLISP_NOTHINGP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-fixnump ()
+instruction primitive-fixnump (?f)
   code
     JITTERLISP_FIXNUMP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-characterp ()
+instruction primitive-characterp (?f)
   code
     JITTERLISP_CHARACTERP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-consp ()
+instruction primitive-consp (?f)
   code
     JITTERLISP_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-non-consp ()
+instruction primitive-non-consp (?f)
   code
     JITTERLISP_NON_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-not ()
+instruction primitive-symbolp (?f)
+  code
+    JITTERLISP_SYMBOLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-non-symbolp (?f)
+  code
+    JITTERLISP_NON_SYMBOLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-not (?f)
   code
     JITTERLISP_NOT_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-boolean-canonicalize ()
+instruction primitive-boolean-canonicalize (?f)
   code
     JITTERLISP_BOOLEAN_CANONICALIZE_(JITTER_TOP_MAINSTACK(),
                                      JITTER_TOP_MAINSTACK());
   end
 end
 
+# Take a compiled closure (no type checking), its arguments already evaluated,
+# and the number of arguments (untagged) on the top of stack.  Replace all the
+# stack operands with the call result.
+# Rationale: this instruction has been designed to be the first and only
+# instruction executed in the driver VM program, called from the AST interpreter
+# in C.
+# The same driver program can be generated once at initialization, and then
+# reused to launch procedures as needed: this is why the instruction takes
+# the closure in-arity from the stack instead of from an instruction argument.
+instruction call-from-c ()
+  caller
+  code
+  /*
+    jitter_log_instruction (0,
+                            //0,//JITTER_SPECIALIZED_INSTRUCTION_OPCODE,
+                            ((const struct jitterlispvm_state_runtime)
+                             jitter_state_runtime),
+                            ((const struct jitterlispvm_state_backing *)
+                             & original_state->vmprefix_state_backing));
+  */
+  /*
+debug_pointer (-100, (const void*) JITTER_TOP_MAINSTACK());
+debug_pointer (-101, (const void*) JITTER_UNDER_TOP_MAINSTACK());
+debug_pointer (0, NULL);
+debug_pointer (0, NULL);*/
+
+    /* Pop a number (untagged) off the stack, so that I know at which
+       depth to find the closure.  The arity check must have been
+       performed already on the interpreter side. */
+    const jitter_uint in_arity = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+
+/*
+debug_pointer (-200, (const void*) JITTER_TOP_MAINSTACK());
+debug_pointer (-201, (const void*) JITTER_UNDER_TOP_MAINSTACK());
+debug_pointer (0, NULL);
+debug_pointer (0, NULL);*/
+    /* What follows is similar to the call instruction in the case of a compiled
+       callee.  Shall I factor the common code with a macro? */
+
+    /* Decode the closure. */
+/*
+debug_pointer (in_arity, NULL);
+debug_pointer (-2, & JITTER_UNDER_TOP_MAINSTACK());
+    jitterlisp_object * callee_p
+      = (& JITTER_UNDER_TOP_MAINSTACK()) - (in_arity - 1);
+      debug_pointer (-1, callee_p); */
+    jitterlisp_object callee = JITTER_AT_DEPTH_MAINSTACK(in_arity);
+/*asm ("# %[q]" : [q] "+rm" (callee));
+  debug_pointer (0, (const void*)callee);*/
+    struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
+/*asm ("# %[q]" : [q]"+rm" (c));
+  debug_pointer (1, (const void*)c);*/
+    struct jitterlisp_compiled_closure *cc = & c->compiled;
+/*asm ("# %[q]" : [q]"+rm" (cc));
+debug_pointer (2, (const void*)cc);
+asm ("# %[q]" : [q]"+rm" (cc));
+debug_pointer (4, cc->first_program_point);*/
+
+    /* Make place for the return address in the return stack.  The
+       actual value will be written by the callee. */
+    JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
+    JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
+
+    /* Branch-and-link.  This follows the ordinary calling convention,
+       with the main stack containing the closure and its actuals, known
+       to be in the correct number.  The next VM instruction will be a
+       prolog saving the link; then execution will fall thru into the
+       compiled closure body. */
+    JITTER_BRANCH_AND_LINK(cc->first_program_point);
+  end
+end
+
+# This is the generic code working for both compiled and interpreted closures.
+# FIXME: add a call-compiled instruction, to be generated when the callee is
+# known at compile time to be compiled.
 instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
   caller
   code
-    jitterlisp_object callee = JITTER_AT_DEPTH_MAINSTACK(JITTER_ARGN0);
+    const jitter_uint in_arity = JITTER_ARGN0;
+    jitterlisp_object callee = JITTER_AT_DEPTH_MAINSTACK(in_arity);
     struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
-    JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
 
-// FIXME: this assumes that the called closure is always compiled, and
-// crashes when calling an interpreted procedure from a compiled procedure.
+    if (c->kind == jitterlisp_closure_type_compiled)
+      {
+        /* Make place for the return address in the return stack.  The
+           actual value will be written by the callee. */
+        JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
+        JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
 
-    // JITTER_BRANCH_AND_LINK(c->compiled.code);
-// FIXME: this is obviously wrong, as it relies on knowing Jitter's dispatching
-// mode.  I have to introduce a macro to get the first instruction from a
-// program, in whatever representation is appropriate for the dispatching
-// model.
-    JITTER_BRANCH_AND_LINK(((struct jitterlispvm_program *) c->compiled.code)->native_code);
+        /* Branch-and-link to the native code, whose first instruction
+           will be a prolog. */
+        struct jitterlisp_compiled_closure *cc = & c->compiled;
+        // FIXME: store the code beginnig as a closure field, to avoid
+        // indirections here.
+        JITTER_BRANCH_AND_LINK(cc->first_program_point);
+      }
+    else
+      {
+        const struct jitterlisp_interpreted_closure *ic = & c->interpreted;
+
+        /* Push an element on the main stack.  This way we can ensure that
+           every actual is accessible thru memory in a contiguous array,
+           even if the main stack is TOS-optimized.  Compute the address
+           (on the main stack backing) where the actuals begin.
+
+           Notice that the interpreted function we are calling is allowed
+           to call into compiled code in its turn.  This is not a problem,
+           as we are not moving stack pointers down until the call ends:
+           the unused part of the main and return stacks is available to
+           the callee. */
+        JITTER_PUSH_UNSPECIFIED_MAINSTACK();
+        jitterlisp_object *actuals
+          // FIXME: add a stack operator to compute this address.
+          = (& JITTER_UNDER_TOP_MAINSTACK()) - in_arity + 1;
+
+        /* Call the interpreter. */
+putchar ('['); putchar ('i');
+        jitterlisp_object interpretation_result
+          = jitterlisp_call_interpreted (ic, actuals, in_arity);
+putchar (']');
+
+        /* Remove as many elements as the in-arity plus one (the callee) from
+           the stack, without affecting the top.  Unless JITTER_ARGN0 is
+           residual this whole loops compiles to one instruction when the main
+           stack is TOS-optimized, and doesn't touch memory. */
+        int i;
+        for (i = 0; i < in_arity + 1; i ++)
+          JITTER_NIP_MAINSTACK();
+
+        /* Now the stack is one element higher than it was before the call,
+           containing the unspecified element at the top.  Replace it with
+           the result.  Again this doesn't touch memory. */
+        JITTER_TOP_MAINSTACK() = interpretation_result;
+      }
   end
 end
 
@@ -696,20 +1243,27 @@ instruction tail-call (?n)
 #  caller  # Commented out to make the instruction rewritable.
   code
     /* FIXME: this is currently a dummy instruction, always rewritten away. */
+    // FIXME: can I make compiled->interpreted calls tail?
   end
 end
 
 instruction procedure-prolog ()
   callee
   code
+    /* Fill the return stack slot with the return address.  The return
+       stack has already been pushed (with an unspecified value on the
+       top) by the caller. */
     JITTER_TOP_RETURNSTACK() = (jitterlisp_object) JITTER_LINK;
+    //dump_stacks (0, the_jitter_state_runtime_pointer);
   end
 end
 
 instruction return ()
   code
+    //dump_stacks (1, the_jitter_state_runtime_pointer);
     jitter_uint return_address = JITTER_TOP_RETURNSTACK();
     JITTER_DROP_RETURNSTACK();
+    //dump_stacks (2, the_jitter_state_runtime_pointer);
     JITTER_RETURN(return_address);
   end
 end
@@ -724,6 +1278,14 @@ instruction restore-register (!R)
   code
     JITTER_ARG0 = JITTER_TOP_RETURNSTACK();
     JITTER_DROP_RETURNSTACK();
+  end
+end
+
+instruction fail ()
+  non-relocatable
+  cold
+  code
+    jitterlisp_fail_from_vm ();
   end
 end
 
@@ -867,6 +1429,31 @@ rule rewrite
 into
   return
 end
+
+# The AST rewriter takes care of removing most "not; branch-if-*" sequences,
+# including every use of "not" as a condition and every use of
+# "boolean-canonicalize" as a guard or condition; however
+# "not; branch-if-true" sequnces remain as while guards, where the branch is
+# always on a true condiion (I compile while loops as do..while, with the
+# conditional branch at the end).  It's easier to optimize this pattern here
+# than to add a special case to the compiler.
+rule rewrite
+  primitive-not $a; branch-if-true $b
+into
+  branch-if-false $b
+end
+
+# # Some save/restore pairs are easy to eliminate.
+# # FIXME: no, this never fires because of the implicit label after the call,
+# # which makes the sequence non-rewritable.  Do I really want this behavior?
+# # I suspect not.
+# rule rewrite
+#   save-register $a; call $b; restore-register $a; primitive-primordial-plus $c; return
+# into
+#   call $b; primitive-primordial-plus $c; return
+# end
+
+
 
 # FIXME: this is a temporary kludge, to be used before I actually implement
 # tail calls.
