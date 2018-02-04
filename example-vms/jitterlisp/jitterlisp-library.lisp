@@ -37,11 +37,16 @@
 
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Stuff to be probably made into primitives.
+;;;; FIXME: move: closure utility procedures.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-constant (closure-in-arity closure)
-  (length (interpreted-closure-formals closure)))
+  (cond ((interpreted-closure? closure)
+         (length (interpreted-closure-formals closure)))
+        ((compiled-closure? closure)
+         (compiled-closure-in-arity closure))
+        (#t
+         (error `(closure-in-arity called on the non-closure ,closure)))))
 
 
 
@@ -2310,7 +2315,7 @@
       `(cons ,first-element
              (improper-list ,@other-elements))))
 
-;;; This is the common Scheme name.
+;;; This is the usual Scheme name.
 (define cons*
   improper-list)
 
@@ -2888,7 +2893,7 @@
 
 
 
-;;;; Tentative: assigned variables in an AST.
+;;;; Tentative: assigned variables in an AST.  [FIXME: remove unless I use this]
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; A set! form counts as an assignment; a define form doesn't, as a
@@ -3174,6 +3179,94 @@
   (and (non-null? asts)
        (or (ast-nonlocally-assigns? (car asts) x)
            (ast-nonlocally-assigns?-list (cdr asts) x))))
+
+
+
+
+;;;; AST equality.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return non-#f iff two ASTs are syntactically equal.  This could of course be
+;;; made more accurate, for example by renaming bound variables in a consistent
+;;; way in the two ASTs.
+;;; Assume that a and b are both non-cyclic.
+(define-constant (ast-equal? a b)
+  (cond ((ast-literal? a)
+         (and (ast-literal? b)
+              (eq? (ast-literal-value a) (ast-literal-value b))))
+        ((ast-variable? a)
+         (and (ast-variable? b)
+              (eq? (ast-variable-name a) (ast-variable-name b))))
+        ((ast-define? a)
+         (and (ast-define? b)
+              (eq? (ast-define-name a) (ast-define-name b))
+              (ast-equal? (ast-define-body a) (ast-define-body b))))
+        ((ast-if? a)
+         (and (ast-if? b)
+              (ast-equal? (ast-if-condition a) (ast-if-condition b))
+              (ast-equal? (ast-if-then a) (ast-if-then b))
+              (ast-equal? (ast-if-else a) (ast-if-else b))))
+        ((ast-set!? a)
+         (and (ast-set!? b)
+              (eq? (ast-set!-name a) (ast-set!-name b))
+              (ast-equal? (ast-set!-body a) (ast-set!-body b))))
+        ((ast-while? a)
+         (and (ast-while? b)
+              (ast-equal? (ast-while-guard a) (ast-while-guard b))
+              (ast-equal? (ast-while-body a) (ast-while-body b))))
+        ((ast-primitive? a)
+         (and (ast-primitive? b)
+              (ast-equal? (ast-primitive-operator a) (ast-primitive-operator b))
+              (ast-equal?-list (ast-primitive-operands a) (ast-primitive-operands b))))
+        ((ast-call? a)
+         (and (ast-call? b)
+              (ast-equal? (ast-call-operator a) (ast-call-operator b))
+              (ast-equal?-list (ast-call-operands a) (ast-call-operands b))))
+        ((ast-lambda? a)
+         (and (ast-lambda? b)
+              (eq?-list (ast-lambda-formals a) (ast-lambda-formals b))
+              (ast-equal? (ast-lambda-body a) (ast-lambda-body b))))
+        ((ast-let? a)
+         (and (ast-let? b)
+              (eq? (ast-let-bound-name a) (ast-let-bound-name b))
+              (ast-equal? (ast-let-bound-form a) (ast-let-bound-form b))
+              (ast-equal? (ast-let-body a) (ast-let-body b))))
+        ((ast-sequence? a)
+         (and (ast-sequence? b)
+              (ast-equal? (ast-sequance-first a) (ast-sequance-first b))
+              (ast-equal? (ast-sequance-second a) (ast-sequance-second b))))))
+
+;;; An extension of ast-equal? to lists of ASTs.
+;;; Return non-#f iff the two given AST lists have syntactically equal elements
+;;; at the same positions.  Return #f if the lists have different lengths or if
+;;; any two elements at the same position are different.
+(define-constant (ast-equal?-list as bs)
+  (cond ((null? as)
+         ;; Both empty lists, or different lengths.
+         (null? bs))
+        ((null? bs)
+         ;; Different lengths.
+         #f)
+        ((ast-equal? (car as) (car bs))
+         (ast-equal?-list (cdr as) (cdr bs)))
+        (#t
+         ;; Different first elements.
+         #f)))
+
+;;; A helper for ast-equal?.  Return #t iff the two given non-cyclic lists of
+;;; eq?-comparable values (used with symbols) are equal.
+(define-constant (eq?-list as bs)
+  (cond ((null? as)
+         ;; Both empty lists, or different lengths.
+         (null? bs))
+        ((null? bs)
+         ;; Different lengths.
+         #f)
+        ((eq? (car as) (car bs))
+         (eq?-list (cdr as) (cdr bs)))
+        (#t
+         ;; Different first elements.
+         #f)))
 
 
 
@@ -3648,11 +3741,12 @@
                   (new-body (ast-alpha-convert-with body alist)))
              (ast-nested-let new-formals actuals new-body))))))
 
-;;; By definition a "wrapper" is an empty-environment closure with n formals,
-;;; whose entire body consists in either:
-;;; - a primitive with the formals as its operands, all used, in the same order;
-;;; - a call with a leaf operator where no formal occurs free in the operator,
-;;;   and the operands are like in the previous case.
+;;; I define a "wrapper" to be an empty-environment closure with n formals,
+;;; whose entire body consists of either:
+;;; (a) a primitive with the formals as its operands, all used, in the same
+;;;     order;
+;;; (b) a call with a leaf operator where no formal occurs free in the operator,
+;;;     and the operands are like in the previous case.
 ;;; Notice that the second case has no restriction on operator effects: even in
 ;;; rewritten form the order of effects doesn't change.
 ;;;
@@ -3711,6 +3805,18 @@
          ;; Non-variable actual, or variable not matching the
          ;; formal in its position.
          #f)))
+
+;;; Return non-#f iff the argument is an interpreted closure satisfying the (a)
+;;; case of the definition above.  This is convenient to use below in the
+;;; compiler, as "primitive wrappers" can be compiled to efficient code.
+(define-constant (closure-primitive-wrapper? thing)
+  (if (not (interpreted-closure? thing))
+      #f
+      (let ((environment (interpreted-closure-environment thing))
+            (formals (interpreted-closure-formals thing))
+            (body (interpreted-closure-body thing)))
+        (and (ast-primitive? body)
+             (ast-wrapper-arguments? formals (ast-primitive-operands body))))))
 
 ;;; Return a rewritten a wrapper call.  We assume that the body is a wrapper,
 ;;; and that the actuals respect the wrapper in-arity; notice that we even
@@ -3906,18 +4012,33 @@
                                                      bounds))
                (optimized-second (ast-optimize-helper (ast-sequence-second ast)
                                                       bounds)))
-           ;; If fhe first form in the sequence has no effect rewrite to the
-           ;; second form only.
-           (if (not (ast-effectful? optimized-first bounds))
-               optimized-second
-               (ast-sequence optimized-first
-                             optimized-second))))))
+           (ast-optimize-sequence optimized-first
+                                  optimized-second
+                                  bounds)))))
 
 ;;; An extension of ast-optimize-helper to a list of ASTs: return the list
 ;;; of rewriten ASTs in order.
 (define-constant (ast-optimize-helper-list asts bounds)
   (map (lambda (ast) (ast-optimize-helper ast bounds))
        asts))
+
+;;; A helper for ast-optimize-helper in the sequence case.  Assume that both the
+;;; subforms are already optimized.
+(define-constant (ast-optimize-sequence optimized-first optimized-second bounds)
+  (cond ((and (ast-variable? optimized-first)
+              (ast-equal? optimized-first optimized-second))
+         ;; This can occur as a result of other optimizations.  Rewrite
+         ;; [sequence [variable x] [variable x]] into [variable x].  This is correct
+         ;; even if x is not known to be bound, as no effects are removed; the removed
+         ;; (second) reference is guaranteed not to have effects.
+         optimized-first)
+        (#t
+         ;; If fhe first form in the sequence has no effect rewrite to the
+         ;; second form only.
+         (if (not (ast-effectful? optimized-first bounds))
+             optimized-second
+             (ast-sequence optimized-first
+                           optimized-second)))))
 
 ;;; A helper for ast-optimize-helper in the set! case.  The body should already
 ;;; be optimized.
@@ -4042,6 +4163,13 @@
          ;; The condition has been simplified to #f, since we didn't
          ;; get to the previous clause.
          (ast-optimize-helper else bounds))
+        ((ast-equal? then else)
+         ;; The two branches are equal, so we don't need to have a conditional at all: turn it
+         ;; into a sequance, which will usually be further optimizable as the condition tends
+         ;; not to have effects.
+         (ast-optimize-helper (ast-sequence optimized-condition
+                                            then)
+                              bounds))
         (#t
          ;; Keep both branches.
          (ast-if optimized-condition
@@ -4503,7 +4631,9 @@
 
 ;;; Destructively modify the given closure, replacing its fields with a
 ;;; semantically equivalent optimized version.
-(define-constant (closure-optimize! closure)
+(define-constant (interpreted-closure-optimize! closure)
+  (when (compiled-closure? closure)
+    (error `(cannot optimize the already compiled closure ,closure)))
   ;; First alpha-convert the closure; optimization might rely on this.
   (let* ((fields (closure-alpha-convert closure))
          (alpha-converted-env (car fields))
@@ -4550,11 +4680,11 @@
                            set-cdaaar! set-cdaadr! set-cdadar! set-cdaddr!
                            set-cddaar! set-cddadr! set-cdddar! set-cddddr!)))
     (dolist (accessor 2-accessors)
-      (closure-optimize! accessor))
+      (optimize-when-interpreted-closure! accessor))
     (dolist (accessor 3-accessors)
-      (closure-optimize! accessor))
+      (optimize-when-interpreted-closure! accessor))
     (dolist (accessor 4-accessors)
-      (closure-optimize! accessor))))
+      (optimize-when-interpreted-closure! accessor))))
 
 ;;; Optimize every globally defined closure, constant or not, therefore
 ;;; retroactively optimizing the code defined up to this point.
@@ -4573,7 +4703,7 @@
     (when (and (defined? symbol)
                (closure? (symbol-global symbol)))
       (display `(optimizing ,symbol)) (newline)
-      (closure-optimize! (symbol-global symbol)))))
+      (optimize-when-interpreted-closure! (symbol-global symbol)))))
 
 ;;; Flatten composed cons accessors and optimize everything else once.
 (define-constant (optimize-retroactively!)
@@ -4913,12 +5043,6 @@
 (define-macro (compiler-with-unused-result state . body-forms)
   `(compiler-with-flag ,state used-result #f ,@body-forms))
 
-;; (define-macro (compiler-with-unused-result state . body-forms)
-;;   (let ((state-name (gensym)))
-;;     `(let ((,state-name ,state))
-;;        (compiler-with-flag ,state-name tail #f
-;;          (compiler-with-flag ,state-name used-result #f ,@body-forms)))))
-
 
 
 
@@ -5244,10 +5368,14 @@
 
 
 
-;;;; Compiling a closure (very tentative, non-destructive).
+;;;; Compiling an interpreted closure.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant (closure-compile! c)
+;;; Compiling an interpreted closure destructively changes it into a compiled
+;;; closure, without affecting its identity.  The change is irreversible: an
+;;; interpreted closure can become compiled, but it's not possible to uncompile
+;;; a compiled closure.
+(define-constant (interpreted-closure-compile! c)
   (when (compiled-closure? c)
     (error `(closure ,c is already compiled)))
   (let ((env (interpreted-closure-environment c))
@@ -5279,23 +5407,75 @@
           (set! reversed-nonlocal-values
                 (cons (cdr env-binding)
                       reversed-nonlocal-values))))
-      ;; Bind formals: for each actual generate either a pop instruction to
-      ;; get the actual value, or a drop instruction to ignore it in case the
-      ;; formal is not used.
-      (compiler-pop-formals! s formals body)
-      ;; Generate an instruction to bind the closure environment, if needed,
-      ;; then another to drop the closure.
-      (compiler-bind-closure-environment! s)
-      ;; Now the state contains bindings for every non-global bound in the
-      ;; body AST, and we can compile it.  Any remaining variable occurring
-      ;; in the body but not in the state bindings is a global.
-      (compile-ast! s body)
-      ;; (display `(reversed-nonlocal-values is ,reversed-nonlocal-values)) (newline)
-      ;; (print-compiler-state s)
-      (compile! c
-                (length formals)
-                (reverse! reversed-nonlocal-values)
-                (reverse (compiler-reversed-instructions s))))))
+      (cond ((closure-primitive-wrapper? c)
+             (let ((primitive (ast-primitive-operator body)))
+               ;; We can compile primitive wrappers (see the definition above)
+               ;; in a simple and efficient way: primitive, nip, return.
+               (compiler-add-instruction! s `(primitive ,primitive))
+               (compiler-add-instruction! s '(nip))
+               (compiler-add-instruction! s '(return))))
+            (#t
+             ;; Bind formals: for each actual generate either a pop instruction
+             ;; to get the actual value, or a drop instruction to ignore it in
+             ;; case the formal is not used.
+             (compiler-pop-formals! s formals body)
+             ;; Generate an instruction to bind the closure environment, if
+             ;; needed, then another to drop the closure.
+             (compiler-bind-closure-environment! s)
+             ;; Now the state contains bindings for every non-global bound in
+             ;; the body AST, and we can compile it.  Any remaining variable
+             ;; occurring in the body but not in the state bindings is a global.
+             (compile-ast! s body)))
+      (print-compiler-state s)
+      ;; We can now destructively modify the interpreted closure.
+      (interpreted-closure-make-compiled!
+          c
+          (length formals)
+          (reverse! reversed-nonlocal-values)
+          (reverse! (compiler-reversed-instructions s))))))
+
+
+
+
+;;;; Compiliation convenience procedures.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; It's nice to provide the user with procedures working indifferently on
+;;; interpreted or compiled closures, compiling the intepreted ones on the fly
+;;; if needed.
+
+;;; This factors the common functionality of the user procedures below.
+(define-constant (compile!-if-needed-then-call thing procedure)
+  (cond ((compiled-closure? thing)
+         ;; The thing is already compiled.
+         (procedure thing))
+        ((interpreted-closure? thing)
+         ;; The thing is not compiled yet.  Optimize it and compile it, then do
+         ;; the job.
+         (interpreted-closure-optimize! thing)
+         (interpreted-closure-compile! thing)
+         (procedure thing))
+        ((macro? thing)
+         ;; Macros are only interpreted.  This is a current limitation that
+         ;; could be lifted.
+         (error `(macros not currently compilable: ,thing)))
+        (#t
+         ;; This is a non-closure non-macro.
+         (error `(cannot compile ,thing)))))
+
+;;; Compile the given closure if needed.  Return nothing.
+(define-constant (compile thing)
+  (compile!-if-needed-then-call thing (lambda (x))))
+
+;;; Print a native-code disassembly of the given closure, compiling it first if
+;;; needed.  Return nothing.
+(define-constant (disassemble thing)
+  (compile!-if-needed-then-call thing compiled-closure-disassemble))
+
+;;; Print VM code for the given closure, compiling it first if needed.  Return
+;;; nothing.
+(define-constant (disassemble-vm thing)
+  (compile!-if-needed-then-call thing compiled-closure-print))
 
 
 
@@ -5365,11 +5545,11 @@
 (define define-constant-non-optimized
   define-constant)
 
-;;; Destructively optimize the argument if it's a closure; do nothing
-;;; otherwise.  Return nothing.
-(define-constant (optimize-when-closure! thing)
-  (when (closure? thing)
-    (closure-optimize! thing)))
+;;; Destructively optimize the argument if it's an interpreted closure; do
+;;; nothing otherwise.  Return nothing.
+(define-constant (optimize-when-interpreted-closure! thing)
+  (when (interpreted-closure? thing)
+    (interpreted-closure-optimize! thing)))
 
 ;;; Define the named thing, and immediately optimize it if it's a closure.  Same
 ;;; syntax as define.
@@ -5382,7 +5562,7 @@
                 ;; Making a globally defined closure a constant *before*
                 ;; optimizing it may help the rewrite system.
                 (make-constant ',thing))
-              (optimize-when-closure! ,value-name))))
+              (optimize-when-interpreted-closure! ,value-name))))
         ((or (not (symbols? thing))
              (not (all-different? (cdr thing))))
          (error `(define-optimized-possibly-constant: ill-formed defined
@@ -5397,7 +5577,7 @@
               (when ,constant
                 ;; Again, make the thing constant before optimizing it.
                 (make-constant ',thing-name))
-              (optimize-when-closure! ,value-name))))))
+              (optimize-when-interpreted-closure! ,value-name))))))
 (define-macro (define-optimized thing . body)
   `(define-optimized-possibly-constant #f ,thing ,@body))
 (define-macro (define-constant-optimized thing . body)
@@ -5431,8 +5611,8 @@
 (define-macro (c lambda)
   (let ((closure-name (gensym)))
     `(let ((,closure-name ,lambda))
-       (closure-optimize! ,closure-name)
-       (closure-compile! ,closure-name)
+       (interpreted-closure-optimize! ,closure-name)
+       (interpreted-closure-compile! ,closure-name)
        (newline)
        (compiled-closure-print ,closure-name)
        (newline)
@@ -5465,10 +5645,35 @@
   (if (zero? n)
       1
       (* n (fact (- n 1)))))
+(define-constant (fact-tail-recursive-helper n acc)
+  (if (zero? n)
+      acc
+      (fact-tail-recursive-helper (- n 1)
+                                  (* acc n))))
+(define-constant (fact-tail-recursive n)
+  (fact-tail-recursive-helper n 1))
 (define-constant (fact-i n)
   (let ((res 1))
     (while (not (zero? n))
       (set! res (* res n))
+      (set! n (- n 1)))
+    res))
+
+(define-constant (gauss n)
+  (if (zero? n)
+      0
+      (+ n (gauss (- n 1)))))
+(define-constant (gauss-tail-recursive-helper n acc)
+  (if (zero? n)
+      acc
+      (gauss-tail-recursive-helper (- n 1)
+                                   (+ acc n))))
+(define-constant (gauss-tail-recursive n)
+  (gauss-tail-recursive-helper n 0))
+(define-constant (gauss-i n)
+  (let ((res 0))
+    (while (not (zero? n))
+      (set! res (+ res n))
       (set! n (- n 1)))
     res))
 
@@ -5511,6 +5716,31 @@
     (error '(average: zero arguments)))
   `(/ (+ ,@things)
       ,(length things)))
+
+(define (sum xs)
+  (let ((res 0))
+    (while (not (null? xs))
+      (set! res (+ res (car xs)))
+      (set! xs (cdr xs))) res))
+
+(define (e? n)
+  (cond ((zero? n)
+         #t)
+        ((= n 1)
+         #f)
+        (#t
+         (o? (- n 1)))))
+(define (o? n)
+  (cond ((zero? n)
+         #f)
+        ((= n 1)
+         #t)
+        (#t
+         (e? (- n 1)))))
+
+(define (qq n)
+  (length (flatten (map iota (iota n)))))
+
 
 ;;;  OK
 ;;; (define q (macroexpand '(let ((a a) (b a)) a))) q (ast-alpha-convert q)
@@ -5713,3 +5943,46 @@
 
 ;; A good test case for the used-result flag.
 ;; (c (lambda (a b) (when a (set! b a)) b))
+
+(when #f
+  (define (f x y)
+    (cons x y))
+  f
+  (closure-compile! f)
+  (display (f 10 20))
+  (newline)
+
+  (define (g x y z)
+    (display y))
+  g
+  (closure-compile! g)
+  (display (g 10 20 30))
+  (newline)
+  )
+
+;; Wrong result on PowerPC:
+;; Q='bin/jitterlisp--unsafe--no-threading'; make -j && make -j $Q && time -p rj ./scripts/emulator $Q --colorize --no-omit-nothing --vm --repl --cross-disassemble --compact-uninterned --no-repl --eval '(disassemble gauss) (gauss 1)' 2>&1 
+;;
+;; The saved address on the return stack is wrong: the second one is equal to
+;; the first.
+
+;; Here the opcode is in r31 for debugging.  r20 is the link register.
+;; r27 is the return stack top pointer.
+;; This is good:
+;; # 0x100b9bd4: procedure-prolog (8 bytes):
+;;     0xf5d80000 92 9b 00 00      stw     r20,0(r27)
+;;     0xf5d80004 3b e0 00 67      li      r31,103
+;; ;; This is bad:
+;; # 0x100b9bec: call/n1/retR 0xf5d80690 (136 bytes):
+;;     ...
+;;     # Beginning of the compiled-closure part.
+;;     0xf5d80624 3b 7b 00 04      addi    r27,r27,4
+;;     0xf5d80628 81 48 00 14      lwz     r10,20(r8)
+;;     0xf5d8062c 7d 49 03 a6      mtctr   r10
+;;     0xf5d80630 4e 80 04 20      bctr
+;;     0xf5d80634 3b e0 00 0b      li      r31,11
+;;     0xf5d80638 7e 14 83 78      mr      r20,r16
+;;     # End of the compiled-closure part.
+;;     ...
+;; The link register is set *after* the call which is supposed to save
+;; it to the return stack.
