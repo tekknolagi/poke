@@ -1381,6 +1381,12 @@ EXTRA_DIST += \
 # Other files for JitterLisp.
 EXTRA_DIST += example-vms/jitterlisp/THANKS
 
+# JitterLisp documentation.
+info_TEXINFOS += \
+  example-vms/jitterlisp/doc/jitterlisp.texi
+example_vms_jitterlisp_doc_jitterlisp_TEXINFOS = \
+  $(srcdir)/doc/gpl.texi $(srcdir)/doc/fdl.texi
+
 
 # Brainfuck example VM.
 # ################################################################
