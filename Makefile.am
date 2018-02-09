@@ -1385,8 +1385,13 @@ EXTRA_DIST += example-vms/jitterlisp/THANKS
 info_TEXINFOS += \
   example-vms/jitterlisp/doc/jitterlisp.texi
 example_vms_jitterlisp_doc_jitterlisp_TEXINFOS = \
-  $(srcdir)/doc/gpl.texi $(srcdir)/doc/fdl.texi
-
+  $(srcdir)/example-vms/jitterlisp/doc/gpl.texi \
+  $(srcdir)/example-vms/jitterlisp/doc/fdl.texi
+# This is an easy way of not distributing two copies of the same two files.
+$(srcdir)/example-vms/jitterlisp/doc/gpl.texi: doc/gpl.texi
+	cp "$<" "$@"
+$(srcdir)/example-vms/jitterlisp/doc/fdl.texi: doc/fdl.texi
+	cp "$<" "$@"
 
 # Brainfuck example VM.
 # ################################################################
