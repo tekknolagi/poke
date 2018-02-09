@@ -19,9 +19,13 @@
 @c to be distributed.
 @c @set preview
 
-@c @set This if I decide to include license texts.  It will look silly unless
+@c @set this if I decide to include license texts.  It will look silly unless
 @c the manual is long.
 @c @set includelicenses
+
+@c @set this is I really want to typeset the PDF version in color.  It is
+@c probably a bad idea.
+@set color
 
 
 @c Index settings which must come early
@@ -39,14 +43,35 @@
 
 @setfilename jitterlisp.info
 @include version-jitterlisp.texi
-@settitle JitterLisp @value{VERSION}
+@settitle The JitterLisp manual, for Jitter version @value{VERSION}
 
 
 @c Global settings
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+@documentlanguage en
+
 @syncodeindex pg cp
 @documentencoding UTF-8
+
+@c @ignore
+@afourpaper
+@c @end ignore
+
+@c Use color for previews, which are not to be printed.  On screen it is
+@c convenient to check that links point to the right thing.
+@ifset preview
+@set color
+@end ifset @c preview
+
+@ifclear color
+@c Don't use color for hyperlinks.  If the manual is really to be printed
+@c out it will almost certainly be in black and white.
+@tex
+\global\def\linkcolor{0 0 0}
+\global\def\urlcolor{0 0 0}
+@end tex
+@end ifclear @c color
 
 @ignore
 @fonttextsize 10
@@ -112,6 +137,15 @@ epsilon\subscript\
 @strong{[@emph{FIXME}: \text\]}
 @end rmacro
 
+@rmacro fill
+@fixme{Fill this.}
+@end rmacro
+
+@c This occurs a lot of times, so a macro comes in handy.
+@rmacro nothing
+@code{#<nothing>}
+@end rmacro
+
 @rmacro rephrase{text}
 @strong{[@emph{REPHRASE}: \text\]}
 @end rmacro
@@ -123,7 +157,7 @@ epsilon\subscript\
 @copying
 This is the manual for JitterLisp
 @c (edition @value{EDITION} for
-(version @value{VERSION},
+(for Jitter version @value{VERSION},
 last updated on @value{UPDATED}), an efficient Lisp system using a Jittery VM.
 
 Copyright @copyright{} 2018  Luca Saiu.  Written by Luca Saiu.
@@ -146,7 +180,7 @@ A copy of the GNU Free Documentation License is
   Documentation License'', and the license text is also
 @end ifset @c includelicenses
 distributed in electronic form along with the software in the file
-@file{doc/COPYING.DOC} and available on the web at the URL
+@file{doc/COPYING.DOC}, and available on the web at the URL
 @url{https://www.gnu.org/licenses/fdl.html}.
 @end quotation
 
@@ -161,11 +195,11 @@ his contact information.
 
 @titlepage
 @title JitterLisp
-@subtitle for version @value{VERSION}, updated in @value{UPDATED-MONTH}
+@subtitle for Jitter version @value{VERSION}, updated in @value{UPDATED-MONTH}
 @c @author Luca Saiu (@email{positron@@gnu.org}, @url{http://ageinghacker.net})
 @c @author Luca Saiu (@url{http://ageinghacker.net})
 @c @author Luca Saiu (@email{positron@@gnu.org})
-@author Luca Saiu
+@author Luca Saiu (@email{positron@@gnu.org})
 @page
 @vskip 0pt plus 1filll
 @insertcopying
@@ -194,14 +228,15 @@ his contact information.
 @end ifnottex
 
 @menu
-@c What this software is and how it came to be
+Overview
 * Introduction::                   What JitterLisp is and why you should care.
-* Invoking @command{jitterlisp}::  How to use the Lisp system from command line.
+* Using JitterLisp::               How to build and run the software.
 
 Reference documentation
-* Lisp language reference::        The JitterLisp predefined language features.
-* Lisp library reference::         What predefined globals do.
+* Lisp reference::                 Documentation for the Lisp system.
+* C API::                          Using JitterLisp with C (not).
 
+Inner workings and development
 * Internals::                      How JitterLisp works under the hood.
 @c Licenses
 @c * GNU General Public License::     How you can share and modify the software.
@@ -214,8 +249,9 @@ Licenses
 @end ifset @c includelicenses
 
 Indices
-* Symbol index::                   A link to the documentation for each predefined global
-                                   variable.
+* Symbol and reserved syntax index:: A link to the documentation for each
+                                   predefined global variable or piece of
+                                   reserved syntax.
 * Concept index::                  The key words of this manual, with links.
 
 @ifset preview
@@ -237,14 +273,16 @@ Temporary stuff, for myself
 @c distinction should be kept.
 
 @node Introduction
-@unnumbered Introduction
+@c @unnumbered Introduction
+@chapter Introduction
 
 JitterLisp is a comparatively simple and efficient Lisp system,
 relying on the Jitter virtual machine generator for compiling code.
 
 @menu
-* History::                            Why the world needed another Lisp.
-* Features::                           What JitterLisp can do.
+* History::                            How JitterLisp came to be.
+* Goals::                              Why I though the world needed another Lisp.
+* Features and influences::            What JitterLisp can do and where it comes from.
 * License::                            JitterLisp is released under the GNU GPLv3+.
 @end menu
 
@@ -254,47 +292,363 @@ relying on the Jitter virtual machine generator for compiling code.
 @cindex history
 @cindex epsilon
 @cindex GNU epsilon
-@cindex @ @epsilonzero{} @c The initial forced space is less ugly than the alternative.
-
-@fixme{@pxref{Top,,, jitter, The Jitter Manual}}
-The programming language GNU epsilon (@pxref{Top,,, epsilon, The GNU
-epsilon Manual}), my main long-term project, has yet to live to my
-expectations.  And even if I keep believing in the superiority of its
-design, as I firmly do, epsilon's concrete implementation still looks
-like a promise waiting to be fulfilled.
-
+@cindex Jitter
+@cindex sub-project
+@c @cindex @ @epsilonzero{} @c The initial forced space is less ugly than the alternative.
+Jitter (@pxref{Top,,, jitter, The Jitter Manual}) was born out of an
+attempt to optimize the programming language GNU epsilon
+(@pxref{Top,,, epsilon, The GNU epsilon Manual}), my main long-term
+project.  Dissatisfied with the speedup provided by a simple
+direct-threaded virtual machine I started exploring more advanced
+techniques, and the experiment eventually grew into the current
+virtual-machine generator.
 @ignore
-epsilon is written in itself, and every language form seen by the user
-is a syntactic extension rewriting to fundamental forms or, more
-typically, to other syntactic extensions.
+Even if it can certainly be said that
+Jitter is a sub-project which got way out of hand I am happy with the
+end result, and believe that others will find it useful.
 @end ignore
-Among the missed opportunities in epsilon its performance has always
-bothered me.  If on one hand there are good technical reasons making
-high efficiency more difficult to achieve in epsilon than in other
-systems, on the other I conceived its architecture with that end,
-amongst others, always in mind, to be competitive with the best.
+@ignore
+Useful as it is, Jitter could certainly be called a sub-project which
+got out of hand.
+@end ignore
+@ignore
+Even if it could certainly be called a sub-project which got out of hand I
+am happy with Jitter, and believe that others will find it useful as well.
+@end ignore
+A sub-project, some might argue, that got out of hand.
 
-@fixme{shorten this paragraph: there's no need to talk of
-the first failed attempt.}
-In late 2015 I decided to implement a direct-threaded virtual machine
-for epsilon mostly intended to make interactive usage more convenient
-and to reduce bootstrap time.  The speedup I obtained, about 4-6x, was
-disappointing.
+@c Shortly after my public presentation of Jitter at the 2017 edition of
+@c the GNU Hackers Meeting a friend @fixme{ask permission to mention him
+@c by name} expressed interest in Jitter and wanted to use it in a new
+@c software of his, even in its unpolished state.
 
-At that point I made a new repository and started experimenting with
-more advanced VM techniques, reading the scientific literature and
-adding ideas of my own.  That second more ambitious experiment
-succeeded and eventually grew into an independent project, Jitter.
+@c In order to provide him with a practical example to use as a reference
+@c before the official Jitter documentation was ready I quickly put
+@c together the ``structured'' example, a simple imperative programming
+@c language based on a Jittery VM.
 
-@fixme{Go on.}
+@c The structured example proved useful as a stopgap solution and I added
+@c a few more features to Jitter at my friend's @fixme{see above}
+@c request, but we both knew it was not enough.  Jitter needed to be
+@c stressed to find bugs and tested on a practical application.  A real
+@c programming language.  A Lisp.
+
+Still, Jitter had seen no major application yet.  It needed to be
+stressed to find bugs and embedded in a practical system for me to
+discover what was missing and fill the gaps.  I wanted a real
+application.  A real programming language.  A Lisp.
+
+@cindex sub-sub-project
+And the sub-sub-project has now also gotten out of hand, again
+branching off in its own interesting direction.
+
+@c independent goals of its own.
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
-@node Features
-@section Features
-@cindex features
+@node Goals
+@section Goals
 
-@fixme{Write this}
+JitterLisp lives somewhere near the boundary between the end of the
+domain of complex toys, and where simple real Lisp systems begin;
+@c
+as long as we keep seeing it as an example for Jitter either
+classification will do.
+@c JitterLisp is a complex toy, or a simple real Lisp system; either will
+@c work as long as we keep seeing it as an example for Jitter.
+As for concrete applications it can certainly be made useful: the Lisp
+library can be extended, and JitterLisp itself could become both
+embeddable and extensible in C without unreasonable effort.  I might
+bend the system in some of these directions myself in the future, and
+the result would be useful, but writing yet another Lisp system was
+never my primary goal.
+
+Even without the ambitious scope of Jitter I consider JitterLisp
+useful to show the level of performance within the reach of
+``simple'', clean systems.  JitterLisp gets many design points correct
+but is not perfect or exceptionally clever in any.  Still it appears
+more efficient than every mature ``dynamic language'', in some cases
+to a spectacular degree---due more to the faults of others than to any
+merit of mine.
+
+@cindex Schadenfreude
+I will not even try to hide my own personal goal for JitterLisp: being
+able to say that @emph{most language implementations are inexcusably
+bad} as in fact they are, with a real implementation to present
+and not just a proof of concept; and numbers.
+
+@cindex Schadenfreude
+Here I stand, claiming my right to rub JitterLisp on everyone's face.
+How good it feels.
+
+@c I want to be able to say that 
+@c And here I am, rubbing
+@c @c my victory
+@c JitterLisp
+@c on their faces.
+
+@c We can, we must do better.
+
+@c The fashionable solutions are incredibly easy to beat.  Let us do it,
+@c and rub the victory in their faces.
+
+@c And if somebody read these words more like a criticism of others than
+@c an endorsement of myself, she would be correct.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Features and influences
+@section Features and influences
+@cindex design criterion
+@cindex criterion, for feature inclusion
+@cindex feature inclusion criterion
+@cindex feature
+Every time I had to choose whether to support a feature or to omit it
+for simplicity my decision relied on two criteria:
+@itemize @bullet
+@cindex criterion, for feature inclusion
+@cindex feature inclusion criterion
+@item
+@emph{Can the feature be omitted while keeping the language
+realistic?}
+JitterLisp should remain a Lisp, not more difficult to learn for a
+Lisper than another simple dialect nor too fundamentally different.
+JitterLisp must also be a practical system with the core features a
+programmer would expect, and not just an idealized prototype.
+@*
+It must be possible to compare the JitterLisp @emph{language} with
+standard dialects, and find them similar in practice.
+
+@cindex criterion, for feature inclusion
+@cindex feature inclusion criterion
+@item
+@emph{Is the feature critical for performance?}  If omitting the
+feature granted JitterLisp a performance advantage with respect to
+other Lisps at the cost of making JitterLisp very cumbersome to use,
+then not supporting it would make performance comparisons unfair.
+When, on the other hand, a feature has no performance overhead
+(particularly when not in use), I can in good conscience leave it out
+and claim that an extended JitterLisp with the feature would still
+perform as well as the current system.
+@*
+The language must make comparisons between the JitterLisp
+@emph{implementation} and other Lisp implementations possible, and fair.
+@end itemize
+@noindent
+In the end the relative weight associated to each of the two criteria
+can only be a judgment call and some grey areas will remain, no matter
+how I strive for fairness.
+In case some reader felt that I unbalanced the comparison to
+JitterLisp's advantage by choosing to include or exclude some feature,
+I am open to discussion.
+
+@cindex compatibility, other Lisp dialects (none)
+@cindex influence
+@cindex Common Lisp
+@cindex Scheme
+@cindex macro
+JitterLisp draws inspiration from both Common Lisp and Scheme, without
+being compatible with either.
+However a competent programmer should be able to write code running
+unchanged on top of a Common Lisp or Scheme system, through a layer of
+simple macros.
+
+@cindex epsilon
+Several implementation ideas originate from my own GNU epsilon.
+
+@menu
+* Comparison with other Lisps::     Some features come from Common Lisp and Scheme.
+* epsilonian features::             Others are reminiscent of GNU epsilon.
+* Simplifications::                 What JitterLisp lacks and why.
+@end menu
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Comparison with other Lisps
+@subsection Comparison with other Lisps
+The JitterLisp language is first of all a Lisp dialect, and as such
+will feel familiar to any programmer already mastering any other Lisp.
+
+@cindex feature
+@cindex lexical scoping
+@cindex scoping, lexical
+@cindex static scoping
+@cindex iteration
+@cindex recursion
+@cindex macro
+@cindex Lisp/1
+@cindex /1, Lisp
+@cindex procedure
+@cindex higher order
+@cindex order, higher
+@cindex compiled procedure
+@cindex interpreted procedure
+@cindex garbage collection
+@cindex homoiconicity
+@cindex quoting
+@cindex quasiquoting
+JitterLisp is a
+@emph{lexically-scoped}
+@emph{higher-order}
+@emph{homoiconic}
+@emph{Lisp/1}
+featuring
+@emph{closures},
+@emph{garbage collection},
+@emph{quasiquoting} and
+Turing-complete @emph{macros}.
+
+@cindex feature
+@cindex expression
+@cindex sub-expression
+@cindex statement (absent in JitterLisp)
+@cindex top-level form (absent in JitterLisp)
+@cindex form, top-level (absent in JitterLisp)
+Every syntactic form in JitterLisp is an @emph{expression}, and nontrivial
+expressions will contain sub-expressions; there are no statements as
+a distinct syntactic category, nor special forms which are only valid
+at the top level.
+@cindex feature
+@cindex tail call
+@cindex space overhead, tail call
+@cindex mutability, variable
+@cindex variable
+Variables are @emph{mutable} by default, and @emph{iteration} and
+@emph{recursion} are both supported.  @emph{Tail calls} incur no
+space overhead except in inter-calls between compiled and interpreted
+code.
+
+@cindex feature
+@cindex type
+@cindex datatype
+@cindex empty list
+@cindex symbol
+@cindex cons
+@cindex cdr
+@cindex list
+@cindex character
+@cindex procedure
+@c FIXME: mention strings when I add them
+@c FIXME: mention vectors when I add them
+Typing is @emph{dynamic}.  JitterLisp datatypes include the
+@emph{empty list} object,
+@emph{symbols}, @emph{characters}, @emph{conses} and
+@emph{procedures}.  Non-empty lists are cdr-nested conses.
+@cindex fixnum
+@cindex number
+@c FIXME: fixnum only -- no floats -- no bignums -- change when I add more types
+At the present time @emph{fixnums} are the only numeric type.
+
+@cindex feature
+@cindex procedure
+@cindex compiled procedure
+@cindex interpreted procedure
+@cindex procedure, compiled
+@cindex procedure, interpreted
+@cindex identity, procedure across compiling
+Each procedure may be either @emph{interpreted} or @emph{compiled},
+and procedures of different kinds are allowed to call each other
+with no restrictions and no difference in observable behavior.
+Interpreted procedures can be compiled at run time without
+affecting their @emph{identity} as objects.
+
+@fixme{quoting and quasiquoting are Lispy, not epsilonian}
+
+@fixme{compare with standard Lisp dialects}
+
+@fixme{Many of the superficial features of JitterLisp, particularly at the
+lexical level, come from Scheme}
+
+@fixme{@code{define} operating at the top level, like Common Lisp's
+@code{defun} but differently from Scheme}
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node epsilonian features
+@subsection epsilonian features
+
+@cindex dynamic langauge
+@cindex reflection
+@cindex AST
+@cindex Abstract Syntax Tree
+@cindex macroexpansion
+JitterLisp is
+@c at the same time
+more @emph{``dynamic''} and more
+@emph{reflective} than typical Lisp dialects: any expression is
+allowed to define, remove or alter any non-constant global binding;
+the @emph{Abstract Syntax Tree} returned by macroexpansion and contained
+within each closure is a recursive data structure describing an
+expression in a @emph{minimalistic core language} which can be interpreted,
+compiled, analyzed, optimized or in general used like any other data
+structure.
+
+@cindex compiler
+@cindex AST
+@cindex Abstract Syntax Tree
+Exposed ASTs and reflection make it possible and natural for the
+compiler to be implemented as an ordinary procedure, itself written in
+Lisp and running on top of the interpreter or compiled by itself at
+run time.
+
+@cindex quasiquoting
+@cindex macro
+@cindex Common Lisp
+@cindex GNU epsilon
+@cindex epsilon
+These features, distinctly epsilonian, make the internal
+implementation simpler and more elegant but are meant to be invisible
+to the casual user.  In particular user macros operate on ordinary
+non-AST Lisp data structures, usually through Lisp quasiquoting, and
+will feel instantly familiar to any Common Lisp programmer; the fact
+that the core Lisp forms are themselves predefined macros expanding to
+ASTs may be safely ignored in ordinary programs as an implementation
+detail.
+
+@xref{Interaction example} for a quick demo session introducing most
+of the non-traditional features likely to surprise a Lisp user.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Simplifications
+@subsection Simplifications
+
+@menu
+* Intentionally omitted features::            What I didn't include, on purpose.
+* Desirable but not implemented features::    What I would like to include.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Intentionally omitted features
+@subsubsection Intentionally omitted features
+
+@fixme{no modules, packages or namespaces}
+
+@syindex values@r{ (non-existing form)}
+@fixme{no @code{values}}
+
+@syindex call/cc@r{ (non-existing form)}
+@fixme{no continuations}
+
+@syindex throw@r{ (non-existing form)}
+@syindex catch@r{ (non-existing form)}
+@fixme{no exceptions}
+
+@cindex variadic, procedure (absent in JitterLisp)
+@fixme{no variadic procedures (but I do have variadic macros)}
+
+@fixme{no OO}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Desirable but not implemented features
+@subsubsection Desirable but not implemented features
+
+@fixme{no stack traces}
+
+@fixme{no type dispatching}
+
+@fixme{only a small library}
+
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -307,11 +661,15 @@ succeeded and eventually grew into an independent project, Jitter.
 @cindex General Public License
 @cindex license, for JitterLisp
 @cindex software, license
+@cindex copying (software software)
 JitterLisp is free software, distributed under the GNU General Public
 License, version 3 or later.
 @ifset includelicenses
   @xref{GNU General Public License} for the full text of the software license.
 @end ifset @c includelicenses
+@cindex no warranty
+@cindex warranty, lack thereof
+There is no warranty whatsoever.
 
 @cindex free documentation
 @cindex FDL
@@ -326,28 +684,893 @@ Documentation License, version 1.3 or later.
 @end ifset @c includelicenses
 
 
-@c Here starts the actual documentation, written in a more formal
-@c tone.  Everything from here on should be in the first person
-@c *plural*.
+@c Here starts the actual documentation, written in a slightly more formal
+@c tone but still in the first person singular.  I find it appropriate for the
+@c JitterLisp's manual to have a less formal tone than Jitter's.
 
-@c Invoking @command{jitterlisp}
+@c Using JitterLisp
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@c This node name is required by the GNU standards.
+@node Using JitterLisp
+@chapter Using JitterLisp
+@cindex usage (JitterLisp)
 
-@node Invoking @command{jitterlisp}
-@chapter Invoking @command{jitterlisp}
+@cindex source
+@cindex distribution
+JitterLisp is distributed along with Jitter as an advanced example of
+its use, and must be compiled from the source code.
+
+@cindex cross compilation
+@cindex GNU build system
+@cindex GNU conventions, build system
+@cindex build system
+@cindex distribution
+@cindex Jitter
+@cindex build directory (Jitter)
+JitterLisp has no separate distribution or build system of its own,
+but is easy to build from the Jitter build directory.  The build
+process follows the GNU conventions, and supports cross-compilation.
+
+@cindex REPL
+@cindex Read-Eval-Print Loop
+@cindex GNU, command line options
+@cindex file (JitterLisp code)
+@cindex interaction (REPL)
+Once compiled JitterLisp is quite friendly to use.  It supports
+GNU-style command-line options and can work either interactively with
+a REPL, or by running Lisp code from text files.
+
+@menu
+* Obtaining the software::                 Where to download from.
+* Building JitterLisp::                    JitterLisp is easy to build at
+                                           the same time as Jitter.
+* Installing JitterLisp::                  No need to.
+* Invoking JitterLisp::                    The command line interface.
+* Interaction example::                    A demo session showing the main
+                                           features.
+@end menu
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Obtaining the software
+@section Obtaining the software
+
+@cindex obtaining
+@cindex downloading
+@cindex distribution
+
+@cindex C
+@cindex source
+@cindex distribution
+@cindex git
+JitterLisp is distributed as an example within Jitter, and can be
+obtained along with the Jitter source code.  It is written in C and itself,
+and the virtual machine it relies on for compiled closures is generated by
+Jitter.
+The current web page for Jitter, containing a link to a publicly
+readable git repository, is on my web site at the URL
+@url{http://ageinghacker.net/projects/jitter/}.
+
+@cindex branch, git
+@cindex git branch
+@cindex @code{jitterlisp}, git branch
+@cindex @code{master}, git branch
+As of early 2018 JitterLisp's development takes place on the
+@code{jitterlisp} git branch, to be merged into @code{master} as soon
+as the code approaches a stable form.
+
+@cindex feedback
+@cindex contacting the author
+@cindex author, contacting
+@cindex Luca Saiu, contacting
+@cindex Saiu, Luca, contacting
+I welcome feedback.  If you need to contact me or want to discuss about
+JitterLisp please
+@pxref{Contacting the author,,, jitter, The Jitter Manual}.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Building JitterLisp
+@section Building JitterLisp
+
+@cindex build directory (Jitter)
+JitterLisp belongs to Jitter's examples.  The examples are not built
+by the default @command{make} target but are easy to generate by running
+@example
+make examples
+@end example
+@noindent
+from the Jitter build directory, or by running the test suite as
+explained below.
+
+@cindex test suite, Jitter
+@cindex @code{check}, make target (Jitter)
+@cindex @command{make check} (Jitter)
+@cindex build directory (Jitter)
+The Jitter test suite includes many cases based on JitterLisp, as compiled
+JitterLisp procedures are a convenient and realistic way of stressing Jitter
+and testing its generated code.
+Running Jitter's test suite with
+@example
+make check
+@end example
+@noindent
+(@pxref{Running the test suite,,, jitter, The Jitter Manual})
+from its build directory is sufficient to build JitterLisp as a side
+effect, in all of the variants (@pxref{JitterLisp executables}) supported
+by the Jitter configuration.
+I highly recommend running the test suite in any case before using
+Jitter.
+
+@cindex cross compilation
+@cindex Jitter
+@cindex GNU Coding Standards
+@cindex GNU build system
+@cindex Coding Standards, GNU
+@cindex build system, GNU
+@cindex GNU Autoconf
+@cindex GNU Automake
+@cindex Autoconf
+@cindex Automake
+@cindex tarball, stable release (not yet)
+@xref{Working with the Jitter sources,,, jitter, The Jitter Manual} for
+detailed building instructions.  The build system follows the modern GNU
+style and in particular the common practice and suggestions from the GNU
+Coding Standards
+(@pxref{Top,,, standards, The GNU Coding Standards}), which sets a few
+additional requirements such as GNU Autoconf and GNU Automake for
+``developers''---at the present time before I release official stable
+tarballs every user has to follow the developer instructions.
+
+@cindex Boehm-Demers garbage collector
+@cindex garbage collector, Boehm-Demers
+@cindex Hans Boehm, garbage collector
+Even if the dependency is not mandatory I strongly recommend the
+Boehm-Demers garbage collector, packaged by every modern GNU/Linux
+distributions and also easy to install from sources.
+@cindex Readline
+@cindex GNU Readline
+Another optional
+dependency is the GNU Readline library.
+@*
+@cindex @file{configure} script, Jitter
+Both dependencies are automatically checked by Jitter's @file{configure}
+script; if a library or its C headers are missing the corresponding
+functionality will be disabled, or some JitterLisp variants will not be
+built.
+
+@cindex cross compiling
+@cindex directory, build (Jitter)
+@cindex build directory (Jitter)
+Jitter's build system encourages a separate build directory and
+supports advanced features such as cross compilation, but should be
+standard enough to just work with the usual command line
+@example
+./bootstrap && ./configure && make
+@end example
+@noindent in most practical cases.
+
+@menu
+* JitterLisp executables:: Several JitterLisp systems, compatible but different.
+@end menu
+
+@node JitterLisp executables
+@subsection JitterLisp executables
+
+@cindex @file{configure} script, Jitter
+According to the system characteristics as detected by Jitter's
+@file{configure} script and to configure-time options supplied by the
+user the build system will compile different versions of JitterLisp,
+with the intent of testing and benchmarking Jitter.
+
+These different compiled programs will have different performance
+profiles, but still be equivalent in terms of Lisp functionality.
+
+@cindex configuration item, JitterLisp
+One JitterLisp executable is built for each combination of the
+following configuration items:
+@table @emph
+@cindex safe, JitterLisp configuration item
+@cindex unsafe, JitterLisp configuration item
+@item safety
+a JitterLisp program may be @dfn{safe} and check for operand types
+before executing every operation, or @dfn{unsafe} and omitting some
+check.  An unsafe Lisp will be more efficient, but subject to crashes
+in case of user error;
+
+@cindex Boehm-Demers garbage collector
+@cindex garbage collector, Boehm-Demers
+@cindex Hans Boehm, garbage collector
+@cindex litter
+@item garbage collection
+JitterLisp supports the Boehm-Demers garbage collector but can also
+allocate heap memory without ever freeing the space, either because the
+garbage collection library is not available or for performance testing.
+The two possible configuration values are called @dfn{Boehm} or
+@dfn{litter}, respectively.
+
+@cindex dispatching model, Jitter
+@item dispatching model
+there are currently four @dfn{dispatching models} supported by Jitter:
+@dfn{@code{switch}-dispatching},
+@dfn{direct threading},
+@dfn{minimal threading} and
+@dfn{no threading} (@pxref{Dispatch models,,, jitter, The Jitter Manual}),
+each with its own performance and portability profile.
+JitterLisp will run with any dispatching model.
+@end table
+
+@cindex build directory (Jitter)
+Unless some configuration item is disabled this makes up a total of 16
+combinations and therefore 16 executables, recognizable by suffixes in
+their file name.
+The safety suffix may be empty or @samp{--unsafe},
+the garbage collection suffix @samp{--boehm} or empty,
+and the dispatching model suffix one of
+@samp{--switch},
+@samp{--direct-threading},
+@samp{--minimal-threading} and
+@samp{--no-threading}.
+@*
+A good combination for general use will be
+@emph{safe}-@emph{Boehm}-@emph{no-threading}, implemented in the file
+@file{bin/jitterlisp--boehm--no-threading} relative to Jitter's build
+directory.
+A user measuring performance in a ``lowest-overhead'' context might
+want to try @file{bin/jitterlisp--unsafe--no-threading}, paying close
+attention to how much memory is used.
+The shell command
+@example
+ls bin/jitterlisp*
+@end example
+@noindent will print the full list of available JitterLisp programs.
+
+``Default'' JitterLisp executables, with no dispatching model suffix
+in their name are also built using the best dispatching model
+available in the current configuration.  In the example above
+@file{bin/jitterlisp--boehm} will have the same functionality as
+@file{bin/jitterlisp--boehm--no-threading}.
+
 @cindex invoking
 @cindex command line
-@cindex @command{jitterlisp}, invoking
+@cindex option, command line (@command{jitterlisp})
+@cindex @command{jitterlisp} and related executables, invoking
+In the following examples I will refer to @file{bin/jitterlisp--boehm}
+as the executable to run.  The executable name is easy to replace with
+another, in case that configuration is not available; every JitterLisp
+executable supports the same command-line interface.
+@cindex current working directory
+@cindex directory, current working
+The current working directory is always irrelevant when invoking any
+JitterLisp executable; the @file{bin/} component of the path name
+is therefore safe to freely adapt as well.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Installing JitterLisp
+@section Installing JitterLisp
+
+@cindex installing (by hand, for the time being)
+The Jitter build system does not support installing examples at the
+present time.
+
+@cindex GNU Libtool
+@cindex Libtool
+It would certainly be possible to directly use Libtool and install
+Jitter's libraries and executables.
+@cindex @file{configure} script, Jitter
+@cindex @option{--disable-shared}, Jitter @file{configure} option
+@cindex shared library
+@cindex static library
+@cindex library (native, non-Lisp)
+However, as a simpler workaround, a user can configure
+Jitter to generate static libraries only by calling @file{configure}
+with the option @option{--disable-shared},
+and then build the examples.  Each JitterLisp executable will be one
+self-contained file with no external run-time dependencies, easy to
+copy by hand into some directory from @env{PATH} or to another
+convenient location.
+
+@cindex library file, JitterLisp
+@cindex initialization file, JitterLisp
+@cindex license, text in JitterLisp executables
+@cindex GPL
+@cindex GNU General Public License
+If the Jitter libraries are statically linked and every dynamic
+library is installed then the JitterLisp executables will not access
+any other file by default: the large Lisp initialization file and the
+GPL license text are in fact embedded as constants within the native
+compiled file image (@pxref{constant-strings}).
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@c This node name is required by the GNU Coding Standards.  However nothing
+@c requires it to be a *chapter* name.
+@node Invoking JitterLisp
+@section Invoking JitterLisp
+@cindex invoking
+@cindex command line
+@cindex option, command line (@command{jitterlisp})
+@cindex @command{jitterlisp} and related executables, invoking
+
+@cindex non-option argument
+@fixme{file names as arguments}
+
+@fixme{Write this}
+@fixme{negative options}
+@fixme{multiple options: which one wins}
+
+@cindex common GNU options, command-line
+@cindex GNU, common options, command-line
+@cindex command-line options
+@cindex options, command-line
+JitterLisp supports the common GNU-style command-line options:
+@table @option
+@cindex @option{--version}, command-line option
+@item --version
+Print version information and legal notices for JitterLisp, then exit
+with success.
+
+@cindex @option{-?}, command-line option
+@cindex @option{--help}, command-line option
+@item -?@r{, }--help
+Print a terse description of JitterLisp's command-line interface including
+the options documented here, then exit with success.
+
+@cindex @option{--usage}, command-line option
+@item --usage
+Print a list of the options documented here with no explanation, then
+exit with success.
+@end table
+
+Scripting options:
+@table @option
+@cindex @option{--dump-version}, command-line option
+@item --dump-version
+@end table
+
+REPL options:
+@table @option
+@cindex @option{-r}, command-line option
+@cindex @option{--no-repl}, command-line option
+@cindex @option{--batch}, command-line option
+@item -q@r{, }--no-repl@r{, }--batch
+@end table
+Interactivity negative options:
+@table @option
+@cindex @option{--repl}, command-line option
+@cindex @option{--no-batch}, command-line option
+@item --repl@r{, }--no-batch
+@end table
+
+Interaction:
+@table @option
+@cindex @option{--no-omit-nothing}, command-line option
+@item --no-omit-nothing
+@fixme{This is about @nothing.}
+@end table
+
+Interaction negative options:
+@table @option
+@cindex @option{--omit-nothing}, command-line option
+@item --omit-nothing
+@end table
+
+Command-line form evaluation:
+@table @option
+@cindex @option{-e}, command-line option
+@cindex @option{--eval}, command-line option
+@item -e @var{sexprs}@r{, }--eval=@var{sexprs}
+@end table
+
+Debugging and benchmarking options:
+@table @option
+@cindex @option{-c}, command-line option
+@cindex @option{--colorize}, command-line option
+@item -c@r{, }--colorize
+@cindex @option{--compact-uninterned}, command-line option
+@item --compact-uninterned
+@cindex @option{--cross-disassembler}, command-line option
+@item --cross-disassembler
+@cindex @option{--no-library}, command-line option
+@item --no-library
+@cindex @option{--no-optimization-rewriting}, command-line option
+@item --no-optimization-rewriting
+@cindex @option{--no-verbose-litter}, command-line option
+@item --no-verbose-litter
+@cindex @option{-v}, command-line option
+@cindex @option{--verbose}, command-line option
+@item -v@r{, }--verbose
+@end table
+Debugging and benchmarking negative options:
+@table @option
+@cindex @option{--no-colorize}, command-line option
+@item --no-colorize
+@cindex @option{--no-compact-uninterned}, command-line option
+@item --no-compact-uninterned
+@cindex @option{--no-cross-disassembler}, command-line option
+@item --no-cross-disassembler
+@cindex @option{--no-verbose}, command-line option
+@item --no-verbose
+@cindex @option{--optimization-rewriting}, command-line option
+@item --optimization-rewriting
+@cindex @option{--verbose-litter}, command-line option
+@item --verbose-litter
+@end table
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Interaction example
+@section Interaction example
 
 @fixme{Write this}
 
+@fixme{@code{+} is a macro}
 
-@c Lisp language reference
+@fixme{look at an interpreted closure}
+
+@fixme{@code{macroexpand}}
+
+@fixme{do some simple computation over ASTs}
+
+@fixme{optimize explicitly}
+
+@fixme{optimize retroactively}
+
+@ignore
+@result{} foo
+@expansion{} foo
+@print{} foo
+@error{} foo
+@end ignore
+
+@fixme{These are just ideas.  The variable @code{x} is unbound.}
+@example
+(append '(a b c) '(1 2 3 4))
+  @result{} (a b c 1 2 3 4)
+
+
+x
+  @error{} unbound variable x
+'x
+  @result{} x
+(macroexpand x)
+  @error{} unbound variable x
+
+(macroexpand 'x)
+  @result{} [variable x]
+(macroexpand ''x)
+  @result{} [literal x]
+(macroexpand '''x)
+  @result{} [literal (quote x)]
+(macroexpand ''''x)
+  @result{} [literal (quote (quote x))]
+
+(define (twice n)
+  (* n 2))
+(twice 10)
+  @result{} 20
+twice
+  @result{}
+  #<interpreted-closure () (#<u680>)
+    [primitive #<primitive 2* 1-ary> [variable #<u680>]]>
+
+(define-macro (when-zero discriminand . body)
+  `(when (zero? ,discriminand) ,@@body))
+
+(macroexpand '(when-zero a b c))
+  @result{}
+  [if [call [variable zero?] [variable a]]
+        [sequence [variable b]
+                  [variable c]]
+        [literal #<nothing>]]
+(when-zero 42 (display 'foo) (newline))
+  @expansion{}
+  [if [call [variable zero?] [literal 42]]
+      [sequence [call [variable display] [literal foo]]
+                [call [variable newline]]]
+      [literal #<nothing>]]
+  @result{}
+  @nothing
+
+;; For people familiar with Common Lisp:
+(define-macro (defun operator formals . body-forms)
+  `(define (,operator ,@@formals)
+     ,@@body-forms))
+(define-macro (defmacro operator formals . body-forms)
+  `(define-macro (,operator . ,formals)
+     ,@@body-forms))
+;; And then:
+(defun successor (n)
+  (+ n 1))
+(defmacro when-zero (discriminand . body)
+  `(when (zero? ,discriminand)
+     ,@@body))
+
+(define my-even?
+  (letrec ((my-even? (lambda (n)
+                       (cond ((= n 0)  #t)
+                             ((= n 1)  #f)
+                             (#t       (odd? (- n 1))))))
+           (my-odd? (lambda (n)
+                      (cond ((= n 0)  #f)
+                            ((= n 1)  #t)
+                            (#t       (even? (- n 1)))))))
+    my-even?))
+(lambda () (letrec ((f 1) (g 2)) f))
+  @result{}
+  #<interpreted-closure () ()
+    [let #<u702> [literal #<undefined>]
+      [let #<u703> [literal #<undefined>]
+        [sequence [set! #<u702> [literal 1]]
+                  [sequence [set! #<u703> [literal 2]]
+                            [variable #<u702>]]]]]>
+(macroexpand '(begin))
+  @result{} [literal #<nothing>]
+(macroexpand '(begin (newline)))
+  @result{} [call [variable newline]]
+(macroexpand '(newline))
+  @result{} [call [variable newline]]
+(macroexpand '(begin (display 42) (newline)))
+  @result{}
+  [sequence [call [variable display] [literal 42]]
+            [call [variable newline]]]
+(macroexpand '(begin (display 42) (newline) (newline)))
+  @result{}
+  [sequence [call [variable display] [literal 42]]
+            [sequence [call [variable newline]]
+                      [call [variable newline]]]]
+
+@end example
+
+
+
+@c Lisp reference
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+@node Lisp reference
+@chapter Lisp reference
+
+@fill
+
+@menu
+* Lisp data::                      The possible shapes of Lisp objects.
+* Lisp language reference::        About the JitterLisp language.
+* Lisp language form reference::   The JitterLisp predefined language constructs.
+* Lisp library reference::         What predefined globals do.
+@end menu
+
+
+@c Lisp language form reference
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Lisp data
+@section Lisp data
+
+@fixme{Write this}
+
+@menu
+* Types::                                     Every possible shape of data.
+* Mapping Lisp data to expressions::          Homoiconicity.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@
+@node Types
+@subsection Types
+
+Every Lisp datum contains a @dfn{value} and a @dfn{type}.  Given a
+datum it is always possible to check for its type at run time by means
+of some predefined procedure (@pxref{type-checking-procedures}).
+
+Since JitterLisp has, at least currently, no subtyping relation, each
+object belongs to exactly one of the following types.  However some
+predefined procedures are provided to check whether an object belongs
+to one of several related data types; for example @code{closure?} will
+accept either an interpreted closure or a compiled closure as a
+``closure''.
+
+@fixme{any two object are comparable by identity: see @code{eq?}.}
+
+@anchor{macroexpansion}
+@fixme{talk about macroexpansion}
+
+@menu
+* Uniques::                 A few special objects.
+* Fixnums::                 Smallish-range integers.
+* Characters::              The fundamental elements of text.
+* Symbols::                 Comparable and usually named objects.
+* Conses::                  Mutable object pairs.
+* Boxes::                   Mutable objects contining another object.
+* Interpreted closures::    Procedures to be interpreted.
+* Compiled closures::       Faster procedures for the VM.
+* Primitives::              Procedure-like objects implemented in C.
+* Abstract Syntax Trees::   Code to be interpreted or compiled.
+* Macros::                  Procedure-like things to generate ASTs.
+* Primitive macros::        Macros implemented in C.
+@end menu
+
+@node Uniques
+@subsubsection Uniques
+@cindex unique
+
+@fill
+@fixme{immutability}
+
+@cindex empty list
+@cindex list, empty
+A unique object important in practice is @dfn{the empty list}:
+@syindex ()
+@deffn {unique} ()
+In read syntax it is acceptable to separate the open and closed
+parentheses with arbitrary whitespace or comments, in which last case
+the closed parentheses will be found on a separate line.
+@end deffn
+@noindent
+There exists exactly one empty list object, written as @code{()}.  It
+is used, in particular, as the trailing part of the of every list
+@emph{spine}:
+@pxref{lists}.
+
+@cindex boolean
+@cindex boolean, canonical
+@cindex canonical boolean
+@cindex true
+@cindex false
+A @dfn{boolean} object or @dfn{canonical boolean} represents a truth
+value, either @dfn{true} or @dfn{false}.  There are exactly two
+booleans:
+@syindex #f
+@deffn  {unique} #f
+@syindex #t
+@deffnx {unique} #t
+The false object is written as @code{#f};
+the true object is written as @code{#t}.
+@end deffn
+@noindent
+@cindex generalized boolean
+@cindex boolean, generalized
+@cindex conditional
+@cindex loop
+In practical use @code{#f} tends to be more important than @code{#t},
+as JitterLisp conditionals and loops distinguish between the @code{#f}
+value and @emph{any other} Lisp object which is taken as ``true'' for
+the purposes of tests.  A Lisp object used as a boolean
+in this extended sense is called a @dfn{generalized boolean}.  Of
+course generalized booleans are not necessarily unique objects.
+
+@syindex #<nothing>@r{ (no read syntax)}
+@deffn  {unique, no read syntax} #<nothing>
+@syindex #<eof>@r{ (no read syntax)}
+@deffnx {unique, no read syntax} #<eof>
+@syindex #<undefined>@r{ (no read syntax)}
+@deffnx {unique, no read syntax} #<undefined>
+@end deffn
+
+@node Fixnums
+@subsubsection Fixnums
+@cindex fixnum
+
+@node Characters
+@subsubsection Characters
+@cindex character
+
+@node Symbols
+@subsubsection Symbols
+@cindex symbol
+
+@node Conses
+@subsubsection Conses
+@cindex cons
+A @dfn{cons} is a pair object containing exactly two other Lisp
+objects, allowed to be conses in their turn or any other objects.
+Conses are mutable, in the sense that the two components of a cons can
+be changed at run time while keeping the identity of the cons object.
+
+@cindex car
+@cindex cdr
+The first object contained in a cons is called its @dfn{car}, the second is
+called its @dfn{cdr}.
+
+@cindex syntax, cons
+@cindex read syntax, cons
+@cindex output syntax, cons
+@syindex (@r{ (open parenthesis, cons syntax)}
+@syindex )@r{ (closed parenthesis, cons syntax)}
+@syindex .@r{ (dot, cons syntax)}
+@quotation Syntax
+If @var{a} and @var{b} are two Lisp objects, then
+@code{(@var{a} . @var{b})} is a cons containing
+@var{a} as its car and @var{b} as its cdr.
+@end quotation
+
+@cindex composed selector, cons
+Let @var{S} be any nonempty sequence of the characters ``a'' and
+``d''.  Then the @dfn{ca@var{S}r} of a cons is the car of the
+c@var{S}r of the cons, and its @dfn{cd@var{S}r} is the cdr of its
+c@var{S}r.
+@cindex caddr
+For example the caddr of an object is the car of the cdr
+of its cdr.  Such @dfn{composed cons selector} names are convenient to
+use when referring to nested components of a cons, and the JitterLisp
+library provides convenient functionality to access them with any
+@var{S} of length 1, 2, 3 and 4.
+
+@anchor{lists}
+@cindex list
+A @dfn{list} is either the empty list object or a cons whose cdr is
+another list.
+For example @code{()}, @code{(#t . ())}, @code{(#f . (3 . ()))}
+and @code{((1 . 2) . ())} are lists;
+@code{(#t . #t)} is not a list.
+
+@cindex sublist
+@cindex element, list
+A @dfn{sublist} of a nonempty list is either its cdr or a sublist of
+its cdr.
+The @dfn{elements} of a nonempty list are the car the list and the
+elements of its sublists.
+For example the list
+@code{(foo . (10 . (bar . ())))} has the three sublists
+@code{(10 . (bar . ()))},
+@code{(bar . ())}
+and
+@code{()},
+and the three elements
+@code{foo}, @code{10} and @code{bar}; the empty list
+@code{()} has no sublists and no elements.
+Given a nonempty list its first element and its first sublist can always
+be found by taking, respectively, the car and the cdr of the list.  Taking
+the car and cdr of the first sublist yields the second element and the
+second sublist of the original list, and so on.
+
+@cindex spine, list
+The following notation makes lists much easier to write, as it
+suppresses every dot on the list @dfn{spine} and many parentheses; it
+can be used on many non-list conses as well:
+@cindex compact cons notation
+@cindex cons notation, compact
+@cindex notation, cons, compact
+@quotation Compact cons notation
+Let @code{(@var{a} . @var{b})} be a cons.  When @var{b} is either the
+empty list @code{()} or another cons the @dfn{compact cons notation}
+is supported: in compact notation @emph{both} the dot and the
+parentheses around @var{b}
+@c , but not the open parenthesis before @var{a} or the closed
+@c parenthesis after @var{b},
+are omitted.
+
+JitterLisp always adopts the compact cons notation in output, whenever
+applicable.  Its use in input is optional.
+@end quotation
+@noindent
+For example
+@code{(7)} is a compact way of writing @code{(7 . ())},
+@code{(1 2)} is a compact way of writing @code{(1 . (2 . ()))},
+@code{((a))} is a compact way of writing @code{((a . ()) . ())},
+and @code{(10 a . #t)} is a compact way of writing the non-list
+@code{(10 . (a . #t))}.
+
+A further syntactic convenience is available for particular conses,
+which are also lists:
+@cindex notation, prefix
+@cindex prefix notation
+@quotation Prefix notation
+Let @var{q} be the read syntax for a Lisp object.  Then:
+@itemize
+@item
+@syindex '@r{ (apostrophe, prefix for @code{quote})}
+@code{'@var{q}} is an alternative read syntax for @code{(quote @var{q})};
+@item
+@syindex `@r{ (backtick, prefix for @code{quasiquote})}
+@code{`@var{q}} is an alternative read syntax for @code{(quasiquote @var{q})};
+@item
+@syindex ,@r{ (comma, prefix for @code{unquote})}
+@code{,@var{q}} is an alternative read syntax for @code{(unquote @var{q})};
+and
+@item
+@syindex ,@@@r{ (comma at, prefix for @code{unquote-splicing})}
+@code{,@@@var{q}} is an alternative read syntax for @code{(unquote-splicing @var{q})}.
+@end itemize
+The prefix notation is recognized by the reader, but currently not emitted
+in output.  Its use in input, again, is optional.
+@end quotation
+@noindent
+The prefix notation serves to express quoting and quasiquoting in a more
+convenient way: @pxref{Quoting and quasiquoting}.
+
+It is worth stressing that lists are not special at the language
+level and do not constitute a separate type: the name ``list'' is
+just a characterization of the shape of some objects, common in
+practice, which include the empty list object and some conses.
+
+
+@node Boxes
+@subsubsection Boxes
+@cindex box
+
+Boxes have no read syntax.
+
+@node Interpreted closures
+@subsubsection Interpreted closures
+@cindex interpreted closure
+
+@node Compiled closures
+@subsubsection Compiled closures
+@cindex compiled closure
+@fixme{An interpreted closure can destructively change to a compiled
+closure (but not vice-versa) without changing its identity.}
+
+@node Primitives
+@subsubsection Primitives
+@cindex primitive
+
+@node Abstract Syntax Trees
+@subsubsection Abstract Syntax Trees
+@cindex Abstract Syntax Tree (AST)
+An @dfn{Abstract Syntax Tree} or @dfn{AST} is a recursive type
+representing code as a data structure.  ASTs only support the core
+language forms which remain after macroexpanding away
+(@pxref{macroexpansion}, @pxref{Macroexpanding})
+every macro use: Lisp code rewritten
+not to use any macro turns into an AST, which can be then interpreted or
+compiled, or even analyzed and transformed by other Lisp code.
+
+@cindex reflection
+@cindex self-compiler
+@cindex self-optimizer
+@cindex compiler, self-
+@cindex optimizer, self-
+JitterLisp in fact contains no executor for Lisp: there are only an
+@dfn{AST interpreter}, written in C, and an @dfn{AST compiler}
+generating code for the Jittery VM, written in Lisp.  It is thanks to
+the reflection capabilities provided by the AST data type that it is
+possible to write a self-compiler, and also a self-optimizer, in the
+language itself.
+
+@fill
+
+ASTs have no read syntax, however the JitterLisp library provides
+facilities to conveniently inspect and build ASTs: @pxref{AST
+operations}.
+
+@node Macros
+@subsubsection Macros
+@cindex macro (type)
+
+@node Primitive macros
+@subsubsection Primitive macros
+@cindex primitive macro
+
+
+
+@c @@@@@@@@@@@@@@@@@@@
+@node Mapping Lisp data to expressions
+@subsection Mapping Lisp data to expressions
+
+
+@c Lisp language reference
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 @node Lisp language reference
-@chapter Lisp language reference
+@section Lisp language reference
+
+@fixme{Write this}
+
+@menu
+* Constants::                                 Some symbols can't be globally
+                                              mutated.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@
+@node Constants
+@subsection Constants
+@fixme{primitive wrappers are global constants}
+
+
+@c Lisp language form reference
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Lisp language form reference
+@section Lisp language form reference
 
 @fixme{Write this.}
 
@@ -367,16 +1590,6 @@ the library and initialize the global state; then, from the library
 itself, the feature is re-defined in Lisp in a more general or
 powerful way.
 
-@menu
-* Lisp reference introduction::               What you will find in this chapter,
-                                              and general considerations.
-* Language forms::                            The stuff programs are made of.
-@end menu
-
-@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
-@node Lisp reference introduction
-@section Lisp reference introduction
-
 @fixme{Write this}
 
 @fixme{lexical scoping}
@@ -389,9 +1602,6 @@ powerful way.
 
 @fixme{erroring out}
 
-@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
-@node Language forms
-@section Language forms
 @cindex form, language
 @cindex language form
 
@@ -402,12 +1612,41 @@ use the most specific form available, for readability and occasionally
 also for efficiency's sake.}
 
 @menu
+* Definitions::              Adding or changing global variable bindings.
 * Sequencing::               Executing multiple forms one after the other.
 * Conditionals::             Evaluating different forms according to the result of another.
+* Procedures::               Making anonymous procedure objects or ``closures''.
 * Blocks::                   Establishing local variable bindings.
 * Assignment::               Changing existing variable bindings.
 * Loops::                    Performing the same action multiple times.
+* Making macros::            Building new macros.
+* Quoting and quasiquoting:: Building literal or mostly literal objects.
 @end menu
+
+@c @@@@@@@@@@@
+@node Definitions
+@subsection Definitions
+
+@syindex define
+@deffn  {macro} define defined-thing . forms
+@syindex define-constant
+@deffnx {macro} define-constant defined-thing . forms
+@syindex define-non-optimized
+@deffnx {macro} define-non-optimized defined-thing . forms
+@syindex define-constant-non-optimized
+@deffnx {macro} define-constant-non-optimized defined-thing . forms
+@fixme{Write this}
+@end deffn
+
+@anchor{define-macro}
+@syindex define-macro
+@deffn  {macro} define-macro (name . args-pattern) . forms
+@end deffn
+
+@syindex macrolet@r{ (non-existing form)}
+There is currently no syntactic support for local macros, such as
+Common Lisp's @code{macrolet}.
+
 
 @c @@@@@@@@@@@
 @node Sequencing
@@ -416,7 +1655,8 @@ also for efficiency's sake.}
 @cindex sequencing
 @fixme{sequencing is nice}
 
-@fixme{``implicit @code{progn}'' or ``implicit @code{begin}''}
+@fixme{``implicit @code{progn}'' or ``implicit @code{begin}'': I do it
+in more cases than Common Lisp and Scheme}
 
 @syindex begin
 @deffn {macro} begin . forms
@@ -485,13 +1725,29 @@ result of the condition.
 @end deffn
 
 @syindex cond
-@deffn {macro} cond . clauses
+@deffn {core macro} cond . clauses
 @fixme{Write this}
 @end deffn
 
 @syindex case
 @deffn {macro} case discriminand . clauses
 @fixme{Write this}
+@end deffn
+
+
+@c @@@@@@@@@@@
+@node Procedures
+@subsection Procedures
+
+@anchor{lambda}
+@syindex lambda
+@deffn  {macro} lambda formals . forms
+@syindex lambda-optimized
+@deffnx {macro} lambda-optimized formals . forms
+@end deffn
+
+@syindex lambda-non-optimized
+@deffn {core macro} lambda-non-optimized formals . forms
 @end deffn
 
 
@@ -529,8 +1785,10 @@ but belongs with looping forms; @pxref{named-let,, named @code{let}} for its des
 
 @anchor{destructuring-bind}
 @syindex destructuring-bind
-@deffn {macro} destructuring-bind template structure . forms
-@fixme{Write this}
+@deffn {macro} destructuring-bind pattern structure . forms
+@cindex template (Common Lisp)
+@cindex pattern
+@fixme{Write this.  Common Lisp calls ``template'' what I call ``pattern''.}
 @end deffn
 
 @c @@@@@@@@@@@
@@ -543,7 +1801,7 @@ An @dfn{assignment} operation destructively modifies an existing variable bindin
 @syindex set!
 @deffn {core macro} set! x . forms
 Evaluate the forms @var{forms} left-to-right, then assign the result of the last one
-(or @code{#<nothing>} if no forms were given) to the innermost binding for the variable
+(or @nothing{} if no forms were given) to the innermost binding for the variable
 @var{x}.
 
 Error out if @var{x} is not a symbol, if @var{x} is unbound, or if the binding for
@@ -583,20 +1841,22 @@ times, in sequence.
 @end deffn
 
 @syindex dotimes
-@deffn {macro} dotimes (x . count-forms) . body-forms
+@syindex dotimesdown
+@deffn  {macro} dotimes (x count-form . result-forms) . body-forms
+@deffnx {macro} dotimesdown (x count-form . result-forms) . body-forms
 @fixme{Write this}
 @end deffn
 
 @syindex dolist
-@deffn {macro} dolist (x . list-forms) . body-forms
+@deffn {macro} dolist (x list-form . result-forms) . body-forms
 @fixme{Write this}
 @end deffn
 
 @anchor{named-let}
+@syindex named-let
+@deffn  {macro} named-let name bindings . forms
 @syindex @r{named} let
 @syindex let@r{, named}
-@syindex named-let
-@deffn {macro} named-let name bindings . forms
 @deffnx {macro} let name bindings . forms
 @fixme{Write this}
 
@@ -604,24 +1864,999 @@ The other, simpler, syntax for @code{let} is described among block
 forms: @pxref{let,, @code{let}}.
 @end deffn
 
+@c @@@@@@@@@@@
+@node Making macros
+@subsection Making macros
+
+@syindex low-level-macro
+@deffn {core macro} low-level-macro . forms
+@syindex low-level-macro-args
+@fixme{Write this.  Speak of @code{low-level-macro-args}}
+@end deffn
+
+@syindex macro
+@deffn {macro} macro (macro-name . pattern) . forms
+@fixme{Write this.  This uses @code{destructuring bind}
+@pxref{destructuring-bind}}
+@end deffn
+
+@syindex define
+@syindex define-macro
+The macros above would suffice, along with @code{define}, for globally
+binding macros.  However @code{define-macro} is provided as a more convenient
+syntax: @pxref{define-macro}.
+
+
+@c @@@@@@@@@@@
+@node Quoting and quasiquoting
+@subsection Quoting and quasiquoting
+
+@cindex quoting
+@syindex quote
+@deffn {core macro} quote thing
+@end deffn
+
+@cindex quasiquoting
+@syindex quasiquote
+@syindex unquote
+@syindex unquote-splicing
+@deffn {macro} quasiquote template
+@end deffn
+
+@syindex quote
+@syindex quasiquote
+@syindex unquote
+@syindex unquote-splicing
+@syindex '@r{ (apostrophe, prefix for @code{quote})}
+@syindex `@r{ (backtick, prefix for @code{quasiquote})}
+@syindex ,@r{ (comma, prefix for @code{unquote})}
+@syindex ,@@@r{ (comma at, prefix for @code{unquote-splicing})}
+@fixme{link prefixes.  Remind that ' is usable}
+
 
 @c Lisp library reference
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 @node Lisp library reference
-@chapter Lisp library reference
+@section Lisp library reference
 
 @fixme{Write this}
 
+@fixme{Every symbol documented here is a global constant, except for
+macros; it is convenient to be able to re-define macros in a
+backwards-compatible way}
+
 @menu
-* Input and output::                          How to read and write.
+* Type checking::                     Testing a datum's type at run time.
+* Boolean operations::                Working with booleans.
+* Arithmetic::                        Operations on numbers.
+* Number comparison::                 Comparing numbers.
+* Symbol handling::                   Working with symbols.
+* Box handling::                      Working with boxes.
+* Cons handling::                     Working with conses.
+* List handling::                     Working with list-shaped objects.
+* Alist handling::                    Working with association lists.
+* Higher order::                      Procedures working with procedures.
+* Variadic utility::                  Helpers for defining variadic macros.
+* Sets as lists::                     Sets as unordered list of elements
+                                      compared with @code{eq?}.
+* AST operations::                    Working with Abstract Syntax Trees.
+* Macroexpanding::                    Explicitly expanding macros from user
+                                      code.
+* Interpreting::                      @code{eval}, @code{apply} and friends.
+* Input and output::                  How to read and write.
+* Legal notices::                     Printing legal notices.
+* Unclassified::                      stuff to move
 @end menu
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
-@node Input and output
-@section Input and output
+@node Type checking
+@subsection Type checking
 
+@cindex type checking
+@cindex checking, type
+@anchor{type-checking-procedures}
+
+@menu
+* Actual type checking::                    Testing an object type.
+* Pseudo-type checking::                    Testing an object type and shape.
+@end menu
+
+@c @@@@@@@@@@@@
+@node Actual type checking
+@subsubsection Actual type cheking
+
+@fixme{``Actual'' is a terrible word to use here.}
+
+@fixme{Write.  These return a canonical boolean and never fail.}
+
+@syindex fixnum?
+@deffn  {primitive wrapper} fixnum? x
+@syindex boolean?
+@deffnx {primitive wrapper} unique? x
+@syindex unique?
+@deffnx {primitive wrapper} boolean? x
+@syindex character?
+@deffnx {primitive wrapper} character? x
+@syindex null?
+@deffnx {primitive wrapper} null? x
+@syindex eof?
+@deffnx {primitive wrapper} eof? x
+@syindex nothing?
+@deffnx {primitive wrapper} nothing? x
+@syindex undefined?
+@deffnx {primitive wrapper} undefined? x
+@syindex box?
+@deffnx {primitive wrapper} box? x
+@syindex symbol?
+@deffnx {primitive wrapper} symbol? x
+@syindex cons?
+@deffnx {primitive wrapper} cons? x
+@syindex primitive?
+@deffnx {primitive wrapper} primitive? x
+@syindex macro?
+@deffnx {primitive wrapper} macro? x
+@syindex interpreted-closure?
+@deffnx {primitive wrapper} interpreted-closure? x
+@syindex compiled-closure?
+@deffnx {primitive wrapper} compiled-closure? x
+@syindex ast?
+@deffnx {primitive wrapper} ast? x
+@end deffn
+
+@syindex non-null?
+@syindex non-cons?
+@syindex non-symbol?
+@deffn  {primitive wrapper} non-null? x
+@deffnx {primitive wrapper} non-cons? x
+@deffnx {primitive wrapper} non-symbol? x
+@end deffn
+
+@c @@@@@@@@@@@@
+@node Pseudo-type checking
+@subsubsection Pseudo-type checking
+
+@syindex number?
+@deffn {procedure} number? x
+@end deffn
+
+@syindex closure?
+@deffn {procedure} closure? x
+@end deffn
+
+@syindex list?
+@deffn {procedure} list? x
+@end deffn
+
+@syindex singleton?
+@deffn {procedure} singleton? x
+@end deffn
+
+@syindex null-or-singleton?
+@deffn {procedure} null-or-singleton? x
+@end deffn
+
+@syindex symbols?
+@deffn {procedure} symbols? x
+@end deffn
+
+@syindex alist?
+@deffn {procedure} alist? x
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Boolean operations
+@subsection Boolean operations
+
+@syindex not
+@deffn {primitive wrapper} not x
+@end deffn
+
+@syindex or
+@deffn  {macro} or . clauses
+@syindex lispy-or
+@deffnx {macro} lispy-or . clauses
+@end deffn
+
+@syindex and
+@deffn  {macro} and . clauses
+@syindex lispy-and
+@syindex lispy-or  @c Not a mistake: there is a reference.
+@deffnx {macro} lispy-and . clauses
+@fixme{@code{lispy-and} is provided just for symmetry with @code{lispy-or},
+and is in fact an alias for @code{and}, the traditional Lisp
+definition does introducing no inefficiencies in this case.}
+@end deffn
+
+@syindex boolean-canonicalize
+@deffn {primitive wrapper} boolean-canonicalize x
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Arithmetic
+@subsection Arithmetic
+
+@fixme{fixnum only for the time being}
+
+@syindex negate
+@deffn  {primitive wrapper} negate x
+@end deffn
+
+@syindex 1+
+@deffn  {primitive wrapper} 1+ x
+@syindex 1-
+@deffnx {primitive wrapper} 1- x
+@end deffn
+
+@syindex 2*
+@deffn  {primitive wrapper} 2* x
+@syindex 2/
+@deffnx {primitive wrapper} 2/ x
+@syindex 2quotient
+@deffnx {primitive wrapper} 2quotient x
+@syindex 2remainder
+@deffnx {primitive wrapper} 2remainder x
+@end deffn
+
+@syindex primordial-+
+@deffn  {primitive wrapper} primordial-+ x y
+@syindex primordial--
+@deffnx {primitive wrapper} primordial-- x y
+@syindex primordial-*
+@deffnx {primitive wrapper} primordial-* x y
+@syindex primordial-/
+@deffnx {primitive wrapper} primordial-/ x y
+@syindex primordial-quotient
+@deffnx {primitive wrapper} primordial-quotient x y
+@syindex primordial-remainder
+@deffnx {primitive wrapper} primordial-remainder x y
+@end deffn
+
+@syindex *-by-sums-procedure
+@deffn {procedure} *-by-sums-procedure x y
+@end deffn
+
+@syindex **-procedure
+@deffn {procedure} **-procedure b e
+@end deffn
+
+@syindex +
+@deffn  {macro} + . args
+@syindex *
+@deffnx {macro} * . args
+@syindex *-by-sums
+@deffnx {macro} *-by-sums . args
+@syindex **
+@deffnx {macro} ** . args
+@end deffn
+
+@syindex -
+@deffn {macro} - . args
+@end deffn
+
+@syindex /
+@deffn {macro} / . args
+@end deffn
+
+@syindex square
+@deffn {procedure} square x
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Number comparison
+@subsection Number comparison
+
+@fixme{fixnum only for the time being}
+
+@syindex zero?
+@deffn  {primitive wrapper} zero? x
+@syindex non-zero?
+@deffnx {primitive wrapper} non-zero? x
+@syindex positive?
+@deffnx {primitive wrapper} positive? x
+@syindex non-positive?
+@deffnx {primitive wrapper} non-positive? x
+@syindex negative?
+@deffnx {primitive wrapper} negative? x
+@syindex non-negative?
+@deffnx {primitive wrapper} non-negative? x
+@end deffn
+
+@syindex =
+@deffn  {primitive wrapper} = x y
+@syindex <
+@deffnx {primitive wrapper} < x y
+@syindex >
+@deffnx {primitive wrapper} > x y
+@syindex <=
+@deffnx {primitive wrapper} <= x y
+@syindex >=
+@deffnx {primitive wrapper} >= x y
+@syindex <>
+@deffnx {primitive wrapper} <> x y
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Symbol handling
+@subsection Symbol handling
+
+@syindex gensym
+@deffn {primitive wrapper} gensym
+@end deffn
+
+@syindex interned-symbols
+@deffn {primitive wrapper} interned-symbols
+@end deffn
+
+@syindex symbol-global
+@deffn {primitive wrapper} symbol-global s
+@end deffn
+
+@syindex make-constant!
+@deffn {primitive wrapper} make-constant! s
+@end deffn
+
+@syindex constant?
+@deffn {primitive wrapper} constant? s
+@end deffn
+
+@syindex defined?
+@deffn {primitive wrapper} defined? s
+@end deffn
+
+@syindex undefine
+@deffn {primitive wrapper} undefine s
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Box handling
+@subsection Box handling
+
+@syindex box
+@deffn {primitive wrapper} box x
+@end deffn
+
+@syindex box-get
+@deffn {primitive wrapper} box-get b
+@end deffn
+
+@syindex box-set!
+@deffn {primitive wrapper} box-set! b x
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Cons handling
+@subsection Cons handling
+
+@syindex cons
+@deffn {primitive wrapper} cons a b
+@end deffn
+
+@syindex car
+@deffn  {primitive wrapper} car c
+@syindex cdr
+@deffnx {primitive wrapper} cdr c
+@end deffn
+
+@syindex caar
+@deffn  {procedure} caar c
+@syindex cdar
+@deffnx {procedure} cdar c
+@syindex cadr
+@deffnx {procedure} cadr c
+@syindex cddr
+@deffnx {procedure} cddr c
+@syindex caaar
+@deffnx {procedure} caaar c
+@syindex cadar
+@deffnx {procedure} cadar c
+@syindex caadr
+@deffnx {procedure} caadr c
+@syindex caddr
+@deffnx {procedure} caddr c
+@syindex cdaar
+@deffnx {procedure} cdaar c
+@syindex cddar
+@deffnx {procedure} cddar c
+@syindex cdadr
+@deffnx {procedure} cdadr c
+@syindex cdddr
+@deffnx {procedure} cdddr c
+@syindex caaaar
+@deffnx {procedure} caaaar c
+@syindex caadar
+@deffnx {procedure} caadar c
+@syindex caaadr
+@deffnx {procedure} caaadr c
+@syindex caaddr
+@deffnx {procedure} caaddr c
+@syindex cadaar
+@deffnx {procedure} cadaar c
+@syindex caddar
+@deffnx {procedure} caddar c
+@syindex cadadr
+@deffnx {procedure} cadadr c
+@syindex cadddr
+@deffnx {procedure} cadddr c
+@syindex cdaaar
+@deffnx {procedure} cdaaar c
+@syindex cdadar
+@deffnx {procedure} cdadar c
+@syindex cdaadr
+@deffnx {procedure} cdaadr c
+@syindex cdaddr
+@deffnx {procedure} cdaddr c
+@syindex cddaar
+@deffnx {procedure} cddaar c
+@syindex cdddar
+@deffnx {procedure} cdddar c
+@syindex cddadr
+@deffnx {procedure} cddadr c
+@syindex cddddr
+@deffnx {procedure} cddddr c
+@end deffn
+
+@syindex set-car!
+@deffn  {primitive wrapper} set-car! c x
+@syindex set-cdr!
+@deffnx {primitive wrapper} set-cdr! c x
+@end deffn
+
+@syindex set-caar!
+@deffn  {procedure} set-caar! c
+@syindex set-cdar!
+@deffnx {procedure} set-cdar! c
+@syindex set-cadr!
+@deffnx {procedure} set-cadr! c
+@syindex set-cddr!
+@deffnx {procedure} set-cddr! c
+@syindex set-caaar!
+@deffnx {procedure} set-caaar! c
+@syindex set-cadar!
+@deffnx {procedure} set-cadar! c
+@syindex set-caadr!
+@deffnx {procedure} set-caadr! c
+@syindex set-caddr!
+@deffnx {procedure} set-caddr! c
+@syindex set-cdaar!
+@deffnx {procedure} set-cdaar! c
+@syindex set-cddar!
+@deffnx {procedure} set-cddar! c
+@syindex set-cdadr!
+@deffnx {procedure} set-cdadr! c
+@syindex set-cdddr!
+@deffnx {procedure} set-cdddr! c
+@syindex set-caaaar!
+@deffnx {procedure} set-caaaar! c
+@syindex set-caadar!
+@deffnx {procedure} set-caadar! c
+@syindex set-caaadr!
+@deffnx {procedure} set-caaadr! c
+@syindex set-caaddr!
+@deffnx {procedure} set-caaddr! c
+@syindex set-cadaar!
+@deffnx {procedure} set-cadaar! c
+@syindex set-caddar!
+@deffnx {procedure} set-caddar! c
+@syindex set-cadadr!
+@deffnx {procedure} set-cadadr! c
+@syindex set-cadddr!
+@deffnx {procedure} set-cadddr! c
+@syindex set-cdaaar!
+@deffnx {procedure} set-cdaaar! c
+@syindex set-cdadar!
+@deffnx {procedure} set-cdadar! c
+@syindex set-cdaadr!
+@deffnx {procedure} set-cdaadr! c
+@syindex set-cdaddr!
+@deffnx {procedure} set-cdaddr! c
+@syindex set-cddaar!
+@deffnx {procedure} set-cddaar! c
+@syindex set-cdddar!
+@deffnx {procedure} set-cdddar! c
+@syindex set-cddadr!
+@deffnx {procedure} set-cddadr! c
+@syindex set-cddddr!
+@deffnx {procedure} set-cddddr! c
+@end deffn
+
+@syindex car-or-nil
+@deffn  {procedure} car-or-nil c
+@syindex cdr-or-nil
+@deffnx {procedure} cdr-or-nil c
+@end deffn
+
+@syindex improper-list
+@deffn  {macro} improper-list first-element . more-elements
+@syindex cons*
+@deffnx {macro} cons* first-element . more-elements
+@end deffn
+
+@syindex circular-list
+@deffn {macro} circular-list first-element . more-elements
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node List handling
+@subsection List handling
+
+@syindex singleton
+@deffn {procedure} singleton
+@end deffn
+
+@syindex list
+@deffn {macro} list . elements
+@end deffn
+
+@syindex replicate
+@deffn  {procedure} replicate n x
+@syindex make-list
+@deffnx {procedure} make-list n x
+@end deffn
+
+@syindex last-cons
+@deffn {procedure} last-cons xs
+@end deffn
+
+@syindex last
+@deffn {procedure} last xs
+@end deffn
+
+@syindex all-but-last
+@deffn  {procedure} all-but-last xs
+@syindex all-but-last-reversed
+@deffnx {procedure} all-but-last-reversed xs
+@end deffn
+
+@syindex length
+@deffn {procedure} length xs
+@end deffn
+
+@syindex reverse
+@deffn  {procedure} reverse xs
+@syindex reverse!
+@deffnx {procedure} reverse! xs
+@end deffn
+
+@syindex append-procedure
+@deffn  {procedure} append-procedure xs ys
+@syindex append-reversed
+@deffnx {procedure} append-reversed xs ys
+@syindex append!
+@deffnx {procedure} append! xs ys
+@end deffn
+
+@syindex append
+@deffn  {macro} append . xss
+@end deffn
+
+@syindex flatten
+@deffn  {procedure} flatten xss
+@syindex flatten!
+@deffnx {procedure} flatten! xss
+@syindex flatten-reversed
+@deffnx {procedure} flatten-reversed xss
+@syindex flatten-reversed!
+@deffnx {procedure} flatten-reversed! xss
+@end deffn
+
+@syindex list-copy
+@deffn {procedure} list-copy xs
+@end deffn
+
+@syindex nth-cons
+@deffn  {procedure} nth-cons xs n
+@syindex nth-cons-or-nil
+@deffnx {procedure} nth-cons-or-nil xs n
+@end deffn
+
+@syindex nth
+@deffn {procedure} nth xs n
+@end deffn
+
+@syindex take
+@deffn  {procedure} take xs n
+@syindex take-reversed
+@deffnx {procedure} take-reversed xs n
+@syindex take!
+@deffnx {procedure} take! xs n
+@end deffn
+
+@syindex drop
+@deffn  {procedure} drop xs n
+@syindex drop!
+@deffnx {procedure} drop! xs n
+@end deffn
+
+@syindex zip
+@deffn  {procedure} zip xs n
+@syindex zip-reversed
+@deffnx {procedure} zip-reversed xs n
+@end deffn
+
+@syindex unzip
+@deffn  {procedure} unzip xs n
+@syindex unzip-reversed
+@deffnx {procedure} unzip-reversed xs n
+@end deffn
+
+@syindex map
+@deffn  {procedure} map f xs
+@syindex map-reversed
+@deffnx {procedure} map-reversed f xs
+@syindex map!
+@deffnx {procedure} map! f xs
+@end deffn
+
+@syindex fold-left
+@deffn {procedure} fold-left f x xs
+@end deffn
+
+@syindex fold-right
+@deffn  {procedure} fold-right f xs y
+@syindex fold-right!
+@deffnx {procedure} fold-right! f xs y
+@end deffn
+
+@syindex exists?
+@deffn  {procedure} exists? p xs
+@syindex for-all?
+@deffnx {procedure} for-all? p xs
+@end deffn
+
+@syindex filter
+@deffn  {procedure} filter p xs
+@syindex filter-reversed
+@deffnx {procedure} filter-reversed p xs
+@end deffn
+
+@syindex range
+@deffn  {procedure} range a b
+@syindex range-reversed
+@deffnx {procedure} range-reversed a b
+@end deffn
+
+@syindex iota
+@deffn {procedure} iota n
+@end deffn
+
+@syindex sort
+@deffn {procedure} sort xs
+@end deffn
+
+@syindex list-has?
+@deffn {procedure} list-has? xs x
+@end deffn
+
+@syindex list-without
+@deffn  {procedure} list-without xs x
+@syindex list-without!
+@deffnx {procedure} list-without! xs x
+@end deffn
+
+@syindex all-different?
+@deffn {procedure} all-different?
+@fixme{quadratic}
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Alist handling
+@subsection Alist handling
+
+@syindex assq
+@deffn {procedure} assq key alist
+@end deffn
+
+@syindex rassq
+@deffn {procedure} rassq value alist
+@end deffn
+
+@syindex del-assq-1
+@deffn {procedure} del-assq-1 key alist
+@end deffn
+
+@syindex del-assq
+@deffn  {procedure} del-assq key alist
+@syindex del-assq-noncopying
+@deffnx {procedure} del-assq-noncopying key alist
+@end deffn
+
+@syindex del-assq-list
+@deffn  {procedure} del-assq-list keys alist
+@syindex del-assq-list-noncopying
+@deffnx {procedure} del-assq-list-noncopying keys alist
+@end deffn
+
+@syindex alist-copy
+@deffn {procedure} alist-copy alist
+@end deffn
+
+@syindex alist-get
+@deffn {procedure} alist-get key alist
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Higher order
+@subsection Higher order
+
+@syindex compose-procedure
+@deffn  {procedure} compose-procedure f g
+@syindex compose-eta
+@deffnx {procedure} compose-eta f g
+@end deffn
+
+@syindex compose
+@deffn  {macro} compose . fs
+@syindex compose-pipeline
+@deffnx {macro} compose-pipeline . fs
+@end deffn
+
+@syindex square-function
+@deffn  {procedure} square-function f
+@syindex square-function-eta
+@deffnx {procedure} square-function-eta f
+@end deffn
+
+@syindex iterate
+@deffn  {procedure} iterate f n
+@syindex iterate-eta
+@deffnx {procedure} iterate-eta f n
+@syindex iterate-pre
+@deffnx {procedure} iterate-pre f n
+@syindex iterate-post
+@deffnx {procedure} iterate-post f n
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Variadic utility
+@subsection Variadic utility
+
+@syindex define-left-nested-variadic-extension
+@deffn  {macro} define-left-nested-variadic-extension name original-name neutral
+@syindex define-right-nested-variadic-extension
+@deffnx {macro} define-right-nested-variadic-extension name original-name neutral
+@syindex define-associative-variadic-extension
+@deffnx {macro} define-associative-variadic-extension name original-name neutral
+@end deffn
+
+@fixme{yes, the things that follow are really procedures}
+
+@syindex variadic-left-deep
+@deffn  {procedure} variadic-left-deep rator neutral rands
+@syindex variadic-right-deep
+@deffnx {procedure} variadic-right-deep rator neutral rands
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Sets as lists
+@subsection Sets as lists
+
+@fixme{Performance caveat}
+
+@fixme{order caveat}
+
+@fixme{The word ``set'' as used here refers to a collection of objects in the
+mathematical sense, and has nothing to do with the action of ``setting'' as
+performed by @code{set-@var{thing}!} procedures.}
+
+@syindex set-empty
+@deffn {unique} set-empty
+@end deffn
+
+@syindex set-empty?
+@deffn {procedure} empty? s
+@end deffn
+
+@syindex set-singleton
+@deffn {procedure} set-singleton x
+@end deffn
+
+@syindex set
+@deffn  {macro} set . elements
+@end deffn
+
+@syindex set-has?
+@deffn {procedure} set-has? s x
+@end deffn
+
+@syindex set-with
+@deffn {procedure} set-with s x
+@end deffn
+
+@syindex set-without
+@deffn {procedure} set-without s x
+@end deffn
+
+@syindex set-unite-procedure
+@deffn  {procedure} set-unite-procedure s1 s2
+@syindex set-intersect-procedure
+@deffnx {procedure} set-intersect-procedure s1 s2
+@syindex set-subtract-procedure
+@deffnx {procedure} set-subtract-procedure s1 s2
+@end deffn
+
+@syindex set-unite
+@deffn  {macro} set-unite . sets
+@syindex set-intersect
+@deffnx {macro} set-intersect . sets
+@syindex set-subtract
+@deffnx {macro} set-subtract first-set . other-sets
+@end deffn
+
+@syindex list->set
+@deffn  {procedure} list->set xs
+@end deffn
+
+@syindex set->list@r{ (non-existing procedure)}
+@fixme{No @code{set->list} is needed}.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node AST operations
+@subsection AST operations
+
+@fixme{if the argument is not an AST these all fail.}
+
+@syindex ast-literal?
+@deffn  {primitive wrapper} ast-literal?
+@syindex ast-variable?
+@deffnx {primitive wrapper} ast-variable?
+@syindex ast-define?
+@deffnx {primitive wrapper} ast-define?
+@syindex ast-if?
+@deffnx {primitive wrapper} ast-if?
+@syindex ast-set!?
+@deffnx {primitive wrapper} ast-set!?
+@syindex ast-while?
+@deffnx {primitive wrapper} ast-while?
+@syindex ast-primitive?
+@deffnx {primitive wrapper} ast-primitive?
+@syindex ast-call?
+@deffnx {primitive wrapper} ast-call?
+@syindex ast-lambda?
+@deffnx {primitive wrapper} ast-lambda?
+@syindex ast-let?
+@deffnx {primitive wrapper} ast-let?
+@syindex ast-sequence?
+@deffnx {primitive wrapper} ast-sequence?
+@end deffn
+
+@fixme{types: when we fail}
+
+@syindex ast-literal
+@deffn  {primitive wrapper} ast-literal value
+@syindex ast-variable
+@deffnx {primitive wrapper} ast-variable name
+@syindex ast-define
+@deffnx {primitive wrapper} ast-define name body
+@syindex ast-if
+@deffnx {primitive wrapper} ast-if condition then else
+@syindex ast-set!
+@deffnx {primitive wrapper} ast-set! name body
+@syindex ast-while
+@deffnx {primitive wrapper} ast-while guard body
+@syindex ast-primitive
+@deffnx {primitive wrapper} ast-primitive operator operands
+@syindex ast-call
+@deffnx {primitive wrapper} ast-call operator operands
+@syindex ast-lambda
+@deffnx {primitive wrapper} ast-lambda formals body
+@syindex ast-let
+@deffnx {primitive wrapper} ast-let bound-name bound-form body
+@syindex ast-sequence
+@deffnx {primitive wrapper} ast-sequence first second
+@end deffn
+
+@fixme{these fail if the argument is not an AST or if it's an AST of the
+wrong case}
+@fixme{no destructive operations right now.  They would be easy to
+add, even if using them in an unrestricted way might destroy compiler
+properties; anyway, it is already possible to destroy the same
+compiler implied properties, by violating other unenforced invariants}
+
+@syindex ast-literal-value
+@deffn  {primitive wrapper} ast-literal-value ast
+@syindex ast-variable-name
+@deffnx {primitive wrapper} ast-variable-name ast
+@syindex ast-define-name
+@deffnx {primitive wrapper} ast-define-name ast
+@syindex ast-define-body
+@deffnx {primitive wrapper} ast-define-body ast
+@syindex ast-if-condition
+@deffnx {primitive wrapper} ast-if-condition ast
+@syindex ast-if-then
+@deffnx {primitive wrapper} ast-if-then ast
+@syindex ast-if-else
+@deffnx {primitive wrapper} ast-if-else ast
+@syindex ast-set!-name
+@deffnx {primitive wrapper} ast-set!-name ast
+@syindex ast-set!-body
+@deffnx {primitive wrapper} ast-set!-body ast
+@syindex ast-while-guard
+@deffnx {primitive wrapper} ast-while-guard ast
+@syindex ast-while-body
+@deffnx {primitive wrapper} ast-while-body ast
+@syindex ast-primitive-operator
+@deffnx {primitive wrapper} ast-primitive-operator ast
+@syindex ast-primitive-operands
+@deffnx {primitive wrapper} ast-primitive-operands ast
+@syindex ast-call-operator
+@deffnx {primitive wrapper} ast-call-operator ast
+@syindex ast-call-operands
+@deffnx {primitive wrapper} ast-call-operands ast
+@syindex ast-lambda-formals
+@deffnx {primitive wrapper} ast-lambda-formals ast
+@syindex ast-lambda-body
+@deffnx {primitive wrapper} ast-lambda-body ast
+@syindex ast-let-bound-name
+@deffnx {primitive wrapper} ast-let-bound-name ast
+@syindex ast-let-bound-form
+@deffnx {primitive wrapper} ast-let-bound-form ast
+@syindex ast-let-body
+@deffnx {primitive wrapper} ast-let-body ast
+@syindex ast-sequence-first
+@deffnx {primitive wrapper} ast-sequence-first ast
+@syindex ast-sequence-second
+@deffnx {primitive wrapper} ast-sequence-second ast
+@end deffn
+
+@fixme{An example showing a constuction, check and field access for the same case,
+to highlight the lexical conventions.}
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Macroexpanding
+@subsection Macroexpanding
+
+@syindex macrolet@r{ (non-existing form)}
+@fixme{There is currently no syntactic support for local macros, such as
+Common Lisp's @code{macrolet}.}
+
+@syindex primordial-macroexpand
+@deffn {primitive wrapper} primordial-macroexpand form env
+@end deffn
+
+@syindex macroexpand
+@deffn {macro} macroexpand form . optional-env
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Interpreting
+@subsection Interpreting
+
+@syindex apply
+@deffn  {primitive wrapper} apply operator operands
+@syindex apply-primitive
+@deffnx {primitive wrapper} apply-primitive operator operands
+@end deffn
+
+@syindex primordial-eval
+@deffn {primitive wrapper} primordial-eval form env
+@end deffn
+
+@syindex eval
+@deffn {macro} eval form . optional-env
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Input and output
+@subsection Input and output
+
+@cindex GNU Readline
 @cindex Readline
 @cindex I/O
 @cindex input
@@ -636,7 +2871,7 @@ standard output, respectively, or the terminal via ReadLine.
 
 @c @@@@@@@@@
 @node Character I/O
-@subsection Character I/O
+@subsubsection Character I/O
 
 @cindex character-based input/output
 @cindex input/output, character-based
@@ -671,7 +2906,7 @@ If @code{newline} were not already provided in the library it could be defined a
 
 
 @node Lisp object I/O
-@subsection Lisp object I/O
+@subsubsection Lisp object I/O
 
 @cindex object, Lisp, input/output
 @cindex Lisp object, input/output
@@ -696,6 +2931,53 @@ Emit the printed representation of @var{thing} to the standard output.
 No newline character or other terminator is added.
 @end deffn
 
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Legal notices
+@subsection Legal notices
+
+@cindex copying (software software)
+@syindex copying
+@deffn  {primitive wrapper} copying
+@syindex no-warranty
+@cindex no warranty
+@cindex warranty, lack thereof
+@deffnx {primitive wrapper} no-warranty
+Display legal notices by printing, respectively, the full text of the GNU GPL
+or an excerpt explaining how there is no warranty of any kind.
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Unclassified
+@subsection Unclassified (move)
+
+@syindex identity
+@deffn {procedure} identity x
+@end deffn
+
+@syindex eq?
+@deffn  {primitive wrapper} eq? x y
+@syindex not-eq?
+@deffnx {primitive wrapper} not-eq? x y
+@end deffn
+
+@syindex error
+@deffn {primitive wrapper} error thing
+@end deffn
+
+@syindex gc
+@deffn {primitive wrapper} gc
+@end deffn
+
+
+@c C API
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node C API
+@chapter C API
+
+@fill
+
 
 @c Internals
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -703,7 +2985,10 @@ No newline character or other terminator is added.
 @node Internals
 @chapter Internals
 
-@fixme{Write this}
+@anchor{constant-strings}
+@cindex library file, JitterLisp
+@cindex initialization file, JitterLisp
+@fill
 
 
 @ifset includelicenses
@@ -729,8 +3014,8 @@ No newline character or other terminator is added.
 @c Indices
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-@node Symbol index
-@unnumbered Symbol index
+@node Symbol and reserved syntax index
+@unnumbered Symbol and reserved syntax index
 
 What follows is an alphabetical list of predefined JitterLisp globals,
 without distinction between core definitions coming from the C code

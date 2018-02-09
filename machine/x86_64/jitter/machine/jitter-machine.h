@@ -143,9 +143,10 @@
                    target_index,                                                \
                    0, 0, 0 /* not used for this case */)                        \
                 : /* outputs */                                                 \
-                :   [jitter_operand0] constraints0 (operand0)                   \
-                  , [jitter_operand1] constraints1 (operand1)                   \
-                  , JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */          \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                        \
+                  [jitter_operand0] constraints0 (operand0),                    \
+                  [jitter_operand1] constraints1 (operand1),                    \
+                  JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
                 : "cc" /* clobbers */                                           \
                 : jitter_jump_anywhere_label /* goto labels */);                \
     }                                                                           \
@@ -274,7 +275,8 @@
     {                                                                 \
       asm goto ("jmpq *%[the_link_rvalue]\n\t"                        \
                 : /* outputs. */                                      \
-                : [the_link_rvalue] "rm" (link_rvalue) /* inputs. */  \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,              \
+                  [the_link_rvalue] "rm" (link_rvalue) /* inputs. */  \
                 : /* clobbers. */                                     \
                 : jitter_jump_anywhere_label /* gotolabels. */);      \
       /* The rest of the VM instruction is unreachable. */            \
@@ -291,7 +293,8 @@
                 "jmpq *%[the_callee_rvalue]\n"                               \
                 "jitter_return_address_%=:\n"                                \
                 : /* outputs. */                                             \
-                : [the_callee_rvalue] "rm" (callee_rvalue) /* inputs. */     \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                     \
+                  [the_callee_rvalue] "rm" (callee_rvalue) /* inputs. */     \
                 : /* clobbers. */                                            \
                 : jitter_jump_anywhere_label /* gotolabels. */);             \
       /* Skip the rest of the specialized instruction, for compatibility */  \
@@ -314,7 +317,8 @@
                    0, 0, 0 /* not used for this case */)                        \
                 "jitter_return_address_%=:\n"                                   \
                 : /* outputs. */                                                \
-                : JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                        \
+                  JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
                 : /* clobbers. */                                               \
                 : jitter_jump_anywhere_label /* gotolabels. */);                \
       /* Skip the rest of the specialized instruction, for compatibility */     \
@@ -366,7 +370,8 @@
       asm goto ("pushq %[the_link_rvalue]\n\t"                        \
                 "retq"                                                \
                 : /* outputs. */                                      \
-                : [the_link_rvalue] "rm" (link_rvalue) /* inputs. */  \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,              \
+                  [the_link_rvalue] "rm" (link_rvalue) /* inputs. */  \
                 : /* clobbers. */                                     \
                 : jitter_jump_anywhere_label /* gotolabels. */);      \
       /* The rest of the VM instruction is unreachable. */            \
@@ -379,9 +384,12 @@
   do                                                                        \
     {                                                                       \
       const void * restrict jitter_call_indirect_target = (callee_rvalue);  \
-      asm goto ("callq *%[target]"                                          \
+      asm goto ("# Do a real call, pretending to go to\n\t"                 \
+                "# %l[jitter_jump_anywhere_label]\n\t"                      \
+                "callq *%[target]\n"                                        \
                 : /* outputs */                                             \
-                : [target] "rm" (jitter_call_indirect_target) /* inputs */  \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                    \
+                  [target] "rm" (jitter_call_indirect_target) /* inputs */  \
                 : /* clobbers */                                            \
                 : jitter_jump_anywhere_label /* goto labels */);            \
       /* Make the rest of the VM instruction unreachable. */                \
@@ -400,7 +408,8 @@
                    target_index,                                                \
                    0, 0, 0 /* not used for this case */)                        \
                 : /* outputs */                                                 \
-                : JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                        \
+                  JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
                 : /* clobbers */                                                \
                 : jitter_jump_anywhere_label /* goto labels */);                \
       /* Make the rest of the VM instruction unreachable. */                    \

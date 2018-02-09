@@ -1,9 +1,9 @@
-/* Jittery Lisp: interpreter: naïve C version.
+/* JitterLisp: interpreter: naïve C version.
 
    Copyright (C) 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -68,8 +68,7 @@ jitterlisp_apply_vm (jitterlisp_object closure_value,
 /* VM initialization and finalization.
  * ************************************************************************** */
 
-// FIXME: register and unregister GC roots as needed.  They are only two, one
-// per stack backing.
+/* The one global VM state. */
 struct jitterlispvm_state
 jitterlispvm_state;
 
@@ -88,13 +87,26 @@ jitterlisp_reset_vm_state (void)
 }
 
 void
-jitterlisp_initialize_vm (void)
+jitterlisp_vm_initialize (void)
 {
   /* Call the Jitter-generated function initializing the VM subsystem. */
   jitterlispvm_initialize ();
 
+  /* JitterLisp VM programs, with the one exception right below in this
+     function, don't end with an exitvm instruction.  This way we save space in
+     the replicated code for each Lisp procedure, and make it nicer to read. */
+  jitterlispvm_disable_final_exitvm ();
+
   /* Initialize the global VM state. */
   jitterlispvm_state_initialize (& jitterlispvm_state);
+
+  /* Register the two stack backings as GC roots. */
+  struct jitterlispvm_state_backing *sb
+    = & jitterlispvm_state.jitterlispvm_state_backing;
+  jitterlisp_push_stack_backing_as_gc_root
+     (& sb->jitter_stack_mainstack_backing);
+  jitterlisp_push_stack_backing_as_gc_root
+     (& sb->jitter_stack_returnstack_backing);
 
   /* Make the driver program and keep it ready to be use, pre-specialized.
      The driver program consists of exactly two instructions:
@@ -106,22 +118,23 @@ jitterlisp_initialize_vm (void)
   JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program,
                                   call_mfrom_mc);
 //JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, debug);
+  /* By default we do not add exitvm to VM programs in JitterLisp: the only
+     place where we need to pass back control from VM code to C code is here in
+     the driver. */
+  JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, exitvm);
+//JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, debug);
   jitterlispvm_specialize_program (jitterlisp_driver_vm_program);
-
-printf ("Driver:\n");
-  if (jitterlisp_settings.cross_disassembler)
-    jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_CROSS_OBJDUMP, NULL);
-  else
-    jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_OBJDUMP, NULL);
-printf ("\n");
 }
 
 void
-jitterlisp_finalize_vm (void)
+jitterlisp_vm_finalize (void)
 {
   /* Destroy the driver program and invalidate its pointer to catch mistakes. */
   jitterlispvm_destroy_program (jitterlisp_driver_vm_program);
   jitterlisp_driver_vm_program = NULL;
+
+  /* Unregister the two stack backings as GC roots. */
+  jitterlisp_pop_gc_roots (2);
 
   /* Finalize the global VM state. */
   jitterlispvm_state_finalize (& jitterlispvm_state);
@@ -148,18 +161,37 @@ jitterlisp_finalize_vm (void)
 static inline jitterlisp_object
 jitterlisp_jump_to_driver_and_return_result (void)
 {
+  /*
+  static bool d = false;
+  if (! d)
+    {
+      d = true;
+      printf ("Driver:\n");
+      if (jitterlisp_settings.cross_disassembler)
+        jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_CROSS_OBJDUMP, NULL);
+      else
+        jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_OBJDUMP, NULL);
+      printf ("\n");
+    }
+  */
+  /*
 printf ("E: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
 printf ("R: %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());
 fputs ("{c", stdout); fflush (stdout);
+  */
   /* Run the driver which will immediately call the closure, leaving only
      the result on the stack. */
   jitterlispvm_interpret (jitterlisp_driver_vm_program, & jitterlispvm_state);
+  /*
 fputs ("} --> ", stdout); fflush (stdout);
+  */
 
   /* Pop the result off the stack and return it. */
   jitterlisp_object res = JITTERLISPVM_TOP_MAINSTACK();
+  /*
 printf ("%p", (void*) res); fflush (stdout);
 fputs ("\n", stdout); fflush (stdout);
+  */
   JITTERLISPVM_DROP_MAINSTACK();
   return res;
 }
@@ -170,23 +202,22 @@ jitterlisp_call_compiled (jitterlisp_object rator_value,
                           jitter_uint rand_ast_no,
                           jitterlisp_object env)
 {
-  /* Here I can be sure that operator_value is a compiled closure: decode it
-     with no checks. */
+  /* Here I can be sure that operator_value is a compiled closure. */
   const struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(rator_value);
-  const struct jitterlisp_compiled_closure *cc = & c->compiled;
-
+  /*
 printf ("The encoded rator is %p\n", (void*)rator_value);
 printf ("The decoded rator is %p\n", c);
 printf ("The decoded cc is at %p\n", cc);
 printf ("The cc program is at %p\n", cc->vm_program);
 printf ("The cc first program point is at %p\n", cc->first_program_point);
+  */
   // FIXME: shall I check the arity *before* evaluating actuals or after?
   // Here I do it before, but it's easy to change.
   // In either case compiled code must have the same semantics.  Do whatever
   // is faster on compiled code.  There are two other identical cases below.
 
   /* Check that the arity matches. */
-  if (__builtin_expect ((cc->in_arity != rand_ast_no), false))
+  if (__builtin_expect ((c->in_arity != rand_ast_no), false))
     jitterlisp_error_cloned ("arity mismatch in call to compiled closure");
 
   /* Push the compiled closure, tagged, on the VM stack. */
@@ -206,9 +237,10 @@ printf ("The cc first program point is at %p\n", cc->first_program_point);
      expects this last operand on the top of the stack, to be able to find
      the closure below. */
   JITTERLISPVM_PUSH_MAINSTACK(rand_ast_no);
-
+  /*
 printf ("Q: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
 printf ("W: %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());
+  */
   /* Pass control to VM code. */
   return jitterlisp_jump_to_driver_and_return_result ();
 }
@@ -221,10 +253,8 @@ jitterlisp_apply_compiled (jitterlisp_object rator_value,
   // that doesn't need to be done here: error recovery code in the REPL should
   // simply reset the state.
 
-  /* Here I can be sure that operator_value is a compiled closure: decode it
-     with no checks. */
+  /* Here I can be sure that operator_value is a compiled closure. */
   const struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(rator_value);
-  const struct jitterlisp_compiled_closure *cc = & c->compiled;
 
   /* Push the compiled closure on the VM stack. */
   JITTERLISPVM_PUSH_MAINSTACK(rator_value);
@@ -239,9 +269,9 @@ jitterlisp_apply_compiled (jitterlisp_object rator_value,
       rest = JITTERLISP_EXP_C_A_CDR(rest);
       provided_in_arity ++;
     }
-  
+
   /* Check that the arity matches. */
-  if (__builtin_expect ((cc->in_arity != provided_in_arity), false))
+  if (__builtin_expect ((c->in_arity != provided_in_arity), false))
     jitterlisp_error_cloned ("arity mismatch in apply to compiled closure");
 
   /* Push the number of closure operands, unencoded.  The driver programs

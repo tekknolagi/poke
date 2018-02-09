@@ -1,9 +1,9 @@
-/* Jittery Lisp: Jittery VM code generator.
+/* JitterLisp: Jittery VM code generator.
 
    Copyright (C) 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -144,7 +144,8 @@ jitterlisp_instruction_name (jitterlisp_object insn)
    Lisp representation to a jitterlispvm_label . */
 
 /* Reserve a Lisp label identifier not used by the Lisp compiler (which only
-   generates natural label identifiers) for error handling. */
+   generates natural label identifiers) for error handling.  This will be
+   added to the map only if actually used. */
 static const jitterlisp_object
 jitterlisp_minus_one = JITTERLISP_FIXNUM_ENCODE(-1);
 
@@ -173,12 +174,23 @@ jitterlisp_lookup_label (struct jitterlispvm_program *p,
   return res;
 }
 
-/* Return the one VM label used for handling errors.  See the initialization
-   code below for rationale. */
+/* Return the one VM label used for handling errors, binding it in the table (to
+   a negative Lisp identifier) if this is its first use for the current VM
+   program.  See the initialization code below for rationale. */
 static jitterlispvm_label
-jitterlisp_error_label (const struct jitter_hash_table *map)
+jitterlisp_error_label (struct jitterlispvm_program *p,
+                        struct jitter_hash_table *map)
 {
-  return jitter_word_hash_table_get (map, jitterlisp_minus_one).fixnum;
+  return jitterlisp_lookup_label (p, map, jitterlisp_minus_one);
+}
+
+/* Return non-false iff the given map has an error label.  If that is not the
+   case then we don't need error handling in the current VM program. */
+static bool
+jitterlisp_has_error_label (const struct jitter_hash_table *map)
+{
+  jitter_int key = JITTERLISP_FIXNUM_DECODE(jitterlisp_minus_one);
+  return jitter_word_hash_table_has (map, key);
 }
 
 
@@ -200,24 +212,57 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
   jitter_uint in_arity = pri->in_arity;
 
   bool is_cons_setter = false;
+  bool can_fail = true;
   if (! strcmp (name, "null?"))
-    jitterlispvm_append_instruction_name (p, "primitive-nullp");
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-nullp");
+    }
   else if (! strcmp (name, "non-null?"))
-    jitterlispvm_append_instruction_name (p, "primitive-non-nullp");
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-non-nullp");
+    }
   else if (! strcmp (name, "nothing?"))
-    jitterlispvm_append_instruction_name (p, "primitive-nothingp");
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-nothingp");
+    }
   else if (! strcmp (name, "cons?"))
-    jitterlispvm_append_instruction_name (p, "primitive-consp");
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-consp");
+    }
   else if (! strcmp (name, "non-cons?"))
-    jitterlispvm_append_instruction_name (p, "primitive-non-consp");
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-non-consp");
+    }
   else if (! strcmp (name, "symbol?"))
-    jitterlispvm_append_instruction_name (p, "primitive-symbolp");
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-symbolp");
+    }
   else if (! strcmp (name, "non-symbol?"))
-    jitterlispvm_append_instruction_name (p, "primitive-non-symbolp");
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-non-symbolp");
+    }
   else if (! strcmp (name, "fixnum?"))
-    jitterlispvm_append_instruction_name (p, "primitive-fixnump");
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-fixnump");
+    }
   else if (! strcmp (name, "character?"))
-    jitterlispvm_append_instruction_name (p, "primitive-characterp");
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-characterp");
+    }
+  else if (! strcmp (name, "unique?"))
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-uniquep");
+    }
   else if (! strcmp (name, "1+"))
     jitterlispvm_append_instruction_name (p, "primitive-one-plus");
   else if (! strcmp (name, "1-"))
@@ -226,6 +271,8 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
     jitterlispvm_append_instruction_name (p, "primitive-two-times");
   else if (! strcmp (name, "2/"))
     jitterlispvm_append_instruction_name (p, "primitive-two-divided");
+  else if (! strcmp (name, "2quotient"))
+    jitterlispvm_append_instruction_name (p, "primitive-two-quotient");
   else if (! strcmp (name, "2remainder"))
     jitterlispvm_append_instruction_name (p, "primitive-two-remainder");
   else if (! strcmp (name, "primordial-+"))
@@ -237,9 +284,15 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
   else if (! strcmp (name, "primordial-/-unsafe"))
     jitterlispvm_append_instruction_name (p, "primitive-primordial-divided-unsafe");
   else if (! strcmp (name, "eq?"))
-    jitterlispvm_append_instruction_name (p, "primitive-eqp");
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-eqp");
+    }
   else if (! strcmp (name, "not-eq?"))
-    jitterlispvm_append_instruction_name (p, "primitive-not-eqp");
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-not-eqp");
+    }
   else if (! strcmp (name, "zero?"))
     jitterlispvm_append_instruction_name (p, "primitive-zerop");
   else if (! strcmp (name, "non-zero?"))
@@ -264,16 +317,27 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
     jitterlispvm_append_instruction_name (p, "primitive-fixnum-eqp");
   else if (! strcmp (name, "<>"))
     jitterlispvm_append_instruction_name (p, "primitive-fixnum-not-eqp");
-  else if (! strcmp (name, "car")
-           || ! strcmp (name, "cdr")
-           || ! strcmp (name, "cons")
-           || ! strcmp (name, "negate")
-           || ! strcmp (name, "quotient-unsafe")
-           || ! strcmp (name, "remainder-unsafe")
+  else if (! strcmp (name, "cons")
            || ! strcmp (name, "boolean-canonicalize")
            || ! strcmp (name, "not")
            )
     {
+      /* These primitives cannot fail and have a regular name. */
+      can_fail = false;
+      char *full_name = jitter_xmalloc (strlen (name) + 100);
+      sprintf (full_name, "primitive-%s", name);
+      jitterlispvm_append_instruction_name (p, full_name);
+      free (full_name);
+    }
+  else if (! strcmp (name, "car")
+           || ! strcmp (name, "cdr")
+           || ! strcmp (name, "negate")
+           || ! strcmp (name, "quotient-unsafe")
+           || ! strcmp (name, "remainder-unsafe")
+           )
+    {
+      /* These primitives have a regular name but can fail, so we can't treat
+         them along with the previous group.  I guess I should factor. */
       char *full_name = jitter_xmalloc (strlen (name) + 100);
       sprintf (full_name, "primitive-%s", name);
       jitterlispvm_append_instruction_name (p, full_name);
@@ -291,7 +355,7 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
         JITTERLISPVM_APPEND_INSTRUCTION (p, primitive_mset_mcarb_mspecial);
       else
         JITTERLISPVM_APPEND_INSTRUCTION (p, primitive_mset_mcdrb_mspecial);
-      jitterlispvm_label error_label = jitterlisp_error_label (map);
+      jitterlispvm_label error_label = jitterlisp_error_label (p, map);
       jitterlispvm_append_label_parameter (p, error_label);
       JITTERLISPVM_APPEND_INSTRUCTION (p, nip);
       JITTERLISPVM_APPEND_INSTRUCTION (p, copy_mfrom_mliteral);
@@ -306,12 +370,13 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
       jitterlispvm_append_unsigned_literal_parameter (p, in_arity);
     }
 
-  /* In every case except the set-car! and set-cdr! we still need to append the
-     error label as the last argument.  The primitive instruction will jump
-     there used in case some argument type doesn't match.  */
-  if (! is_cons_setter)
+  /* In every case except for the primitives that never fail and set-car! and
+     set-cdr! (compiled into more than one VM instructions) we still need to
+     append the error label as the last argument.  The primitive instruction
+     will jump there used in case some argument type doesn't match.  */
+  if (can_fail && ! is_cons_setter)
     {
-      jitterlispvm_label error_label = jitterlisp_error_label (map);
+      jitterlispvm_label error_label = jitterlisp_error_label (p, map);
       jitterlispvm_append_label_parameter (p, error_label);
     }
 }
@@ -385,7 +450,16 @@ jitterlisp_translate_instruction (struct jitterlispvm_program *p,
       JITTERLISP_NO_MORE_ARGUMENTS(insn);
       jitterlispvm_append_instruction_name (p, name);
       jitterlispvm_append_unsigned_literal_parameter (p, in_arity_arg);
-      jitterlispvm_label error_label = jitterlisp_error_label (map);
+      jitterlispvm_label error_label = jitterlisp_error_label (p, map);
+      jitterlispvm_append_label_parameter (p, error_label);
+    }
+  else if (! strcmp (name, "check-global-defined"))
+    {
+      JITTERLISP_ARGUMENT(symbol_arg, insn, SYMBOL);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      jitterlispvm_append_instruction_name (p, name);
+      jitterlispvm_append_unsigned_literal_parameter (p, symbol_arg);
+      jitterlispvm_label error_label = jitterlisp_error_label (p, map);
       jitterlispvm_append_label_parameter (p, error_label);
     }
   else if (! strcmp (name, "branch")
@@ -402,7 +476,7 @@ jitterlisp_translate_instruction (struct jitterlispvm_program *p,
     {
       JITTERLISP_NO_MORE_ARGUMENTS(insn);
       jitterlispvm_append_instruction_name (p, name);
-      jitterlispvm_label error_label = jitterlisp_error_label (map);
+      jitterlispvm_label error_label = jitterlisp_error_label (p, map);
       jitterlispvm_append_label_parameter (p, error_label);
     }
   else if (! strcmp (name, "primitive"))
@@ -453,9 +527,14 @@ jitterlisp_translate_instructions (struct jitterlispvm_program *p,
        rest = JITTERLISP_EXP_C_A_CDR(rest))
     jitterlisp_translate_instruction (p, map, JITTERLISP_EXP_C_A_CAR(rest));
 
-  /* Generate the error-handling routine after the other instructions. */
-  jitterlispvm_append_label (p, jitterlisp_error_label (map));
-  JITTERLISPVM_APPEND_INSTRUCTION(p, fail);
+  /* Generate the error-handling routine after the other instructions, if we
+     have used it in the translation of the instructions before; if we haven't
+     then the current VM program doesn't need error handling. */
+  if (jitterlisp_has_error_label (map))
+    {
+      jitterlispvm_append_label (p, jitterlisp_error_label (p, map));
+      JITTERLISPVM_APPEND_INSTRUCTION(p, fail);
+    }
 }
 
 /* Given the Lisp encoding of the VM program, generate the Jittery version. */
@@ -465,12 +544,9 @@ jitterlisp_generate_jittery (jitterlisp_object code_as_sexpression)
   struct jitterlispvm_program *res
     = jitterlispvm_make_program ();
 
-  /* Make the label hash table, and immediately add the binding for error
-     handling. */
+  /* Make the label hash table. */
   struct jitter_hash_table map;
   jitter_hash_initialize (& map);
-  union jitter_word value = {.fixnum = jitterlispvm_fresh_label (res)};
-  jitter_word_hash_table_add (& map, jitterlisp_minus_one, value);
 
   /* Translate instructions. */
   jitterlisp_translate_instructions (res, & map, code_as_sexpression);
@@ -490,19 +566,16 @@ jitterlisp_compile (struct jitterlisp_closure *c,
                     jitterlisp_object nonlocals,
                     jitterlisp_object code_as_sexpression)
 {
-  /* Error out if the Jittery VM is disabled. */
-  if (! jitterlisp_settings.vm)
-    jitterlisp_error_cloned ("can't compile: Jittery VM disabled");
-
   c->kind = jitterlisp_closure_type_compiled;
   struct jitterlisp_compiled_closure * const cc = & c->compiled;
-  cc->in_arity = in_arity;
   cc->nonlocals = nonlocals;
   cc->nonlocal_no = jitterlisp_length (nonlocals);
   // FIXME: don't leak.
   cc->vm_program = jitterlisp_generate_jittery (code_as_sexpression);
   cc->first_program_point = JITTERLISPVM_PROGRAM_BEGINNING(cc->vm_program);
-printf ("codegen: first program point at %p\n", cc->first_program_point);
+  /*
+    printf ("codegen: first program point at %p\n", cc->first_program_point);
+  */
 }
 
 

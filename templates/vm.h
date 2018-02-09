@@ -88,6 +88,16 @@ vmprefix_enable_optimization_rewriting (void);
 void
 vmprefix_disable_optimization_rewriting (void);
 
+/* Do not automatically append an "exitvm" instruction at the end of each VM
+   program, adding an "unreachable" instruction instead. */
+void
+vmprefix_disable_final_exitvm (void);
+
+/* Automatically append an "exitvm" instruction at the end of each VM program.
+   This is the default. */
+void
+vmprefix_enable_final_exitvm (void);
+
 
 
 

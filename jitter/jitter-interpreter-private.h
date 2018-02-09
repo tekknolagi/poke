@@ -187,53 +187,31 @@
 /* Macros to let GCC see jumps to indeterminate locations.
  * ************************************************************************** */
 
-/* Expand to a two-statement sequence:
-   - some empty inline asm code whose constraints claim to update
-     jitter_anywhere_variable ;
-   - a jump to jitter_anywhere_variable 's content, reaching one of the labels
-     in the current C functions -- GCC cannot discover which one.
-
-   Rationale: there is only one instance of this in the interpreter and it is
-   actually unreachable at run time, differently from what asm constraints
-   claim.  The role of the unreachable statement is to alter GCC's program
-   representation to assume that a jump to any label is possible from it,
-   defeating analyses.  This serves to make GCC's register allocation compatible
-   across VM instructions, so that the end of any VM instruction matches the
-   beginning of any other.
-
-   Notice that jitter_anywhere_variable's declaration requires it to be in
-   memory rather than in a register, and every constarint on reinforces this.
-   The idea is to reduce register pressure, preventing GCC from wasting a
-   register for this variable, which is never touched by actually running
-   code. */
-#define JITTER_JUMP_ANYWHERE                                      \
-  do                                                              \
-    {                                                             \
-      asm (JITTER_ASM_COMMENT_UNIQUE("Jump anywhere: pretend to"  \
-                                     " update %[jitter_anywhere]" \
-                                     " before jumping to it")     \
-           : [jitter_anywhere] "+m" (jitter_anywhere_variable));  \
-      goto *(jitter_anywhere_variable.pointer);                   \
-      __builtin_unreachable ();                                   \
-    }                                                             \
-  while (false)
+// FIXME: comment.
+#define JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(_jitter_label)                 \
+  asm goto (JITTER_ASM_COMMENT_UNIQUE("Pretend to possibly jump to "       \
+                                      JITTER_STRINGIFY(_jitter_label)      \
+                                      " at %l["                            \
+                                      JITTER_STRINGIFY(_jitter_label)      \
+                                      "] based on "                        \
+                                      " jitter_next_program_point"         \
+                                      " at %[jitter_next_program_point]")  \
+            : /* outputs */                                                \
+            : [jitter_next_program_point] "m" (jitter_next_program_point)  \
+              /* inputs */                                                 \
+            : /* clobbers */                                               \
+            : /* jump destinations */ _jitter_label)
 
 /* Expand to zero assembly instructions, but with inline asm constraints
    affecting GCC's program representation as if the generated code could either
    jump to the content of jitter_anywhere_variable or fall thru.
 
    Rationale: see the comment about JITTER_PRETEND_TO_JUMP_ANYWHERE below. */
-#define JITTER_PRETEND_TO_POSSIBLY_JUMP_ANYWHERE                                \
-  do                                                                            \
-    {                                                                           \
-      asm goto (JITTER_ASM_COMMENT_UNIQUE("Pretend to possibly jump "           \
-                                          "to %l[jitter_jump_anywhere_label] "  \
-                                          "based on %[jitter_anywhere]")        \
-                : /* outputs */                                                 \
-                : /* inputs */ [jitter_anywhere] "m" (jitter_anywhere_variable) \
-                : /* clobbers */                                                \
-                : /* jump destinations */ jitter_jump_anywhere_label);          \
-    }                                                                           \
+#define JITTER_PRETEND_TO_POSSIBLY_JUMP_ANYWHERE            \
+  do                                                        \
+    {                                                       \
+      JITTER_COMPUTED_GOTO(&& jitter_jump_anywhere_label);  \
+    }                                                       \
   while (false)
 
 /* Expand to zero assembly instructions, but with inline asm constraints and
@@ -365,36 +343,6 @@
 
 
 
-/* Sequencing.
- * ************************************************************************** */
-
-/* The implemenation of this part is still tentative.  The idea is introducing
-   (empty) inline asm statements with dependencies on a dummy variable, in order
-   to force GCC not to move statements across labels when the generated code
-   ordering is critical, particularly at the beginning of VM instructions. */
-#define JITTER_SEQUENCE_POINT_ACTUAL \
-  do \
-    { \
-      asm volatile (JITTER_ASM_COMMENT_UNIQUE("foo %[jitter_anywhere]") \
-                    : [jitter_anywhere] "+m" (jitter_anywhere_variable) \
-                    : \
-                    : "memory"); \
-      JITTER_PRETEND_TO_POSSIBLY_JUMP_ANYWHERE; \
-    } \
-  while (false)
-
-/* FIXME: this is disabled.  Sequence points seem to not matter with GCC 6, 7
-   and 8, and make the generated code worse.  The code still deserves to be kept
-   around for the time being. */
-#define JITTER_SEQUENCE_POINT             \
-  do                                      \
-    {                                     \
-       /*JITTER_SEQUENCE_POINT_ACTUAL;*/  \
-    }                                     \
-  while (false)
-
-
-
 /* VM instruction prolog and epilog.
  * ************************************************************************** */
 
@@ -412,10 +360,8 @@
   /* VM instruction prolog: every non-switch dispatches. */
 # define JITTER_INSTRUCTION_PROLOG(name, mangled_name, hotness_attribute)   \
 { \
-JITTER_SEQUENCE_POINT; \
   JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL_OF(mangled_name):             \
     __attribute__ ((hotness_attribute));                                   \
-JITTER_SEQUENCE_POINT; \
 JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
                       ": begin");
 #endif // defined(JITTER_DISPATCH_SWITCH)
@@ -447,15 +393,15 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
    instruction code within the interpreter.
    FIXME: shall I use the do..while (false) trick here?  This macro is expanded
    a lot of times, and never from user code. */
-#if   defined(JITTER_DISPATCH_SWITCH)                          \
+#if   defined(JITTER_DISPATCH_SWITCH)            \
    || defined(JITTER_DISPATCH_DIRECT_THREADING)
-# define JITTER_SKIP_RESIDUALS                                 \
-  JITTER_SET_IP(ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
+# define JITTER_SKIP_RESIDUALS                                        \
+  JITTER_SET_IP(jitter_ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
 #elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define JITTER_SKIP_RESIDUALS                                 \
-  JITTER_SET_IP(ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
+# define JITTER_SKIP_RESIDUALS                                        \
+  JITTER_SET_IP(jitter_ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
 #elif defined(JITTER_DISPATCH_NO_THREADING)
-# define JITTER_SKIP_RESIDUALS                                 \
+# define JITTER_SKIP_RESIDUALS  \
   /* do nothing. */
 #else
 # error "unknown dispatching model"
@@ -481,22 +427,17 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
 #elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
 # define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
       JITTER_SKIP_RESIDUALS;                                            \
-JITTER_SEQUENCE_POINT; \
     JITTER_COMMENT_IN_ASM("Specialized instruction "                    \
                           JITTER_STRINGIFY(name) ": end");              \
 } \
     JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):          \
-JITTER_SEQUENCE_POINT; \
       JITTER_PRETEND_TO_JUMP_ANYWHERE;
 #elif defined(JITTER_DISPATCH_NO_THREADING)
 # define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
-JITTER_SEQUENCE_POINT; \
     JITTER_COMMENT_IN_ASM("Specialized instruction "                    \
                           JITTER_STRINGIFY(name) ": end");              \
 } \
-JITTER_SEQUENCE_POINT; \
     JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):          \
-JITTER_SEQUENCE_POINT; \
       JITTER_PRETEND_TO_JUMP_ANYWHERE;
 #else
 # error "unknown dispatching model"
@@ -604,77 +545,41 @@ JITTER_SEQUENCE_POINT; \
 # endif // ! defined(JITTER_ASM_COMPUTED_GOTO_CLOBBERS)
   /* If we arrived here we have all the information to define
      JITTER_COMPUTED_GOTO_IN_ASM . */
-# define JITTER_COMPUTED_GOTO_IN_ASM(target)                               \
-    do                                                                     \
-      {                                                                    \
-        const void *_jitter_the_target = (const void*) (target);           \
-        asm goto (JITTER_ASM_COMMENT_UNIQUE("goto* in assembly")           \
-                  JITTER_ASM_COMPUTED_GOTO_TEMPLATE                        \
-                  : /* outputs */                                          \
-                  :   [_jitter_the_target]                                 \
-                         JITTER_ASM_COMPUTED_GOTO_INPUT_CONSTRAINT         \
-                            (_jitter_the_target)                           \
-                    , [_jitter_jump_anywhere_label]                        \
-                         "X" (&& jitter_jump_anywhere_label) /* inputs */  \
-                  : JITTER_ASM_COMPUTED_GOTO_CLOBBERS /* clobbers */       \
-                  : jitter_jump_anywhere_label /* gotolabels */);          \
-        __builtin_unreachable ();                                          \
-      }                                                                    \
+# define JITTER_COMPUTED_GOTO_IN_ASM(target)                                   \
+    do                                                                         \
+      {                                                                        \
+        const void *_jitter_the_target = (const void*) (target);               \
+        asm goto (JITTER_ASM_COMMENT_UNIQUE("goto* in assembly to "            \
+                                            JITTER_STRINGIFY(target) " "       \
+                                            "at %[_jitter_the_target], "       \
+                                            "and not actually going to "       \
+                                            "jitter_jump_anywhere_label at "   \
+                                            "%l[jitter_jump_anywhere_label]")  \
+                  JITTER_ASM_COMPUTED_GOTO_TEMPLATE                            \
+                  : /* outputs */                                              \
+                  : [_jitter_the_target]                                       \
+                    JITTER_ASM_COMPUTED_GOTO_INPUT_CONSTRAINT                  \
+                       (_jitter_the_target)                                    \
+/*, [runtime] "X" (jitter_state_runtime)*/                 \
+                    /* inputs */                                               \
+                  : JITTER_ASM_COMPUTED_GOTO_CLOBBERS /* clobbers */           \
+/*, "memory" */                                            \
+                  : jitter_jump_anywhere_label /* gotolabels */);              \
+        __builtin_unreachable();                                               \
+      }                                                                        \
     while (false)
 #endif // #if (! defined(JITTER_ASM_COMPUTED_GOTO_TEMPLATE)) || (! defined ...
 
-/* Implement a version of goto * with complicated control flow expressed by
-   inline asm constraints associated to empty code, making it difficult for GCC
-   to tail-merge.
-   This is a fallback (relatively fragile) solution, for architectures not
-   providing enough information to define JITTER_COMPUTED_GOTO_IN_ASM . */
-#define JITTER_COMPUTED_GOTO_WEIRD_COUNT(_jitter_target_expression, count)      \
-  do                                                                            \
-    {                                                                           \
-      void *_jitter_target = (void*) (_jitter_target_expression);               \
-      volatile jitter_int _jitter_fake_condition;                               \
-      JITTER_MARK_MEMORY_AS_DEFINED_BY_ASSEMBLY(_jitter_fake_condition);        \
-    JITTER_CONCATENATE_TWO(_before__, count):                                   \
-      asm goto (JITTER_ASM_COMMENT_UNIQUE("Pretend to possibly branch forward " \
-                                          "based on %[_jitter_target] and "     \
-                                          "%[_jitter_fake_condition]")          \
-                : /* outputs */                                                 \
-                :   [_jitter_target] "r" (_jitter_target)                       \
-                    , [_jitter_fake_condition] "m" (_jitter_fake_condition)     \
-                    /* inputs */                                                \
-                : /* clobbers */                                                \
-                : JITTER_CONCATENATE_TWO(_after__, count) /* gotolabels */);    \
-      JITTER_MARK_REGISTER_AS_SET_BY_ASSEMBLY(_jitter_target);                  \
-      JITTER_MARK_MEMORY_AS_SET_BY_ASSEMBLY(_jitter_fake_condition);            \
-      goto * _jitter_target;                                                    \
-    JITTER_CONCATENATE_TWO(_after__, count):                                    \
-      asm goto (JITTER_ASM_COMMENT_UNIQUE("Pretend to possibly jump back "      \
-                                          "based on %[_jitter_fake_condition]") \
-                : /* outputs */                                                 \
-                : [_jitter_fake_condition] "m" (_jitter_fake_condition)         \
-                  /* inputs */                                                  \
-                : /* clobbers*/                                                 \
-                : JITTER_CONCATENATE_TWO(_before__, count) /* gotolabels */);   \
-      __builtin_unreachable ();                                                 \
-    }                                                                           \
-  while (false)
-
-/* Define JITTER_COMPUTED_GOTO_WEIRD to instantiate
-   JITTER_COMPUTED_GOTO_WEIRD_COUNT using a fresh count at every expansion. */
-#define JITTER_COMPUTED_GOTO_WEIRD(_jitter_target_expression)     \
-  JITTER_COMPUTED_GOTO_WEIRD_COUNT(_jitter_target_expression,     \
-                                   JITTER_INTEGER_LITERAL_UNIQUE)
-
 /* Define JITTER_COMPUTED_GOTO using one of the macros above. */
 #ifdef JITTER_REPLICATE
-  /* Replication is enabled: use the assembly version of goto * , or the weird
+  /* Replication is enabled: use the assembly version of goto * , or the trivial
      version if there is no assembly version available. */
 # ifdef JITTER_COMPUTED_GOTO_IN_ASM
-#   define JITTER_COMPUTED_GOTO(target)  \
+#   define JITTER_COMPUTED_GOTO(target)    \
       JITTER_COMPUTED_GOTO_IN_ASM(target)
 #   else
-#   define JITTER_COMPUTED_GOTO(target)  \
-      JITTER_COMPUTED_GOTO_WEIRD(target)
+#   define JITTER_COMPUTED_GOTO(target)     \
+      JITTER_COMPUTED_GOTO_TRIVIAL(target)
 # endif // ifdef JITTER_COMPUTED_GOTO_IN_ASM
 #else /* replication is disabled */
   /* Replication is disabled: we don't need the hacks above, so in this case we
@@ -706,11 +611,11 @@ JITTER_SEQUENCE_POINT; \
 #if      defined(JITTER_DISPATCH_SWITCH)             \
       || defined(JITTER_DISPATCH_DIRECT_THREADING)   \
       || defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define JITTER_SET_IP(target_pointer)                    \
-    do                                                    \
-      {                                                   \
-        ip = (const union jitter_word*)(target_pointer);  \
-      }                                                   \
+# define JITTER_SET_IP(target_pointer)                           \
+    do                                                           \
+      {                                                          \
+        jitter_ip = (const union jitter_word*)(target_pointer);  \
+      }                                                          \
     while (false)
 #endif // #if      defined(JITTER_DISPATCH_SWITCH) || ...
 
@@ -725,11 +630,11 @@ JITTER_SEQUENCE_POINT; \
     while (false)
 #elif    defined(JITTER_DISPATCH_DIRECT_THREADING)   \
       || defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define JITTER_BRANCH_TO_IP()             \
-    do                                     \
-      {                                    \
-        JITTER_COMPUTED_GOTO(ip->thread);  \
-      }                                    \
+# define JITTER_BRANCH_TO_IP()                    \
+    do                                            \
+      {                                           \
+        JITTER_COMPUTED_GOTO(jitter_ip->thread);  \
+      }                                           \
     while (false)
 #endif // #if   defined(...
 
@@ -800,14 +705,14 @@ JITTER_SEQUENCE_POINT; \
 #if    defined(JITTER_DISPATCH_SWITCH)             \
     || defined(JITTER_DISPATCH_DIRECT_THREADING)   \
     || defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define _JITTER_BRANCH_AND_LINK(target_rvalue)               \
-    do                                                        \
-      {                                                       \
-        jitter_state_runtime._jitter_link                     \
-          = ((const union jitter_word *)                      \
-             (ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO));  \
-        JITTER_BRANCH(target_rvalue);                         \
-      }                                                       \
+# define _JITTER_BRANCH_AND_LINK(target_rvalue)                      \
+    do                                                               \
+      {                                                              \
+        jitter_state_runtime._jitter_link                            \
+          = ((const union jitter_word *)                             \
+             (jitter_ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO));  \
+        JITTER_BRANCH(target_rvalue);                                \
+      }                                                              \
     while (false)
 #elif    defined(JITTER_DISPATCH_NO_THREADING)
 # ifndef JITTER_MACHINE_SUPPORTS_PROCEDURE

@@ -1393,6 +1393,14 @@ $(srcdir)/example-vms/jitterlisp/doc/gpl.texi: doc/gpl.texi
 $(srcdir)/example-vms/jitterlisp/doc/fdl.texi: doc/fdl.texi
 	cp "$<" "$@"
 
+# JitterLisp test cases.
+if JITTER_ENABLE_TEST_SUITE
+  TESTS += tests/jitterlisp/jitterlisp.test
+  check_PROGRAMS += $(PROGRAMS_JITTERLISP)
+  tests/jitterlisp/jitterlisp.log: $(check_PROGRAMS)
+  EXTRA_DIST += tests/jitterlisp/test-definitions.scm
+endif # if JITTER_ENABLE_TEST_SUITE
+
 # Brainfuck example VM.
 # ################################################################
 

@@ -1,9 +1,9 @@
-/* Jittery Lisp: heap allocation header.
+/* JitterLisp: heap allocation header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@
 
 #include <stdlib.h>
 
-#include <jitter/jitter-hash.h>
+#include <jitter/jitter-stack.h>
 
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-ast.h"
@@ -207,6 +207,55 @@ jitterlisp_symbol_make_interned (const char *name)
 char *
 jitterlisp_allocate (size_t size_in_bytes)
   __attribute__ ((returns_nonnull, malloc));
+
+
+
+
+/* GC root registration.
+ * ************************************************************************** */
+
+/* GC roots must be registered, using Boehm GC, when they come from somewhere
+   else than stack, register or global space.  This means malloc, mmap and
+   firends.  Registering roots has no effect when littering.
+
+   GC roots are handled under a strict LIFO policy. */
+
+/* Register a root, providing a pointer to an array of Lisp objects and the
+   array size (allowed to be 1 for single objects). */
+void
+jitterlisp_push_gc_root (jitterlisp_object *object_pointer,
+                         size_t element_no)
+  __attribute__ ((nonnull (1)));
+
+/* A convenience function registering the memory of the pointed stack backing
+   as a GC root. */
+void
+jitterlisp_push_stack_backing_as_gc_root (struct jitter_stack_backing *sb)
+  __attribute__ ((nonnull (1)));
+
+
+/* Unregister the last how_many roots which have been registered.
+   The how_many parameter indicates the number of *roots* to be popped, not the
+   number of Lisp objects or bytes.
+   Notice that it is not necessary to call this at finalization time, as
+   finalization implicitly pops every remaining root.*/
+void
+jitterlisp_pop_gc_roots (size_t how_many);
+
+/* Pop a single GC root.  This is equivalent to calling jitterlisp_pop_gc_roots
+   with an argument of 1. */
+void
+jitterlisp_pop_gc_root (void);
+
+
+
+
+/* Forced collection.
+ * ************************************************************************** */
+
+/* Perform a GC, or do nothing if littering. */
+void
+jitterlisp_gc (void);
 
 
 

@@ -1,9 +1,9 @@
-/* Jittery Lisp: s-expression implementation.
+/* JitterLisp: s-expression implementation.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -138,17 +138,19 @@ jitterlisp_make_interned (const char *name)
 }
 
 /* Globally named object variables. */
+jitterlisp_object jitterlisp_else;
+jitterlisp_object jitterlisp_label;
 jitterlisp_object jitterlisp_low_level_macro_args;
 jitterlisp_object jitterlisp_primitive_make_constantb;
-jitterlisp_object jitterlisp_label;
 
 /* Initialize globally named object variables. */
 static void
 jitterlisp_initialize_globally_named_objects (void)
 {
+  jitterlisp_else = jitterlisp_make_interned ("else");;
+  jitterlisp_label = jitterlisp_make_interned ("label");;
   jitterlisp_low_level_macro_args
     = jitterlisp_make_interned ("low-level-macro-args");
   jitterlisp_primitive_make_constantb
     = jitterlisp_make_interned ("primitive-make-constant!");;
-  jitterlisp_label = jitterlisp_make_interned ("label");;
 }

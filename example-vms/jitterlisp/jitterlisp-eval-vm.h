@@ -1,9 +1,9 @@
-/* Jittery Lisp: interpreter: naïve C version header.
+/* JitterLisp: interpreter: naïve C version header.
 
    Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -138,16 +138,14 @@ jitterlisp_apply_compiled (jitterlisp_object rator_value,
 /* Not for the user: VM initialization and finalization.
  * ************************************************************************** */
 
-/* Differently from the rest of initialization and finalization functions these
-   are currently called from main, so that the user can entirely disable VM
-   code. */
+/* These are called from the global initialization and finalization code. */
 
 /* Initialize the VM substystem and the global VM state. */
 void
-jitterlisp_initialize_vm (void);
+jitterlisp_vm_initialize (void);
 
 /* Finalize the VM substystem and the global VM state. */
 void
-jitterlisp_finalize_vm (void);
+jitterlisp_vm_finalize (void);
 
 #endif // #ifndef JITTERLISP_EVAL_VM_H_

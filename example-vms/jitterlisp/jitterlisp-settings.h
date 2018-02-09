@@ -1,9 +1,9 @@
-/* Jittery Lisp: global settings: header.
+/* JitterLisp: global settings: header.
 
    Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -53,6 +53,10 @@ struct jitterlisp_settings
   /* Non-false iff the output needs to be verbose. */
   bool verbose;
 
+  /* Non-false iff littering output needs to be verbose.  Ignored when not
+     littering. */
+  bool verbose_litter;
+
   /* Non-false iff we have to load the Lisp library. */
   bool library;
 
@@ -72,8 +76,8 @@ struct jitterlisp_settings
      emulators. */
   bool cross_disassembler;
 
-  /* Non-false iff we are to uses the Jittery VM, and not a naïf interpreter. */
-  bool vm;
+  /* If true then enable optimization rewriting. */
+  bool optimization_rewriting;
 
   /* Non-false iff output s-expressions need to be colorized with terminal
      escape sequences. */

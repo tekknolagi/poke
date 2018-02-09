@@ -1,6 +1,6 @@
 /* Jitter: VM-specific configuration and internal implementation header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -61,6 +61,38 @@ jitter_print_vm_configuration (FILE *f,
 
 
 
+/* VM run-time settings.
+ * ************************************************************************** */
+
+/* These global configuration functions must be called before adding VM
+   instructions, or never called at all. */
+
+/* Enable optimization rewriting rules for the given VM.  Optimization rewriting
+   is enabled by default. */
+void
+jitter_vm_enable_optimization_rewriting (struct jitter_vm *vm);
+
+/* Disable optimization rewriting rules for the given VM.  This is mostly useful
+   for debugging and benchmarking. */
+void
+jitter_vm_disable_optimization_rewriting (struct jitter_vm *vm);
+
+/* Do not add an implicit exitvm instruction at the end of every VM program, adding
+   an "unreachable" instruction which does nothing instead; this saves memory and
+   makes replicated code smaller, but assumes that the unreachable instruction is
+   actually unreachable.
+   The default behavior is adding an exitvm instruction. */
+void
+jitter_vm_disable_final_exitvm (struct jitter_vm *vm);
+
+/* Restore the default behavior, canceling the effect of a previous call to
+   jitter_vm_disable_final_exitvm . */
+void
+jitter_vm_enable_final_exitvm (struct jitter_vm *vm);
+
+
+
+
 /* VM internal implementation.
  * ************************************************************************** */
 
@@ -114,6 +146,7 @@ struct jitter_vm
      VM-independent program specialization relies on those, so they have to be
      accessible to the Jitter library, out of generated code*/
   const struct jitter_meta_instruction *exitvm_meta_instruction;
+  const struct jitter_meta_instruction *unreachable_meta_instruction;
 
   /* The longest unspecialized/meta instruction name length, not mangled,
      without counting the final '\0' character.  Special specialized
@@ -146,28 +179,16 @@ struct jitter_vm
   /* Rewrite an instruction or do nothing.  See the comment for
      actually_rewrite, above. */
   void (*rewrite) (struct jitter_program *p);
+
+  /* Automatically add a final "exitvm" instruction at the end of each VM
+     program if true; otherwise add a final "unreachable" instruction. */
+  bool add_final_exitvm;
 };
-
-
-
-
-/* VM rewriting: enabling and disabling.
- * ************************************************************************** */
 
 /* A function doing nothing, usable as a value for the rewrite field of struct
    jitter_vm , defined above. */
 void
 jitter_dont_rewrite (struct jitter_program *p);
-
-/* Enable optimization rewriting rules for the given VM.  Optimization rewriting
-   is enabled by default. */
-void
-jitter_vm_enable_optimization_rewriting (struct jitter_vm *vm);
-
-/* Disable optimization rewriting rules for the given VM.  This is mostly useful
-   for debugging and benchmarking. */
-void
-jitter_vm_disable_optimization_rewriting (struct jitter_vm *vm);
 
 
 #endif // #ifndef JITTER_VM_H_

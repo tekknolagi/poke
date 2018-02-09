@@ -1,9 +1,9 @@
-/* Jittery Lisp: primitives.
+/* JitterLisp: primitives.
 
    Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -339,6 +339,8 @@ jitterlisp_apply_primitive (jitterlisp_object primitive,
 /* Type checking. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(fixnump, ANYTHING,
   { JITTERLISP_FIXNUMP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(uniquep, ANYTHING,
+  { JITTERLISP_UNIQUEP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(characterp, ANYTHING,
   { JITTERLISP_CHARACTERP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(nullp, ANYTHING,
@@ -404,6 +406,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(two_times, FIXNUM,
   { JITTERLISP_2TIMES_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(two_divided, FIXNUM,
   { JITTERLISP_2DIVIDED_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(two_quotient, FIXNUM,
+  { JITTERLISP_2QUOTIENT_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(two_remainder, FIXNUM,
   { JITTERLISP_2REMAINDER_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(negate, FIXNUM,
@@ -490,8 +494,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_4_(interpreted_closure_setb,
                                  INTERPRETED_CLOSURE, ENVIRONMENT, SYMBOLS, AST,
   { JITTERLISP_INTERPRETED_CLOSURE_SET_(res, args [0], args [1], args [2],
                                         args [3]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(compiled_closure_in_arity, COMPILED_CLOSURE,
-  { JITTERLISP_COMPILED_CLOSURE_IN_ARITY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_in_arity, CLOSURE,
+  { JITTERLISP_CLOSURE_IN_ARITY_(res, args [0]); })
 /* Vector operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
   { JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]); })
@@ -509,6 +513,9 @@ JITTERLISP_PRIMITIVE_FUNCTION_0_(read,
 /* Error handling operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(error, ANYTHING,
   { JITTERLISP_ERROR_(res, args [0]); })
+/* GC operations. */
+JITTERLISP_PRIMITIVE_FUNCTION_0_(gc,
+  { JITTERLISP_GC_(res); })
 /* AST case-checking operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(ast_literalp, AST,
   { JITTERLISP_AST_LITERALP_(res, args [0]); })
@@ -632,6 +639,44 @@ JITTERLISP_PRIMITIVE_FUNCTION_0_(copying,
   { printf ("%s\n", jitterlisp_gpl); })
 JITTERLISP_PRIMITIVE_FUNCTION_0_(no_warranty,
   { printf ("%s\n", jitterlisp_no_warranty); })
+/* Scratch / tentative. */
+JITTERLISP_PRIMITIVE_FUNCTION_2_(catch_any, CLOSURE, CLOSURE,
+  { jitterlisp_object jitterlisp_possibly_failing_thunk = args [0];
+    jitterlisp_object jitterlisp_recovery_thunk = args [1];
+    jitterlisp_object jitterlisp_either_branch_res;
+    /* The basic idea here is correct.  But I have to:
+       (a) exit cleanly from the VM on error , using EXIT_VM.  There should
+           be no need to copy back the VM state from registers, as that entire
+           state can be lost.
+       (b) store a Lisp object as an exception ("condition" in Common Lisp)
+           along with / instead of the current C string, and use it here from
+           the error branch.  That should be the only argument for the recovery
+           thunk.
+       I think that (a) might be complicated to implement as stated, just for
+       the need of distinguishing whether error is being called from the VM
+       or not.  What about having a non-initializing VM run (within the
+       generated-vm2.c) wrapped into something similar to
+       JITTERLISP_HANDLE_ERRORS ?
+       Exceptions must propagate out of as many VMs are currently in use; this
+       is important when multiple layers of mixed-mode (compiled vs. interpreted)
+       calls are active. */
+    JITTERLISP_HANDLE_ERRORS(
+      {
+        printf ("Hello from catch-any: NON-error branch 100\n");
+        jitterlisp_either_branch_res
+          = jitterlisp_apply_interpreter (jitterlisp_possibly_failing_thunk,
+                                          JITTERLISP_EMPTY_LIST);
+        printf ("Hello from catch-any: NON-error branch 1000\n");
+      },
+      {
+        printf ("Hello from catch-any: ERROR branch 100\n");
+        jitterlisp_either_branch_res
+          = jitterlisp_apply_interpreter (jitterlisp_recovery_thunk,
+                                          JITTERLISP_EMPTY_LIST);
+        printf ("Hello from catch-any: ERROR branch 1000\n");
+      });
+    res = jitterlisp_either_branch_res;
+  })
 
 /* Primitive macro functions. */
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(define)
@@ -661,6 +706,7 @@ jitterlisp_primitives []
   = {
       /* Type checking. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("fixnum?", 1, fixnump),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("unique?", 1, uniquep),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("character?", 1, characterp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("null?", 1, nullp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-null?", 1, non_nullp),
@@ -699,6 +745,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("1-", 1, one_minus),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("2*", 1, two_times),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("2/", 1, two_divided),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("2quotient", 1, two_quotient),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("2remainder", 1, two_remainder),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("negate", 1, negate),
       /* Boolean operations. */
@@ -749,8 +796,8 @@ jitterlisp_primitives []
                                              interpreted_closure_body),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interpreted-closure-set!", 4,
                                              interpreted_closure_setb),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compiled-closure-in-arity", 1,
-                                             compiled_closure_in_arity),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-in-arity", 1,
+                                             closure_in_arity),
       /* Vector operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */
@@ -763,6 +810,8 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("read", 0, read),
       /* Error handling operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("error", 1, error),
+      /* GC operations. */
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("gc", 0, gc),
       /* AST case-checking operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-literal?", 1, ast_literalp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("ast-variable?", 1, ast_variablep),
@@ -834,6 +883,8 @@ jitterlisp_primitives []
       /* Operations to display legal notices. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("copying", 0, copying),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("no-warranty", 0, no_warranty),
+      /* Scratch / tentative. */
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("catch-any", 2, catch_any),
 
       /* Primitive macros */
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("define", define),

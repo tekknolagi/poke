@@ -1,9 +1,9 @@
-/* Jittery Lisp: heap allocation.
+/* JitterLisp: heap allocation.
 
    Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -28,6 +28,7 @@
 #include <string.h>
 
 #include <jitter/jitter-dynamic-buffer.h>
+#include <jitter/jitter-hash.h>
 #include <jitter/jitter-fatal.h>
 #include <jitter/jitter-malloc.h>
 
@@ -116,25 +117,31 @@ jitterlisp_unregister_current_thread (void)
 
 
 
-/* Explicit GC root registration.
+/* GC root registration.
  * ************************************************************************** */
 
-//#warning "export the public part of this.  Add comments."
-
+/* Data about a root. */
 struct jitterlisp_gc_root
 {
+  /* Initial pointer to the array of Lisp objects. */
   jitterlisp_object *object_pointer;
+
+  /* How many objects there are. */
+  size_t object_no;
 };
 
+/* I keep roots in a global stack. */
 static struct jitter_dynamic_buffer
 jitterlisp_gc_root_stack;
 
+/* Initialize the global root stack.  This is only used internally. */
 static void
 jitterlisp_gc_root_stack_initialize (void)
 {
   jitter_dynamic_buffer_initialize (& jitterlisp_gc_root_stack);
 }
 
+/* Finalize the global root stack.  This is only used internally. */
 static void
 jitterlisp_gc_root_stack_finalize (void)
 {
@@ -142,20 +149,38 @@ jitterlisp_gc_root_stack_finalize (void)
 }
 
 void
-jitterlisp_push_gc_root (jitterlisp_object *object_pointer)
+jitterlisp_push_gc_root (jitterlisp_object *object_pointer,
+                         size_t object_no)
 {
   struct jitterlisp_gc_root root;
   root.object_pointer = object_pointer;
+  root.object_no = object_no;
   jitter_dynamic_buffer_push (& jitterlisp_gc_root_stack,
                               & root,
                               sizeof (struct jitterlisp_gc_root));
 #if   defined(JITTERLISP_LITTER)
   /* Do nothing. */
 #elif defined(JITTERLISP_BOEHM_GC)
-  GC_add_roots (object_pointer, ((char *) object_pointer) + sizeof (jitterlisp_object));
+  GC_add_roots (object_pointer,
+                ((char *) object_pointer)
+                + sizeof (jitterlisp_object) * object_no);
 #else
 # error "impossible or unimplemented"
 #endif // #if defined(...
+}
+
+void
+jitterlisp_push_stack_backing_as_gc_root (struct jitter_stack_backing *sb)
+{
+  /* Perform a cheap sanity check: here we must be speaking of elements
+     of the size of list objects. */
+  if (sb->element_size_in_bytes != sizeof (jitterlisp_object))
+    jitter_fatal ("stack backing not an array of Lisp objects");
+
+  /* Register the full memory for the backing as a root.  The size is given
+     in elements, not in chars, as expected here. */
+  jitterlisp_push_gc_root ((jitterlisp_object *) sb->memory,
+                           sb->element_no);
 }
 
 void
@@ -169,7 +194,8 @@ jitterlisp_pop_gc_roots (size_t how_many)
   for (i = 0; i < how_many; i ++)
     GC_remove_roots (popped_roots [i].object_pointer,
                      ((char *) (popped_roots [i].object_pointer)
-                      + sizeof (jitterlisp_object)));
+                      + (sizeof (jitterlisp_object)
+                         * popped_roots [i].object_no)));
 #endif // #if defined(JITTERLISP_BOEHM_GC)
 }
 
@@ -260,8 +286,9 @@ jitterlisp_add_litter_block (size_t block_size_in_bytes)
   jitterlisp_litter_heap_size += block_size_in_bytes;
 
 #define JITTERLIST_TO_MB(x) ((x) / 1024.0 / 1024.0)
-  /* Log, unless this block is the first. */
-  if (jitterlisp_settings.verbose || ! is_this_block_the_first)
+  /* Log, unless disabled, if the block is not the first (the first block
+     allocation is uninteresting). */
+  if (jitterlisp_settings.verbose_litter && ! is_this_block_the_first)
     fprintf (stderr, "New %.1fMB litter block.  The heap is now %.1fMB.\n",
              JITTERLIST_TO_MB(block_size_in_bytes),
              JITTERLIST_TO_MB(jitterlisp_litter_heap_size));
@@ -431,7 +458,7 @@ jitterlisp_symbol_make_interned (const char *name)
       res->global_value = JITTERLISP_UNDEFINED;
       res->index = 0;
       res->global_constant = false;
-      jitterlisp_push_gc_root (& res->global_value);
+      jitterlisp_push_gc_root (& res->global_value, 1);
       union jitter_word w = { .pointer = (void *) res };
       jitter_string_hash_table_add (& jitterlisp_symbol_table, name, w);
       return res;
@@ -453,6 +480,24 @@ jitterlisp_destroy_interned_symbol (const union jitter_word w)
   /* Destroy the struct as well.  This is correct, since symbols are allocated
      with malloc. */
   free (symbol);
+}
+
+
+
+
+/* Force collection.
+ * ************************************************************************** */
+
+void
+jitterlisp_gc (void)
+{
+#if   defined(JITTERLISP_LITTER)
+  /* Do nothing. */
+#elif defined(JITTERLISP_BOEHM_GC)
+  GC_gcollect ();
+#else
+# error "impossible or unimplemented"
+#endif // #if defined(...
 }
 
 

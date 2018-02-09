@@ -1,9 +1,9 @@
-/* Jittery Lisp: interpreter: naïve C version.
+/* JitterLisp: interpreter: naïve C version.
 
    Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -61,6 +61,9 @@ jitterlisp_eval_interpreter_ast_primitive (jitterlisp_object rator,
   for (i = 0; i < rand_no; i ++)
     values [i] = jitterlisp_eval_interpreter_ast (rand_asts [i], env);
 
+  /* FIXME: does GCC guarantee that this will not be compiled as a sibling
+     call?  It is important that the current stack frame is not popped until
+     the callee returns. */
   return JITTERLISP_PRIMITIVE_DECODE(rator)->function (values);
 }
 

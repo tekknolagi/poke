@@ -1,9 +1,9 @@
-/* Jittery Lisp: driver.
+/* JitterLisp: driver.
 
    Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -47,36 +47,38 @@
 enum jitterlisp_negative_option
   {
     jitterlisp_negative_option_no_verbose = -1,
-    jitterlisp_negative_option_library = -2,
-    jitterlisp_negative_option_no_compact_uninterned = -3,
-    jitterlisp_negative_option_omit_nothing = -4,
-    jitterlisp_negative_option_vm = -5,
+    jitterlisp_negative_option_verbose_litter = -2,
+    jitterlisp_negative_option_library = -3,
+    jitterlisp_negative_option_no_compact_uninterned = -4,
+    jitterlisp_negative_option_omit_nothing = -5,
     jitterlisp_negative_option_repl = -6,
     jitterlisp_negative_option_no_colorize = -7,
-    jitterlisp_negative_option_no_cross_disassembler = -8
+    jitterlisp_negative_option_no_cross_disassembler = -8,
+    jitterlisp_negative_option_optimization_rewriting = -9
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum jitterlisp_negative_option . */
 enum jitterlisp_long_only_option
   {
-    jitterlisp_long_only_option_compact_uninterned = -20,
-    jitterlisp_long_only_option_no_library = -21,
-    jitterlisp_long_only_option_no_omit_nothing = -22,
-    jitterlisp_long_only_option_no_vm = -23,
+    jitterlisp_long_only_option_no_verbose_litter = -20,
+    jitterlisp_long_only_option_compact_uninterned = -21,
+    jitterlisp_long_only_option_no_library = -22,
+    jitterlisp_long_only_option_no_omit_nothing = -23,
     jitterlisp_long_only_option_no_repl = -24,
     jitterlisp_long_only_option_dump_version = -25,
     jitterlisp_long_only_option_cross_disassembler = -26,
+    jitterlisp_long_only_option_no_optimization_rewriting = -27
   };
 
 /* Command-line option specification. */
 static struct argp_option jitterlisp_option_specification[] =
-  {/* File options. */
-   {NULL, '\0', NULL, OPTION_DOC, "File options:", 10},
+  {/* Read-Eval-Print Loop options. */
+   {NULL, '\0', NULL, OPTION_DOC, "Read-Eval-Print Loop options:", 10},
    {"no-repl", jitterlisp_long_only_option_no_repl, NULL, 0,
     "Run non-interactively, without a REPL" },
    {"batch", 'q', NULL, OPTION_ALIAS },
-   /* File negative options. */
+   /* Interactivity negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 11},
    {"repl", jitterlisp_negative_option_repl, NULL, 0,
     "Run interactively, with a REPL (default unless files are given on the "
@@ -92,10 +94,10 @@ static struct argp_option jitterlisp_option_specification[] =
    {"omit-nothing", jitterlisp_negative_option_omit_nothing, NULL, 0,
     "Omit #<nothing> evaluation results (default)"},
 
-   /* Command-line s-expression evaluation. */
-   {NULL, '\0', NULL, OPTION_DOC, "Command-line s-expression evaluation:", 30},
+   /* Command-line form evaluation. */
+   {NULL, '\0', NULL, OPTION_DOC, "Command-line form evaluation:", 30},
    {"eval", 'e', "SEXPRS", 0,
-    "Evaluate the given s-expressions after running the files (if any) "
+    "Evaluate the given Lisp forms after running the files (if any) "
     "and before running the REPL (if enabled)" },
 
    /* Debugging options. */
@@ -104,24 +106,26 @@ static struct argp_option jitterlisp_option_specification[] =
     "Colorize s-expressions with ANSI terminal escape sequences" },
    {"verbose", 'v', NULL, 0,
     "Show progress information at run time" },
-   {"no-vm", jitterlisp_long_only_option_no_vm, NULL, 0,
-    "Use a naïf C interpreter instead of the Jittery VM" },
-   {"no-jittery", '\0', NULL, OPTION_ALIAS },
+   {"no-verbose-litter", jitterlisp_long_only_option_no_verbose_litter, NULL, 0,
+    "Don't show littering information at run time" },
    {"no-library", jitterlisp_long_only_option_no_library, NULL, 0,
     "Don't load the Lisp library" },
    {"compact-uninterned", jitterlisp_long_only_option_compact_uninterned, NULL,
     0, "Print uninterned symbols in compact notation" },
    {"cross-disassembler", jitterlisp_long_only_option_cross_disassembler, NULL,
     0, "Use the cross-disassembler instead of the native disassembler" },
+   {"no-optimization-rewriting",
+    jitterlisp_long_only_option_no_optimization_rewriting, NULL, 0,
+    "Disable optimization rewriting (this is mostly useful for debugging "
+    "rewrite rules and for measuring the speedup they introduce)" },
    /* Debugging negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 41},
    {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
     "Don't colorize s-expressions (default)"},
    {"no-verbose", jitterlisp_negative_option_no_verbose, NULL, 0,
     "Don't show progress information (default)"},
-   {"vm", jitterlisp_negative_option_vm, NULL, 0,
-    "Use the Jittery VM (default)"},
-   {"jittery", '\0', NULL, OPTION_ALIAS },
+   {"verbose-litter", jitterlisp_negative_option_verbose_litter, NULL, 0,
+    "Show littering information at run time (default)" },
    {"library", jitterlisp_negative_option_library, NULL, 0,
     "Load the Lisp library (default)" },
    {"no-compact-uninterned", jitterlisp_negative_option_no_compact_uninterned,
@@ -129,6 +133,9 @@ static struct argp_option jitterlisp_option_specification[] =
    {"no-cross-disassembler", jitterlisp_negative_option_no_cross_disassembler,
     NULL, 0, "Use the native disassembler instead of the cross-disassembler "
     "(default)" },
+   {"optimization-rewriting",
+    jitterlisp_negative_option_optimization_rewriting, NULL, 0,
+    "Enable optimization rewriting (default)" },
 
    {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 50},
    {"dump-version", jitterlisp_long_only_option_dump_version, NULL, 0,
@@ -144,7 +151,7 @@ static struct argp_option jitterlisp_option_specification[] =
 
 const char *argp_program_version
   = "JitterLisp (" PACKAGE_NAME ") " PACKAGE_VERSION "\n"
-    "Copyright (C) 2017 Luca Saiu.\n"
+    "Copyright (C) 2017, 2018 Luca Saiu.\n"
     "JitterLisp comes with ABSOLUTELY NO WARRANTY.\n"
     "You may redistribute copies of JitterLisp under the terms of the GNU General Public\n"
     "License, version 3 or any later version published by the Free Software Foundation.\n"
@@ -208,8 +215,8 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'v':
       sp->verbose = true;
       break;
-    case jitterlisp_long_only_option_no_vm:
-      sp->vm = false;
+    case jitterlisp_long_only_option_no_verbose_litter:
+      sp->verbose_litter = false;
       break;
     case jitterlisp_long_only_option_no_library:
       sp->library = false;
@@ -220,6 +227,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case jitterlisp_long_only_option_cross_disassembler:
       sp->cross_disassembler = true;
       break;
+    case jitterlisp_long_only_option_no_optimization_rewriting:
+      sp->optimization_rewriting = false;
+      break;
 
     /* Debugging negative options. */
     case jitterlisp_negative_option_no_colorize:
@@ -228,8 +238,8 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case jitterlisp_negative_option_no_verbose:
       sp->verbose = false;
       break;
-    case jitterlisp_negative_option_vm:
-      sp->vm = true;
+    case jitterlisp_negative_option_verbose_litter:
+      sp->verbose_litter = true;
       break;
     case jitterlisp_negative_option_library:
       sp->library = true;
@@ -239,6 +249,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case jitterlisp_negative_option_no_cross_disassembler:
       sp->cross_disassembler = false;
+      break;
+    case jitterlisp_negative_option_optimization_rewriting:
+      sp->optimization_rewriting = true;
       break;
 
     /* Scripting options. */
@@ -287,13 +300,13 @@ main (int argc, char **argv)
                 : jitterlisp_run_repl_yes);
   /* From now on sp->repl can be used as a boolean. */
 
+  /* Disable optimization rewriting, on by default, if the settings say so. */
+  if (! jitterlisp_settings.optimization_rewriting)
+    jitterlispvm_disable_optimization_rewriting ();
+
   /* If running interactively print the banner, as per the GPL. */
   if (sp->repl)
     jitterlisp_interactive_banner ();
-
-  /* Initialize the VM substystem, unless disabled. */
-  if (sp->vm)
-    jitterlisp_initialize_vm ();
 
   /* Run input files and s-expressions from the command-line, halting at the
      first error; still free the resources before exiting, even in case of
@@ -335,10 +348,6 @@ main (int argc, char **argv)
      needed right before exiting, but is convenient when checking for memory
      leaks with Valgrind which this way won't show false positives. */
   jitterlisp_finalize ();
-
-  /* Finalize the VM substystem, unless disabled. */
-  if (sp->vm)
-    jitterlisp_finalize_vm ();
 
   /* Return success or failure, as we decided before.  Yes, we go to the trouble
      of freeing resources even on fatal errors: see the comment above. */

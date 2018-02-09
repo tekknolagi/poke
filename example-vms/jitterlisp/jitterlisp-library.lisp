@@ -3,7 +3,7 @@
 ;;; Copyright (C) 2017, 2018 Luca Saiu
 ;;; Written by Luca Saiu
 
-;;; This file is part of the Jittery Lisp language implementation, distributed as
+;;; This file is part of the JitterLisp language implementation, distributed as
 ;;; an example along with Jitter under the same license.
 
 ;;; Jitter is free software: you can redistribute it and/or modify
@@ -33,23 +33,8 @@
     (error '(you are trying to load the library more than once))
     #t)
 
-
 
 
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; FIXME: move: closure utility procedures.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define-constant (closure-in-arity closure)
-  (cond ((interpreted-closure? closure)
-         (length (interpreted-closure-formals closure)))
-        ((compiled-closure? closure)
-         (compiled-closure-in-arity closure))
-        (#t
-         (error `(closure-in-arity called on the non-closure ,closure)))))
-
-
-
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Type checking.
@@ -201,7 +186,7 @@
 
 (define-constant (qq-append xs ys)
   (if (list? xs)
-      (append xs ys)
+      (append-procedure xs ys)
       (error '(unquote-splicing argument evaluates to non-list))))
 
 (define-constant (qq-atom x)
@@ -243,10 +228,10 @@
                (list3 'cons
                       ''unquote-splicing
                       (qq-recursive x-cdr (1- depth))))))
-        (#t
-         ;;`(append ,(qq-recursive-as-car x-car depth)
-         ;;         ,(qq-recursive x-cdr depth))
-         (list3 'append ;; no qq-append here: qq-recursive-as-car returns a list.
+        (else
+         ;;`(append-procedure ,(qq-recursive-as-car x-car depth)
+         ;;                   ,(qq-recursive x-cdr depth))
+         (list3 'append-procedure ;; no qq-append here: qq-recursive-as-car returns a list.
                 (qq-recursive-as-car x-car depth)
                 (qq-recursive x-cdr depth)))))
 
@@ -309,11 +294,11 @@
                     (list3 'cons
                            ''unquote-splicing
                            (qq-recursive x-cdr (1- depth))))))
-        (#t
-         ;;`(list (append ,(qq-recursive-as-car x-car depth)
-         ;;               ,(qq-recursive x-cdr depth))))
+        (else
+         ;;`(list (append-procedure ,(qq-recursive-as-car x-car depth)
+         ;;                         ,(qq-recursive x-cdr depth))))
          (list2 'list1
-                (list3 'append
+                (list3 'append-procedure
                        (qq-recursive-as-car x-car depth)
                        (qq-recursive x-cdr depth))))))
 
@@ -339,7 +324,7 @@
            (error '(quasiquote arguments not a list)))
           ((non-null? (cdr low-level-macro-args))
            (error '(quasiquote arguments more than one or not a list)))
-          (#t
+          (else
            (quasiquote-procedure (car low-level-macro-args))))))
 
 
@@ -357,8 +342,37 @@
 (define-constant (singleton x)
   (cons x ()))
 
+
 
 
+;;;; singleton?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (singleton? x)
+  (if (cons? x)
+      (null? (cdr x))
+      #f))
+
+
+
+
+;;;; null-or-singleton?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return non-#f iff the argument is either () or a singleton list.
+;;; Rationale: this is useful in macros with a single optional argument,
+;;; for checking that the optional part of the arguments has the correct
+;;; shape.
+(define-constant (null-or-singleton? x)
+  (cond ((null? x)
+         #t)
+        ((cons? x)
+         (null? (cdr x)))
+        (else
+         #f)))
+
+
+
 
 ;;;; list?.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -373,7 +387,7 @@
             ((non-cons? xs)
              (set! res #f)
              (set! go-on #f))
-            (#t
+            (else
              (set! xs (cdr xs)))))
     res))
 
@@ -382,7 +396,7 @@
          #t)
         ((cons? xs)
          (list?-tail-recursive (cdr xs)))
-        (#t
+        (else
          #f)))
 
 (define-constant (list? xs)
@@ -404,7 +418,7 @@
              (set! res #f))
             ((symbol? (car xs))
              (set! xs (cdr xs)))
-            (#t
+            (else
              (set! xs ())
              (set! res #f))))
     res))
@@ -416,7 +430,7 @@
          #f)
         ((symbol? (car xs))
          (symbols?-tail-recursive (cdr xs)))
-        (#t
+        (else
          #f)))
 
 (define-constant (symbols? xs)
@@ -607,14 +621,14 @@
 (define-constant (reverse-iterative xs)
   (append-reversed-iterative xs ()))
 
-;; This uses append instead of append-non-tail-recursive .
+;; This uses append-procedure instead of append-non-tail-recursive .
 (define-constant (reverse-non-tail-recursive xs)
   (if (null? xs)
       ()
-      (append (reverse-non-tail-recursive (cdr xs))
-              (singleton (car xs)))))
+      (append-procedure (reverse-non-tail-recursive (cdr xs))
+                        (singleton (car xs)))))
 
-;; This uses append-non-tail-recursive instead of append .
+;; This uses append-non-tail-recursive instead of append-procedure .
 (define-constant (reverse-really-non-tail-recursive xs)
   (if (null? xs)
       ()
@@ -687,7 +701,7 @@
   (append-reversed-tail-recursive (reverse-tail-recursive xs)
                                   ys))
 
-(define-constant (append xs ys)
+(define-constant (append-procedure xs ys)
   (append-iterative xs ys))
 
 
@@ -838,6 +852,17 @@
 
 
 
+;;;; car-or-nil.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (car-or-nil xs)
+  (if (null? xs)
+      ()
+      (car xs)))
+
+
+
+
 ;;;; cdr-or-nil.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -852,7 +877,7 @@
 ;;;; nth-cons-or-nil.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant (nth-cons-or-nil-iterative n xs)
+(define-constant (nth-cons-or-nil-iterative xs n)
   ;; A break or return form would be useful here.  Even better I could also
   ;; iterate on an and condition, but we have no and macro yet.
   (let* ((go-on #t))
@@ -861,21 +886,21 @@
              (set! go-on #f))
             ((null? xs)
              (set! go-on #f))
-            (#t
+            (else
              (set! n (1- n))
              (set! xs (cdr xs)))))
     xs))
 
-(define-constant (nth-cons-or-nil-tail-recursive n xs)
+(define-constant (nth-cons-or-nil-tail-recursive xs n)
   (cond ((zero? n)
          xs)
         ((null? xs)
          ())
-        (#t
-         (nth-cons-or-nil-tail-recursive (1- n) (cdr xs)))))
+        (else
+         (nth-cons-or-nil-tail-recursive (cdr xs) (1- n)))))
 
-(define-constant (nth-cons-or-nil n xs)
-  (nth-cons-or-nil-iterative n xs))
+(define-constant (nth-cons-or-nil xs n)
+  (nth-cons-or-nil-iterative xs n))
 
 
 
@@ -883,7 +908,7 @@
 ;;;; nth-cons.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant (nth-cons n xs)
+(define-constant (nth-cons xs n)
   (let* ((c (nth-cons-or-nil n xs)))
     (if (null? c)
         (error '(nth-cons: list too short))
@@ -924,7 +949,7 @@
              (set! go-on #f))
             ((zero? n)
              (set! go-on #f))
-            (#t
+            (else
              (set! res (cons (car xs) res))
              (set! xs (cdr xs))
              (set! n (1- n)))))
@@ -940,7 +965,7 @@
          ())
         ((null? xs)
          ())
-        (#t
+        (else
          (cons (car xs) (take-non-tail-recursive (cdr xs) (1- n))))))
 
 (define-constant (take-reversed-tail-recursive-helper xs n acc)
@@ -948,7 +973,7 @@
          acc)
         ((null? xs)
          acc)
-        (#t
+        (else
          (take-reversed-tail-recursive-helper (cdr xs)
                                               (1- n)
                                               (cons (car xs) acc)))))
@@ -970,7 +995,7 @@
 (define-constant (take!-iterative xs n)
   (if (zero? n)
       ()
-      (let* ((n-1-th-cons-or-nil (nth-cons-or-nil-iterative (1- n) xs)))
+      (let* ((n-1-th-cons-or-nil (nth-cons-or-nil-iterative xs (1- n))))
         (if (non-null? n-1-th-cons-or-nil)
             (set-cdr! n-1-th-cons-or-nil ()))
         xs)))
@@ -981,7 +1006,7 @@
              'do-nothing
              (set-cdr! xs ())))
         ((null? xs))
-        (#t
+        (else
          (take!-tail-recursive-helper (cdr xs) (1- n)))))
 (define-constant (take!-tail-recursive xs n)
   (if (zero? n)
@@ -1007,7 +1032,7 @@
              (set! go-on #f))
             ((zero? n)
              (set! go-on #f))
-            (#t
+            (else
              (set! xs (cdr xs))
              (set! n (1- n)))))
     xs))
@@ -1017,7 +1042,7 @@
          xs)
         ((null? xs)
          ())
-        (#t
+        (else
          (drop-tail-recursive (cdr xs) (1- n)))))
 
 (define-constant (drop xs n)
@@ -1032,7 +1057,7 @@
 (define-constant (drop! xs n)
   (if (zero? n)
       xs
-      (let* ((n-1-th-cons-or-nil (nth-cons-or-nil (1- n) xs)))
+      (let* ((n-1-th-cons-or-nil (nth-cons-or-nil xs (1- n))))
         (if (non-null? n-1-th-cons-or-nil)
             (let* ((old-cdr (cdr n-1-th-cons-or-nil)))
               (set-cdr! n-1-th-cons-or-nil ())
@@ -1070,29 +1095,30 @@
 ;;; I've discovered Emacs Lisp's seq-let , less powerful but conceptually very
 ;;; similar, only now in 2017.
 
-;;; Return the result of destructuring-bind with the given formal template bound
+;;; Return the result of destructuring-bind with the given formal pattern bound
 ;;; to low-level-macro-args or some sub-component of it.  The result is code,
 ;;; not executed by this function: of course we cannot do that until we have an
 ;;; actual value for low-level-macro-args .
 ;;; Notice that component may be evaluated multiple times in the returned code,
 ;;; and therefore should be a literal or a variable.  This is ensured out of
 ;;; this recursive procedure, by calling it with an appropriate actual.
-(define-constant (destructuring-bind-recursive formals-template
+;;; Common Lisp calls "template" what we call "pattern" here.
+(define-constant (destructuring-bind-recursive formals-pattern
                                                component
                                                body-forms)
-  (cond ((null? formals-template)
-         ;; There is nothing to bind in the template.  Return code to check
+  (cond ((null? formals-pattern)
+         ;; There is nothing to bind in the pattern.  Return code to check
          ;; that there are also no actuals, and then either proceeds or fails.
          `(if (null? ,component)
               (begin
                 ,@body-forms)
               (error `(destructuring-bind: excess actuals: ,,component))))
-        ((symbol? formals-template)
-         ;; The macro template is dotted, or this is a recursive call on a
-         ;; template car: in either case bind one variable to every actual.
-         `(let* ((,formals-template ,component))
+        ((symbol? formals-pattern)
+         ;; The macro pattern is dotted, or this is a recursive call on a
+         ;; pattern car: in either case bind one variable to every actual.
+         `(let* ((,formals-pattern ,component))
             ,@body-forms))
-        ((cons? formals-template)
+        ((cons? formals-pattern)
          ;; Bind both the car and the cdr.  For efficiency's sake name the two
          ;; sub-components in the generated code.
          (let* ((car-name (gensym))
@@ -1100,23 +1126,23 @@
            `(let* ((,car-name (car ,component))
                    (,cdr-name (cdr ,component)))
               ,(destructuring-bind-recursive
-                  (car formals-template)
+                  (car formals-pattern)
                   car-name
                   ;; The inner quasiquoting serves to make a (singleton) list of
                   ;; the body forms.
-                  `(,(destructuring-bind-recursive (cdr formals-template)
+                  `(,(destructuring-bind-recursive (cdr formals-pattern)
                                                    cdr-name
                                                    body-forms))))))
-        ((vector? formals-template)
-         (error `(vector ,formals-template in macro formals template)))
-        (#t
-         ;; The template is, hopefully, something which can be compared with eq?
+        ((vector? formals-pattern)
+         (error `(vector ,formals-pattern in macro formals pattern)))
+        (else
+         ;; The pattern is, hopefully, something which can be compared with eq?
          ;; .  Return code checking that it's equal to the actual and in that
          ;; case proceeds without binding anything.
-         `(if (eq? ,formals-template ,component)
+         `(if (eq? ,formals-pattern ,component)
               (begin
                 ,@body-forms)
-              (error `(non-matching template argument: ,formals-template
+              (error `(non-matching pattern argument: ,formals-pattern
                                     ,component))))))
 
 ;;; The args argument represents "actuals" in a symbolic form; their values
@@ -1128,14 +1154,14 @@
 ;;;   '((display a) (display b)))
 ;;; This would return code binding a and b as local variable to the car and
 ;;; cadr of some-arguments, assumed to be bound, and display them.
-(define-constant (destructuring-bind-procedure formals-template args body-forms)
+(define-constant (destructuring-bind-procedure formals-pattern args body-forms)
   (let* ((args-value-name (gensym)))
     `(let* ((,args-value-name ,args))
-       ,(destructuring-bind-recursive formals-template
+       ,(destructuring-bind-recursive formals-pattern
                                       args-value-name
                                       body-forms))))
 
-;; FIXME: check that the formals-template doesn't require non-linear bindings.
+;; FIXME: check that the formals-pattern doesn't require non-linear bindings.
 
 
 
@@ -1146,15 +1172,15 @@
 ;;; This will be convenient to define high-level macros on top of low-level
 ;;; macros, by destructuring the one low-level macro argument.
 
-;;; Arguments: template structure . body-forms Evaluate structure and locally
-;;; bind its components with the variables in the template; return the result of
+;;; Arguments: pattern structure . body-forms Evaluate structure and locally
+;;; bind its components with the variables in the pattern; return the result of
 ;;; evaluating the body forms with the bindings visible.
 (define-constant destructuring-bind
   (low-level-macro
-    (let* ((template (car low-level-macro-args))
+    (let* ((pattern (car low-level-macro-args))
            (structure (cadr low-level-macro-args))
            (body-forms (cddr low-level-macro-args)))
-      (destructuring-bind-procedure template structure body-forms))))
+      (destructuring-bind-procedure pattern structure body-forms))))
 
 
 
@@ -1176,8 +1202,8 @@
                              ,@macro-body-forms)))))
 
 ;;; Globally define a high-level named macro.
-;;; Arguments: (name . formals) . body-forms
-;;; Scheme-style, where formals can be an improper list.
+;;; Arguments: (name . pattern) . body-forms
+;;; The pattern is of the form accepted by destructuring-bind.
 (define-constant define-macro
   (macro ((macro-name . macro-formals) . macro-body-forms)
     `(define ,macro-name
@@ -1202,7 +1228,7 @@
          #f)
         ((cons? (car x))
          (alist? (cdr x)))
-        (#t
+        (else
          #f)))
 
 (define-constant (assq key alist)
@@ -1210,7 +1236,7 @@
          #f)
         ((eq? (caar alist) key)
          (car alist))
-        (#t
+        (else
          (assq key (cdr alist)))))
 
 (define-constant (rassq value alist)
@@ -1218,7 +1244,7 @@
          #f)
         ((eq? (cdar alist) value)
          (car alist))
-        (#t
+        (else
          (rassq value (cdr alist)))))
 
 ;;; Return a new alist, possibly sharing structure with alist, without the
@@ -1228,7 +1254,7 @@
          ())
         ((eq? (caar alist) object)
          (cdr alist))
-        (#t
+        (else
          (cons (car alist) (del-assq-1-noncopying object (cdr alist))))))
 
 (define-constant (del-assq-1 object alist)
@@ -1239,7 +1265,7 @@
          ())
         ((eq? (caar alist) object)
          (del-assq-noncopying object (cdr alist)))
-        (#t
+        (else
          (cons (car alist) (del-assq-noncopying object (cdr alist))))))
 
 (define-constant (del-assq object alist)
@@ -1300,7 +1326,7 @@
              acc))
         ((null? bs)
          (error '(zip-tail-recursive: first list longer)))
-        (#t
+        (else
          (zip-reversed-tail-recursive-helper (cdr as)
                                              (cdr bs)
                                              (cons (cons (car as)
@@ -1331,7 +1357,7 @@
              ()))
         ((null? bs)
          (error '(zip-non-tail-recursive: first list longer)))
-        (#t
+        (else
          (cons (cons (car as) (car bs))
                (zip-non-tail-recursive (cdr as) (cdr bs))))))
 
@@ -1555,7 +1581,7 @@
              (begin
                (set! res #t)
                (set! go-on #f)))
-            (#t
+            (else
              (set! xs (cdr xs)))))
     res))
 
@@ -1564,7 +1590,7 @@
          #f)
         ((p (car xs))
          #t)
-        (#t
+        (else
          (exists?-tail-recursive p (cdr xs)))))
 
 (define-constant (exists? p xs)
@@ -1587,7 +1613,7 @@
              (begin
                (set! res #f)
                (set! go-on #f)))
-            (#t
+            (else
              (set! xs (cdr xs)))))
     res))
 
@@ -1596,7 +1622,7 @@
          #t)
         ((p (car xs))
          (for-all?-tail-recursive p (cdr xs)))
-        (#t
+        (else
          #f)))
 
 (define-constant (for-all? p xs)
@@ -1623,7 +1649,7 @@
          ())
         ((p (car xs))
          (cons (car xs) (filter-non-tail-recursive p (cdr xs))))
-        (#t
+        (else
          (filter-non-tail-recursive p (cdr xs)))))
 
 (define-constant (filter-reversed-tail-recursive-helper p xs acc)
@@ -1631,7 +1657,7 @@
          acc)
         ((p (car xs))
          (filter-reversed-tail-recursive-helper p (cdr xs) (cons (car xs) acc)))
-        (#t
+        (else
          (filter-reversed-tail-recursive-helper p (cdr xs) acc))))
 (define-constant (filter-reversed-tail-recursive p xs)
   (filter-reversed-tail-recursive-helper p xs ()))
@@ -1749,11 +1775,10 @@
              (set! go-on #f))
             ((<= x (car xs))
              (set! go-on #f))
-            (#t
-             (begin
-               (set! smaller-elements-reversed
-                     (cons (car xs) smaller-elements-reversed))
-               (set! xs (cdr xs))))))
+            (else
+             (set! smaller-elements-reversed
+                   (cons (car xs) smaller-elements-reversed))
+             (set! xs (cdr xs)))))
     (append-reversed-iterative smaller-elements-reversed
                                (cons x xs))))
 
@@ -1764,7 +1789,7 @@
         ((<= x (car xs))
          (append-reversed-tail-recursive smaller-elements-reversed
                                          (cons x xs)))
-        (#t
+        (else
          (insert-tail-recursive-helper x
                                        (cdr xs)
                                        (cons (car xs)
@@ -1777,7 +1802,7 @@
          (singleton x))
         ((<= x (car xs))
          (cons x xs))
-        (#t
+        (else
          (cons (car xs)
                (insert-non-tail-recursive x (cdr xs))))))
 
@@ -1813,7 +1838,7 @@
              (begin
                (insert-as-second! x xs)
                (set! go-on #f)))
-            (#t
+            (else
              (set! xs (cdr xs)))))))
 (define-constant (insert!-iterative x xs)
   (if (null? xs)
@@ -1827,7 +1852,7 @@
          (insert-as-first! x xs))
         ((null? (cdr xs))
          (insert-as-second! x xs))
-        (#t
+        (else
          (insert!-tail-recursive-non-null x (cdr xs)))))
 (define-constant (insert!-tail-recursive x xs)
   (if (null? xs)
@@ -1950,7 +1975,7 @@
         ((even? n)
          (let* ((f^n/2 (iterate-squaring-pre f (quotient n 2))))
            (square-function f^n/2)))
-        (#t
+        (else
          (compose-procedure f (iterate-squaring-pre f (1- n))))))
 
 (define-constant (iterate-squaring-eta f n x)
@@ -1960,7 +1985,7 @@
          x)
         ((even? n)
          (iterate-squaring-eta (square-function f) (quotient n 2) x))
-        (#t
+        (else
          (iterate-squaring-eta (square-function f) (quotient n 2) (f x)))))
 (define-constant (iterate-squaring-post f n)
   (lambda (x) (iterate-squaring-eta f n x)))
@@ -1972,6 +1997,10 @@
 (define-constant (iterate-tail-recursive-pre f n)
   (iterate-tail-recursive-pre-helper f n identity))
 
+(define-constant (iterate-pre f n)
+  (iterate-squaring-pre f n))
+(define-constant (iterate-post f n)
+  (iterate-squaring-post f n))
 (define-constant (iterate f n)
   (iterate-squaring-pre f n))
 
@@ -1988,13 +2017,34 @@
 ;;;; list-has?.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; Return non-#f iff x is eq? to at least one of the elements of xs, assumed
+;;; to be a list.
+;; (define-constant (list-has? xs x)
+;;   (let* ((res #f)
+;;          (done #f)) ;; A break or return form would be nice here.
+;;     (while (not done)
+;;       (cond ((null? xs)
+;;              (set! done #t))
+;;             ((eq? (car xs) x)
+;;              (set! res #t)
+;;              (set! done #t))
+;;             (else
+;;              (set! xs (cdr xs)))))
+;;     res))
+
+(define-constant (non-empty-list-has? xs x)
+  (let* ((res #f))
+    (while (not (null? xs))
+      (if (eq? (car xs) x)
+          (begin
+            (set! res #t)
+            (set! xs ()))
+          (set! xs (cdr xs))))
+    res))
 (define-constant (list-has? xs x)
-  (cond ((null? xs)
-         #f)
-        ((eq? (car xs) x)
-         #t)
-        (#t
-         (list-has? (cdr xs) x))))
+  (if (null? xs)
+      #f
+      (non-empty-list-has? xs x)))
 
 
 
@@ -2014,7 +2064,7 @@
             ((eq? (car xs) x)
              (set! xs (cdr xs))
              (set! go-on #f))
-            (#t
+            (else
              (set! reversed-prefix (cons (car xs) reversed-prefix))
              (set! xs (cdr xs)))))
     (append!-iterative (reverse!-iterative reversed-prefix) xs)))
@@ -2025,7 +2075,7 @@
         ((eq? (car xs) x)
          (append!-tail-recursive (reverse!-tail-recursive acc)
                                  (cdr xs)))
-        (#t
+        (else
          (list-without-tail-recursive-helper (cdr xs)
                                              x
                                              (cons (car xs) acc)))))
@@ -2037,7 +2087,7 @@
          ())
         ((eq? (car xs) x)
          (cdr xs))
-        (#t
+        (else
          (cons (car xs)
                (list-without-non-tail-recursive (cdr xs) x)))))
 
@@ -2063,7 +2113,7 @@
              (set! go-on #f))
             ((eq? (car next-cons) x)
              (set! go-on #f))
-            (#t
+            (else
              (set! xs next-cons)
              (set! next-cons (cdr next-cons)))))
     ;; Now xs is either the predecessor we were looking for or ().
@@ -2086,7 +2136,7 @@
          ;; modify xs to turn it into the result, but we already have the
          ;; result as a substructure of xs.
          (cdr xs))
-        (#t
+        (else
          ;; Here we may have the opportunity to actually modify the list.
          ;; Find the predecessor cons, if any.
          (let* ((predecessor-or-nil (cons-before-or-nil xs x)))
@@ -2111,7 +2161,7 @@
          #t)
         ((list-has? (cdr xs) (car xs))
          #f)
-        (#t
+        (else
          (all-different? (cdr xs)))))
 
 
@@ -2148,7 +2198,7 @@
          (error '(or: non-list arguments)))
         ((null? (cdr clauses))
          (car clauses))
-        (#t
+        (else
          `(if ,(car clauses)
               '#t
               (or ,@(cdr clauses))))))
@@ -2167,7 +2217,7 @@
          (error '(and: non-list arguments)))
         ((null? (cdr clauses))
          (car clauses))
-        (#t
+        (else
          `(if ,(car clauses)
               (and ,@(cdr clauses))
               '#f))))
@@ -2183,7 +2233,7 @@
          '#f)
         ((null? (cdr args))
          (car args))
-        (#t
+        (else
          (let* ((first-name (gensym)))
            `(let* ((,first-name ,(car args)))
               (if ,first-name
@@ -2196,8 +2246,8 @@
 ;;; This is provided just for symmetry, since JitterLisp's default and operator
 ;;; is already efficient, and differently from JitterLisp's or follows the Lisp
 ;;; convention.
-(define-macro (lispy-and . args)
-  `(and ,@args))
+(define lispy-and
+  and)
 
 
 
@@ -2219,8 +2269,8 @@
                                        (map cdr bindings)))
          (user-variable-bindings (zip (map car bindings)
                                       (map singleton fresh-variables))))
-    `(let* ,(append fresh-variable-bindings
-                    user-variable-bindings)
+    `(let* ,(append-procedure fresh-variable-bindings
+                              user-variable-bindings)
        ,@body-forms)))
 
 
@@ -2280,15 +2330,15 @@
          'identity)
         ((null? (cdr args))
          (car args))
-        (#t
+        (else
          `(compose-procedure ,(car args)
                              (compose ,@(cdr args))))))
 
-;;; Sometimes it is convenient to write variadic-composition procedures
-;;; in the order they are executed.  This is equivalent to compose with
-;;; its arguments in the opposite order.
-;;; The arguments of this macro are still evaluated left-to-right, in
-;;; the order they are written in the call.
+;;; Sometimes it is convenient to write variadically composed procedures
+;;; in the order they are executed.  This is equivalent to a use of the
+;;; compose macro with its arguments in the opposite order, except that
+;;; the arguments of this macro are still evaluated left-to-right, in
+;;; the order they are written in the macro use.
 (define-macro (compose-pipeline . args)
   (let ((procedure-names (map (lambda (useless) (gensym)) args)))
     `(let* ,(zip procedure-names
@@ -2298,7 +2348,7 @@
 
 
 
-;;;; Variadic list operations.
+;;;; Variadic list or pseudo-list operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Given one or more arguments return their right-deep nested conses in order,
@@ -2336,8 +2386,7 @@
 
 ;; FIXME: use let-macro
 (define-macro (case-variable-matches? variable literals)
-  (if (or (eq? literals 'else)
-          (eq? literals '#t))
+  (if (eq? literals 'else)
       '#t
       `(or ,@(map (lambda (a-literal)
                     `(eq? ,variable ,a-literal))
@@ -2502,7 +2551,7 @@
          neutral)
         ((null? (cdr rands))
          (car rands))
-        (#t
+        (else
          (let* ((last-rand (last rands))
                 (all-but-last-rands (all-but-last rands)))
            `(,rator ,(variadic-left-deep rator neutral
@@ -2519,15 +2568,9 @@
          neutral)
         ((null? (cdr rands))
          (car rands))
-        (#t
+        (else
          `(,rator ,(car rands)
                   ,(variadic-right-deep rator neutral (cdr rands))))))
-
-
-
-
-;;;; Variadic arithmetic.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Define operator as a variadic macro, composing the original-name rator
 ;;; (itself a procedure, variable name or macro name) with the given
@@ -2555,6 +2598,12 @@
   ;; better stack code.
   `(define-left-nested-variadic-extension ,operator ,original-name ,neutral))
 
+
+
+
+;;;; Variadic arithmetic.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define-associative-variadic-extension + primordial-+ 0)
 (define-associative-variadic-extension * primordial-* 1)
 
@@ -2563,7 +2612,7 @@
          (error '(-: no arguments)))
         ((null? (cdr operands))
          `(negate ,@operands))
-        (#t
+        (else
          `(primordial-- ,(car operands)
                         (+ ,@(cdr operands))))))
 
@@ -2572,9 +2621,86 @@
          (error '(/: no arguments)))
         ((null? (cdr operands))
          `(primordial-/ 1 ,@operands))
-        (#t
+        (else
          `(primordial-/ ,(car operands)
                         (* ,@(cdr operands))))))
+
+
+;;;; Squaring.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (square n)
+  (* n n))
+
+
+
+
+;;;; Multiplication by additions (for fun).
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (*-nonnegative-b-by-sums-non-tail-recursive a b)
+  (cond ((zero? b)
+         0)
+        ((odd? b)
+         (+ a (*-nonnegative-b-by-sums-non-tail-recursive (2* a)
+                                                          (2quotient b))))
+        (else
+         (*-nonnegative-b-by-sums-non-tail-recursive (2* a)
+                                                     (2quotient b)))))
+(define-constant (*-by-sums-non-tail-recursive a b)
+  (if (< b 0)
+      (- (*-nonnegative-b-by-sums-non-tail-recursive a (- b)))
+      (*-nonnegative-b-by-sums-non-tail-recursive a b)))
+
+(define-constant (*-nonnegative-b-by-sums-iterative a b)
+  (let ((res 0))
+    (while (not (zero? b))
+      (when (odd? b)
+        (set! res (+ res a)))
+      (set! a (2* a))
+      (set! b (2quotient b)))
+    res))
+(define-constant (*-by-sums-iterative a b)
+  (if (< b 0)
+      (- (*-nonnegative-b-by-sums-iterative a (- b)))
+      (*-nonnegative-b-by-sums-iterative a b)))
+
+(define-constant (*-by-sums-procedure a b)
+  (*-by-sums-iterative a b))
+
+(define-right-nested-variadic-extension *-by-sums *-by-sums-procedure 1)
+
+
+
+
+;;;; Exponentiation.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (**-procedure-non-tail-recursive b e)
+  (cond ((zero? e)
+         1)
+        ((even? e)
+         (square (**-procedure-non-tail-recursive b (quotient e 2))))
+        (else
+         (* b (square (**-procedure-non-tail-recursive b (quotient e 2)))))))
+
+(define-constant (**-procedure-iterative b e)
+  (let ((res 1))
+    (while (not (zero? e))
+      (when (odd? e)
+        (set! res (* res b))
+        (set! e (- e 1)))
+      (set! e (quotient e 2))
+      (set! b (square b)))
+    res))
+
+(define-constant **-procedure
+  **-procedure-iterative)
+
+(define-right-nested-variadic-extension **-non-tail-recursive **-procedure-non-tail-recursive 1)
+(define-right-nested-variadic-extension **-iterative **-procedure-iterative 1)
+
+(define ** **-iterative)
 
 
 
@@ -2600,12 +2726,8 @@
 ;;;; Variadic list operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant previous-append append)
-
-;; FIXME: rename the append operator above in quasiquoting functions before
-;; renaming this to append.
-;; Calls in code which is already in AST form will be affected otherwise.
-(define-right-nested-variadic-extension variadic-append previous-append ())
+;;; Define a variadic version of append, now finally named append.
+(define-right-nested-variadic-extension append append-procedure ())
 
 
 
@@ -2631,7 +2753,7 @@
          reversed-left-part)
         ((eq? (car xs) x)
          (append! reversed-left-part (cdr xs)))
-        (#t
+        (else
          (set-without-helper (cdr xs) x (cons (car xs) reversed-left-part)))))
 (define-constant (set-without xs x)
   (set-without-helper xs x ()))
@@ -2647,13 +2769,10 @@
       xs
       (set-unite-procedure (set-with xs (car ys)) (cdr ys))))
 
-(define-associative-variadic-extension set-unite
-  set-unite-procedure set-empty)
-
-(define-constant (set-subtract xs ys)
+(define-constant (set-subtract-procedure xs ys)
   (if (null? ys)
       xs
-      (set-subtract (set-without xs (car ys)) (cdr ys))))
+      (set-subtract-procedure (set-without xs (car ys)) (cdr ys))))
 
 (define-constant (set-intersect-helper xs ys acc)
   (if (null? ys)
@@ -2668,8 +2787,14 @@
 (define-constant (set-intersect-procedure xs ys)
   (set-intersect-helper xs ys ()))
 
+;;; Define variadic extensions for the union, intersection and subtraction
+;;; operations.
+(define-associative-variadic-extension set-unite
+  set-unite-procedure set-empty)
 (define-associative-variadic-extension set-intersect
   set-intersect-procedure set-empty)
+(define-macro (set-subtract first-set . other-sets)
+  `(set-subtract-procedure ,first-set (set-unite ,@other-sets)))
 
 (define-constant (list->set list)
   ;; This relies on set-unite-procedure recurring on its second argument.
@@ -2786,7 +2911,7 @@
           ((p? (stream-car s))
            (stream-cons (stream-car s)
                         (stream-filter p? (stream-cdr s))))
-          (#t
+          (else
            (stream-filter p? (stream-cdr s))))))
 
 (define-constant (stream-map f s)
@@ -2802,7 +2927,7 @@
            stream-empty)
           ((stream-null? s)
            stream-empty)
-          (#t
+          (else
            (stream-cons (stream-car s)
                         (stream-take (stream-cdr s) (1- n)))))))
 
@@ -2812,7 +2937,7 @@
            s)
           ((stream-null? s)
            stream-empty)
-          (#t
+          (else
            (stream-drop (stream-cdr s) (1- n))))))
 
 (define-constant (stream-fold-left f x xs)
@@ -3291,7 +3416,7 @@
          #f)
         ((ast-equal? (car as) (car bs))
          (ast-equal?-list (cdr as) (cdr bs)))
-        (#t
+        (else
          ;; Different first elements.
          #f)))
 
@@ -3306,7 +3431,7 @@
          #f)
         ((eq? (car as) (car bs))
          (eq?-list (cdr as) (cdr bs)))
-        (#t
+        (else
          ;; Different first elements.
          #f)))
 
@@ -3494,7 +3619,7 @@
                ((constant? (ast-variable-name ast))
                 ;; Reading a global constant has no effects.
                 #f)
-               (#t
+               (else
                 ;; Reading a global non-constant may fail, which counts as an
                 ;; effect.
                 #t)))
@@ -3555,7 +3680,7 @@
          #f)
         ((ast-effectful? (car asts) bounds)
          #t)
-        (#t
+        (else
          (ast-effectful?-list (cdr asts) bounds))))
 
 ;;; A set-as-list of non-effectful primitives.  FIXME: add a
@@ -3721,7 +3846,7 @@
          #t)
         ((ast-leaf? (car asts))
          (ast-leaf?-list (cdr asts)))
-        (#t
+        (else
          #f)))
 
 
@@ -3771,7 +3896,7 @@
            ;; implemented, but this is very common and important to have from
            ;; the get go.
            (ast-rewrite-wrapper-call body actuals))
-          (#t
+          (else
            ;; The environment is empty, and the argument number is correct:
            ;; rewrite into nested lets binding the closure formals to the call
            ;; actuals, and then evaluating the closure body.  alpha-convert the
@@ -3825,7 +3950,7 @@
                 (ast-wrapper-arguments? formals (ast-call-operands body)))
            ;; The call case as defined above.
            #t)
-          (#t
+          (else
            ;; In any other case, the body is not a wrapper.
            #f))))
 
@@ -3843,7 +3968,7 @@
               (eq? (car formals)
                    (ast-variable-name (car actuals))))
          (ast-wrapper-arguments? (cdr formals) (cdr actuals)))
-        (#t
+        (else
          ;; Non-variable actual, or variable not matching the
          ;; formal in its position.
          #f)))
@@ -3875,7 +4000,7 @@
          ;; primitive case.  This does require the operator not to have effects,
          ;; but that has been checked already by this procedure's caller.
          (ast-call (ast-call-operator body) actuals))
-        (#t
+        (else
          ;; This shouldn't happen.
          (error `(ast-rewrite-wrapper-call: operator ,body not a
                                             wrapper body)))))
@@ -3978,7 +4103,7 @@
                   (ast-simplify-known-closure-call-helper (ast-literal-value
                                                            simplified-operator)
                                                           simplified-operands))
-                 (#t
+                 (else
                   (ast-call simplified-operator simplified-operands)))))
         ((ast-lambda? ast)
          (ast-lambda (ast-lambda-formals ast)
@@ -4016,7 +4141,7 @@
          (ast-define (ast-define-name ast)
                      (ast-optimize-helper (ast-define-body ast) bounds)))
         ((ast-if? ast)
-         (ast-optimize-if (ast-optimize-helper (ast-if-condition ast) bounds)
+         (ast-optimize-if (ast-if-condition ast)
                           (ast-if-then ast)
                           (ast-if-else ast)
                           bounds))
@@ -4074,7 +4199,7 @@
          ;; even if x is not known to be bound, as no effects are removed; the removed
          ;; (second) reference is guaranteed not to have effects.
          optimized-first)
-        (#t
+        (else
          ;; If fhe first form in the sequence has no effect rewrite to the
          ;; second form only.
          (if (not (ast-effectful? optimized-first bounds))
@@ -4099,7 +4224,7 @@
          ;; case; the condition checks whether the variable is bound in the
          ;; non-global environement only, on purpose.
          (ast-literal (begin)))
-        (#t
+        (else
          ;; Fallback case, in which we optimize nothing.
          (ast-set! name body))))
 
@@ -4157,67 +4282,137 @@
          ;; an opportunity to improve tailness.  It can occur as a consequence
          ;; of other rewrites.
          bound-form)
-        (#t
+        (else
          ;; Default case: keep the let AST in our rewriting.
          (ast-let bound-name
                   bound-form
                   (ast-optimize-helper body (set-with bounds bound-name))))))
 
-;;; A helper for ast-optimize-helper in the if case.  Only the condition
-;;; needs to be already optimized.
-(define-constant (ast-optimize-if optimized-condition then else bounds)
-  (cond ((ast-sequence? optimized-condition)
+;;; A helper for ast-optimize-helper in the if case.
+(define-constant (ast-optimize-if condition then else bounds)
+  (ast-optimize-if-helper (ast-optimize-helper condition bounds)
+                          (ast-optimize-helper then bounds)
+                          (ast-optimize-helper else bounds)
+                          bounds))
+
+;;; A helper for ast-optimize-if, requiring every AST sub to be already optimized.
+(define-constant (ast-optimize-if-helper condition then else bounds)
+  (cond ((ast-sequence? condition)
          ;; Rewrite [if [sequence E1 E2] E3 E4] into
          ;; [sequence E1 [if E2 E3 E4]], and optimize the result.  This may
          ;; lead to further optimizations, particularly if the condition
          ;; eventually reduces to a constant.  The set of bound variables
          ;; doesn't change at any point.
          (let ((sequence
-                (ast-sequence (ast-sequence-first optimized-condition)
-                              (ast-if (ast-sequence-second optimized-condition)
+                (ast-sequence (ast-sequence-first condition)
+                              (ast-if (ast-sequence-second condition)
                                       then
                                       else))))
            (ast-optimize-helper sequence bounds)))
-        ((and (ast-primitive? optimized-condition)
-              (eq? (ast-primitive-operator optimized-condition)
+        ((and (ast-primitive? condition)
+              (eq? (ast-primitive-operator condition)
                    primitive-boolean-canonicalize))
          ;; Rewrite [if [primitive boolean-canonicalize E1] E2 E3] into
          ;; [if E1 E2 E3], and optimize the result.  Boolean canonicalization
          ;; is a waste of time in this position.
-         (ast-optimize-if (car (ast-primitive-operands optimized-condition))
-                          then
-                          else
-                          bounds))
-        ((and (ast-primitive? optimized-condition)
-              (eq? (ast-primitive-operator optimized-condition)
+         (ast-optimize-if-helper (car (ast-primitive-operands condition))
+                                 then
+                                 else
+                                 bounds))
+        ((and (ast-primitive? condition)
+              (eq? (ast-primitive-operator condition)
                    primitive-not))
          ;; Rewrite [if [primitive not E1] E2 E3] into [if E1 E3 E2], and
          ;; optimize the result.
-         (ast-optimize-if (car (ast-primitive-operands optimized-condition))
-                          else
-                          then
-                          bounds))
-        ((and (ast-literal? optimized-condition)
-              (ast-literal-value optimized-condition))
-         ;; The condition has been simplified to non-#f.
-         (ast-optimize-helper then bounds))
-        ((ast-literal? optimized-condition)
+         (ast-optimize-if-helper (car (ast-primitive-operands condition))
+                                 else
+                                 then
+                                 bounds))
+        ((and (ast-literal? condition)
+              (ast-literal-value condition))
+         ;; The condition has been simplified to non-#f: rewrite
+         ;; [if [literal non-#f] E1 E2] into E1.
+         then)
+        ((ast-literal? condition)
          ;; The condition has been simplified to #f, since we didn't
-         ;; get to the previous clause.
-         (ast-optimize-helper else bounds))
+         ;; get to the previous clause: rewrite [if [literal #f] E1 E2] into E2.
+         else)
         ((ast-equal? then else)
          ;; The two branches are equal, so we don't need to have a conditional
          ;; at all: turn it into a sequence of the condition and one branch;
          ;; this will usually be further optimizable as the condition tends not
          ;; to have effects.
-         (ast-optimize-helper (ast-sequence optimized-condition
+         ;; Rewrite [if E1 E2 E2] into [sequence E1 E2].
+         (ast-optimize-helper (ast-sequence condition
                                             then)
                               bounds))
-        (#t
-         ;; Keep both branches.
-         (ast-if optimized-condition
-                 (ast-optimize-helper then bounds)
-                 (ast-optimize-helper else bounds)))))
+        ((and (ast-equal? condition then)
+              (ast-literal? else)
+              (not (ast-literal-value else))
+              (not (ast-effectful? condition bounds)))
+         ;; The condition has no effects and is equal to the then branch, with
+         ;; an else branch which is the literal #f.  This occurs in the
+         ;; expansion of (and X X) with a non-effectul X.
+         ;; Rewrite [if E1 E1 [literal #f]] into E1.
+         condition)
+        ((and (ast-equal? condition else)
+              (ast-literal? then)
+              (eq? (ast-literal-value then) #t) ;; Exactly the canonical #t.
+              (not (ast-effectful? condition bounds)))
+         ;; The condition has no effects and is equal to the else branch, with
+         ;; an then branch which is the literal #t -- exactly that canonical
+         ;; boolean, not any other non-#f value.  This occurs in the
+         ;; expansion of the non-lispy (or X X) with a non-effectul X.
+         ;; Rewrite [if E1 [literal #t] E1] into
+         ;; [primitive boolean-canonicalize E1].
+         ;; This is provided for symmetry with the previous case, mostly for
+         ;; fun.
+         (ast-optimize-helper (ast-primitive primitive-boolean-canonicalize
+                                             (list condition))
+                              bounds))
+        ((and (ast-primitive? else)
+              (eq? (ast-primitive-operator else)
+                   primitive-boolean-canonicalize)
+              (ast-equal? condition
+                          (car (ast-primitive-operands else)))
+              (ast-literal? then)
+              (eq? (ast-literal-value then) #t) ;; Exactly the canonical #t.
+              (not (ast-effectful? condition bounds)))
+         ;; A generalization of the previous case to the expansion of non-lispy
+         ;; (or X X ... X).
+         ;; Rewrite [if E1 [literal #t] [primitive boolean-canonicalize E1]]
+         ;; into [primitive boolean-canonicalize E1].
+         (ast-optimize-helper (ast-primitive primitive-boolean-canonicalize
+                                             (list condition))
+                              bounds))
+        ((and (ast-literal? then)
+              (ast-literal? else)
+              (eq? (ast-literal-value then) #t) ;; The canonical #t.
+              (not (ast-literal-value else)))
+         ;; Rewrite [if E #t #f] into [primitive boolean-canonicalize E]; notice
+         ;; that there is no requirement on effectfulness or on the shape of the
+         ;; condition.
+         ;; This doesn't only occur in dumb code written by human beginners: it
+         ;; occurs, for example, in the expansion of non-lispy (or X #f), which
+         ;; may well come from the expansion of another macro.
+         (ast-optimize-helper (ast-primitive primitive-boolean-canonicalize
+                                             (list condition))
+                              bounds))
+        ((and (ast-literal? then)
+              (ast-literal? else)
+              (not (ast-literal-value then))
+              (eq? (ast-literal-value else) #t)) ;; The canonical #t.
+         ;; Rewrite [if E #f #t] into [primitive not E]; again there is no
+         ;; requirement on effectfulness or on the shape of the condition.
+         ;; This is symmetrical with respect to the previous case.
+         (ast-optimize-helper (ast-primitive primitive-not
+                                             (list condition))
+                              bounds))
+        (else
+         ;; Generic case.  Keep both branches, each optimized separately.
+         (ast-if condition
+                 then
+                 else))))
 
 ;;; A helper for ast-optimize-helper in the while case.  Only the guard
 ;;; needs to be already optimized.
@@ -4248,7 +4443,7 @@
          ;; Remove a (while #f ...).  Notice that we can't simplify
          ;; a while with a constantly non-#f guard.
          (ast-literal (begin)))
-        (#t
+        (else
          ;; Keep the while form.
          (ast-while optimized-guard
                     (ast-optimize-helper body bounds)))))
@@ -4261,23 +4456,39 @@
   (cond ;; Successor and predecessor; multiplication, division and remainder by
         ;; two.
         ((and (eq? primitive primitive-primordial-+) (ast-one? (car operands)))
-         ;; [primitive + 1 E] ==> [primitive 1+ E]
+         ;; [primitive primordial-+ 1 E] ==> [primitive 1+ E]
          (ast-optimize-primitive primitive-1+ (list (cadr operands))))
         ((and (eq? primitive primitive-primordial-+) (ast-one? (cadr operands)))
-         ;; [primitive + E 1] ==> [primitive 1+ E]
+         ;; [primitive primordial-+ E 1] ==> [primitive 1+ E]
          (ast-optimize-primitive primitive-1+ (list (car operands))))
         ((and (eq? primitive primitive-primordial-*) (ast-two? (car operands)))
-         ;; [primitive * 2 E] ==> [primitive 2* E]
+         ;; [primitive primordial-* 2 E] ==> [primitive 2* E]
          (ast-optimize-primitive primitive-2* (list (cadr operands))))
         ((and (eq? primitive primitive-primordial-*) (ast-two? (cadr operands)))
-         ;; [primitive * E 2] ==> [primitive 2* E]
+         ;; [primitive primordial-* E 2] ==> [primitive 2* E]
          (ast-optimize-primitive primitive-2* (list (car operands))))
         ((and (eq? primitive primitive-primordial--) (ast-one? (cadr operands)))
-         ;; [primitive - E 1] ==> [primitive 1- E]
+         ;; [primitive primordial-- E 1] ==> [primitive 1- E]
          (ast-optimize-primitive primitive-1- (list (car operands))))
+        ((and (eq? primitive primitive-primordial-+)
+              (ast-minus-one? (car operands)))
+         ;; [primitive primordial-+ -1 E] ==> [primitive 1- E]
+         (ast-optimize-primitive primitive-1- (list (cadr operands))))
+        ((and (eq? primitive primitive-primordial-+)
+              (ast-minus-one? (cadr operands)))
+         ;; [primitive primordial-+ E -1] ==> [primitive 1- E]
+         (ast-optimize-primitive primitive-1- (list (car operands))))
+        ((and (eq? primitive primitive-primordial--)
+              (ast-minus-one? (cadr operands)))
+         ;; [primitive primordial-- E -1] ==> [primitive 1+ E]
+         (ast-optimize-primitive primitive-1+ (list (car operands))))
         ((and (eq? primitive primitive-primordial-/) (ast-two? (cadr operands)))
-         ;; [primitive / E 2] ==> [primitive 2/ E]
+         ;; [primitive primordial-/ E 2] ==> [primitive 2/ E]
          (ast-optimize-primitive primitive-2/ (list (car operands))))
+        ((and (eq? primitive primitive-quotient)
+              (ast-two? (cadr operands)))
+         ;; [primitive quotient E 2] ==> [primitive 2quotient E]
+         (ast-optimize-primitive primitive-2quotient (list (car operands))))
         ((and (eq? primitive primitive-remainder) (ast-two? (cadr operands)))
          ;; [primitive remainder E 2] ==> [primitive 2remainder E]
          (ast-optimize-primitive primitive-2remainder (list (car operands))))
@@ -4372,7 +4583,7 @@
          (ast-optimize-primitive-known-actuals primitive
                                                (map ast-literal-value
                                                     operands)))
-        (#t
+        (else
          ;; Fallback case: we have nothing to rewrite.
          (ast-primitive primitive operands))))
 
@@ -4381,11 +4592,13 @@
   (and (ast-literal? ast)
        (eq? (ast-literal-value ast) value)))
 
-;;; Return non-#f iff the given AST is the literal 0, 1, 2, respectively.
+;;; Return non-#f iff the given AST is repsectively the literal 0, 1, -1, 2.
 (define-constant (ast-zero? ast)
   (ast-literal-value? ast 0))
 (define-constant (ast-one? ast)
   (ast-literal-value? ast 1))
+(define-constant (ast-minus-one? ast)
+  (ast-literal-value? ast -1))
 (define-constant (ast-two? ast)
   (ast-literal-value? ast 2))
 
@@ -4458,7 +4671,7 @@
         ((eq? primitive primitive->=)
          ;; [primitive not [primitive >= . Es]] ==> [primitive < . Es]
          (ast-optimize-primitive primitive-< operands))
-        (#t
+        (else
          ;; Fallback case: don't rewrite anything.
          (ast-primitive primitive-not
                         (list (ast-primitive primitive operands))))))
@@ -4508,7 +4721,7 @@
                    ;; The first condition on the first actual is satisfied.
                    ;; Check the others.
                    (inner-loop (cdr conditions) (cdr values)))
-                  (#t
+                  (else
                    ;; The first condition on the first actual is not satisfied.
                    ;; Leave this signature and try with the next.
                    (outer-loop (cdr signatures)))))))))
@@ -4604,7 +4817,7 @@
 
 ;;; Return an optimized version of the given AST where the given set-as-list of
 ;;; variables is bound.
-(define-constant (ast-optimize ast-0 bounds)
+(define-constant (ast-optimize-procedure ast-0 bounds)
   (let* (;; Fold global constants into the AST.  This will introduce, in
          ;; particular, closure literals as operators.
          ;;(_ (display `(ast-0: ,ast-0)) (newline))
@@ -4628,6 +4841,14 @@
          ;;(_  (newline))
          )
     ast-4))
+
+;;; A convenience macro allowing to omit the bounds argument, taken as () when
+;;; missing.
+(define-macro (ast-optimize ast . optional-bounds)
+  (unless (null-or-singleton? optional-bounds)
+    (error `(ast-optimize: optional arguments ,optional-bounds
+                           not null nor a singleton)))
+  `(ast-optimize-procedure ,ast ,(car-or-nil optional-bounds)))
 
 ;;; Given a closure consistently alpha-convert it and return a list of
 ;;; three elements:
@@ -4762,6 +4983,9 @@
 
 ;;;; Variadic eval and macroexpand.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; FIXME: use null-or-singleton? and car-or-nil .  Possibly define a
+;;; helper macro just for this case, which should be common.
 
 (define-macro (eval form . optional-environment)
   (if (null? optional-environment)
@@ -4934,7 +5158,7 @@
         ((eq? place 'global)
          ;; We don't have a register to return.
          (error '(compiler-place->register: globals not supported)))
-        (#t
+        (else
          ;; Nonlocals don't have an associated register.
          (error '(compiler-place->register: place ,place supported)))))
 
@@ -5111,7 +5335,7 @@
          (let ((place (compiler-bind-local-boxed! s variable-name)))
            (compiler-add-instruction! s `(pop-to-register ,(cadr place)))
            place))
-        (#t
+        (else
          ;; The variable is used and doesn't require boxing.
          (let ((place (compiler-bind-local-unboxed! s variable-name)))
            (compiler-add-instruction! s `(pop-to-register ,(cadr place)))
@@ -5148,7 +5372,7 @@
             ((ast-requires-boxing-for? body formal)
              ;; The variable is used and requires boxing.
              (compiler-non-dropping-bind-at-depth! s formal depth #t))
-            (#t
+            (else
              ;; The variable is used and doesn't require boxing.
              (compiler-non-dropping-bind-at-depth! s formal depth #f)))
       (set! depth (1+ depth)))
@@ -5300,7 +5524,7 @@
                (compiler-add-instruction! s `(nonlocal ,nonlocal-index))
                (when (eq? (car place) 'nonlocal-boxed)
                  (compiler-add-instruction! s `(unbox))))))
-          (#t
+          (else
            (error `(unimplemented variable place ,place)))))
   (compiler-emit-return-when-tail! s))
 
@@ -5349,7 +5573,7 @@
                  (index (cadr place)))
              (compiler-add-instruction! s `(push-register ,nonlocal-register))
              (compiler-add-instruction! s `(set-nonlocal ,index))))
-          (#t
+          (else
            (error `(unsupported set! place ,place)))))
   (when (compiler-used-result? s)
     (compiler-push-nothing! s))
@@ -5415,7 +5639,7 @@
                  ;; The operator is a variable globally bound to a constant
                  ;; and not shadowed.
                  (symbol-global (ast-variable-name operator)))
-                (#t
+                (else
                  ;; The closure is not known: I can't omit run-time checks.
                  #f)))
          (known-compiled
@@ -5430,7 +5654,7 @@
                  'tail-call)
                 (known-compiled
                  'call-compiled)
-                (#t
+                (else
                  'call))))
     (compiler-with-non-tail s
       (compiler-with-used-result s
@@ -5531,7 +5755,7 @@
                (compiler-add-instruction! s `(primitive ,primitive))
                (compiler-add-instruction! s '(nip))
                (compiler-add-instruction! s '(return))))
-            (#t
+            (else
              ;; General case.
              ;; Generate code binding the formals we use and the nonlocals in
              ;; registers, ignoring the others and dropping them all, including
@@ -5541,7 +5765,7 @@
              ;; the body AST, and we can compile it.  Any remaining variable
              ;; occurring in the body but not in the state bindings is a global.
              (compile-ast! s body)))
-      (print-compiler-state s)
+      ;;(print-compiler-state s)
       ;; We can now destructively modify the interpreted closure.
       (interpreted-closure-make-compiled!
           c
@@ -5574,7 +5798,7 @@
          ;; Macros are only interpreted.  This is a current limitation that
          ;; could be lifted.
          (error `(macros not currently compilable: ,thing)))
-        (#t
+        (else
          ;; This is a non-closure non-macro.
          (error `(cannot compile ,thing)))))
 
@@ -5608,6 +5832,7 @@
     (display x)
     (newline)))
 
+;;; A debugging procedure.
 (define-constant (print-compiler-state s)
   (display `(USED LABELS: ,@(sort (compiler-used-labels s))))
   (newline)
@@ -5648,7 +5873,37 @@
 
 
 
-;;;; Implicit optimization.
+;;;; Implicit optimization: lambdas.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; From now on the lambda form will macroexpand to an optimized body.  The
+;;; optimization is computed at macroexpansion time by lambda, not at evaluation
+;;; time when building a closure.
+
+;; Keep the original non-optimizing lambda with a different name, which will be
+;; useful in the definition of lambda-optimized and for testing.
+(define lambda-non-optimized
+  lambda)
+
+(define-macro (lambda-optimized formals . body)
+  (unless (symbols? formals)
+    (error `(lambda: formals not a list of symbols: ,formals)))
+  (unless (all-different? formals)
+    (error `(lambda: non-distinct formals ,formals)))
+  ;; AST rewriting as invoked here cannot know the exact set of variables bound
+  ;; in the body, but assuming that only the formals are bound is a correct
+  ;; conservative approximation.
+  (ast-optimize (macroexpand `(lambda-non-optimized ,formals ,@body))
+                formals))
+
+;; Redefine lambda to make it implicitly optimizing.
+(define lambda
+  lambda-optimized)
+
+
+
+
+;;;; Implicit optimization: definitions.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; From now on definition forms will automatically optimize new globally bound
@@ -5682,7 +5937,7 @@
              (not (all-different? (cdr thing))))
          (error `(define-optimized-possibly-constant: ill-formed defined
                    thing ,thing)))
-        (#t
+        (else
          (let ((value-name (gensym))
                (thing-name (car thing))
                (thing-formals (cdr thing)))
@@ -5698,7 +5953,7 @@
 (define-macro (define-constant-optimized thing . body)
   `(define-optimized-possibly-constant #t ,thing ,@body))
 
-;; Re-define define and define-constant.
+;; Re-define define and define-constant to make them implicitly optimizing.
 (define-macro (define thing . body)
   `(define-optimized ,thing ,@body))
 (define-macro (define-constant thing . body)
@@ -5733,74 +5988,6 @@
        (newline)
        (compiled-closure-disassemble ,closure-name))))
 
-(define-constant (fibo n)
-  (if (< n 2)
-      n
-      (+ (fibo (- n 2))
-         (fibo (- n 1)))))
-
-(define-constant (euclid a b)
-  (cond ((= a b)
-         a)
-        ((< a b)
-         (euclid a (- b a)))
-        (#t
-         (euclid (- a b) b))))
-(define-constant (euclid-i a b)
-  (while (<> a b)
-    (if (< a b)
-        (set! b (- b a))
-        (set! a (- a b))))
-  a)
-
-(define-constant (average-procedure a b)
-  (/ (+ a b) 2))
-
-(define-constant (fact n)
-  (if (zero? n)
-      1
-      (* n (fact (- n 1)))))
-(define-constant (fact-tail-recursive-helper n acc)
-  (if (zero? n)
-      acc
-      (fact-tail-recursive-helper (- n 1)
-                                  (* acc n))))
-(define-constant (fact-tail-recursive n)
-  (fact-tail-recursive-helper n 1))
-(define-constant (fact-i n)
-  (let ((res 1))
-    (while (not (zero? n))
-      (set! res (* res n))
-      (set! n (- n 1)))
-    res))
-
-(define-constant (gauss n)
-  (if (zero? n)
-      0
-      (+ n (gauss (- n 1)))))
-(define-constant (gauss-tail-recursive-helper n acc)
-  (if (zero? n)
-      acc
-      (gauss-tail-recursive-helper (- n 1)
-                                   (+ acc n))))
-(define-constant (gauss-tail-recursive n)
-  (gauss-tail-recursive-helper n 0))
-(define-constant (gauss-i n)
-  (let ((res 0))
-    (while (not (zero? n))
-      (set! res (+ res n))
-      (set! n (- n 1)))
-    res))
-
-(define-constant (count a)
-  (if (zero? a)
-      0
-      (count (- a 1))))
-(define-constant (count-i a)
-  (while (not (zero? a))
-    (set! a (- a 1)))
-  a)
-
 ;;; This is useful to test run-time type checking, particularly in compiled
 ;;; code.
 (define-constant (count-i-incorrect a)
@@ -5808,23 +5995,8 @@
     (set! a (- a 'b)))
   a)
 
-(define-constant (count2 a b)
-  (if (zero? a)
-      b
-      (count2 (- a 1) (+ b 1))))
-(define-constant (count2-i a b)
-  (while (not (zero? a))
-    (set! a (- a 1))
-    (set! b (+ b 1)))
-  b)
-
-(define-constant (month->days m)
-  (unless (and (>= m 1) (<= m 13))
-    (error `(the month ,m is not between 1 and 12)))
-  (case m
-    ((9 4 6 11) 30)
-    ((2) 28)
-    (else 31)))
+(define-constant (average-procedure a b)
+  (/ (+ a b) 2))
 
 (define-macro (average . things)
   (when (zero? (length things))
@@ -5837,21 +6009,6 @@
     (while (not (null? xs))
       (set! res (+ res (car xs)))
       (set! xs (cdr xs))) res))
-
-(define (e? n)
-  (cond ((zero? n)
-         #t)
-        ((= n 1)
-         #f)
-        (#t
-         (o? (- n 1)))))
-(define (o? n)
-  (cond ((zero? n)
-         #f)
-        ((= n 1)
-         #t)
-        (#t
-         (e? (- n 1)))))
 
 (define (qq n)
   (length (flatten (map iota (iota n)))))
@@ -6025,7 +6182,7 @@
                           `((not ,clause)
                             (set! ,res-name #f)))
                         (all-but-last clauses))
-                 (#t
+                 (else
                   (set! ,res-name ,(last clauses))))
            ,res-name))))
 
@@ -6105,12 +6262,65 @@
 ;; (disassemble-vm (let* ((a 1)) (lambda (x) (+ x a))))
 ;; (disassemble-vm (lambda (x) y))
 
+;; Similar on x86_64, GCC 7 only:
+;; # 0x55578e8: call-from-c/retR 0xffffffffffffffff (93 bytes):
+;;     0x000000000402a000 48 8b 74 24 18       	movq   0x18(%rsp),%rsi
+;;     0x000000000402a005 48 8b 54 24 10       	movq   0x10(%rsp),%rdx
+;;     0x000000000402a00a 48 8b 06             	movq   (%rsi),%rax
+;;     0x000000000402a00d 48 83 ee 08          	subq   $0x8,%rsi
+;;     0x000000000402a011 48 89 74 24 18       	movq   %rsi,0x18(%rsp)
+;;     0x000000000402a016 48 89 c1             	movq   %rax,%rcx
+;;     0x000000000402a019 48 85 d2             	testq  %rdx,%rdx
+;;     0x000000000402a01c 74 09                	je     0x000000000402a027
+;;     0x000000000402a01e 48 6b d2 f8          	imulq  $0xfffffffffffffff8,%rdx,%rdx
+;;     0x000000000402a022 48 8b 4c 16 08       	movq   0x8(%rsi,%rdx,1),%rcx
+;;     0x000000000402a027 0f 1f 04 25 aa 00 00 00 	nopl   0xaa
+;;     0x000000000402a02f 48 8b 74 24 20       	movq   0x20(%rsp),%rsi
+;;     0x000000000402a034 48 8d 56 08          	leaq   0x8(%rsi),%rdx
+;;     0x000000000402a038 0f 1f 04 25 bb 00 00 00 	nopl   0xbb
+;;     0x000000000402a040 48 c7 46 08 aa aa 42 42 	movq   $0x4242aaaa,0x8(%rsi)
+;;     0x000000000402a048 0f 1f 04 25 cc 00 00 00 	nopl   0xcc
+;;     0x000000000402a050 ff 51 25             	callq  *0x25(%rcx)
+;;     0x000000000402a053 48 89 54 24 20       	movq   %rdx,0x20(%rsp)
+;;     0x000000000402a058 48 89 44 24 10       	movq   %rax,0x10(%rsp)
+;; The two nopl instructions are for debugging.  The two movq are run too late,
+;; after the call: 0x20(%rsp) is the return stack pointer, in this case held
+;; in memory.  The instruction run after the call would have stored the correct
+;; value if run before.
+;;
+;; Should JITTER_BRANCH_AND_LINK and JITTER_BRANCH_AND_LINK_FAST end with
+;; __builtin_unreachable to prevent this kind of behavior?  I guess not:
+;; sometimes I really want a jump instruction to be generated after the
+;; branch-and-link instruction, to skip the rest of the VM instruction code
+;; which is not empty.
+;; Should JITTER_BRANCH_AND_LINK and JITTER_BRANCH_AND_LINK_FAST clobber
+;; memory?  Would that help? [Tested: no it wouldn't]
+;;
+;; I have understood the problem now.
+;; -fno-sched-interblock might work as a last-ditch workaround, but I should
+;; do something more solid. [No, it wouldn't]
+
+;; The GCC parameter max-goto-duplication-insns was defined following Anton
+;; Ertl's complaint about unconditional branches to branches, which bothers
+;; me as well, in https://gcc.gnu.org/bugzilla/show_bug.cgi?id=15242 .
+;; It is supposed to be a solution.
+;; https://gcc.gnu.org/bugzilla/show_bug.cgi?id=15242 reported by Bernd Paysan
+;; is about similar issues, again also concerning me.
 
 ;; This fails: why?
 ;; (c ast-equal?)
 
+;; MIPS: the 18 test suite failures are prevented by undefining
+;; JITTER_MACHINE_SUPPORTS_PROCEDURE.  I have to understand why.
 
-(define-constant (ap f x) (f x))
-(define (w) (ap 1+ 10))
-(disassemble-vm w)
-(disassemble-vm ap)
+(when #f
+  (define-constant (ap f x) (f x))
+  (define (w) (ap 1+ 10))
+  (disassemble-vm w)
+  (disassemble-vm ap)
+  )
+
+;; As of 2018-03-02, after changing runtime definitions and code generation but before
+;; cleaning them up, I'm seeing failures only on minimal-threading.  I think the problem
+;; is in the call VM instruction: I don't see the link register in 0x10(%rsp) ever being
+;; set.

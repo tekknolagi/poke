@@ -1,9 +1,9 @@
-/* Jittery Lisp: Lisp macros.
+/* JitterLisp: Lisp macros.
 
    Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -38,7 +38,7 @@ jitterlisp_macroexpand_multiple (jitterlisp_object os,
   /* This logic is slightly more complex than the obvious recursive alternative,
      but uses constant stack space and doesn't use any temporary heap data
      structure. */
-  jitterlisp_object res;
+  jitterlisp_object res = JITTERLISP_UNDEFINED; /* Invalid, to catch bugs. */
   jitterlisp_object *res_restp = & res;
   while (! JITTERLISP_IS_EMPTY_LIST(os))
     {
@@ -288,6 +288,21 @@ jitterlisp_primitive_macro_function_cond (jitterlisp_object cdr,
   jitterlisp_object condition = JITTERLISP_EXP_C_A_CAR (clause);
   jitterlisp_object clause_body = JITTERLISP_EXP_C_A_CDR (clause);
   jitterlisp_object more_clauses = JITTERLISP_EXP_C_A_CDR (clauses);
+
+  /* I support a Scheme-style else condition in the last clause. */
+  if (condition == jitterlisp_else)
+    {
+      /* An else-condition clause is only acceptable if there are no more clauses
+         following it. */
+      if (! JITTERLISP_IS_EMPTY_LIST(more_clauses))
+        jitterlisp_error_cloned ("cond: else-condition clause not the last one");
+
+      /* Treat the else condition as if it were #t. */
+      condition = JITTERLISP_TRUE;
+    }
+
+  /* Expand to an if conditional, with the expansion of another cond with the
+     remaining clauses in the else branch. */
   return jitterlisp_ast_make_if
             (jitterlisp_macroexpand (condition, env),
              jitterlisp_macroexpand_begin (clause_body, env),

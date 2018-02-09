@@ -1,9 +1,9 @@
-/* Jittery Lisp: global settings.
+/* JitterLisp: global settings.
 
    Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -37,11 +37,12 @@ void
 jitterlisp_settings_set_default (void)
 {
   jitterlisp_settings.verbose = false;
+  jitterlisp_settings.verbose_litter = true;
   jitterlisp_settings.library = true;
   jitterlisp_settings.print_nothing_results = false;
   jitterlisp_settings.print_compact_uninterned_symbols = false;
   jitterlisp_settings.cross_disassembler = false;
-  jitterlisp_settings.vm = true;
+  jitterlisp_settings.optimization_rewriting = true;
   jitterlisp_settings.colorize = false;
   jitterlisp_settings.sexps_string = NULL;
   jitter_dynamic_buffer_initialize

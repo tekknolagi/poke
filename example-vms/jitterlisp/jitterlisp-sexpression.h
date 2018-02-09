@@ -1,9 +1,9 @@
-/* Jittery Lisp: s-expression header.
+/* JitterLisp: s-expression header.
 
    Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -448,9 +448,6 @@ struct jitterlisp_interpreted_closure
 /* The fields of a compiled closure object. */
 struct jitterlisp_compiled_closure
 {
-  /* How many arguments this closure takes. */
-  jitter_uint in_arity;
-
   /* How many nonlocals there are.  FIXME: remove this unless it's needed
      for garbage collection. */
   jitter_uint nonlocal_no;
@@ -481,6 +478,9 @@ struct jitterlisp_closure
 {
   /* The kind of this closure. */
   enum jitterlisp_closure_kind kind;
+
+  /* How many arguments this closure takes. */
+  jitter_uint in_arity;
 
   /* The kind determines which field of the anonymous union is actually used.
      Notice that it's allowed, and useful, for a closure to change kind at run
@@ -772,9 +772,10 @@ struct jitterlisp_ast;
 
    This requires them to be GC roots, which will need some work if I switch to a
    moving GC. */
+extern jitterlisp_object jitterlisp_else;
+extern jitterlisp_object jitterlisp_label;
 extern jitterlisp_object jitterlisp_low_level_macro_args;
 extern jitterlisp_object jitterlisp_primitive_make_constantb;
-extern jitterlisp_object jitterlisp_label;
 
 
 

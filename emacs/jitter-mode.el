@@ -260,7 +260,11 @@ Right now the mode only provides font-locking support.
          t)
 
       ;; Highlight Jitter statement-like macros in C code.
-      ("\\<JITTER_\\(?:BRANCH_FAST\\|BRANCH\\|EXIT\\)\\>"
+      ("\\<JITTER_EXIT\\>"
+       0 font-lock-builtin-face t)
+      ("\\<JITTER_BRANCH\\(?:_AND_LINK\\(?:_WITH\\)?\\)?\\(?:_FAST\\)?\\>"
+       0 font-lock-builtin-face t)
+      ("\\<JITTER_BRANCH_FAST_IF_\\(?:ZERO\\|NONZERO\\|POSITIVE\\|NONPOSITIVE\\|NEGATIVE\\|NONNEGATIVE\\|EQUAL\\|NOTEQUAL\\|LESS_UNSIGNED\\|LESS_SIGNED\\|GREATER_UNSIGNED\\|GREATER_SIGNED\\|NOTLESS_UNSIGNED\\|NOTLESS_SIGNED\\|NOTGREATER_UNSIGNED\\|NOTGREATER_SIGNED\\)\\>"
        0 font-lock-builtin-face t)
 
       ;; Highlight other machine-defined Jitter macros for instruction bodies.

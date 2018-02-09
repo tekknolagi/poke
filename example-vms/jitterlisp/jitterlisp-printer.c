@@ -1,9 +1,9 @@
-/* Jittery Lisp: printer.
+/* JitterLisp: printer.
 
    Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
-   This file is part of the Jittery Lisp language implementation, distributed as
+   This file is part of the JitterLisp language implementation, distributed as
    an example along with Jitter under the same license.
 
    Jitter is free software: you can redistribute it and/or modify
@@ -218,16 +218,16 @@ jitterlisp_print_string (jitterlisp_char_printer_function char_printer,
 {
   const char *p;
   for (p = s; * p != '\0'; p ++)
-    char_printer (char_printer_state, *p);
+    char_printer (char_printer_state, * p);
 }
 
 /* A helper function for jitterlisp_print_long_long .  The argument n is
    required to be strictly positive, and can use all the available bits. */
 static void
-jitterlisp_print_long_long_recursive (jitterlisp_char_printer_function cp,
-                                      void *cps,
-                                      jitter_ulong_long n,
-                                      unsigned radix)
+jitterlisp_print_ulong_long_recursive (jitterlisp_char_printer_function cp,
+                                       void *cps,
+                                       jitter_ulong_long n,
+                                       unsigned radix)
 {
   /* If the number is zero we have nothing more to print.  Notice that this is
      only reached if the original number to print was non-zero, in which case
@@ -236,12 +236,14 @@ jitterlisp_print_long_long_recursive (jitterlisp_char_printer_function cp,
     return;
 
   /* Recursively print every digit but the last one, which is to say the number
-     divided by ten, rounded down.  We are going to print the least significant
-     digit right after this call, so that it correctly ends up on the right. */
-  jitterlisp_print_long_long_recursive (cp, cps, n / radix, radix);
+     divided by the radix, rounded down.  We are going to print the least
+     significant digit right after this call, so that it correctly ends up on
+     the right. */
+  jitter_ulong_long n_without_last_digit = n / radix;
+  jitterlisp_print_ulong_long_recursive (cp, cps, n_without_last_digit, radix);
 
   /* Print the least significant digit. */
-  int digit = n % radix;
+  unsigned digit = n % radix;
   char character = (digit < 10) ? '0' + digit : 'a' + digit - 10;
   cp (cps, character);
 }
@@ -278,12 +280,13 @@ jitterlisp_print_long_long (jitterlisp_char_printer_function char_printer,
        which has well-defined behavior (differently from the converse);
      - I'n not negating a signed quantity, which would be undefined
        behavior. */
-  n = signed_n;
   if (signed_ && signed_n < 0)
     {
       char_printer (char_printer_state, '-');
-      n = - n;
+      n = - signed_n;
     }
+  else
+    n = signed_n;
 
   /* Print a radix prefix, unless the prefix is the default. */
   switch (radix)
@@ -309,8 +312,8 @@ jitterlisp_print_long_long (jitterlisp_char_printer_function char_printer,
 
   /* The number we have to print if we arrived at this point is strictly
      positive.  Use the recursive helper. */
-  jitterlisp_print_long_long_recursive (char_printer, char_printer_state,
-                                        n, radix);
+  jitterlisp_print_ulong_long_recursive (char_printer, char_printer_state,
+                                         n, radix);
 }
 
 /* Print the given pointer, as a hexadecimal address, using the given
@@ -553,7 +556,7 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
   /* Print the object according to its type. */
   if (JITTERLISP_IS_FIXNUM(o))
     {
-      jitter_int decoded = JITTERLISP_FIXNUM_DECODE(o);
+      jitter_long_long decoded = JITTERLISP_FIXNUM_DECODE(o);
       jitterlisp_print_decoration (cp, cps, FIXNUMATTR);
       jitterlisp_print_long_long (cp, cps, decoded, true, 10);
       jitterlisp_print_decoration (cp, cps, NOATTR);
@@ -615,13 +618,13 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
     }
   else if (JITTERLISP_IS_COMPILED_CLOSURE(o))
     {
-      struct jitterlisp_compiled_closure *cc
-        = & JITTERLISP_CLOSURE_DECODE(o)->compiled;
+      struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(o);
+      struct jitterlisp_compiled_closure *cc = & c->compiled;
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_string (cp, cps, "#<compiled-closure ");
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_long_long (cp, cps, cc->in_arity, false, 10);
+      jitterlisp_print_long_long (cp, cps, c->in_arity, false, 10);
       jitterlisp_print_string (cp, cps, "-ary");
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
@@ -637,7 +640,7 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
       struct jitterlisp_interpreted_closure * const ic
         = & JITTERLISP_CLOSURE_DECODE(o)->interpreted;
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_string (cp, cps, "#<closure ");
+      jitterlisp_print_string (cp, cps, "#<interpreted-closure ");
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_recursive (cp, cps, st, ic->environment);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
