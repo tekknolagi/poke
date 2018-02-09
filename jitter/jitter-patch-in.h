@@ -372,6 +372,11 @@ struct jitter_patch_in_descriptor
   [jitter_vm_instruction_beginning]            \
      "X" (&& JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL)
 
+/* Likewise for the instruction end. */
+#define JITTER_INPUT_VM_INSTRUCTION_END  \
+  [jitter_vm_instruction_end]            \
+     "X" (&& JITTER_SPECIALIZED_INSTRUCTION_END_LABEL)
+
 /* Expand to a C statement (currently not protected with do..while (false), as
    this is meant to be only used within other macros) containing the given
    patch-in for an unconditional VM branch.
@@ -384,9 +389,20 @@ struct jitter_patch_in_descriptor
   asm goto (JITTER_ASM_PATCH_IN_PLACEHOLDER(size_in_bytes, case,     \
                                             arg0, arg1, arg2, arg3)  \
             : /* outputs */                                          \
-            : JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */     \
+            : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                 \
+              JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */     \
             : /* clobbers */                                         \
             : jitter_jump_anywhere_label /* gotolabels */)
+
+/* Every patch-in needs two inputs: the current VM state runtime (hopefully in
+   registers), and its memory counterpart.  Without these constraints GCC might
+   move operations altering such data after the patch-in, which would be
+   incorrect.
+   Those must be used as part of the input constraints for every patch-in. */
+#define JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE  \
+  /*[_jitter_runtime] "X" (jitter_state_runtime),*/       \
+    /*  , [_jitter_original_state] "m" (* original_state)*/ \
+  [_jitter_dummy] "X" (jitter_next_program_point)
 
 
 

@@ -337,7 +337,7 @@
 #define JITTER_FAST_UNCONDITIONAL_BRANCH_PLACEHOLDER(residual_index)  \
   do                                                                  \
     {                                                                 \
-      asm ("" : : : "memory"); /* FIXME: do I still need this? */     \
+/*asm ("" : : : "memory"); / * FIXME: remove now, unless really needed. * / */     \
       JITTER_PATCH_IN_PLACEHOLDER_GOTO_(                              \
          JITTER_PATCH_IN_SIZE_FAST_BRANCH_UNCONDITIONAL,              \
          JITTER_PATCH_IN_CASE_FAST_BRANCH_UNCONDITIONAL,              \

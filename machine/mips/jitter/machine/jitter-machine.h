@@ -134,15 +134,15 @@
                                               target_index)                 \
   do                                                                        \
     {                                                                       \
-      asm                                                                   \
-      goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)       \
-            "1:\n\t"                                                        \
-            instruction_string " %[jitter_operand], 1b"                     \
-            : /* outputs */                                                 \
-            :   [jitter_operand] "r" (operand)                              \
-              , JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */          \
-            : /* clobbers */                                                \
-            : jitter_jump_anywhere_label /* goto labels */);                \
+      asm goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)   \
+                "1:\n\t"                                                    \
+                instruction_string " %[jitter_operand], 1b"                 \
+                : /* outputs */                                             \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                    \
+                  [jitter_operand] "r" (operand),                           \
+                  JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */        \
+                : /* clobbers */                                            \
+                : jitter_jump_anywhere_label /* goto labels */);            \
     }                                                                       \
   while (false)
 
@@ -151,17 +151,18 @@
                                                 operand1, target_index)        \
   do                                                                           \
     {                                                                          \
-      asm                                                                      \
-      goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)          \
-            "1:\n\t"                                                           \
-            instruction_string " %[jitter_operand0], %[jitter_operand1], 1b"   \
-            : /* outputs */                                                    \
-            :   [jitter_operand0] "r" (operand0)                               \
-              , [jitter_operand1] "r" (operand1)                               \
-              , JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */             \
-            : /* clobbers */                                                   \
-            : jitter_jump_anywhere_label /* goto labels */);                   \
-     }                                                                         \
+      asm goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)      \
+                "1:\n\t"                                                       \
+                instruction_string                                             \
+                " %[jitter_operand0], %[jitter_operand1], 1b"                  \
+                : /* outputs */                                                \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                       \
+                  [jitter_operand0] "r" (operand0),                            \
+                  [jitter_operand1] "r" (operand1),                            \
+                  JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
+                : /* clobbers */                                               \
+                : jitter_jump_anywhere_label /* goto labels */);               \
+    }                                                                          \
   while (false)
 
 /* Emit a conditional branch instruction with two register operands, where the
@@ -170,15 +171,15 @@
                                                 target_index)                  \
   do                                                                           \
     {                                                                          \
-      asm                                                                      \
-      goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)          \
-            "1:\n\t"                                                           \
-            instruction_string " $0, %[jitter_operand1], 1b"                   \
-            : /* outputs */                                                    \
-            :   [jitter_operand1] "r" (operand1)                               \
-              , JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */             \
-            : /* clobbers */                                                   \
-            : jitter_jump_anywhere_label /* goto labels */);                   \
+      asm goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)      \
+                "1:\n\t"                                                       \
+                instruction_string " $0, %[jitter_operand1], 1b"               \
+                : /* outputs */                                                \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                       \
+                  [jitter_operand1] "r" (operand1),                            \
+                  JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
+                : /* clobbers */                                               \
+                : jitter_jump_anywhere_label /* goto labels */);               \
     }                                                                          \
   while (false)
 
@@ -188,15 +189,15 @@
                                                 target_index)                  \
   do                                                                           \
     {                                                                          \
-      asm                                                                      \
-      goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)          \
-            "1:\n\t"                                                           \
-            instruction_string " %[jitter_operand0], $0, 1b"                   \
-            : /* outputs */                                                    \
-            :   [jitter_operand0] "r" (operand0)                               \
-              , JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */             \
-            : /* clobbers */                                                   \
-            : jitter_jump_anywhere_label /* gotolabels */);                    \
+      asm goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)      \
+                "1:\n\t"                                                       \
+                instruction_string " %[jitter_operand0], $0, 1b"               \
+                : /* outputs */                                                \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                       \
+                  [jitter_operand0] "r" (operand0),                            \
+                  JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
+                : /* clobbers */                                               \
+                : jitter_jump_anywhere_label /* gotolabels */);                \
     }                                                                          \
   while (false)
 
@@ -427,7 +428,8 @@
       /* always a nop.  This is why I don't use .set nomacro, noreorder . */   \
       asm goto ("jr %[return_addr]"                                            \
                 : /* outputs. */                                               \
-                : [return_addr] "r" (jitter_the_return_address) /* inputs. */  \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                       \
+                  [return_addr] "r" (jitter_the_return_address) /* inputs. */  \
                 : /* clobbers. */                                              \
                 : jitter_jump_anywhere_label /* gotolabels. */);               \
       /* The rest of the VM instruction is unreachable. */                     \
@@ -446,7 +448,8 @@
       /* always a nop.  This is why I don't use .set nomacro, noreorder . */  \
       asm goto ("jalr %[destination]"                                         \
                 : /* outputs. */                                              \
-                : [destination] "r" (jitter_destination) /* inputs. */        \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                      \
+                  [destination] "r" (jitter_destination) /* inputs. */        \
                 : "$31" /* clobbers. */                                       \
                 : jitter_jump_anywhere_label /* gotolabels. */);              \
       /* Skip the rest of the specialized instruction, for compatibility */   \
@@ -468,7 +471,8 @@
                    target_index,                                               \
                    0, 0, 0 /* not used for this case */)                       \
                 : /* outputs. */                                               \
-                : JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                       \
+                  JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
                 : /* clobbers. */                                              \
                 : jitter_jump_anywhere_label /* gotolabels. */);               \
       /* Skip the rest of the specialized instruction, for compatibility */    \

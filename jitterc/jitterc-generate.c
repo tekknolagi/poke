@@ -914,8 +914,8 @@ jitterc_emit_rewrite_rule (FILE *f, const struct jitterc_vm *vm,
   /* Emit the rule body, by compiling instruction templates one after the
      other. */
   EMIT("  JITTER_RULE_BEGIN_BODY\n");
-  EMIT("    //fprintf (stderr, \"* The rule %s fires...\\n\");\n",
-       rule->name);
+  EMIT("    fprintf (stderr, \"* The rule %s (line %i) fires...\\n\");\n",
+       rule->name, rule->line_no);
   FOR_LIST(i, comma, rule->out_instruction_templates)
     {
       const struct jitterc_instruction_template *it
@@ -2522,7 +2522,7 @@ jitterc_emit_interpreter_main_function
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("      //JITTER_DUMP_PATCH_IN_DESCRIPTORS(vmprefix);\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n");
-  EMIT("      goto jitter_possibly_restore_registers_and_return;\n");
+  EMIT("      goto jitter_possibly_restore_registers_and_return_label;\n");
   EMIT("    }\n");
   EMIT("\n\n");
 
@@ -2547,16 +2547,16 @@ jitterc_emit_interpreter_main_function
   EMIT("  /* Declare the instruction pointer from the thread array, unless the dispatching\n");
   EMIT("     model is no-threading, in which case no thread array even exists. */\n");
   EMIT("#ifndef JITTER_DISPATCH_NO_THREADING\n");
-  EMIT("  vmprefix_program_point ip;\n");
+  EMIT("  vmprefix_program_point ip = NULL; /* Invalidate to catch errors. */\n");
   EMIT("#endif // #ifndef JITTER_DISPATCH_NO_THREADING\n\n");
 
-  EMIT("  /* Declare a variable to be supposedly used as a computed goto target for jumping;\n");
-  EMIT("     to any VM instruction; in actuality the variable is not ever accessed by reachable\n");
-  EMIT("     code, but only mentioned in inline assembly constraints to force GCC to keep its\n");
-  EMIT("     register allocation compatible between the end of a VM instruction and the beginning\n");
-  EMIT("     of any other.  Assembly constraints will always require jitter_anywhere_label to be\n");
-  EMIT("     in memory rather than in a register, so as not to waste one register on this. */\n");
-  EMIT("  volatile union jitter_word jitter_anywhere_variable __attribute__ ((unused));\n\n");
+  /* EMIT("  /\* Declare a variable to be supposedly used as a computed goto target for jumping;\n"); */
+  /* EMIT("     to any VM instruction; in actuality the variable is not ever accessed by reachable\n"); */
+  /* EMIT("     code, but only mentioned in inline assembly constraints to force GCC to keep its\n"); */
+  /* EMIT("     register allocation compatible between the end of a VM instruction and the beginning\n"); */
+  /* EMIT("     of any other.  Assembly constraints will always require jitter_anywhere_label to be\n"); */
+  /* EMIT("     in memory rather than in a register, so as not to waste one register on this. *\/\n"); */
+  /* EMIT("  volatile union jitter_word jitter_anywhere_variable __attribute__ ((unused));\n\n"); */
 
   EMIT("  /* Initialize the residual base, if needed.  After this we will be able to\n");
   EMIT("     safely access jitter_residual_argument_INDEX, with any index from zero up to\n");
@@ -2629,17 +2629,51 @@ jitterc_emit_interpreter_main_function
   EMIT("     not work as intended (which prevents the use of global and static\n");
   EMIT("     variables, string literals and possibly large literal constants), and\n");
   EMIT("     GDB gets easily confused. */\n");
-  EMIT("   JITTER_BRANCH(VMPREFIX_PROGRAM_BEGINNING(p));");
+  EMIT("  vmprefix_program_point jitter_next_program_point\n");
+  EMIT("    = VMPREFIX_PROGRAM_BEGINNING(p);\n");
+
+  EMIT("#ifdef JITTER_REPLICATE\n");
+  EMIT(" jitter_dispatch_label: __attribute__ ((cold))\n");
+  FOR_LIST(i, comma, vm->specialized_instructions)
+    {
+      const struct jitterc_specialized_instruction* sins
+        = ((const struct jitterc_specialized_instruction*)
+           gl_list_get_at (vm->specialized_instructions, i));
+      EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL_OF(%s));\n",
+           sins->mangled_name);
+      EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(%s));\n",
+           sins->mangled_name);
+    }
+  //EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(a_label);\n");
+  EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_exit_vm_label);\n");
+  EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_possibly_restore_registers_and_return_label);\n");
+  EMIT("#endif // #ifdef JITTER_REPLICATE\n\n");
+
+  EMIT("  /* Actually jump (for real, not just lying in assembly constraints)\n");
+  EMIT("     to the next program point; this is only reachable for the first\n");
+  EMIT("     program point. */\n");
+  EMIT("  JITTER_BRANCH(jitter_next_program_point);\n");
   EMIT("\n");
   EMIT("\n");
+
+  EMIT("#ifdef JITTER_REPLICATE\n");
   EMIT("  /* This is actually unreachable, but I use GCC inline assembly with\n");
   EMIT("     constraints declaring to jump here just to force the compiler to\n");
   EMIT("     allocate registers at the end of each VM instruction in a compatible\n");
   EMIT("     way with the beginning of any other.  This code could, in theory,\n");
   EMIT("     jump to any label within this function -- in practice it would\n");
   EMIT("     crash horribly if ever reached, but that is not a problem. */\n");
-  EMIT("  jitter_jump_anywhere_label: __attribute__ ((cold, unused));\n");
-  EMIT("    JITTER_JUMP_ANYWHERE;\n");
+  EMIT(" jitter_jump_anywhere_label: __attribute__ ((cold, unused));\n");
+  EMIT("  jitter_next_program_point = && jitter_dispatch_label;\n");
+  EMIT("  asm (JITTER_ASM_COMMENT_UNIQUE(\"Pretend to alter next_program_point\"\n");
+  EMIT("                                 \" at %%[next_program_point] based on\"\n");
+  EMIT("                                 \" jitter_state_runtime at %%[runtime]\"\n");
+  EMIT("                                 \" and * original_state %%[original_state].\")\n");
+  EMIT("       : [next_program_point] \"+m\" (jitter_next_program_point)\n");
+  EMIT("       : [runtime] \"X\" (jitter_state_runtime)\n");
+  EMIT("         , [original_state] \"m\" (* original_state));\n");
+  EMIT("  goto * jitter_next_program_point;\n");
+  EMIT("#endif // #ifdef JITTER_REPLICATE\n");
   EMIT("\n");
 
   /* Generate the switch dispatcher, which expands to nothing unless
@@ -2778,7 +2812,7 @@ jitterc_emit_interpreter_main_function
 
   EMIT("  /* This program point is reachable for both thread initialization and\n");
   EMIT("     interpretation.  In either case it is not performance-critical. */\n");
-  EMIT("  jitter_possibly_restore_registers_and_return: __attribute__ ((cold));\n");
+  EMIT("  jitter_possibly_restore_registers_and_return_label: __attribute__ ((cold));\n");
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("    /* Back to regular C without our reserved registers: restore the\n");
   EMIT("       values held in such registers at entry. */\n");
