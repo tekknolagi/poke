@@ -152,24 +152,33 @@ jitter_stack_finalize_backing (struct jitter_stack_backing *backing)
    declarations, suitable for automatic variables or struct members. */
 #define JITTER_STACK_TOS_DECLARATION(type, name)                         \
   type JITTER_STACK_TOS_TOP_NAME(type, , name);                          \
-  type * restrict JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, , name)
+  type * JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, , name)
 #define JITTER_STACK_NTOS_DECLARATION(type, name)                        \
-  type * restrict JITTER_STACK_NTOS_TOP_POINTER_NAME(type, , name)
+  type * JITTER_STACK_NTOS_TOP_POINTER_NAME(type, , name)
 
 /* Expand to a statement initializing a stack from a backing. */
 #define JITTER_STACK_TOS_INITIALIZE(type, stack_container, name, backing)   \
   do                                                                        \
     {                                                                       \
+      /* Initialize the under-top pointer to point to one element below     \
+         the beginning of the backing for an "empty" stack, so that the     \
+         first element to be pushed will increment the pointer to the       \
+         first valid position, and store the (unspecified) initial TOS      \
+         there.  This is as empty as a TOS-optimized stack can get.  */     \
       JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)  \
-        = (type * restrict) ((backing).memory);                             \
+        = ((type *) ((backing).memory)) - 1;                                \
       /* No need to initialize the TOS. */                                  \
     }                                                                       \
   while (false)
 #define JITTER_STACK_NTOS_INITIALIZE(type, stack_container, name, backing)  \
   do                                                                        \
     {                                                                       \
+      /* Initialize the top pointer to point to one element below           \
+         the beginning of the backing for an empty stack, so that the       \
+         first element to be pushed will increment the pointer to the       \
+         first valid position. */                                           \
       JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)       \
-        = (type * restrict) ((backing).memory);                             \
+        = ((type *) ((backing).memory)) - 1;                                \
       /* No need to initialize the TOS. */                                  \
     }                                                                       \
   while (false)
