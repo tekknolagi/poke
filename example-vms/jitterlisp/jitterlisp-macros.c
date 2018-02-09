@@ -204,14 +204,14 @@ jitterlisp_primitive_macro_function_define_internal (jitterlisp_object cdr,
           /* Wrap the definition AST inside a sequence, also making the
              defined symbol constant. */
           jitterlisp_object primitive
-            = JITTERLISP_SYMBOL_DECODE(jitterlisp_primitive_make_constant)
+            = JITTERLISP_SYMBOL_DECODE(jitterlisp_primitive_make_constantb)
                  ->global_value;
-          jitterlisp_object make_constant
+          jitterlisp_object make_constantb
             = jitterlisp_ast_make_primitive
                  (primitive,
                   jitterlisp_list_1 (jitterlisp_ast_make_literal
                                         (defined_thing)));
-          res = jitterlisp_ast_make_sequence (res, make_constant);
+          res = jitterlisp_ast_make_sequence (res, make_constantb);
         }
       return res;
     }

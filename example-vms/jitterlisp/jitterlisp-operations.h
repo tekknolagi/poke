@@ -425,8 +425,6 @@
 /* Fixnums-to-boolean operations.
  * ************************************************************************** */
 
-// FIXME: implement.
-
 #define JITTERLISP_LESSP_(_jitterlisp_out, _jitterlisp_in0,           \
                           _jitterlisp_in1)                            \
   JITTER_BEGIN_                                                       \
@@ -555,7 +553,7 @@
 /* Closure operations.
  * ************************************************************************** */
 
-/* Make a fresh closure with the given fields. */
+/* Make a fresh interpreted closure with the given fields. */
 #define JITTERLISP_CLOSURE_(_jitterlisp_out,                         \
                             _jitterlisp_in0,                         \
                             _jitterlisp_in1,                         \
@@ -593,6 +591,15 @@
                                              _jitterlisp_in0)         \
   JITTERLISP_KINDED_CLOSURE_FIELD_(_jitterlisp_out, _jitterlisp_in0,  \
                                    interpreted, body)
+
+#define JITTERLISP_COMPILED_CLOSURE_IN_ARITY_(_jitterlisp_out,              \
+                                              _jitterlisp_in0)              \
+  JITTER_BEGIN_                                                             \
+    jitter_uint _jitterlisp_in_arity;                                       \
+    JITTERLISP_KINDED_CLOSURE_FIELD_(_jitterlisp_in_arity,                  \
+                                     _jitterlisp_in0, compiled, in_arity);  \
+    (_jitterlisp_out) = JITTERLISP_FIXNUM_ENCODE(_jitterlisp_in_arity);     \
+  JITTER_END_
 
 /* Destructively modify all the fields in an interpreted closure.  By setting
    them all in the same operation I can guarantee that no Lisp code will see a
@@ -636,8 +643,8 @@
       = JITTERLISP_BOOLEAN_ENCODE(_jitterlisp_tmp->global_constant);  \
   JITTER_END_
 
-#define JITTERLISP_MAKE_CONSTANT_(_jitterlisp_out,                      \
-                                  _jitterlisp_in0)                      \
+#define JITTERLISP_MAKE_CONSTANTB_(_jitterlisp_out,                     \
+                                   _jitterlisp_in0)                     \
   JITTER_BEGIN_                                                         \
     JITTERLISP_SYMBOL_DECODE(_jitterlisp_in0)->global_constant = true;  \
     (_jitterlisp_out) = JITTERLISP_NOTHING;                             \
@@ -761,7 +768,7 @@
       = JITTERLISP_BOOLEAN_ENCODE((_jitterlisp_in0) != (_jitterlisp_in1));      \
   JITTER_END_
 
-/* Compute a tagged boolean, #t iff the given fixnum argument is respectively the
+/* Compute a tagged boolean, #t iff the given fixnum argument is respectively
    zero, a non-zero, positive, non-positive, negative, non-negative. */
 #define JITTERLISP_COMPARE_FIXNUM_UNARY_(_jitterlisp_out, _jitterlisp_in0,  \
                                          _jitterlisp_expression_operator,   \
@@ -1236,21 +1243,21 @@
 /* Call the C part of the code generator, making a closure compiled.  This
    destructively modifies all the fields in a closure, be it interpreted or
    compiled, making it compiled. */
-#define JITTERLISP_COMPILEB_(_jitterlisp_out,           \
-                             _jitterlisp_in0,           \
-                             _jitterlisp_in1,           \
-                             _jitterlisp_in2,           \
-                             _jitterlisp_in3)           \
-  JITTER_BEGIN_                                                     \
-    struct jitterlisp_closure *_jitterlisp_closure                  \
-      = JITTERLISP_CLOSURE_DECODE(_jitterlisp_in0);                 \
-    jitter_int _jitterlisp_in_arity                                 \
-      = JITTERLISP_FIXNUM_DECODE(_jitterlisp_in1);                  \
-    jitterlisp_object _jitterlisp_nonlocals = (_jitterlisp_in2);    \
-    jitterlisp_object _jitterlisp_code = (_jitterlisp_in3);         \
-    jitterlisp_compile (_jitterlisp_closure, _jitterlisp_in_arity,  \
-                        _jitterlisp_nonlocals, _jitterlisp_code);   \
-    (_jitterlisp_out) = JITTERLISP_NOTHING;                         \
+#define JITTERLISP_INTERPRETED_CLOSURE_MAKE_COMPILEDB_(_jitterlisp_out,  \
+                                                       _jitterlisp_in0,  \
+                                                       _jitterlisp_in1,  \
+                                                       _jitterlisp_in2,  \
+                                                       _jitterlisp_in3)  \
+  JITTER_BEGIN_                                                          \
+    struct jitterlisp_closure *_jitterlisp_closure                       \
+      = JITTERLISP_CLOSURE_DECODE(_jitterlisp_in0);                      \
+    jitter_int _jitterlisp_in_arity                                      \
+      = JITTERLISP_FIXNUM_DECODE(_jitterlisp_in1);                       \
+    jitterlisp_object _jitterlisp_nonlocals = (_jitterlisp_in2);         \
+    jitterlisp_object _jitterlisp_code = (_jitterlisp_in3);              \
+    jitterlisp_compile (_jitterlisp_closure, _jitterlisp_in_arity,       \
+                        _jitterlisp_nonlocals, _jitterlisp_code);        \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;                              \
   JITTER_END_
 
 /* Print VM code from a compiled closure in human-readable form. */

@@ -64,70 +64,6 @@ jitterlisp_eval_interpreter_ast_primitive (jitterlisp_object rator,
   return JITTERLISP_PRIMITIVE_DECODE(rator)->function (values);
 }
 
-/* A helper function for jitterlisp_eval_interpreter_ast_call .  Call the given
-   (tagged, already evaluated) compiled closure, first evaluating its actuals
-   with the AST interpreter. */
-static inline jitterlisp_object
-jitterlisp_eval_interpreter_ast_compiled_closure_call
-   (const jitterlisp_object rator_value,
-    const jitterlisp_object *rand_asts,
-    jitter_uint rand_ast_no,
-    jitterlisp_object env)
-{
-  /* Here I can be sure that operator_value is a compiled closure: decode it
-     with no checks. */
-  const struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(rator_value);
-  const struct jitterlisp_compiled_closure *cc = & c->compiled;
-
-  // FIXME: shall I check the arity *before* evaluating actuals or after?
-  // Here I do it before, but it's easy to change.
-  // In either case compiled code must have the same semantics.  Do whatever
-  // is faster on compiled code.  There are two other identical cases below.
-
-  /* Check that the arity matches. */
-  if (__builtin_expect ((cc->in_arity != rand_ast_no), false))
-    jitterlisp_error_cloned ("arity mismatch in call to compiled closure");
-
-  /* Push the compiled closure on the VM stack. */
-  JITTERLISPVM_PUSH(rator_value);
-
-  /* Evaluate actuals and push them on the VM stack. */
-  // FIXME: handle errors without leaving observable changes on the stack.
-  int i;
-  for (i = 0; i < rand_ast_no; i ++)
-    {
-      jitterlisp_object rand_value =
-        jitterlisp_eval_interpreter_ast (rand_asts [i], env);
-      JITTERLISPVM_PUSH(rand_value);
-    }
-
-  /* Call.  This is obviously a temporary, ridiculously inefficient solution. */
-  struct jitterlispvm_program *p = jitterlispvm_make_program ();
-  JITTERLISPVM_APPEND_INSTRUCTION(p, call);
-  jitterlispvm_append_unsigned_literal_parameter (p, rand_ast_no);
-  jitterlispvm_specialize_program (p);
-  /*
-  printf ("\nThe driver program is:\n");
-  jitterlispvm_disassemble_program (p, true, JITTER_CROSS_OBJDUMP, NULL);
-  printf ("\nRunning the driver program...\n\n");
-  */
-  jitterlispvm_interpret (p, & jitterlispvm_state);
-  /*
-  printf ("...Still alive after running the driver program.\n");
-  */
-  jitterlispvm_destroy_program (p);
-
-  /* Pop the result off the stack and return it. */
-  jitterlisp_object result = JITTERLISPVM_TOP();
-  /*
-  printf ("The result is: ");
-  jitterlisp_print_to_stream (stdout, result);
-  printf ("\n");
-  */
-  JITTERLISPVM_DROP();
-  return result;
-}
-
 /* Return the result of the given call in the given environment.  The operator
    is an AST, still to evaluate, and the operands are tagged ASTs in the given
    number; the operator comes first in the array.  If the operator doesn't
@@ -153,20 +89,20 @@ jitterlisp_eval_interpreter_ast_call
      interpreted? */
   struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(rator_value);
 
-  /* If the closure is compiled tail-call the helper function and ignore the
-     rest of this. */
   // FIXME: shall I check the arity *before* evaluating actuals or after, as
   // the code does now?
   // In either case compiled code must have the same semantics.  Do whatever
   // is faster on compiled code.  There is another identical case above
   // and one more below.
+
+  /* If the closure is compiled tail-call the helper function and ignore the
+     rest of this. */
   if (__builtin_expect ((c->kind == jitterlisp_closure_type_compiled),
                         false))
-    return jitterlisp_eval_interpreter_ast_compiled_closure_call
-              (rator_value,
-               rator_and_rand_asts + 1,
-               rator_and_rand_no - 1,
-               env);
+    return jitterlisp_call_compiled (rator_value,
+                                     rator_and_rand_asts + 1,
+                                     rator_and_rand_no - 1,
+                                     env);
 
   /* The closure is interpreted.  Evaluate actuals binding them to the closure
      formals, in order, starting from the closure environment.  Unfortunately we
@@ -369,12 +305,21 @@ jitterlisp_object
 jitterlisp_apply_interpreter (jitterlisp_object closure_value,
                               jitterlisp_object operands_as_list)
 {
-  /* Decode the closure and keep its fields in automatic C variables. */
+  /* Decode the closure.  No need to check that it's actually a closure, but
+     here we don't know if it's compiled or interpreted. */
   struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(closure_value);
-  if (c->kind != jitterlisp_closure_type_interpreted)
-    jitterlisp_error_cloned ("jitterlisp_apply_interpreter: non-interpreted closure: unimplemented");
-  jitterlisp_object formals = c->interpreted.formals;
-  jitterlisp_object body_env = c->interpreted.environment;
+
+  /* If the closure is compiled tail-call another function which does the
+     job of calling the VM, checking for in-arity mismatches. */
+  if (__builtin_expect ((c->kind == jitterlisp_closure_type_compiled),
+                        false))
+    return jitterlisp_apply_compiled (closure_value, operands_as_list);
+
+  /* The closure is interpreted, so it's the interpreter's job to evaluate
+     the call.  Keep fields in automatic C variables. */
+  struct jitterlisp_interpreted_closure *ic = & c->interpreted;
+  jitterlisp_object formals = ic->formals;
+  jitterlisp_object body_env = ic->environment;
 
   /* Bind operands to formals in the closure environment. */
   while (! JITTERLISP_IS_EMPTY_LIST (operands_as_list))
@@ -409,6 +354,41 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
 
   /* Return the evaluation of the closure body in the extended closure
      environment. */
-  jitterlisp_object body_ast = c->interpreted.body;
+  jitterlisp_object body_ast = ic->body;
+  return jitterlisp_eval_interpreter_ast (body_ast, body_env);
+}
+
+
+
+
+/* Call into interpreted code.
+ * ************************************************************************** */
+
+jitterlisp_object
+jitterlisp_call_interpreted (const struct jitterlisp_interpreted_closure *ic,
+                             jitterlisp_object *actual_values,
+                             jitter_uint actual_value_no)
+{
+  /* Keep fields in automatic C variables. */
+  jitterlisp_object formals = ic->formals;
+  jitterlisp_object body_env = ic->environment;
+
+  /* Bind operands to formals in the closure environment.  No need for arity
+     checking. */
+  int i;
+  for (i = 0; i < actual_value_no; i ++)
+    {
+      /* Extend the environment with one formal/operand binding. */
+      jitterlisp_object formal = JITTERLISP_EXP_C_A_CAR(formals);
+      jitterlisp_object rand_value = actual_values [i];
+      body_env = jitterlisp_environment_bind (body_env, formal, rand_value);
+
+      /* Advance the formal list. */
+      formals = JITTERLISP_EXP_C_A_CDR(formals);
+    }
+
+  /* Return the evaluation of the closure body in the extended closure
+     environment. */
+  jitterlisp_object body_ast = ic->body;
   return jitterlisp_eval_interpreter_ast (body_ast, body_env);
 }

@@ -27,6 +27,7 @@
 /* Include headers.
  * ************************************************************************** */
 
+#include <stdalign.h>
 #include <stdbool.h>
 
 /* We need the jitter_int and jitter_uint types. */
@@ -455,13 +456,24 @@ struct jitterlisp_compiled_closure
   jitter_uint nonlocal_no;
 
   /* Nonlocals as used in compiled code, with no names and with boxed nonlocals
-     are stored as boxes; NULL if no nonlocals are needed. */
+     are stored as boxes; NULL if no nonlocals are needed.
+
+     This is currently a list; it should become a vector, ideally with immutable
+     size to avoid an indirection, after I properly implement vectors. */
   jitterlisp_object nonlocals;
 
-  /* VM code.  FIXME: think about the type. */
-  //struct jitterlispvm_program *code;
-  // This is declared as a void * to simplify inter-header dependencies.
-  void *code; // FIXME: comment better.
+  /* The specialized VM program for the closure code. */
+  struct jitter_program *vm_program;
+
+  /* The first program point of the VM program above, always a prolog
+     instructions.  This could be extracted as a field from the code itself, but
+     it's better to keep a copy here and avoid a memory dereference at call
+     time.
+     This is actually a jitterlispvm_program_point object, but we declare it as
+     a const void * (which is safe: jitterlispvm_program_point is a constant
+     pointer type on every dispatching model) to avoid cyclical CPP inclusion
+     problems. */
+  const void *first_program_point;
 };
 
 /* A closure datum. */
@@ -537,10 +549,19 @@ typedef jitterlisp_object (*jitterlisp_primitive_function)
 
 /* A primitive descriptor, used for both primitive procedures and primitive
    macros.  Primitives descriptors are all global constants and don't live on
-   the garbage-collected heap.  They don't need to be GC roots as they don't
-   point to other Lisp objects. */
+   the garbage-collected heap, and don't need to be GC roots as they don't
+   point to other Lisp objects.  Still it's important that each structure
+   begins at a double word boundary, so that we may tag them.  The C
+   specification requires a structure to be aligned to the minimum common
+   multiple of the alignment of its members, which is why we add the alignas
+   specifier to a field -- it doesn't really matter which one. */
 struct jitterlisp_primitive
 {
+  /* Make the first field, and therefore the whole struct, double-word aligned:
+     this ensures that enough low-order zero bits in the address can be
+     overwritten by my tag. */
+  alignas (sizeof (jitter_int) * 2)
+
   /* The primitive Lisp name as a C string. */
   char *name;
 
@@ -752,7 +773,7 @@ struct jitterlisp_ast;
    This requires them to be GC roots, which will need some work if I switch to a
    moving GC. */
 extern jitterlisp_object jitterlisp_low_level_macro_args;
-extern jitterlisp_object jitterlisp_primitive_make_constant;
+extern jitterlisp_object jitterlisp_primitive_make_constantb;
 extern jitterlisp_object jitterlisp_label;
 
 

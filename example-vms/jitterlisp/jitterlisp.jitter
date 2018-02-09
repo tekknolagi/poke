@@ -38,7 +38,7 @@ end
 #################################################################
 
 # We only need one register class.
-register-class r 5
+register-class r 6
   code
     jitterlisp_object
   end
@@ -282,7 +282,7 @@ return;
          ways, and which one is the least bad depends on the           \
          architecture. */                                              \
       /* JITTER_BRANCH_FAST_IF_ZERO(_jitterlisp_is_valid,              \
-                                    _jitterlisp_error_fast_label); */  \
+                                 _jitterlisp_error_fast_label); */     \
       if (! __builtin_expect (_jitterlisp_is_valid, true))             \
         JITTER_BRANCH_FAST(_jitterlisp_error_fast_label);              \
       /* if (! __builtin_expect (_jitterlisp_is_valid, true))          \
@@ -580,6 +580,115 @@ instruction nip ()
   end
 end
 
+instruction nip-drop ()
+  code
+    JITTER_NIP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+  end
+end
+
+instruction drop-nip ()
+  code
+    JITTER_DROP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+# FIXME: make a one-argument version generalizing these.  These zero-argument
+# versions are useful to generate from rewrite rules right now, before Jitter
+# support is ready.
+# Each of these VM instructions compiles to just one fast hardware instruction,
+# decrementing a register by a constant without touching memory.
+instruction nip-two ()
+  code
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+  end
+end
+instruction nip-three ()
+  code
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+  end
+end
+instruction nip-four ()
+  code
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+  end
+end
+instruction nip-five ()
+  code
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+  end
+end
+instruction nip-six ()
+  code
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+# Each of these has the same cost of a single drop.
+# FIXME: generalize into a unary instruction when Jitter rewrite rules become
+# expressive enough to obtain these by rewriting.
+instruction nip-two-drop ()
+  code
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+  end
+end
+instruction nip-three-drop ()
+  code
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+  end
+end
+instruction nip-four-drop ()
+  code
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+  end
+end
+instruction nip-five-drop ()
+  code
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+  end
+end
+instruction nip-six-drop ()
+  code
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+  end
+end
+
 # FIXME: is this ever needed?
 instruction push-unspecified ()
   code
@@ -638,9 +747,8 @@ end
 
 instruction pop-to-register (!R)
   code
-    jitterlisp_object top = JITTER_TOP_MAINSTACK();
+    JITTER_ARG0 = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
-    JITTER_ARG0 = top;
   end
 end
 
@@ -650,6 +758,17 @@ instruction pop-to-global (?n print_object)
     struct jitterlisp_symbol *symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
     symbol->global_value = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
+  end
+end
+
+# The first argument must not be zero.
+# Rationale: when I switch to JITTER_AT_DEPTH_UNSAFE_MAINSTACK this will make the
+# unspecialized case faster by avoiding a conditional.
+instruction at-depth-to-register (?n 1 2 3 4 5 6 7 8 9 10, !R)
+  code
+    // FIXME: replace with JITTER_AT_DEPTH_UNSAFE_MAINSTACK after I implement
+    // unsafe at-depth operations.
+    JITTER_ARG1 = JITTER_AT_DEPTH_MAINSTACK(JITTER_ARGN0);
   end
 end
 
@@ -685,14 +804,95 @@ end
 
 # Do a check on the top element, fast-branching to the given error-handling
 # routine in case of mismatch, and do nothing otherwise.
-# This does *not* pop an operand from the stack.
+# Do *not* pop an operand from the stack.
+# FIXME: factor into a common comment for checking instructions.
 instruction check-closure (?f)
   code
-    jitterlisp_object top = JITTER_TOP_MAINSTACK();
-    if (! JITTERLISP_IS_CLOSURE(top))
-      JITTER_BRANCH_FAST(JITTER_ARGF0);
+#   ifndef JITTERLISP_UNSAFE
+      jitterlisp_object top = JITTER_TOP_MAINSTACK();
+      if (! JITTERLISP_IS_CLOSURE(top))
+        JITTER_BRANCH_FAST(JITTER_ARGF0);
+#   endif // #ifndef JITTERLISP_UNSAFE
   end
 end
+
+# This versions is the one failing under no-threading.  I want to keep it for tests
+# even if it's not the best implementation.
+# # The fixnum argument is untagged.
+instruction check-in-arity--alt (?n 0 1 2 3 4 5 6 7 8 9 10, ?f)
+  code
+    // FIXME: this loops forever with no-threading (not with the other dispatching models
+    // including minimal threading) when the callee is compiled.  A Jitter bug.
+    /* Here we can assume that the top object is a closure, without checking: we either
+       already performed a type check, or the compiler decided it wasn't necessary. */
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
+    struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(top);
+
+    /* FIXME: this is optimizable.  I should store the in-arity as a field, independently
+       from the closure compiledness. */
+    if (JITTERLISP_IS_COMPILED_CLOSURE(top))
+      {
+        struct jitterlisp_compiled_closure *cc = & c->compiled;
+        if (cc->in_arity != JITTER_ARGN0)
+          JITTER_BRANCH_FAST(JITTER_ARGF1);
+      }
+    else
+      {
+        /* The closure is interpreted.  Compute its in-arity.  We can assume that
+           the formal list is well-formal, which is to say actually a proper list
+           of distinct symbols. */
+        struct jitterlisp_interpreted_closure *ic = & c->interpreted;
+        jitterlisp_object rest = ic->formals;
+        jitter_uint in_arity = 0;
+        while (! JITTERLISP_IS_EMPTY_LIST(rest))
+          {
+            in_arity ++;
+            rest = JITTERLISP_EXP_C_A_CDR(rest);
+          }
+        if (in_arity != JITTER_ARGN0)
+          JITTER_BRANCH_FAST(JITTER_ARGF1);
+      }
+  end
+end
+
+instruction check-in-arity (?n 0 1 2 3 4 5 6 7 8 9 10, ?f)
+  code
+#   ifndef JITTERLISP_UNSAFE
+      // FIXME: this loops forever with no-threading (not with the other dispatching models
+      // including minimal threading) when the callee is compiled.  A Jitter bug.
+      /* Here we can assume that the top object is a closure, without checking: we either
+         already performed a type check, or the compiler decided it wasn't necessary. */
+      jitterlisp_object top = JITTER_TOP_MAINSTACK();
+      struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(top);
+
+      /* FIXME: this is optimizable.  I should store the in-arity as a field, independently
+         from the closure compiledness. */
+      if (JITTERLISP_IS_COMPILED_CLOSURE(top))
+        {
+          struct jitterlisp_compiled_closure *cc = & c->compiled;
+          if (cc->in_arity != JITTER_ARGN0)
+            JITTER_BRANCH_FAST(JITTER_ARGF1);
+        }
+      else
+        {
+          /* The closure is interpreted.  Compute its in-arity.  We can assume that
+             the formal list is well-formal, which is to say actually a proper list
+             of distinct symbols. */
+          struct jitterlisp_interpreted_closure *ic = & c->interpreted;
+          jitterlisp_object rest = ic->formals;
+          jitter_uint in_arity = 0;
+          while (! JITTERLISP_IS_EMPTY_LIST(rest))
+            {
+              in_arity ++;
+              rest = JITTERLISP_EXP_C_A_CDR(rest);
+            }
+          if (in_arity != JITTER_ARGN0)
+            JITTER_BRANCH_FAST(JITTER_ARGF1);
+        }
+#   endif // #ifndef JITTERLISP_UNSAFE
+  end
+end
+
 
 instruction branch (?f)
   code
@@ -814,6 +1014,29 @@ instruction primitive-cons (?f)
     JITTERLISP_CONS_(JITTER_TOP_MAINSTACK(),
                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
+  end
+end
+
+# The two VM instructions for the set-car! and set-cdr! operations do not consume any
+# operand from the stack, and so are followed by other VM instructions to adjust
+# the stack and set the TOS in compiled code.  Such separate instructions can often
+# be rewritten away.
+instruction primitive-set-carb-special (?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_2(CONS, ANYTHING, JITTER_ARGF0);
+    jitterlisp_object useless __attribute__ ((unused));
+    JITTERLISP_SET_CARB_(useless,
+                         JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    /* Leave the two operands on the stack. */
+  end
+end
+instruction primitive-set-cdrb-special (?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_2(CONS, ANYTHING, JITTER_ARGF0);
+    jitterlisp_object useless __attribute__ ((unused));
+    JITTERLISP_SET_CDRB_(useless,
+                         JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    /* Leave the two operands on the stack. */
   end
 end
 
@@ -1174,9 +1397,30 @@ debug_pointer (4, cc->first_program_point);*/
   end
 end
 
+# FIXME: factor.
+instruction call-compiled (?n 0 1 2 3 4 5 6 7 8 9 10)
+  caller
+  code
+    const jitter_uint in_arity = JITTER_ARGN0;
+    jitterlisp_object callee = JITTER_AT_DEPTH_MAINSTACK(in_arity);
+    struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
+
+    /* Here we can that * c is a compiled closure without checking. */
+    struct jitterlisp_compiled_closure *cc = & c->compiled;
+
+    /* Make place for the return address in the return stack.  The
+       actual value will be written by the callee. */
+    JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
+    JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
+
+    /* Branch-and-link to the native code, whose first instruction
+       will be a prolog. */
+    JITTER_BRANCH_AND_LINK(cc->first_program_point);
+  end
+end
+
 # This is the generic code working for both compiled and interpreted closures.
-# FIXME: add a call-compiled instruction, to be generated when the callee is
-# known at compile time to be compiled.
+# FIXME: factor with call-compiled.
 instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
   caller
   code
@@ -1194,8 +1438,6 @@ instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
         /* Branch-and-link to the native code, whose first instruction
            will be a prolog. */
         struct jitterlisp_compiled_closure *cc = & c->compiled;
-        // FIXME: store the code beginnig as a closure field, to avoid
-        // indirections here.
         JITTER_BRANCH_AND_LINK(cc->first_program_point);
       }
     else
@@ -1240,7 +1482,14 @@ putchar (']');
 end
 
 instruction tail-call (?n)
-#  caller  # Commented out to make the instruction rewritable.
+  caller
+  code
+    /* FIXME: this is currently a dummy instruction, always rewritten away. */
+    // FIXME: can I make compiled->interpreted calls tail?
+  end
+end
+instruction tail-call-compiled (?n)
+  caller
   code
     /* FIXME: this is currently a dummy instruction, always rewritten away. */
     // FIXME: can I make compiled->interpreted calls tail?
@@ -1295,136 +1544,253 @@ end
 ## Optimization rewrites.
 #################################################################
 
-rule rewrite
+rule pop-to-register-push-register rewrite
   pop-to-register $a; push-register $b
 into
   copy-to-register $a; copy-from-register $b
 end
-
-rule rewrite
+rule pop-to-register-push-literal rewrite
   pop-to-register $a; push-literal $b
 into
   copy-to-register $a; copy-from-literal $b
 end
 
-rule rewrite
+rule push-literal-pop-to-register rewrite
   push-literal $a; pop-to-register $b
 into
   literal-to-register $a, $b
 end
 
-rule rewrite
+rule drop-push-register rewrite
   drop; push-register $a
 into
   copy-from-register $a
 end
-
-rule rewrite
+rule drop-push-literal rewrite
   drop; push-literal $a
 into
   copy-from-literal $a
 end
 
-rule rewrite
+rule push-register-pop-to-register rewrite
   push-register $a; pop-to-register $b
 into
   register-to-register $a, $b
 end
 
-rule rewrite
+rule copy-from-register-pop-to-register rewrite
   copy-from-register $a; pop-to-register $b
 into
   register-to-register $a, $b; drop
 end
 
-rule rewrite
+rule copy-from-literal-pop-to-register rewrite
   copy-from-literal $a; pop-to-register $b
 into
   literal-to-register $a, $b; drop
 end
 
-rule rewrite
+rule push-register-push-register rewrite
   push-register $a; push-register $a
 into
   push-register $a; dup
 end
 
-rule rewrite
+rule copy-from-register-push-register rewrite
   copy-from-register $a; push-register $a
 into
   copy-from-register $a; dup
 end
 
-rule rewrite
+rule copy-to-register-and-push-the-same-register rewrite
   copy-to-register $a; push-register $a
 into
   copy-to-register $a; dup
 end
 
-rule rewrite
+rule copy-to-and-from-the-same-register rewrite
   copy-to-register $a; copy-from-register $a
 into
   copy-to-register $a
 end
 
-rule rewrite
+rule push-the-same-literal-twice rewrite
   push-literal $a; push-literal $a
 into
   push-literal $a; dup
 end
 
-rule rewrite
+rule copy-from-literal-and-push-the-same-literal rewrite
   copy-from-literal $a; push-literal $a
 into
   copy-from-literal $a; dup
 end
 
-rule rewrite
+# Remove the first instruction in a two-instruction sequence made of copy-from
+# instructions.
+rule copy-from-literal-then-from-another-literal rewrite
+  copy-from-literal $a; copy-from-literal $b
+into
+  copy-from-literal $b
+end
+rule copy-from-literal-then-from-a-register rewrite
+  copy-from-literal $a; copy-from-register $b
+into
+  copy-from-register $b
+end
+rule copy-from-a-register-then-from-literal rewrite
+  copy-from-register $a; copy-from-literal $b
+into
+  copy-from-literal $b
+end
+rule copy-from-a-register-then-from-another-register rewrite
+  copy-from-register $a; copy-from-register $b
+into
+  copy-from-register $b
+end
+
+# A copy-from instruction is useless when immediately followed by a drop.
+rule useless-copy-from-literal-elimination rewrite
+  copy-from-literal $a; drop
+into
+  drop
+end
+rule useless-copy-from-register-elimination rewrite
+  copy-from-register $a; drop
+into
+  drop
+end
+
+rule push-register-drop rewrite
   push-register $a; drop
 into
   # Nothing.
 end
-
-rule rewrite
+rule push-literal-drop rewrite
   push-literal $a; drop
 into
   # Nothing.
 end
 
-rule rewrite
+rule pop-to-register-copy-from-register rewrite
   pop-to-register $a; copy-from-register $a
 into
   copy-to-register $a; nip
 end
-
-rule rewrite
+rule pop-to-register-drop rewrite
   pop-to-register $a; drop
 into
   nip; pop-to-register $a
 end
 
-rule rewrite
+rule pop-to-register-nip rewrite
+  pop-to-register $a; nip
+into
+  copy-to-register $a; drop-nip
+end
+
+rule drop-nip rewrite
+  drop; nip
+into
+  drop-nip
+end
+
+rule nip-drop rewrite
+  nip; drop
+into
+  nip-drop
+end
+
+rule drop-drop rewrite
   drop; drop
 into
-  nip; drop
+  nip-drop
+end
+
+rule nip-drop-drop rewrite
+  nip-drop; drop
+into
+  nip-two-drop
+end
+rule nip-two-drop-drop rewrite
+  nip-two-drop; drop
+into
+  nip-three-drop
+end
+rule nip-three-drop-drop rewrite
+  nip-three-drop; drop
+into
+  nip-four-drop
+end
+rule nip-four-drop-drop rewrite
+  nip-four-drop; drop
+into
+  nip-five-drop
+end
+rule nip-five-drop-drop rewrite
+  nip-five-drop; drop
+into
+  nip-six-drop
+end
+
+# Combine consecutive nip instructions into single instructions.  This
+# implementation will become nicer and more general when Jitter rewrite rules
+# become more expressive.
+rule nip-nip rewrite
+  nip; nip
+into
+  nip-two
+end
+rule nip-two-nip rewrite
+  nip-two; nip
+into
+  nip-three
+end
+rule nip-three-nip rewrite
+  nip-three; nip
+into
+  nip-four
+end
+rule nip-four-nip rewrite
+  nip-four; nip
+into
+  nip-five
+end
+rule nip-five-nip rewrite
+  nip-five; nip
+into
+  nip-six
+end
+
+# Move nip instructions before copy-from instructions.  This will make it
+# easier to rewrite them into a single nip-multiple instruction.
+rule nip-before-copy-from-register rewrite
+  copy-from-register $a; nip
+into
+  nip; copy-from-register $a
+end
+rule nip-before-copy-from-literal rewrite
+  copy-from-literal $a; nip
+into
+  nip; copy-from-literal $a
 end
 
 # Having copy-to-register at the end might make it possible to combine
-# with some other instruction; nip is not easy to combine, and in fact
-# I currently have no other rule with nip on the left.
-rule rewrite
+# with some other instruction; nip is not easy to combine, except with
+# other nips..
+rule copy-to-register-nip rewrite
   copy-to-register $a; nip
 into
   nip; copy-to-register $a
 end
 
-rule rewrite
+rule pop-to-register-return rewrite
   pop-to-register $a; return
 into
   drop; return
 end
 
-rule rewrite
+rule copy-to-register-return rewrite
   copy-to-register $a; return
 into
   return
@@ -1437,7 +1803,7 @@ end
 # always on a true condiion (I compile while loops as do..while, with the
 # conditional branch at the end).  It's easier to optimize this pattern here
 # than to add a special case to the compiler.
-rule rewrite
+rule not-branch-if-true rewrite
   primitive-not $a; branch-if-true $b
 into
   branch-if-false $b
@@ -1446,19 +1812,183 @@ end
 # # Some save/restore pairs are easy to eliminate.
 # # FIXME: no, this never fires because of the implicit label after the call,
 # # which makes the sequence non-rewritable.  Do I really want this behavior?
-# # I suspect not.
+# # I suspect not.  [FIXME: the behavior is no longer there.]
 # rule rewrite
 #   save-register $a; call $b; restore-register $a; primitive-primordial-plus $c; return
 # into
 #   call $b; primitive-primordial-plus $c; return
 # end
 
+# Some useless restore/save pairs come from compiling nested non-tail procedure calls.
+# Notice that this fires multiple times with multiple nested pairs such as
+#   restore-register %r1; restore-register %r0; save-register %r0; save-register %r1
+# , until every pair has been eliminated.
+rule restore-register-then-save-the-same-register rewrite
+  restore-register $a; save-register $a
+into
+  # Nothing.
+end
 
 
 # FIXME: this is a temporary kludge, to be used before I actually implement
 # tail calls.
-rule remove-tail-calls rewrite
+rule remove-tail-call--kludge rewrite
   tail-call $a
 into
   call $a; return
+end
+rule remove-tail-call-compiled--kludge rewrite
+  tail-call-compiled $a
+into
+  call-compiled $a; return
+end
+
+
+
+
+## Scratch.
+#################################################################
+
+instruction branch-if-register-non-zero (?R, ?f, ?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF2);
+    JITTER_BRANCH_FAST_IF_NOTEQUAL(JITTER_ARG0, JITTERLISP_FIXNUM_ENCODE(0),
+                                   JITTER_ARGF1);
+  end
+end
+
+rule scratch rewrite
+  push-register $a; primitive-non-zerop $b; branch-if-true $c
+into
+  branch-if-register-non-zero $a, $c, $b
+end
+
+instruction branch-if-not-less (?f, ?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF1);
+    jitterlisp_object undertop = JITTER_UNDER_TOP_MAINSTACK();
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
+    JITTER_NIP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(undertop, top, JITTER_ARGF0);
+  end
+end
+# rule rewrite
+#   primitive-lessp $a; branch-if-false $b
+# into
+#   branch-if-not-less $b, $a
+# end
+
+rule nip-drop-push-literal rewrite
+  nip-drop; push-literal $a
+into
+  nip; copy-from-literal $a
+end
+rule nip-drop-push-register rewrite
+  nip-drop; push-register $a
+into
+  nip; copy-from-register $a
+end
+rule nip-two-drop-push-literal rewrite
+  nip-two-drop; push-literal $a
+into
+  nip-two; copy-from-literal $a
+end
+rule nip-two-drop-push-register rewrite
+  nip-two-drop; push-register $a
+into
+  nip-two; copy-from-register $a
+end
+rule nip-three-drop-push-literal rewrite
+  nip-three-drop; push-literal $a
+into
+  nip-three; copy-from-literal $a
+end
+rule nip-three-drop-push-register rewrite
+  nip-three-drop; push-register $a
+into
+  nip-three; copy-from-register $a
+end
+rule nip-four-drop-push-literal  rewrite
+  nip-four-drop; push-literal $a
+into
+  nip-four; copy-from-literal $a
+end
+rule nip-four-drop-push-register rewrite
+  nip-four-drop; push-register $a
+into
+  nip-four; copy-from-register $a
+end
+rule nip-five-drop-push-literal rewrite
+  nip-five-drop; push-literal $a
+into
+  nip-five; copy-from-literal $a
+end
+rule nip-five-drop-push-register rewrite
+  nip-five-drop; push-register $a
+into
+  nip-five; copy-from-register $a
+end
+rule nip-six-drop-push-literal rewrite
+  nip-six-drop; push-literal $a
+into
+  nip-six; copy-from-literal $a
+end
+rule nip-six-drop-push-register rewrite
+  nip-six-drop; push-register $a
+into
+  nip-six; copy-from-register $a
+end
+
+# These will be used if I make primitive-cons not nip its first operand, and
+# compile cons to primitive-cons; nip .
+# For these rule to fire the cons primitive use must be in a non-tail position,
+# used as a non-last operand of a primitive or procedure.
+# Testcases: alist-copy zip-reversed-iterative zip-reversed-tail-recursive-helper
+#            zip-non-tail-recursive unzip-non-tail-recursive .
+instruction nip-push-literal (?n)
+  code
+    JITTER_UNDER_TOP_MAINSTACK() = JITTER_TOP_MAINSTACK();
+    JITTER_TOP_MAINSTACK() = JITTER_ARGN0;
+  end
+end
+instruction nip-push-register (?R)
+  code
+    JITTER_UNDER_TOP_MAINSTACK() = JITTER_TOP_MAINSTACK();
+    JITTER_TOP_MAINSTACK() = JITTER_ARG0;
+  end
+end
+rule rewrite
+  nip; push-literal $a
+into
+  nip-push-literal $a
+end
+rule rewrite
+  nip; push-register $a
+into
+  nip-push-register $a
+end
+
+# # FIXME: enable this after I make primitive-cons not nip its first operand.
+# # Test case: (lambda () (while #t (cons 1 2)))
+# rule useless-cons-elimination rewrite
+#   primitive-cons $a; nip-drop
+# into
+#   # Don't cons at all and drop the two cons operands as well, which will
+#   # hopefully rewrite further.  I don't generate just one nip-drop instruction
+#   # because the first rewritten drop might already rewrite along with its
+#   # previous instruction; and so may the second.
+#   drop; drop
+# end
+
+# FIXME: this version is temporary, and relies on a nipping primitive-cons.
+# Test case: (lambda () (while #t (cons 1 2)))
+rule useless-cons-elimination rewrite
+  primitive-cons $a; drop
+into
+  # Don't cons at all and drop the two cons operands as well, which will
+  # hopefully rewrite further.  I don't generate just one nip-drop instruction
+  # because the first rewritten drop might already rewrite along with its
+  # previous instruction; and so may the second.
+  drop; drop
 end

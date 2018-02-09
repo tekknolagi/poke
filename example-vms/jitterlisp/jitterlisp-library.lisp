@@ -460,22 +460,20 @@
 ;;;; last-cons.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant (last-cons-iterative xs)
-  (if (null? xs)
-      (error '(last-cons-iterative: () argument))
-      (begin
-        (while (not (null? (cdr xs)))
-          (set! xs (cdr xs)))
-        xs)))
+;;; Return the last cons of xs .  Assume, without checking, that xs is a
+;;; non-empty proper list.
 
-(define-constant (last-cons-tail-recursive-non-null xs)
+(define-constant (last-cons-iterative xs)
+  (let* ((cdr-xs (cdr xs)))
+    (while (not (null? cdr-xs))
+      (set! xs cdr-xs)
+      (set! cdr-xs (cdr xs)))
+    xs))
+
+(define-constant (last-cons-tail-recursive xs)
   (if (null? (cdr xs))
       xs
-      (last-cons-tail-recursive-non-null (cdr xs))))
-(define-constant (last-cons-tail-recursive xs)
-  (if (null? xs)
-      (error '(last-cons-tail-recursive: empty list))
-      (last-cons-tail-recursive-non-null xs)))
+      (last-cons-tail-recursive (cdr xs))))
 
 (define-constant (last-cons xs)
   (last-cons-iterative xs))
@@ -1080,8 +1078,8 @@
 ;;; and therefore should be a literal or a variable.  This is ensured out of
 ;;; this recursive procedure, by calling it with an appropriate actual.
 (define-constant (destructuring-bind-recursive formals-template
-                                      component
-                                      body-forms)
+                                               component
+                                               body-forms)
   (cond ((null? formals-template)
          ;; There is nothing to bind in the template.  Return code to check
          ;; that there are also no actuals, and then either proceeds or fails.
@@ -2364,19 +2362,63 @@
 ;;;; High-level syntax: sequencing forms.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-macro (begin1 first-form . more-forms)
-  (let ((result-variable (gensym)))
-    `(let ((,result-variable ,first-form))
-       ,@more-forms
+;;; Evaluate forms in sequence, and return the result of the index-th one,
+;;; 1-based.  For example (begin-from-first 2 . forms) returns the result
+;;; of the second form.
+(define-macro (begin-from-first index . forms)
+  (unless (fixnum? index)
+    (error `(begin-from-first: non-fixnum index ,index)))
+  (unless (> index 0)
+    (error `(begin-from-first: non-positive index ,index)))
+  (unless (>= (length forms) index)
+    (error `(begin-from-first: not enough forms in ,@forms)))
+  (let ((result-variable (gensym))
+        (first-forms (take forms index))
+        (last-forms (drop forms index)))
+    `(let ((,result-variable ,@first-forms))
+       ,@last-forms
        ,result-variable)))
 
-(define-macro (begin2 first-form second-form . more-forms)
-  (let ((result-variable (gensym)))
+(define-macro (begin1 . forms)
+  `(begin-from-first 1 ,@forms))
+(define-macro (begin2 . forms)
+  `(begin-from-first 2 ,@forms))
+(define-macro (begin3 . forms)
+  `(begin-from-first 3 ,@forms))
+(define-macro (begin4 . forms)
+  `(begin-from-first 4 ,@forms))
+
+;;; Evaluate forms in sequence, and return the result of the index-th-to-last
+;;; one, 1-based.  For example (begin-from-last 2 . forms) returns the result
+;;; of the second-to-last form.  An index of 1 yields a macro functionally
+;;; equivalent to begin .
+(define-macro (begin-from-last index . forms)
+  (unless (fixnum? index)
+    (error `(begin-from-last: non-fixnum index ,index)))
+  (unless (> index 0)
+    (error `(begin-from-last: non-positive index ,index)))
+  (unless (>= (length forms) index)
+    (error `(begin-from-last: not enough forms in ,@forms)))
+  (let* ((result-variable (gensym))
+         (first-form-no (primordial-- (length forms) index))
+         (first-forms (take forms first-form-no))
+         (interesting-and-last-forms (drop forms first-form-no))
+         (interesting-form (car interesting-and-last-forms))
+         (last-forms (cdr interesting-and-last-forms)))
     `(begin
-       ,first-form
-       (let ((,result-variable ,second-form))
-         ,@more-forms
+       ,@first-forms
+       (let ((,result-variable ,interesting-form))
+         ,@last-forms
          ,result-variable))))
+
+(define-macro (begin-1 . forms)
+  `(begin-from-last 1 ,@forms))
+(define-macro (begin-2 . forms)
+  `(begin-from-last 2 ,@forms))
+(define-macro (begin-3 . forms)
+  `(begin-from-last 3 ,@forms))
+(define-macro (begin-4 . forms)
+  `(begin-from-last 4 ,@forms))
 
 
 
@@ -3216,7 +3258,7 @@
               (ast-equal? (ast-while-body a) (ast-while-body b))))
         ((ast-primitive? a)
          (and (ast-primitive? b)
-              (ast-equal? (ast-primitive-operator a) (ast-primitive-operator b))
+              (eq? (ast-primitive-operator a) (ast-primitive-operator b))
               (ast-equal?-list (ast-primitive-operands a) (ast-primitive-operands b))))
         ((ast-call? a)
          (and (ast-call? b)
@@ -3233,8 +3275,8 @@
               (ast-equal? (ast-let-body a) (ast-let-body b))))
         ((ast-sequence? a)
          (and (ast-sequence? b)
-              (ast-equal? (ast-sequance-first a) (ast-sequance-first b))
-              (ast-equal? (ast-sequance-second a) (ast-sequance-second b))))))
+              (ast-equal? (ast-sequence-first a) (ast-sequence-first b))
+              (ast-equal? (ast-sequence-second a) (ast-sequence-second b))))))
 
 ;;; An extension of ast-equal? to lists of ASTs.
 ;;; Return non-#f iff the two given AST lists have syntactically equal elements
@@ -4164,9 +4206,10 @@
          ;; get to the previous clause.
          (ast-optimize-helper else bounds))
         ((ast-equal? then else)
-         ;; The two branches are equal, so we don't need to have a conditional at all: turn it
-         ;; into a sequance, which will usually be further optimizable as the condition tends
-         ;; not to have effects.
+         ;; The two branches are equal, so we don't need to have a conditional
+         ;; at all: turn it into a sequence of the condition and one branch;
+         ;; this will usually be further optimizable as the condition tends not
+         ;; to have effects.
          (ast-optimize-helper (ast-sequence optimized-condition
                                             then)
                               bounds))
@@ -5064,7 +5107,7 @@
          'nowhere)
         ((ast-requires-boxing-for? body variable-name)
          ;; The variable is used and requires boxing.
-         (compiler-add-instruction! s '(box))
+         ;; (compiler-add-instruction! s '(box)) ;; FIXME: I believe this is wrong.  The thing is already boxed, and I don't need a second layer.
          (let ((place (compiler-bind-local-boxed! s variable-name)))
            (compiler-add-instruction! s `(pop-to-register ,(cadr place)))
            place))
@@ -5079,12 +5122,64 @@
 (define-constant (compiler-bind-nonlocals! s ??? formals body)
   ???)
 
+;;; Remove actuals from the stack and bind them to the given formals (here given
+;;; in the order in which they occur in a lambda, which is the evaluation order
+;;; -- to be popped right-to-left), simply dropping the ones which are not used
+;;; in the body.  Also drop the closure, found on the stack below the actuals,
+;;; and bind nonlocals if needed.
+(define-constant (compiler-pop-args-and-closure! s formals body)
+  ;; I have two different implementations of this.
+  (compiler-pop-args-and-closure!-one-by-one s formals body)
+  ;;(compiler-pop-args-and-closure!-one-shot s formals body)
+  )
 
-;;; Bind the nonlocal environment from the closure on the top of the stack, if
-;;; needed; in either case drop the top element.
-;;; This should be called right after popping actuals, when the top of the
-;;; stack contains the called closure.
-(define-constant (compiler-bind-closure-environment! s)
+;;; One implementation of compiler-pop-args-and-closure! .  The strategy of this
+;;; implementation is loading every useful element to registers without
+;;; affecting the stack, and then dropping everything in one shot.
+;;; Only one of the implementations is used, but I'm keeping both as I am still
+;;; undecided about the merits of each.
+(define-constant (compiler-pop-args-and-closure!-one-shot s formals body)
+  (let ((formal-no (length formals))
+        (depth 0)) ;; The depth for the current argument or closure.
+    (dolist (formal (reverse formals))
+      (cond ((not (ast-has-free? body formal))
+             ;; The variable is not used.  Do nothing.
+             )
+            ((ast-requires-boxing-for? body formal)
+             ;; The variable is used and requires boxing.
+             (compiler-non-dropping-bind-at-depth! s formal depth #t))
+            (#t
+             ;; The variable is used and doesn't require boxing.
+             (compiler-non-dropping-bind-at-depth! s formal depth #f)))
+      (set! depth (1+ depth)))
+    ;; The called closure is at depth depth.  Bind the nonlocal environment from
+    ;; the closure, if needed.
+    (when (exists? (lambda (binding) (compiler-place-nonlocal? (cdr binding)))
+                   (compiler-bindings s))
+      (let ((register (compiler-fresh-register s)))
+        (compiler-bind! s #t register)
+        (if (zero? depth)
+            (compiler-add-instruction! s `(copy-to-register ,register))
+            (compiler-add-instruction! s `(at-depth-to-register ,depth ,register)))
+        (compiler-add-instruction! s `(dereference-nonlocals ,register))))
+    ;; Drop all the actuals plus the closure.
+    (dotimes (i (+ formal-no 1))
+      (compiler-add-instruction! s '(drop)))))
+
+;;; An alternative implementation of compiler-pop-args-and-closure!, simpler but
+;;; generating worse code when used and unused arguments are mixed.  On the
+;;; other hand the VM instructions generated by this implementation are easier
+;;; to rewrite.
+;;; A good test case to show the difference:
+;;;   (define (f a b c d e f g) (+ a c e g))
+;;; Only one of the implementations is used, but I'm keeping both as I am still
+;;; undecided about the merits of each.
+(define-constant (compiler-pop-args-and-closure!-one-by-one s formals body)
+  (dolist (formal (reverse formals))
+    (compiler-pop-and-bind! s formal body))
+  ;; Now the top of the stack contains the called closure.  Bind the nonlocal
+  ;; environment from the closure, if needed; in either case drop the top
+  ;; element.
   (when (exists? (lambda (binding) (compiler-place-nonlocal? (cdr binding)))
                  (compiler-bindings s))
     (let ((register (compiler-fresh-register s)))
@@ -5092,13 +5187,20 @@
       (compiler-add-instruction! s `(nonlocals-to-register ,register))))
   (compiler-add-instruction! s '(drop)))
 
-;;; Remove actuals from the stack and bind them to the given formals (here given
-;;; in the order in which they occur in a lambda, which is the evaluation order
-;;; -- to be popped right-to-left), simply dropping the ones which are not used
-;;; in the body.
-(define-constant (compiler-pop-formals! s formals body)
-  (dolist (formal (reverse formals))
-    (compiler-pop-and-bind! s formal body)))
+;; Generate an instruction for the given compiler state loading the named
+;; variable from the stack at the given depth (depth 0 means top), without
+;; destructively updating the stack; the variable will be boxed if boxed is
+;; non-#f.  Update the state with the new binding.
+(define-constant (compiler-non-dropping-bind-at-depth! s name depth boxed)
+  ;; Determine in which register to hold the variable binding.
+  (let* ((place (if boxed
+                    (compiler-bind-local-boxed! s name)
+                    (compiler-bind-local-unboxed! s name)))
+         (register (cadr place)))
+    ;; Generate an instruction loading the register, without modifying the stack.
+    (if (zero? depth)
+        (compiler-add-instruction! s `(copy-to-register ,register))
+        (compiler-add-instruction! s `(at-depth-to-register ,depth ,register)))))
 
 ;;; Generate an instruction pushing a #<nothing> literal.
 (define-constant (compiler-push-nothing! s)
@@ -5299,23 +5401,37 @@
   (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-call! s operator operands)
-  (let ((known-closure
-         ;; Bind known-closure to the called closure if I can resolve it
-         ;; at this time, or to #f otherwise.
-         (cond ((and (ast-literal? operator)
-                     (closure? (ast-literal-value operator)))
-                ;; The operator is a literal closure.
-                (ast-literal-value operator))
-               ((and (ast-variable? operator)
-                     (not (compiler-bound-variable? s (ast-variable-name
-                                                       operator)))
-                     (constant? (ast-variable-name operator)))
-                ;; The operator is a variable globally bound to a constant
-                ;; and not shadowed.
-                (symbol-global (ast-variable-name operator)))
-               (#t
-                ;; The closure is not known: I can't omit run-time checks.
-                #f))))
+  (let* ((known-closure
+          ;; Bind known-closure to the called closure if I can resolve it
+          ;; at this time, or to #f otherwise.
+          (cond ((and (ast-literal? operator)
+                      (closure? (ast-literal-value operator)))
+                 ;; The operator is a literal closure.
+                 (ast-literal-value operator))
+                ((and (ast-variable? operator)
+                      (not (compiler-bound-variable? s (ast-variable-name
+                                                        operator)))
+                      (constant? (ast-variable-name operator)))
+                 ;; The operator is a variable globally bound to a constant
+                 ;; and not shadowed.
+                 (symbol-global (ast-variable-name operator)))
+                (#t
+                 ;; The closure is not known: I can't omit run-time checks.
+                 #f)))
+         (known-compiled
+          ;; Non-#f iff the closure is known to be compiled.
+          (and known-closure (compiled-closure? known-closure)))
+         (tail (compiler-tail? s))
+         (call-instruction
+          ;; The VM instruction to use for calling.
+          (cond ((and known-compiled tail)
+                 'tail-call-compiled)
+                (tail
+                 'tail-call)
+                (known-compiled
+                 'call-compiled)
+                (#t
+                 'call))))
     (compiler-with-non-tail s
       (compiler-with-used-result s
         (compile-ast! s operator)))
@@ -5328,22 +5444,22 @@
         (display `(WARNING: in-arity mismatch in call to known closure
                             ,operator with actuals ,operands))
         (newline))
-      (compiler-add-instruction! s `(check-in-arity ,(length operands)))))
-  (dolist (operand operands)
-    (compiler-with-non-tail s
-      (compiler-with-used-result s
-        (compile-ast! s operand))))
-  (if (compiler-tail? s)
-      (compiler-add-instruction! s `(tail-call ,(length operands)))
-      (let ((used-registers (compiler-used-registers s)))
-        ;; The registers being used at this point are a superset of the ones
-        ;; live at return.  This is a conservative approximation, crude but
-        ;; correct.  Doing better would require a liveness analysis pass.
-        (compiler-save-registers! s used-registers)
-        (compiler-add-instruction! s `(call ,(length operands)))
-        (compiler-restore-registers! s used-registers)
-        (unless (compiler-used-result? s)
-          (compiler-add-instruction! s '(drop))))))
+      (compiler-add-instruction! s `(check-in-arity ,(length operands))))
+    (dolist (operand operands)
+      (compiler-with-non-tail s
+                              (compiler-with-used-result s
+                                                         (compile-ast! s operand))))
+    (if (compiler-tail? s)
+        (compiler-add-instruction! s `(,call-instruction ,(length operands)))
+        (let ((used-registers (compiler-used-registers s)))
+          ;; The registers being used at this point are a superset of the ones
+          ;; live at return.  This is a conservative approximation, crude but
+          ;; correct.  Doing better would require a liveness analysis pass.
+          (compiler-save-registers! s used-registers)
+          (compiler-add-instruction! s `(,call-instruction ,(length operands)))
+          (compiler-restore-registers! s used-registers)
+          (unless (compiler-used-result? s)
+            (compiler-add-instruction! s '(drop)))))))
 
 (define-constant (compile-let! s bound-name bound-form body)
   (compiler-with-non-tail s
@@ -5408,20 +5524,19 @@
                 (cons (cdr env-binding)
                       reversed-nonlocal-values))))
       (cond ((closure-primitive-wrapper? c)
+             ;; Special case: we are compiling a primitive wrapper.
              (let ((primitive (ast-primitive-operator body)))
                ;; We can compile primitive wrappers (see the definition above)
-               ;; in a simple and efficient way: primitive, nip, return.
+               ;; in a more efficient way: primitive, nip, return.
                (compiler-add-instruction! s `(primitive ,primitive))
                (compiler-add-instruction! s '(nip))
                (compiler-add-instruction! s '(return))))
             (#t
-             ;; Bind formals: for each actual generate either a pop instruction
-             ;; to get the actual value, or a drop instruction to ignore it in
-             ;; case the formal is not used.
-             (compiler-pop-formals! s formals body)
-             ;; Generate an instruction to bind the closure environment, if
-             ;; needed, then another to drop the closure.
-             (compiler-bind-closure-environment! s)
+             ;; General case.
+             ;; Generate code binding the formals we use and the nonlocals in
+             ;; registers, ignoring the others and dropping them all, including
+             ;; the closure argument.
+             (compiler-pop-args-and-closure! s formals body)
              ;; Now the state contains bindings for every non-global bound in
              ;; the body AST, and we can compile it.  Any remaining variable
              ;; occurring in the body but not in the state bindings is a global.
@@ -5561,7 +5676,7 @@
               (when ,constant
                 ;; Making a globally defined closure a constant *before*
                 ;; optimizing it may help the rewrite system.
-                (make-constant ',thing))
+                (make-constant! ',thing))
               (optimize-when-interpreted-closure! ,value-name))))
         ((or (not (symbols? thing))
              (not (all-different? (cdr thing))))
@@ -5576,7 +5691,7 @@
               (define-non-optimized ,thing-name ,value-name)
               (when ,constant
                 ;; Again, make the thing constant before optimizing it.
-                (make-constant ',thing-name))
+                (make-constant! ',thing-name))
               (optimize-when-interpreted-closure! ,value-name))))))
 (define-macro (define-optimized thing . body)
   `(define-optimized-possibly-constant #f ,thing ,@body))
@@ -5986,3 +6101,16 @@
 ;;     ...
 ;; The link register is set *after* the call which is supposed to save
 ;; it to the return stack.
+
+;; (disassemble-vm (let* ((a 1)) (lambda (x) (+ x a))))
+;; (disassemble-vm (lambda (x) y))
+
+
+;; This fails: why?
+;; (c ast-equal?)
+
+
+(define-constant (ap f x) (f x))
+(define (w) (ap 1+ 10))
+(disassemble-vm w)
+(disassemble-vm ap)

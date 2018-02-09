@@ -255,7 +255,9 @@ relying on the Jitter virtual machine generator for compiling code.
 @cindex epsilon
 @cindex GNU epsilon
 @cindex @ @epsilonzero{} @c The initial forced space is less ugly than the alternative.
-The programming language GNU epsilon (see @ref{Top,,, epsilon, The GNU
+
+@fixme{@pxref{Top,,, jitter, The Jitter Manual}}
+The programming language GNU epsilon (@pxref{Top,,, epsilon, The GNU
 epsilon Manual}), my main long-term project, has yet to live to my
 expectations.  And even if I keep believing in the superiority of its
 design, as I firmly do, epsilon's concrete implementation still looks
