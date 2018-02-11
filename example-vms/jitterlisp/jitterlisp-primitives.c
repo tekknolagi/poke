@@ -404,6 +404,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(two_times, FIXNUM,
   { JITTERLISP_2TIMES_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(two_divided, FIXNUM,
   { JITTERLISP_2DIVIDED_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(two_quotient, FIXNUM,
+  { JITTERLISP_2QUOTIENT_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(two_remainder, FIXNUM,
   { JITTERLISP_2REMAINDER_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(negate, FIXNUM,
@@ -699,6 +701,7 @@ jitterlisp_primitives []
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("1-", 1, one_minus),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("2*", 1, two_times),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("2/", 1, two_divided),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("2quotient", 1, two_quotient),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("2remainder", 1, two_remainder),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("negate", 1, negate),
       /* Boolean operations. */

@@ -99,7 +99,7 @@ end
 initialization-c
   code
     printf ("Hello from the Jittery per-run initialization...\n");
-    //jitter_log_instruction (BEFORE, 0, NULL/*& jitter_state_runtime*/, jitter_state_runtime, & original_state->vmprefix_state_backing);
+    //jitter_log_instruction (BEFORE, 0, NULL/*& jitter_state_runtime*/, jitter_state_runtime, & jitter_original_state->vmprefix_state_backing);
     //printf ("Done with the Jittery per-run initialization\n");
 printf ("TOP: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
 printf ("UT:  %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());
@@ -468,7 +468,7 @@ instruction-beginning-c
                                 ((const struct jitterlispvm_state_runtime)
                                  jitter_state_runtime),
                                 ((const struct jitterlispvm_state_backing *)
-                                 & original_state->vmprefix_state_backing));
+                                 & jitter_original_state->vmprefix_state_backing));
         asm volatile ("nop");
         asm volatile ("nop");
       }
@@ -488,7 +488,7 @@ instruction-end-c
                             ((const struct jitterlispvm_state_runtime)
                              jitter_state_runtime),
                             ((const struct jitterlispvm_state_backing *)
-                             & original_state->vmprefix_state_backing));
+                             & jitter_original_state->vmprefix_state_backing));
   */
   end
 end
@@ -506,7 +506,7 @@ opcode = last_specialized_opcode;
                             ((const struct jitterlispvm_state_runtime)
                              jitter_state_runtime),
                             ((const struct jitterlispvm_state_backing *)
-                             & original_state->vmprefix_state_backing));
+                             & jitter_original_state->vmprefix_state_backing));
 
 /*
 */
@@ -516,7 +516,7 @@ opcode = last_specialized_opcode;
   printf ("%i. After specialized instruction %s\n", i ++,
           jitterlispvm_specialized_instruction_names [previous_specialized_opcode]);
   struct jitterlispvm_state_backing * const b
-    = & original_state->vmprefix_state_backing;
+    = & jitter_original_state->vmprefix_state_backing;
 
   const struct jitter_stack_backing *mainstack_backing
     = & b->jitter_stack_mainstack_backing;
@@ -1183,6 +1183,13 @@ instruction primitive-two-divided (?f)
   end
 end
 
+instruction primitive-two-quotient (?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
+    JITTERLISP_2QUOTIENT_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
 instruction primitive-two-remainder (?f)
   code
     JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
@@ -1342,7 +1349,7 @@ instruction call-from-c ()
                             ((const struct jitterlispvm_state_runtime)
                              jitter_state_runtime),
                             ((const struct jitterlispvm_state_backing *)
-                             & original_state->vmprefix_state_backing));
+                             & jitter_original_state->vmprefix_state_backing));
   */
   /*
 debug_pointer (-100, (const void*) JITTER_TOP_MAINSTACK());

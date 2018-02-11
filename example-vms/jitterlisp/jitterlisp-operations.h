@@ -406,6 +406,12 @@
       = JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_in0,               \
                                     JITTERLISP_FIXNUM_ENCODE(2));  \
   JITTER_END_
+#define JITTERLISP_2QUOTIENT_(_jitterlisp_out, _jitterlisp_in0)    \
+  JITTER_BEGIN_                                                    \
+    (_jitterlisp_out)                                              \
+      = JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_in0,               \
+                                    JITTERLISP_FIXNUM_ENCODE(2));  \
+  JITTER_END_
 #define JITTERLISP_2REMAINDER_(_jitterlisp_out, _jitterlisp_in0)     \
   JITTER_BEGIN_                                                      \
     (_jitterlisp_out)                                                \

@@ -199,7 +199,9 @@ his contact information.
 * Invoking @command{jitterlisp}::  How to use the Lisp system from command line.
 
 Reference documentation
-* Lisp language reference::        The JitterLisp predefined language features.
+* Lisp data::                      The possible shapes of Lisp objects.
+* Lisp language reference::        About the JitterLisp language.
+* Lisp language form reference::   The JitterLisp predefined language constructs.
 * Lisp library reference::         What predefined globals do.
 
 * Internals::                      How JitterLisp works under the hood.
@@ -243,8 +245,8 @@ JitterLisp is a comparatively simple and efficient Lisp system,
 relying on the Jitter virtual machine generator for compiling code.
 
 @menu
-* History::                            Why the world needed another Lisp.
-* Features::                           What JitterLisp can do.
+* History::                            Why I though the world needed another Lisp.
+* Features and influences::            What JitterLisp can do and where it comes from.
 * License::                            JitterLisp is released under the GNU GPLv3+.
 @end menu
 
@@ -290,9 +292,12 @@ succeeded and eventually grew into an independent project, Jitter.
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
-@node Features
-@section Features
-@cindex features
+@node Features and influences
+@section Features and influences
+@cindex feature
+@cindex influences
+@cindex Common Lisp
+@cindex Scheme
 
 @fixme{Write this}
 
@@ -343,11 +348,103 @@ Documentation License, version 1.3 or later.
 @fixme{Write this}
 
 
+@c Lisp language form reference
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Lisp data
+@chapter Lisp data
+
+@fixme{Write this}
+
+@menu
+* Types::                                     Every possible shape of data.
+* Mapping Lisp data to expressions::          Homoiconicity.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Types
+@section Types
+
+Every Lisp datum contains a @dfn{value} and a @dfn{type}.  Given a
+datum it is always possible to check for its type at run time by means
+of some predefined procedure (@pxref{type-checking-procedures}).
+
+Since JitterLisp has, at least currently, no subtyping relation, each
+object belongs to exactly one of the following types.  However some
+predefined procedures are provided to check whether an object belongs
+to one of several related data types; for example @code{closure?} will
+accept either an interpreted closure or a compiled closure as a
+``closure''.
+
+@anchor{type-table}
+@table @emph
+@cindex fixnum
+@item fixnum
+
+@cindex unique
+@item unique type
+
+@cindex character
+@item character
+
+@cindex symbol
+@item symbol
+
+@cindex interpreted closure
+@item interpreted closure
+
+@cindex compiled closure
+@item compiled closure
+@fixme{An interpreted closure can destructively change to a compiled
+closure (but not vice-versa) without changing its identity.}
+
+@cindex primitive
+@item primitive
+
+@cindex AST
+@cindex Abstract Syntax Tree
+@item AST
+
+@cindex cons
+@item cons
+
+@cindex macro (type)
+@item macro
+
+@cindex primitive macro
+@item primitive macro
+
+@end table
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Mapping Lisp data to expressions
+@section Mapping Lisp data to expressions
+
+
 @c Lisp language reference
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 @node Lisp language reference
 @chapter Lisp language reference
+
+@fixme{Write this}
+
+@menu
+* Constants::                                 Some symbols can't be globally
+                                              mutated.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Constants
+@section Constants
+@fixme{primitive wrappers are global constants}
+
+
+@c Lisp language form reference
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Lisp language form reference
+@chapter Lisp language form reference
 
 @fixme{Write this.}
 
@@ -367,16 +464,6 @@ the library and initialize the global state; then, from the library
 itself, the feature is re-defined in Lisp in a more general or
 powerful way.
 
-@menu
-* Lisp reference introduction::               What you will find in this chapter,
-                                              and general considerations.
-* Language forms::                            The stuff programs are made of.
-@end menu
-
-@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
-@node Lisp reference introduction
-@section Lisp reference introduction
-
 @fixme{Write this}
 
 @fixme{lexical scoping}
@@ -388,6 +475,10 @@ powerful way.
 @fixme{metasyntactic conventions: the dot}
 
 @fixme{erroring out}
+
+@menu
+* Language forms::                            The stuff programs are made of.
+@end menu
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Language forms
@@ -583,12 +674,12 @@ times, in sequence.
 @end deffn
 
 @syindex dotimes
-@deffn {macro} dotimes (x . count-forms) . body-forms
+@deffn {macro} dotimes (x count-form . result-forms) . body-forms
 @fixme{Write this}
 @end deffn
 
 @syindex dolist
-@deffn {macro} dolist (x . list-forms) . body-forms
+@deffn {macro} dolist (x list-form . result-forms) . body-forms
 @fixme{Write this}
 @end deffn
 
@@ -613,9 +704,24 @@ forms: @pxref{let,, @code{let}}.
 
 @fixme{Write this}
 
+@fixme{Every symbol documented here is a global constant, except for
+macros; it is convenient to be able to re-define macros in a
+backwards-compatible way}
+
+
 @menu
+* Type checking::                             Testing a datum's type at run time.
 * Input and output::                          How to read and write.
 @end menu
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Type checking
+@section Type checking
+
+@cindex type checking
+@cindex checking, type
+@anchor{type-checking-procedures}
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@

@@ -2577,6 +2577,77 @@
                         (* ,@(cdr operands))))))
 
 
+;;;; Squaring.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (square n)
+  (* n n))
+
+
+
+
+;;;; Multiplication by additions (for fun).
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (*-nonnegative-b-by-sums-non-tail-recursive a b)
+  (cond ((zero? b)
+         0)
+        ((odd? b)
+         (+ a (*-nonnegative-b-by-sums-non-tail-recursive (2* a)
+                                                          (2quotient b))))
+        (#t
+         (*-nonnegative-b-by-sums-non-tail-recursive (2* a)
+                                                     (2quotient b)))))
+(define-constant (*-by-sums-non-tail-recursive a b)
+  (if (< b 0)
+      (- (*-nonnegative-b-by-sums-non-tail-recursive a (- b)))
+      (*-nonnegative-b-by-sums-non-tail-recursive a b)))
+
+(define-constant (*-nonnegative-b-by-sums-iterative a b)
+  (let ((res 0))
+    (while (not (zero? b))
+      (when (odd? b)
+        (set! res (+ res a)))
+      (set! a (2* a))
+      (set! b (2quotient b)))
+    res))
+(define-constant (*-by-sums-iterative a b)
+  (if (< b 0)
+      (- (*-nonnegative-b-by-sums-iterative a (- b)))
+      (*-nonnegative-b-by-sums-iterative a b)))
+
+(define-right-nested-variadic-extension *-by-sums *-by-sums-iterative 1)
+
+
+
+
+;;;; Exponentiation.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (**-procedure-non-tail-recursive b e)
+  (cond ((zero? e)
+         1)
+        ((even? e)
+         (square (**-procedure-non-tail-recursive b (2quotient e))))
+        (#t
+         (* b (square (**-procedure-non-tail-recursive b (2quotient e)))))))
+
+(define-constant (**-procedure-iterative b e)
+  (let ((res 1))
+    (while (not (zero? e))
+      (when (odd? e)
+        (set! res (* res b))
+        (set! e (- e 1)))
+      (set! e (2quotient e))
+      (set! b (square b)))
+    res))
+
+(define-right-nested-variadic-extension **-non-tail-recursive **-procedure-non-tail-recursive 1)
+(define-right-nested-variadic-extension **-iterative **-procedure-iterative 1)
+
+(define ** **-iterative)
+
+
 
 
 ;;;; Making non-variadic lambdas from possibly variadic operators.

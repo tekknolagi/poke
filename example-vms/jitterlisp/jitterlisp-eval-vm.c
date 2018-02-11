@@ -108,12 +108,14 @@ jitterlisp_initialize_vm (void)
 //JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, debug);
   jitterlispvm_specialize_program (jitterlisp_driver_vm_program);
 
+  /*
 printf ("Driver:\n");
   if (jitterlisp_settings.cross_disassembler)
     jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_CROSS_OBJDUMP, NULL);
   else
     jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_OBJDUMP, NULL);
 printf ("\n");
+  */
 }
 
 void

@@ -226,6 +226,8 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
     jitterlispvm_append_instruction_name (p, "primitive-two-times");
   else if (! strcmp (name, "2/"))
     jitterlispvm_append_instruction_name (p, "primitive-two-divided");
+  else if (! strcmp (name, "2quotient"))
+    jitterlispvm_append_instruction_name (p, "primitive-two-quotient");
   else if (! strcmp (name, "2remainder"))
     jitterlispvm_append_instruction_name (p, "primitive-two-remainder");
   else if (! strcmp (name, "primordial-+"))
