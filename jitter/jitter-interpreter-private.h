@@ -393,15 +393,15 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
    instruction code within the interpreter.
    FIXME: shall I use the do..while (false) trick here?  This macro is expanded
    a lot of times, and never from user code. */
-#if   defined(JITTER_DISPATCH_SWITCH)                          \
+#if   defined(JITTER_DISPATCH_SWITCH)            \
    || defined(JITTER_DISPATCH_DIRECT_THREADING)
-# define JITTER_SKIP_RESIDUALS                                 \
-  JITTER_SET_IP(ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
+# define JITTER_SKIP_RESIDUALS                                        \
+  JITTER_SET_IP(jitter_ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
 #elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define JITTER_SKIP_RESIDUALS                                 \
-  JITTER_SET_IP(ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
+# define JITTER_SKIP_RESIDUALS                                        \
+  JITTER_SET_IP(jitter_ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
 #elif defined(JITTER_DISPATCH_NO_THREADING)
-# define JITTER_SKIP_RESIDUALS                                 \
+# define JITTER_SKIP_RESIDUALS  \
   /* do nothing. */
 #else
 # error "unknown dispatching model"
@@ -611,11 +611,11 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
 #if      defined(JITTER_DISPATCH_SWITCH)             \
       || defined(JITTER_DISPATCH_DIRECT_THREADING)   \
       || defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define JITTER_SET_IP(target_pointer)                    \
-    do                                                    \
-      {                                                   \
-        ip = (const union jitter_word*)(target_pointer);  \
-      }                                                   \
+# define JITTER_SET_IP(target_pointer)                           \
+    do                                                           \
+      {                                                          \
+        jitter_ip = (const union jitter_word*)(target_pointer);  \
+      }                                                          \
     while (false)
 #endif // #if      defined(JITTER_DISPATCH_SWITCH) || ...
 
@@ -630,11 +630,11 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
     while (false)
 #elif    defined(JITTER_DISPATCH_DIRECT_THREADING)   \
       || defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define JITTER_BRANCH_TO_IP()             \
-    do                                     \
-      {                                    \
-        JITTER_COMPUTED_GOTO(ip->thread);  \
-      }                                    \
+# define JITTER_BRANCH_TO_IP()                    \
+    do                                            \
+      {                                           \
+        JITTER_COMPUTED_GOTO(jitter_ip->thread);  \
+      }                                           \
     while (false)
 #endif // #if   defined(...
 
@@ -705,14 +705,14 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
 #if    defined(JITTER_DISPATCH_SWITCH)             \
     || defined(JITTER_DISPATCH_DIRECT_THREADING)   \
     || defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define _JITTER_BRANCH_AND_LINK(target_rvalue)               \
-    do                                                        \
-      {                                                       \
-        jitter_state_runtime._jitter_link                     \
-          = ((const union jitter_word *)                      \
-             (ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO));  \
-        JITTER_BRANCH(target_rvalue);                         \
-      }                                                       \
+# define _JITTER_BRANCH_AND_LINK(target_rvalue)                      \
+    do                                                               \
+      {                                                              \
+        jitter_state_runtime._jitter_link                            \
+          = ((const union jitter_word *)                             \
+             (jitter_ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO));  \
+        JITTER_BRANCH(target_rvalue);                                \
+      }                                                              \
     while (false)
 #elif    defined(JITTER_DISPATCH_NO_THREADING)
 # ifndef JITTER_MACHINE_SUPPORTS_PROCEDURE

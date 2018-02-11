@@ -2020,9 +2020,9 @@ jitterc_emit_interpreter_sarg_definition
           EMIT("#   define JITTER_SLOW_REGISTER_OFFSET%i  (JITTER_RESIDUAL_ARGUMENT_%i.fixnum)\n", index, residual_index);
           EMIT("    JITTER_MARK_RESIDUAL_%i_AS_SET_BY_ASSEMBLY;\n", residual_index);
           EMIT("#elif defined (JITTER_REPLICATE)\n");
-          EMIT("#   define JITTER_SLOW_REGISTER_OFFSET%i  ((((union jitter_word*)ip)[%i]).fixnum)\n", index, residual_index);
+          EMIT("#   define JITTER_SLOW_REGISTER_OFFSET%i  ((((union jitter_word*)jitter_ip)[%i]).fixnum)\n", index, residual_index);
           EMIT("#else\n");
-          EMIT("#   define JITTER_SLOW_REGISTER_OFFSET%i  ((((union jitter_word*)ip)[%i]).fixnum)\n", index, residual_index + 1);
+          EMIT("#   define JITTER_SLOW_REGISTER_OFFSET%i  ((((union jitter_word*)jitter_ip)[%i]).fixnum)\n", index, residual_index + 1);
           EMIT("#endif // #if defined(JITTER_DISPATCH_NO_THREADING)\n");
 
           EMIT("#   define JITTER_ARG%i  JITTER_SLOW_REGISTER_FROM_OFFSET(%c, JITTER_SLOW_REGISTER_OFFSET%i)\n",
@@ -2055,9 +2055,9 @@ jitterc_emit_interpreter_sarg_definition
       EMIT("#   define JITTER_ARG%i  JITTER_RESIDUAL_ARGUMENT_%i\n", index, residual_index);
       EMIT("    JITTER_MARK_RESIDUAL_%i_AS_SET_BY_ASSEMBLY;\n", residual_index);
       EMIT("#elif defined (JITTER_REPLICATE)\n");
-      EMIT("#   define JITTER_ARG%i  (((union jitter_word*)ip)[%i])\n", index, residual_index);
+      EMIT("#   define JITTER_ARG%i  (((union jitter_word*)jitter_ip)[%i])\n", index, residual_index);
       EMIT("#else\n");
-      EMIT("#   define JITTER_ARG%i  (((union jitter_word*)ip)[%i])\n", index, residual_index + 1);
+      EMIT("#   define JITTER_ARG%i  (((union jitter_word*)jitter_ip)[%i])\n", index, residual_index + 1);
       EMIT("#endif // #if defined(JITTER_DISPATCH_NO_THREADING)\n");
       break;
 
@@ -2443,9 +2443,9 @@ jitterc_emit_interpreter_main_function
 {
   /* Generate the actual interpreter main function. */
   EMIT("static void\n");
-  EMIT("vmprefix_interpret_or_initialize (bool initialize,\n");
-  EMIT("                                  struct jitter_program const *p,\n");
-  EMIT("                                  struct vmprefix_state * const original_state)\n");
+  EMIT("vmprefix_interpret_or_initialize (bool jitter_initialize,\n");
+  EMIT("                                  struct jitter_program const *jitter_program,\n");
+  EMIT("                                  struct vmprefix_state * const jitter_original_state)\n");
   EMIT("{\n");
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("  /* Save the values in the registers we reserved as global variables,\n");
@@ -2461,7 +2461,7 @@ jitterc_emit_interpreter_main_function
      the labels where every specialized instruction begins and ends, and their sizes
      (only when replication is enabled), to be used only at initialization. */
   EMIT("  /* Initialization.  This is only called once at startup. */\n");
-  EMIT("  if (__builtin_expect (initialize, false))\n");
+  EMIT("  if (__builtin_expect (jitter_initialize, false))\n");
   EMIT("    {\n");
   EMIT("#ifndef JITTER_DISPATCH_SWITCH\n");
   EMIT("      /* FIXME: I can do this with only one relocation, by keeping\n");
@@ -2535,7 +2535,7 @@ jitterc_emit_interpreter_main_function
   EMIT("  /* Make an automatic struct holding a copy of the state whose pointer was given.\n");
   EMIT("     The idea is that the copy should be in registers, as far as possible. */\n");
   EMIT("  struct vmprefix_state_runtime jitter_state_runtime\n");
-  EMIT("    = original_state->vmprefix_state_runtime;\n");
+  EMIT("    = jitter_original_state->vmprefix_state_runtime;\n");
 
   EMIT("  /* FIXME: this initialization should not be here. */\n");
   EMIT("  static volatile size_t slow_register_no; slow_register_no = 200;\n");
@@ -2547,7 +2547,7 @@ jitterc_emit_interpreter_main_function
   EMIT("  /* Declare the instruction pointer from the thread array, unless the dispatching\n");
   EMIT("     model is no-threading, in which case no thread array even exists. */\n");
   EMIT("#ifndef JITTER_DISPATCH_NO_THREADING\n");
-  EMIT("  vmprefix_program_point ip = NULL; /* Invalidate to catch errors. */\n");
+  EMIT("  vmprefix_program_point jitter_ip = NULL; /* Invalidate to catch errors. */\n");
   EMIT("#endif // #ifndef JITTER_DISPATCH_NO_THREADING\n\n");
 
   /* EMIT("  /\* Declare a variable to be supposedly used as a computed goto target for jumping;\n"); */
@@ -2630,7 +2630,7 @@ jitterc_emit_interpreter_main_function
   EMIT("     variables, string literals and possibly large literal constants), and\n");
   EMIT("     GDB gets easily confused. */\n");
   EMIT("  vmprefix_program_point jitter_next_program_point\n");
-  EMIT("    = VMPREFIX_PROGRAM_BEGINNING(p);\n");
+  EMIT("    = VMPREFIX_PROGRAM_BEGINNING(jitter_program);\n");
 
   EMIT("#ifdef JITTER_REPLICATE\n");
   EMIT(" jitter_dispatch_label: __attribute__ ((cold))\n");
@@ -2668,10 +2668,10 @@ jitterc_emit_interpreter_main_function
   EMIT("  asm (JITTER_ASM_COMMENT_UNIQUE(\"Pretend to alter next_program_point\"\n");
   EMIT("                                 \" at %%[next_program_point] based on\"\n");
   EMIT("                                 \" jitter_state_runtime at %%[runtime]\"\n");
-  EMIT("                                 \" and * original_state %%[original_state].\")\n");
+  EMIT("                                 \" and * jitter_original_state %%[jitter_original_state].\")\n");
   EMIT("       : [next_program_point] \"+m\" (jitter_next_program_point)\n");
   EMIT("       : [runtime] \"X\" (jitter_state_runtime)\n");
-  EMIT("         , [original_state] \"m\" (* original_state));\n");
+  EMIT("         , [jitter_original_state] \"m\" (* jitter_original_state));\n");
   EMIT("  goto * jitter_next_program_point;\n");
   EMIT("#endif // #ifdef JITTER_REPLICATE\n");
   EMIT("\n");
@@ -2682,7 +2682,7 @@ jitterc_emit_interpreter_main_function
   EMIT("  /* This is the dispatching switch.  At the beginning of the first VM\n");
   EMIT("     VM instruction and at the end of each other, control jumps here. */\n");
   EMIT(" jitter_dispatching_switch_label:\n");
-  EMIT("  switch (ip->fixnum)\n");
+  EMIT("  switch (jitter_ip->fixnum)\n");
   EMIT("    {\n");
   EMIT("#endif // #ifdef JITTER_DISPATCH_SWITCH\n");
   EMIT("\n");
@@ -2713,7 +2713,7 @@ jitterc_emit_interpreter_main_function
        "!BEGINBASICBLOCK", jitterc_mangle ("!BEGINBASICBLOCK"));
   EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY 0 // special case\n");
   EMIT("#ifdef JITTER_DISPATCH_MINIMAL_THREADING\n");
-  EMIT("    JITTER_SET_IP (ip + 1);\n");
+  EMIT("    JITTER_SET_IP (jitter_ip + 1);\n");
   EMIT("#endif // #ifdef JITTER_DISPATCH_MINIMAL_THREADING\n");
   EMIT("/* The 0 right below is a special case: the instruction actually has\n");
   EMIT("   one residual argument, but [FIXME: explain]. */\n");
@@ -2779,7 +2779,7 @@ jitterc_emit_interpreter_main_function
   EMIT("#ifdef JITTER_DISPATCH_SWITCH\n");
   EMIT("  default:\n");
   EMIT("    jitter_fatal (\"invalid opcode %%li for VM specialized instruction\",\n");
-  EMIT("                  (long) ip->fixnum);\n");
+  EMIT("                  (long) jitter_ip->fixnum);\n");
   EMIT("  } /* switch */\n");
   EMIT("#endif // #ifdef JITTER_DISPATCH_SWITCH\n");
   EMIT("\n");
@@ -2796,7 +2796,7 @@ jitterc_emit_interpreter_main_function
   EMIT("    // fprintf (stderr, \"Restoring the VM state to the struct...\\n\");\n");
   EMIT("    /* Copy the VM state from the local copy we have modified back to\n");
   EMIT("       the structure to which we received a pointer. */\n");
-  EMIT("    original_state->vmprefix_state_runtime = jitter_state_runtime;\n");
+  EMIT("    jitter_original_state->vmprefix_state_runtime = jitter_state_runtime;\n");
   EMIT("\n");
   EMIT("    // fprintf (stderr, \"Exiting the VM...\\n\");\n\n");
 
@@ -2813,6 +2813,7 @@ jitterc_emit_interpreter_main_function
   EMIT("  /* This program point is reachable for both thread initialization and\n");
   EMIT("     interpretation.  In either case it is not performance-critical. */\n");
   EMIT("  jitter_possibly_restore_registers_and_return_label: __attribute__ ((cold));\n");
+  EMIT("    //if (jitter_initialize) puts (\"-- RETURNING FROM INITIALIZATION\\n\");\n");
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("    /* Back to regular C without our reserved registers: restore the\n");
   EMIT("       values held in such registers at entry. */\n");
@@ -2853,9 +2854,9 @@ jitterc_emit_interpreter_wrappers
   EMIT("   vmprefix_threads and vmprefix_thread_sizes and just return, ignoring p and s.\n");
   EMIT("   If not initializing then interpret p in s. */\n");
   EMIT("static void\n");
-  EMIT("vmprefix_interpret_or_initialize (bool initialize,\n");
-  EMIT("                                  struct jitter_program const *p,\n");
-  EMIT("                                  struct vmprefix_state * const original_state)\n");
+  EMIT("vmprefix_interpret_or_initialize (bool jitter_initialize,\n");
+  EMIT("                                  struct jitter_program const *jitter_program,\n");
+  EMIT("                                  struct vmprefix_state * const jitter_original_state)\n");
   EMIT("__attribute__ ((noclone, noinline, no_reorder,\n");
   EMIT("                /* This attribute can be useful to enable, conditionally,\n");
   EMIT("                    on some architectures. */\n");

@@ -394,14 +394,9 @@ struct jitter_patch_in_descriptor
             : /* clobbers */                                         \
             : jitter_jump_anywhere_label /* gotolabels */)
 
-/* Every patch-in needs two inputs: the current VM state runtime (hopefully in
-   registers), and its memory counterpart.  Without these constraints GCC might
-   move operations altering such data after the patch-in, which would be
-   incorrect.
-   Those must be used as part of the input constraints for every patch-in. */
+/* The inline asm inputs to be used as part of the input constraints for every
+   patch-in. */
 #define JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE  \
-  /*[_jitter_runtime] "X" (jitter_state_runtime),*/       \
-    /*  , [_jitter_original_state] "m" (* original_state)*/ \
   [_jitter_dummy] "X" (jitter_next_program_point)
 
 
