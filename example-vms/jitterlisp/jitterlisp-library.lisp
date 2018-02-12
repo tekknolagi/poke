@@ -2200,8 +2200,8 @@
 ;;; This is provided just for symmetry, since JitterLisp's default and operator
 ;;; is already efficient, and differently from JitterLisp's or follows the Lisp
 ;;; convention.
-(define-macro (lispy-and . args)
-  `(and ,@args))
+(define lispy-and
+  and)
 
 
 
@@ -2721,13 +2721,10 @@
       xs
       (set-unite-procedure (set-with xs (car ys)) (cdr ys))))
 
-(define-associative-variadic-extension set-unite
-  set-unite-procedure set-empty)
-
-(define-constant (set-subtract xs ys)
+(define-constant (set-subtract-procedure xs ys)
   (if (null? ys)
       xs
-      (set-subtract (set-without xs (car ys)) (cdr ys))))
+      (set-subtract-procedure (set-without xs (car ys)) (cdr ys))))
 
 (define-constant (set-intersect-helper xs ys acc)
   (if (null? ys)
@@ -2742,8 +2739,14 @@
 (define-constant (set-intersect-procedure xs ys)
   (set-intersect-helper xs ys ()))
 
+;;; Define variadic extensions for the union, intersection and subtraction
+;;; operations.
+(define-associative-variadic-extension set-unite
+  set-unite-procedure set-empty)
 (define-associative-variadic-extension set-intersect
   set-intersect-procedure set-empty)
+(define-macro (set-subtract first-set . other-sets)
+  `(set-subtract-procedure ,first-set (set-unite ,@other-sets)))
 
 (define-constant (list->set list)
   ;; This relies on set-unite-procedure recurring on its second argument.

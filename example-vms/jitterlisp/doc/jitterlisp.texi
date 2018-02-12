@@ -196,7 +196,7 @@ his contact information.
 @menu
 @c What this software is and how it came to be
 * Introduction::                   What JitterLisp is and why you should care.
-* Invoking @command{jitterlisp}::  How to use the Lisp system from command line.
+* Using JitterLisp::               How to build and run the software..
 
 Reference documentation
 * Lisp data::                      The possible shapes of Lisp objects.
@@ -342,16 +342,135 @@ Documentation License, version 1.3 or later.
 @end ifset @c includelicenses
 
 
-@c Here starts the actual documentation, written in a more formal
-@c tone.  Everything from here on should be in the first person
-@c *plural*.
+@c Here starts the actual documentation, written in a slightly more formal
+@c tone but still in the first person singular.  I find it appropriate for the
+@c JitterLisp's manual to have a less formal tone than Jitter's.
 
-@c Invoking @command{jitterlisp}
+@c Using JitterLisp
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@c This node name is required by the GNU standards.
+@node Using JitterLisp
+@chapter Using JitterLisp
+@cindex usage (JitterLisp)
 
+@cindex C
+@cindex source
+@cindex distribution
+JitterLisp is written in C and in itself, and its source code is
+distributed along with Jitter as an advanced example of its use.
+
+@cindex cross compilation
+@cindex GNU build system
+@cindex GNU conventions, build system
+@cindex build system
+@cindex distribution
+@cindex Jitter
+JitterLisp has no separate distribution or build system of its own,
+but is easy to build from the Jitter build directory.  The build
+process follows the GNU conventions, and supports cross-compilation.
+
+@menu
+* Obtaining the software::                 Where to download from.
+* Building JitterLisp::                    JitterLisp is easy to build at
+                                           the same time as Jitter.
+* Installing JitterLisp::                  No need to.
+* Invoking @command{jitterlisp}::                    The command line interface.
+@end menu
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Obtaining the software
+@section Obtaining the software
+
+@cindex obtaining (JitterLisp)
+@cindex downloading (JitterLisp)
+@cindex distribution (JitterLisp)
+
+@cindex git
+JitterLisp is distributed as an example within Jitter, and can be
+obtained along with the Jitter source code.  The current web page for
+Jitter, containing a link to a publicly readable git repository, is
+on my web site at the URL @url{http://ageinghacker.net/projects/jitter/}.
+
+@cindex branch, git
+@cindex git branch
+As of early 2018 JitterLisp's development takes place on the
+@code{jitterlisp} git branch, to be merged into @code{master} as soon
+as the code approaches a stable form.
+
+@cindex feedback
+@cindex contacting the author
+@cindex author, contacting
+@cindex Luca Saiu, contacting
+@cindex Saiu, Luca, contacting
+I welcome feedback.  If you need to contact me or want to discuss about
+JitterLisp please
+@pxref{Contacting the author,,, jitter, The Jitter Manual}.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Building JitterLisp
+@section Building JitterLisp
+
+JitterLisp belongs to Jitter's examples.  The examples are not built
+by the default @command{make} target but are easy to generate by building
+the @code{examples} target from the Jitter build directory.
+
+@cindex test suite, Jitter
+@fixme{Update this and merge into the paragraph above after adding JitterLisp
+test cases to the test suite.}
+JitterLisp appears very useful as a way to stress Jitter and test its
+generated code.
+After merging the @code{jitterlisp} git branch into @code{master} I plan
+to add test cases using JitterLisp to the Jitter test suite.  At that point
+running Jitter's test suite with
+@command{make check}
+(@pxref{Running the test suite,,, jitter, The Jitter Manual})
+will become sufficient to build JitterLisp as a side effect.
+
+@cindex cross compilation
+@cindex Jitter
+@cindex GNU Coding Standards
+@cindex GNU build system
+@cindex Coding Standards, GNU
+@cindex build system, GNU
+@cindex GNU Autoconf
+@cindex GNU Automake
+@cindex Autoconf
+@cindex Automake
+@xref{Working with the Jitter sources,,, jitter, The Jitter Manual} for
+detailed building instructions.  The build system follows the GNU conventions
+and in particular the common practice and suggestions from the GNU Coding
+Standards
+(@pxref{Top,,, standards, The GNU Coding Standards}), which sets a few
+additional requirements for ``developers'' including GNU Autoconf and GNU
+Automake.
+@cindex Boehm-Demers garbage collector
+@cindex GC, Boehm-Demers
+Even if the dependency is not mandatory I strongly recommend the
+Boehm-Demers garbage collector, packaged by every modern GNU/Linux
+distributions and also easy to install from sources.  Another optional
+dependency is the GNU Readline library.
+
+@cindex cross compiling
+@cindex directory, build (Jitter)
+@cindex build directory (Jitter)
+A separate build directory is supported, and encouraged.
+Cross-compilation is also well supported.
+
+@fixme{different executables}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Installing JitterLisp
+@section Installing JitterLisp
+
+@fixme{add a jitterlisp-install target, just for resolving Libtool libraries.}
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@c This node name is required by the GNU Coding Standards.  However nothing
+@c requires it to be a *chapter* name.
 @node Invoking @command{jitterlisp}
-@chapter Invoking @command{jitterlisp}
+@section Invoking @command{jitterlisp}
 @cindex invoking
 @cindex command line
 @cindex @command{jitterlisp}, invoking
@@ -738,6 +857,7 @@ backwards-compatible way}
 * Higher order::                              Procedures working with procedures.
 * Variadic utility::                          Helpers for defining variadic macros.
 * Sets as lists::                             Sets as unordered @code{eq?}-compared lists.
+* AST operations::                            Working with Abstract Syntax Trees.
 * Input and output::                          How to read and write.
 * Unclassified::                              stuff to move
 @end menu
@@ -760,38 +880,42 @@ backwards-compatible way}
 @node Actual type checking
 @subsection Actual type cheking
 
+@fixme{``Actual'' is a terrible word to use here.}
+
 @fixme{Write.  These return a canonical boolean and never fail.}
 
 @syindex fixnum?
-@syindex boolean?
-@syindex character?
-@syindex null?
-@syindex eof?
-@syindex nothing?
-@syindex undefined?
-@syindex box?
-@syindex symbol?
-@syindex cons?
-@syindex primitive?
-@syindex primitive-macro?
-@syindex macro?
-@syindex interpreted-closure?
-@syindex compiled-closure?
 @deffn  {primitive wrapper} fixnum?
+@syindex boolean?
 @deffnx {primitive wrapper} boolean?
+@syindex character?
 @deffnx {primitive wrapper} character?
+@syindex null?
 @deffnx {primitive wrapper} null?
+@syindex eof?
 @deffnx {primitive wrapper} eof?
+@syindex nothing?
 @deffnx {primitive wrapper} nothing?
+@syindex undefined?
 @deffnx {primitive wrapper} undefined?
+@syindex box?
 @deffnx {primitive wrapper} box?
+@syindex symbol?
 @deffnx {primitive wrapper} symbol?
+@syindex cons?
 @deffnx {primitive wrapper} cons?
+@syindex primitive?
 @deffnx {primitive wrapper} primitive?
+@syindex primitive-macro?
 @deffnx {primitive wrapper} primitive-macro?
+@syindex macro?
 @deffnx {primitive wrapper} macro?
+@syindex interpreted-closure?
 @deffnx {primitive wrapper} interpreted-closure?
+@syindex compiled-closure?
 @deffnx {primitive wrapper} compiled-closure?
+@syindex ast?
+@deffnx {primitive wrapper} ast?
 @end deffn
 
 @syindex non-null?
@@ -835,16 +959,20 @@ backwards-compatible way}
 @deffn {primitive wrapper} not x
 @end deffn
 
-@syindex and
-@syindex lispy-and
-@deffn  {macro} and . clauses
-@deffnx {macro} lispy-and . clauses
+@syindex or
+@deffn  {macro} or . clauses
+@syindex lispy-or
+@deffnx {macro} lispy-or . clauses
 @end deffn
 
-@syindex or
-@syindex lispy-or
-@deffn  {macro} or . clauses
-@deffnx {macro} lispy-or . clauses
+@syindex and
+@deffn  {macro} and . clauses
+@syindex lispy-and
+@syindex lispy-or  @c Not a mistake: there is a reference.
+@deffnx {macro} lispy-and . clauses
+@fixme{@code{lispy-and} is provided just for symmetry with @code{lispy-or},
+and is in fact an alias for @code{and}, the traditional Lisp
+definition does introducing no inefficiencies in this case.}
 @end deffn
 
 @syindex boolean-canonicalize
@@ -863,32 +991,32 @@ backwards-compatible way}
 @end deffn
 
 @syindex 1+
-@syindex 1-
 @deffn  {primitive wrapper} 1+ x
+@syindex 1-
 @deffnx {primitive wrapper} 1- x
 @end deffn
 
 @syindex 2*
-@syindex 2/
-@syindex 2remainder
-@syindex 2quotient
 @deffn  {primitive wrapper} 2* x
+@syindex 2/
 @deffnx {primitive wrapper} 2/ x
+@syindex 2quotient
 @deffnx {primitive wrapper} 2quotient x
+@syindex 2remainder
 @deffnx {primitive wrapper} 2remainder x
 @end deffn
 
 @syindex primordial-+
-@syindex primordial--
-@syindex primordial-*
-@syindex primordial-/
-@syindex primordial-quotient
-@syindex primordial-remainder
 @deffn  {primitive wrapper} primordial-+ x y
+@syindex primordial--
 @deffnx {primitive wrapper} primordial-- x y
+@syindex primordial-*
 @deffnx {primitive wrapper} primordial-* x y
+@syindex primordial-/
 @deffnx {primitive wrapper} primordial-/ x y
+@syindex primordial-quotient
 @deffnx {primitive wrapper} primordial-quotient x y
+@syindex primordial-remainder
 @deffnx {primitive wrapper} primordial-remainder x y
 @end deffn
 
@@ -901,12 +1029,12 @@ backwards-compatible way}
 @end deffn
 
 @syindex +
-@syindex *
-@syindex *-by-sums
-@syindex **
 @deffn  {macro} + . args
+@syindex *
 @deffnx {macro} * . args
+@syindex *-by-sums
 @deffnx {macro} *-by-sums . args
+@syindex **
 @deffnx {macro} ** . args
 @end deffn
 
@@ -930,30 +1058,30 @@ backwards-compatible way}
 @fixme{fixnum only for the time being}
 
 @syindex zero?
-@syindex non-zero?
-@syindex positive?
-@syindex non-positive?
-@syindex negative?
-@syindex non-negative?
 @deffn  {primitive wrapper} zero? x
+@syindex non-zero?
 @deffnx {primitive wrapper} non-zero? x
+@syindex positive?
 @deffnx {primitive wrapper} positive? x
+@syindex non-positive?
 @deffnx {primitive wrapper} non-positive? x
+@syindex negative?
 @deffnx {primitive wrapper} negative? x
+@syindex non-negative?
 @deffnx {primitive wrapper} non-negative? x
 @end deffn
 
 @syindex =
-@syindex <
-@syindex >
-@syindex <=
-@syindex >=
-@syindex <>
 @deffn  {primitive wrapper} = x y
+@syindex <
 @deffnx {primitive wrapper} < x y
+@syindex >
 @deffnx {primitive wrapper} > x y
+@syindex <=
 @deffnx {primitive wrapper} <= x y
+@syindex >=
 @deffnx {primitive wrapper} >= x y
+@syindex <>
 @deffnx {primitive wrapper} <> x y
 @end deffn
 
@@ -1017,131 +1145,131 @@ backwards-compatible way}
 @end deffn
 
 @syindex car
-@syindex cdr
 @deffn  {primitive wrapper} car c
+@syindex cdr
 @deffnx {primitive wrapper} cdr c
 @end deffn
 
 @syindex caar
-@syindex cdar
-@syindex cadr
-@syindex cddr
-@syindex caaar
-@syindex cadar
-@syindex caadr
-@syindex caddr
-@syindex cdaar
-@syindex cddar
-@syindex cdadr
-@syindex cdddr
-@syindex caaaar
-@syindex caadar
-@syindex caaadr
-@syindex caaddr
-@syindex cadaar
-@syindex caddar
-@syindex cadadr
-@syindex cadddr
-@syindex cdaaar
-@syindex cdadar
-@syindex cdaadr
-@syindex cdaddr
-@syindex cddaar
-@syindex cdddar
-@syindex cddadr
-@syindex cddddr
 @deffn  {procedure} caar c
+@syindex cdar
 @deffnx {procedure} cdar c
+@syindex cadr
 @deffnx {procedure} cadr c
+@syindex cddr
 @deffnx {procedure} cddr c
+@syindex caaar
 @deffnx {procedure} caaar c
+@syindex cadar
 @deffnx {procedure} cadar c
+@syindex caadr
 @deffnx {procedure} caadr c
+@syindex caddr
 @deffnx {procedure} caddr c
+@syindex cdaar
 @deffnx {procedure} cdaar c
+@syindex cddar
 @deffnx {procedure} cddar c
+@syindex cdadr
 @deffnx {procedure} cdadr c
+@syindex cdddr
 @deffnx {procedure} cdddr c
+@syindex caaaar
 @deffnx {procedure} caaaar c
+@syindex caadar
 @deffnx {procedure} caadar c
+@syindex caaadr
 @deffnx {procedure} caaadr c
+@syindex caaddr
 @deffnx {procedure} caaddr c
+@syindex cadaar
 @deffnx {procedure} cadaar c
+@syindex caddar
 @deffnx {procedure} caddar c
+@syindex cadadr
 @deffnx {procedure} cadadr c
+@syindex cadddr
 @deffnx {procedure} cadddr c
+@syindex cdaaar
 @deffnx {procedure} cdaaar c
+@syindex cdadar
 @deffnx {procedure} cdadar c
+@syindex cdaadr
 @deffnx {procedure} cdaadr c
+@syindex cdaddr
 @deffnx {procedure} cdaddr c
+@syindex cddaar
 @deffnx {procedure} cddaar c
+@syindex cdddar
 @deffnx {procedure} cdddar c
+@syindex cddadr
 @deffnx {procedure} cddadr c
+@syindex cddddr
 @deffnx {procedure} cddddr c
 @end deffn
 
 @syindex set-car!
-@syindex set-cdr!
 @deffn  {primitive wrapper} set-car! c x
+@syindex set-cdr!
 @deffnx {primitive wrapper} set-cdr! c x
 @end deffn
 
 @syindex set-caar!
+@deffn  {procedure} set-caar! c
 @syindex set-cdar!
+@deffnx {procedure} set-cdar! c
 @syindex set-cadr!
+@deffnx {procedure} set-cadr! c
 @syindex set-cddr!
+@deffnx {procedure} set-cddr! c
 @syindex set-caaar!
+@deffnx {procedure} set-caaar! c
 @syindex set-cadar!
+@deffnx {procedure} set-cadar! c
 @syindex set-caadr!
+@deffnx {procedure} set-caadr! c
 @syindex set-caddr!
+@deffnx {procedure} set-caddr! c
 @syindex set-cdaar!
+@deffnx {procedure} set-cdaar! c
 @syindex set-cddar!
+@deffnx {procedure} set-cddar! c
 @syindex set-cdadr!
+@deffnx {procedure} set-cdadr! c
 @syindex set-cdddr!
+@deffnx {procedure} set-cdddr! c
 @syindex set-caaaar!
+@deffnx {procedure} set-caaaar! c
 @syindex set-caadar!
+@deffnx {procedure} set-caadar! c
 @syindex set-caaadr!
+@deffnx {procedure} set-caaadr! c
 @syindex set-caaddr!
+@deffnx {procedure} set-caaddr! c
 @syindex set-cadaar!
+@deffnx {procedure} set-cadaar! c
 @syindex set-caddar!
+@deffnx {procedure} set-caddar! c
 @syindex set-cadadr!
+@deffnx {procedure} set-cadadr! c
 @syindex set-cadddr!
+@deffnx {procedure} set-cadddr! c
 @syindex set-cdaaar!
+@deffnx {procedure} set-cdaaar! c
 @syindex set-cdadar!
+@deffnx {procedure} set-cdadar! c
 @syindex set-cdaadr!
+@deffnx {procedure} set-cdaadr! c
 @syindex set-cdaddr!
+@deffnx {procedure} set-cdaddr! c
 @syindex set-cddaar!
+@deffnx {procedure} set-cddaar! c
 @syindex set-cdddar!
+@deffnx {procedure} set-cdddar! c
 @syindex set-cddadr!
+@deffnx {procedure} set-cddadr! c
 @syindex set-cddddr!
-@deffn  {procedure} set-caar! c x
-@deffnx {procedure} set-cdar! c x
-@deffnx {procedure} set-cadr! c x
-@deffnx {procedure} set-cddr! c x
-@deffnx {procedure} set-caaar! c x
-@deffnx {procedure} set-cadar! c x
-@deffnx {procedure} set-caadr! c x
-@deffnx {procedure} set-caddr! c x
-@deffnx {procedure} set-cdaar! c x
-@deffnx {procedure} set-cddar! c x
-@deffnx {procedure} set-cdadr! c x
-@deffnx {procedure} set-cdddr! c x
-@deffnx {procedure} set-caaaar! c x
-@deffnx {procedure} set-caadar! c x
-@deffnx {procedure} set-caaadr! c x
-@deffnx {procedure} set-caaddr! c x
-@deffnx {procedure} set-cadaar! c x
-@deffnx {procedure} set-caddar! c x
-@deffnx {procedure} set-cadadr! c x
-@deffnx {procedure} set-cadddr! c x
-@deffnx {procedure} set-cdaaar! c x
-@deffnx {procedure} set-cdadar! c x
-@deffnx {procedure} set-cdaadr! c x
-@deffnx {procedure} set-cdaddr! c x
-@deffnx {procedure} set-cddaar! c x
-@deffnx {procedure} set-cdddar! c x
-@deffnx {procedure} set-cddadr! c x
-@deffnx {procedure} set-cddddr! c x
+@deffnx {procedure} set-cddddr! c
 @end deffn
 
 @syindex cdr-or-nil
@@ -1149,8 +1277,8 @@ backwards-compatible way}
 @end deffn
 
 @syindex improper-list
-@syindex cons*
 @deffn  {macro} improper-list first-element . more-elements
+@syindex cons*
 @deffnx {macro} cons* first-element . more-elements
 @end deffn
 
@@ -1172,8 +1300,8 @@ backwards-compatible way}
 @end deffn
 
 @syindex replicate
-@syindex make-list
 @deffn  {procedure} replicate n x
+@syindex make-list
 @deffnx {procedure} make-list n x
 @end deffn
 
@@ -1186,8 +1314,8 @@ backwards-compatible way}
 @end deffn
 
 @syindex all-but-last
-@syindex all-but-last-reversed
 @deffn  {procedure} all-but-last xs
+@syindex all-but-last-reversed
 @deffnx {procedure} all-but-last-reversed xs
 @end deffn
 
@@ -1196,16 +1324,16 @@ backwards-compatible way}
 @end deffn
 
 @syindex reverse
-@syindex reverse!
 @deffn  {procedure} reverse xs
+@syindex reverse!
 @deffnx {procedure} reverse! xs
 @end deffn
 
 @syindex append-procedure
-@syindex append!
-@syindex append-reversed
 @deffn  {procedure} append-procedure xs ys
+@syindex append-reversed
 @deffnx {procedure} append-reversed xs ys
+@syindex append!
 @deffnx {procedure} append! xs ys
 @end deffn
 
@@ -1214,12 +1342,12 @@ backwards-compatible way}
 @end deffn
 
 @syindex flatten
-@syindex flatten!
-@syindex flatten-reversed
-@syindex flatten-reversed!
 @deffn  {procedure} flatten xss
+@syindex flatten!
 @deffnx {procedure} flatten! xss
+@syindex flatten-reversed
 @deffnx {procedure} flatten-reversed xss
+@syindex flatten-reversed!
 @deffnx {procedure} flatten-reversed! xss
 @end deffn
 
@@ -1228,8 +1356,8 @@ backwards-compatible way}
 @end deffn
 
 @syindex nth-cons
-@syindex nth-cons-or-nil
 @deffn  {procedure} nth-cons xs n
+@syindex nth-cons-or-nil
 @deffnx {procedure} nth-cons-or-nil xs n
 @end deffn
 
@@ -1238,36 +1366,36 @@ backwards-compatible way}
 @end deffn
 
 @syindex take
-@syindex take-reversed
-@syindex take!
 @deffn  {procedure} take xs n
+@syindex take-reversed
 @deffnx {procedure} take-reversed xs n
+@syindex take!
 @deffnx {procedure} take! xs n
 @end deffn
 
 @syindex drop
-@syindex drop!
 @deffn  {procedure} drop xs n
+@syindex drop!
 @deffnx {procedure} drop! xs n
 @end deffn
 
 @syindex zip
-@syindex zip-reversed
 @deffn  {procedure} zip xs n
+@syindex zip-reversed
 @deffnx {procedure} zip-reversed xs n
 @end deffn
 
 @syindex unzip
-@syindex unzip-reversed
 @deffn  {procedure} unzip xs n
+@syindex unzip-reversed
 @deffnx {procedure} unzip-reversed xs n
 @end deffn
 
 @syindex map
-@syindex map-reversed
-@syindex map!
 @deffn  {procedure} map f xs
+@syindex map-reversed
 @deffnx {procedure} map-reversed f xs
+@syindex map!
 @deffnx {procedure} map! f xs
 @end deffn
 
@@ -1276,26 +1404,26 @@ backwards-compatible way}
 @end deffn
 
 @syindex fold-right
-@syindex fold-right!
 @deffn  {procedure} fold-right f xs y
+@syindex fold-right!
 @deffnx {procedure} fold-right! f xs y
 @end deffn
 
 @syindex exists?
-@syindex for-all?
 @deffn  {procedure} exists? p xs
+@syindex for-all?
 @deffnx {procedure} for-all? p xs
 @end deffn
 
 @syindex filter
-@syindex filter-reversed
 @deffn  {procedure} filter p xs
+@syindex filter-reversed
 @deffnx {procedure} filter-reversed p xs
 @end deffn
 
 @syindex range
-@syindex range-reversed
 @deffn  {procedure} range a b
+@syindex range-reversed
 @deffnx {procedure} range-reversed a b
 @end deffn
 
@@ -1312,8 +1440,8 @@ backwards-compatible way}
 @end deffn
 
 @syindex list-without
-@syindex list-without!
 @deffn  {procedure} list-without xs x
+@syindex list-without!
 @deffnx {procedure} list-without! xs x
 @end deffn
 
@@ -1340,14 +1468,14 @@ backwards-compatible way}
 @end deffn
 
 @syindex del-assq
-@syindex del-assq-noncopying
 @deffn  {procedure} del-assq key alist
+@syindex del-assq-noncopying
 @deffnx {procedure} del-assq-noncopying key alist
 @end deffn
 
 @syindex del-assq-list
-@syindex del-assq-list-noncopying
 @deffn  {procedure} del-assq-list keys alist
+@syindex del-assq-list-noncopying
 @deffnx {procedure} del-assq-list-noncopying keys alist
 @end deffn
 
@@ -1365,30 +1493,30 @@ backwards-compatible way}
 @section Higher order
 
 @syindex compose-procedure
-@syindex compose-eta
 @deffn  {procedure} compose-procedure f g
+@syindex compose-eta
 @deffnx {procedure} compose-eta f g
 @end deffn
 
 @syindex compose
-@syindex compose-pipeline
 @deffn  {macro} compose . fs
+@syindex compose-pipeline
 @deffnx {macro} compose-pipeline . fs
 @end deffn
 
 @syindex square-function
-@syindex square-function-eta
 @deffn  {procedure} square-function f
+@syindex square-function-eta
 @deffnx {procedure} square-function-eta f
 @end deffn
 
 @syindex iterate
-@syindex iterate-eta
-@syindex iterate-pre
-@syindex iterate-post
 @deffn  {procedure} iterate f n
+@syindex iterate-eta
 @deffnx {procedure} iterate-eta f n
+@syindex iterate-pre
 @deffnx {procedure} iterate-pre f n
+@syindex iterate-post
 @deffnx {procedure} iterate-post f n
 @end deffn
 
@@ -1398,17 +1526,18 @@ backwards-compatible way}
 @section Variadic utility
 
 @syindex define-left-nested-variadic-extension
-@syindex define-right-nested-variadic-extension
-@syindex define-associative-variadic-extension
 @deffn  {macro} define-left-nested-variadic-extension operator original-name neutral
+@syindex define-right-nested-variadic-extension
 @deffnx {macro} define-right-nested-variadic-extension operator original-name neutral
+@syindex define-associative-variadic-extension
 @deffnx {macro} define-associative-variadic-extension operator original-name neutral
 @end deffn
 
 @fixme{yes, the things that follow are really procedures}
+
 @syindex variadic-left-deep
-@syindex variadic-right-deep
 @deffn  {procedure} variadic-left-deep rator neutral rands
+@syindex variadic-right-deep
 @deffnx {procedure} variadic-right-deep rator neutral rands
 @end deffn
 
@@ -1417,7 +1546,178 @@ backwards-compatible way}
 @node Sets as lists
 @section Sets as lists
 
-@fixme{I've scanned the sources looking for definitions up to this point}
+@fixme{Performance caveat}
+
+@fixme{order caveat}
+
+@fixme{The word ``set'' as used here refers to a collection of objects in the
+mathematical sense, and has nothing to do with the action of ``setting'' as
+performed by @code{set-@var{thing}!} procedures.}
+
+@syindex set-empty
+@deffn {non-procedure} set-empty
+@end deffn
+
+@syindex set-empty?
+@deffn {procedure} empty? s
+@end deffn
+
+@syindex set-singleton
+@deffn {procedure} set-singleton x
+@end deffn
+
+@syindex set
+@deffn  {macro} set . elements
+@end deffn
+
+@syindex set-has?
+@deffn {procedure} set-has? s x
+@end deffn
+
+@syindex set-with
+@deffn {procedure} set-with s x
+@end deffn
+
+@syindex set-without
+@deffn {procedure} set-without s x
+@end deffn
+
+@syindex set-unite-procedure
+@deffn  {procedure} set-unite-procedure s1 s2
+@syindex set-intersect-procedure
+@deffnx {procedure} set-intersect-procedure s1 s2
+@syindex set-subtract-procedure
+@deffnx {procedure} set-subtract-procedure s1 s2
+@end deffn
+
+@syindex set-unite
+@deffn  {macro} set-unite . sets
+@syindex set-intersect
+@deffnx {macro} set-intersect . sets
+@syindex set-subtract
+@deffnx {macro} set-subtract first-set . other-sets
+@end deffn
+
+@syindex list->set
+@deffn  {procedure} list->set xs
+@end deffn
+
+@syindex set->list@r{ (non-existing procedure)}
+@fixme{No @code{set->list} is needed}.
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node AST operations
+@section AST operations
+
+@fixme{if the argument is not an AST these all fail.}
+
+@syindex ast-literal?
+@deffn  {primitive wrapper} ast-literal?
+@syindex ast-variable?
+@deffnx {primitive wrapper} ast-variable?
+@syindex ast-define?
+@deffnx {primitive wrapper} ast-define?
+@syindex ast-if?
+@deffnx {primitive wrapper} ast-if?
+@syindex ast-set!?
+@deffnx {primitive wrapper} ast-set!?
+@syindex ast-while?
+@deffnx {primitive wrapper} ast-while?
+@syindex ast-primitive?
+@deffnx {primitive wrapper} ast-primitive?
+@syindex ast-call?
+@deffnx {primitive wrapper} ast-call?
+@syindex ast-lambda?
+@deffnx {primitive wrapper} ast-lambda?
+@syindex ast-let?
+@deffnx {primitive wrapper} ast-let?
+@syindex ast-sequence?
+@deffnx {primitive wrapper} ast-sequence?
+@end deffn
+
+@fixme{types: when we fail}
+
+@syindex ast-literal
+@deffn  {primitive wrapper} ast-literal value
+@syindex ast-variable
+@deffnx {primitive wrapper} ast-variable name
+@syindex ast-define
+@deffnx {primitive wrapper} ast-define name body
+@syindex ast-if
+@deffnx {primitive wrapper} ast-if condition then else
+@syindex ast-set!
+@deffnx {primitive wrapper} ast-set! name body
+@syindex ast-while
+@deffnx {primitive wrapper} ast-while guard body
+@syindex ast-primitive
+@deffnx {primitive wrapper} ast-primitive operator operands
+@syindex ast-call
+@deffnx {primitive wrapper} ast-call operator operands
+@syindex ast-lambda
+@deffnx {primitive wrapper} ast-lambda formals body
+@syindex ast-let
+@deffnx {primitive wrapper} ast-let bound-name bound-form body
+@syindex ast-sequence
+@deffnx {primitive wrapper} ast-sequence first second
+@end deffn
+
+@fixme{these fail if the argument is not an AST or if it's an AST of the
+wrong case}
+@fixme{no destructive operations right now.  They would be easy to
+add, even if using them in an unrestricted way might destroy compiler
+properties; anyway, it is already possible to destroy the same
+compiler implied properties, by violating other unenforced invariants}
+
+@syindex ast-literal-value
+@deffn  {primitive wrapper} ast-literal-value ast
+@syindex ast-variable-name
+@deffnx {primitive wrapper} ast-variable-name ast
+@syindex ast-define-name
+@deffnx {primitive wrapper} ast-define-name ast
+@syindex ast-define-body
+@deffnx {primitive wrapper} ast-define-body ast
+@syindex ast-if-condition
+@deffnx {primitive wrapper} ast-if-condition ast
+@syindex ast-if-then
+@deffnx {primitive wrapper} ast-if-then ast
+@syindex ast-if-else
+@deffnx {primitive wrapper} ast-if-else ast
+@syindex ast-set!-name
+@deffnx {primitive wrapper} ast-set!-name ast
+@syindex ast-set!-body
+@deffnx {primitive wrapper} ast-set!-body ast
+@syindex ast-while-guard
+@deffnx {primitive wrapper} ast-while-guard ast
+@syindex ast-while-body
+@deffnx {primitive wrapper} ast-while-body ast
+@syindex ast-primitive-operator
+@deffnx {primitive wrapper} ast-primitive-operator ast
+@syindex ast-primitive-operands
+@deffnx {primitive wrapper} ast-primitive-operands ast
+@syindex ast-call-operator
+@deffnx {primitive wrapper} ast-call-operator ast
+@syindex ast-call-operands
+@deffnx {primitive wrapper} ast-call-operands ast
+@syindex ast-lambda-formals
+@deffnx {primitive wrapper} ast-lambda-formals ast
+@syindex ast-lambda-body
+@deffnx {primitive wrapper} ast-lambda-body ast
+@syindex ast-let-bound-name
+@deffnx {primitive wrapper} ast-let-bound-name ast
+@syindex ast-let-bound-form
+@deffnx {primitive wrapper} ast-let-bound-form ast
+@syindex ast-let-body
+@deffnx {primitive wrapper} ast-let-body ast
+@syindex ast-sequence-first
+@deffnx {primitive wrapper} ast-sequence-first ast
+@syindex ast-sequence-second
+@deffnx {primitive wrapper} ast-sequence-second ast
+@end deffn
+
+@fixme{An example showing a constuction, check and field access for the same case,
+to highlight the lexical conventions.}
+
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Input and output
@@ -1507,9 +1807,13 @@ No newline character or other terminator is added.
 @end deffn
 
 @syindex eq?
-@syindex not-eq?
 @deffn  {primitive wrapper} eq? x y
+@syindex not-eq?
 @deffnx {primitive wrapper} not-eq? x y
+@end deffn
+
+@syindex error
+@deffn {primitive wrapper} error x
 @end deffn
 
 
