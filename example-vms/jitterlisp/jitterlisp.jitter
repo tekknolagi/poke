@@ -3,8 +3,8 @@
 ## Copyright (C) 2017, 2018 Luca Saiu
 ## Written by Luca Saiu
 
-## This file is part of the Jittery Lisp language implementation, distributed as
-## an example along with Jitter under the same license.
+## This file is part of JitterLisp, distributed as an example along with Jitter
+## under the same license.
 
 ## Jitter is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
