@@ -852,7 +852,7 @@
 ;;;; nth-cons-or-nil.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant (nth-cons-or-nil-iterative n xs)
+(define-constant (nth-cons-or-nil-iterative xs n)
   ;; A break or return form would be useful here.  Even better I could also
   ;; iterate on an and condition, but we have no and macro yet.
   (let* ((go-on #t))
@@ -866,16 +866,16 @@
              (set! xs (cdr xs)))))
     xs))
 
-(define-constant (nth-cons-or-nil-tail-recursive n xs)
+(define-constant (nth-cons-or-nil-tail-recursive xs n)
   (cond ((zero? n)
          xs)
         ((null? xs)
          ())
         (#t
-         (nth-cons-or-nil-tail-recursive (1- n) (cdr xs)))))
+         (nth-cons-or-nil-tail-recursive (cdr xs) (1- n)))))
 
-(define-constant (nth-cons-or-nil n xs)
-  (nth-cons-or-nil-iterative n xs))
+(define-constant (nth-cons-or-nil xs n)
+  (nth-cons-or-nil-iterative xs n))
 
 
 
@@ -883,7 +883,7 @@
 ;;;; nth-cons.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant (nth-cons n xs)
+(define-constant (nth-cons xs n)
   (let* ((c (nth-cons-or-nil n xs)))
     (if (null? c)
         (error '(nth-cons: list too short))
@@ -970,7 +970,7 @@
 (define-constant (take!-iterative xs n)
   (if (zero? n)
       ()
-      (let* ((n-1-th-cons-or-nil (nth-cons-or-nil-iterative (1- n) xs)))
+      (let* ((n-1-th-cons-or-nil (nth-cons-or-nil-iterative xs (1- n))))
         (if (non-null? n-1-th-cons-or-nil)
             (set-cdr! n-1-th-cons-or-nil ()))
         xs)))
@@ -1032,7 +1032,7 @@
 (define-constant (drop! xs n)
   (if (zero? n)
       xs
-      (let* ((n-1-th-cons-or-nil (nth-cons-or-nil (1- n) xs)))
+      (let* ((n-1-th-cons-or-nil (nth-cons-or-nil xs (1- n))))
         (if (non-null? n-1-th-cons-or-nil)
             (let* ((old-cdr (cdr n-1-th-cons-or-nil)))
               (set-cdr! n-1-th-cons-or-nil ())
@@ -1972,6 +1972,10 @@
 (define-constant (iterate-tail-recursive-pre f n)
   (iterate-tail-recursive-pre-helper f n identity))
 
+(define-constant (iterate-pre f n)
+  (iterate-squaring-pre f n))
+(define-constant (iterate-post f n)
+  (iterate-squaring-post f n))
 (define-constant (iterate f n)
   (iterate-squaring-pre f n))
 
@@ -2284,11 +2288,11 @@
          `(compose-procedure ,(car args)
                              (compose ,@(cdr args))))))
 
-;;; Sometimes it is convenient to write variadic-composition procedures
-;;; in the order they are executed.  This is equivalent to compose with
-;;; its arguments in the opposite order.
-;;; The arguments of this macro are still evaluated left-to-right, in
-;;; the order they are written in the call.
+;;; Sometimes it is convenient to write variadically composed procedures
+;;; in the order they are executed.  This is equivalent to a use of the
+;;; compose macro with its arguments in the opposite order, except that
+;;; the arguments of this macro are still evaluated left-to-right, in
+;;; the order they are written in the macro use.
 (define-macro (compose-pipeline . args)
   (let ((procedure-names (map (lambda (useless) (gensym)) args)))
     `(let* ,(zip procedure-names
@@ -2298,7 +2302,7 @@
 
 
 
-;;;; Variadic list operations.
+;;;; Variadic list or pseudo-list operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Given one or more arguments return their right-deep nested conses in order,
@@ -2523,12 +2527,6 @@
          `(,rator ,(car rands)
                   ,(variadic-right-deep rator neutral (cdr rands))))))
 
-
-
-
-;;;; Variadic arithmetic.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ;;; Define operator as a variadic macro, composing the original-name rator
 ;;; (itself a procedure, variable name or macro name) with the given
 ;;; netural element.  Nest on the left.
@@ -2554,6 +2552,12 @@
   ;; With a strict left-to-right evaluation order nesting on the left yields
   ;; better stack code.
   `(define-left-nested-variadic-extension ,operator ,original-name ,neutral))
+
+
+
+
+;;;; Variadic arithmetic.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-associative-variadic-extension + primordial-+ 0)
 (define-associative-variadic-extension * primordial-* 1)
@@ -2616,7 +2620,10 @@
       (- (*-nonnegative-b-by-sums-iterative a (- b)))
       (*-nonnegative-b-by-sums-iterative a b)))
 
-(define-right-nested-variadic-extension *-by-sums *-by-sums-iterative 1)
+(define-constant (*-by-sums-procedure a b)
+  (*-by-sums-iterative a b))
+
+(define-right-nested-variadic-extension *-by-sums *-by-sums-procedure 1)
 
 
 

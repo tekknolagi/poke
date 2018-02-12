@@ -165,7 +165,7 @@ his contact information.
 @c @author Luca Saiu (@email{positron@@gnu.org}, @url{http://ageinghacker.net})
 @c @author Luca Saiu (@url{http://ageinghacker.net})
 @c @author Luca Saiu (@email{positron@@gnu.org})
-@author Luca Saiu
+@author Luca Saiu (@email{positron@@gnu.org})
 @page
 @vskip 0pt plus 1filll
 @insertcopying
@@ -301,6 +301,17 @@ succeeded and eventually grew into an independent project, Jitter.
 
 @fixme{Write this}
 
+@menu
+* epsilonian features::                  Some choices are reminiscent of GNU epsilon.
+@end menu
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node epsilonian features
+@subsection epsilonian features
+
+@fixme{Write this}
+
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node License
@@ -404,6 +415,9 @@ closure (but not vice-versa) without changing its identity.}
 @cindex AST
 @cindex Abstract Syntax Tree
 @item AST
+
+@cindex box
+@item box
 
 @cindex cons
 @item cons
@@ -674,7 +688,9 @@ times, in sequence.
 @end deffn
 
 @syindex dotimes
-@deffn {macro} dotimes (x count-form . result-forms) . body-forms
+@syindex dotimesdown
+@deffn  {macro} dotimes (x count-form . result-forms) . body-forms
+@deffnx {macro} dotimesdown (x count-form . result-forms) . body-forms
 @fixme{Write this}
 @end deffn
 
@@ -711,7 +727,18 @@ backwards-compatible way}
 
 @menu
 * Type checking::                             Testing a datum's type at run time.
+* Arithmetic::                                Operations on numbers.
+* Number comparison::                         Comparing numbers.
+* Symbol handling::                           Working with symbols.
+* Box handling::                              Working with boxes.
+* Cons handling::                             Working with conses.
+* List handling::                             Working with list-shaped objects.
+* Alist handling::                            Working with association lists.
+* Higher order::                              Procedures working with procedures.
+* Variadic utility::                          Helpers for defining variadic macros.
+* Sets as lists::                             Sets as unordered @code{eq?}-compared lists.
 * Input and output::                          How to read and write.
+* Unclassified::                              stuff to move
 @end menu
 
 
@@ -723,6 +750,621 @@ backwards-compatible way}
 @cindex checking, type
 @anchor{type-checking-procedures}
 
+@menu
+* Actual type checking::                    Testing an object type.
+* Pseudo-type checking::                    Testing an object type and shape.
+@end menu
+
+@c @@@@@@@@@@@@
+@node Actual type checking
+@subsection Actual type cheking
+
+@fixme{Write.  These return a canonical boolean and never fail.}
+
+@syindex fixnum?
+@syindex boolean?
+@syindex character?
+@syindex null?
+@syindex eof?
+@syindex nothing?
+@syindex undefined?
+@syindex box?
+@syindex cons?
+@syindex primitive?
+@syindex primitive-macro?
+@syindex macro?
+@syindex interpreted-closure?
+@syindex compiled-closure?
+@deffn  {procedure} fixnum?
+@deffnx {procedure} boolean?
+@deffnx {procedure} character?
+@deffnx {procedure} null?
+@deffnx {procedure} eof?
+@deffnx {procedure} nothing?
+@deffnx {procedure} undefined?
+@deffnx {procedure} box?
+@deffnx {procedure} cons?
+@deffnx {procedure} primitive?
+@deffnx {procedure} primitive-macro?
+@deffnx {procedure} macro?
+@deffnx {procedure} interpreted-closure?
+@deffnx {procedure} compiled-closure?
+@end deffn
+
+@c @@@@@@@@@@@@
+@node Pseudo-type checking
+@subsection Pseudo-type checking
+
+@syindex number?
+@deffn {procedure} number?
+@end deffn
+
+@syindex closure?
+@deffn {procedure} closure?
+@end deffn
+
+@syindex list?
+@deffn {procedure} list?
+@end deffn
+
+@syindex symbols?
+@deffn {procedure} symbols?
+@end deffn
+
+@syindex alist?
+@deffn {procedure} alist? x
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Arithmetic
+@section Arithmetic
+
+@fixme{fixnum only for the time being}
+
+@syindex 1+
+@syindex 1-
+@deffn  {primitive wrapper} 1+ x
+@deffnx {primitive wrapper} 1- x
+@end deffn
+
+@syindex primordial-+
+@syindex primordial--
+@syindex primordial-*
+@syindex primordial-/
+@syindex primordial-quotient
+@syindex primordial-remainder
+@deffn  {primitive wrapper} primordial-+ x y
+@deffnx {primitive wrapper} primordial-- x y
+@deffnx {primitive wrapper} primordial-* x y
+@deffnx {primitive wrapper} primordial-/ x y
+@deffnx {primitive wrapper} primordial-quotient x y
+@deffnx {primitive wrapper} primordial-remainder x y
+@end deffn
+
+@syindex *-by-sums-procedure
+@deffn {procedure} *-by-sums-procedure x y
+@end deffn
+
+@syindex **-procedure
+@deffn {procedure} **-procedure b e
+@end deffn
+
+@syindex +
+@syindex *
+@syindex *-by-sums
+@syindex **
+@deffn  {macro} + . args
+@deffnx {macro} * . args
+@deffnx {macro} *-by-sums . args
+@deffnx {macro} ** . args
+@end deffn
+
+@syindex -
+@deffn {macro} - . args
+@end deffn
+
+@syindex /
+@deffn {macro} / . args
+@end deffn
+
+@syindex square
+@deffn {procedure} square x
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Number comparison
+@section Number comparison
+
+@fixme{fixnum only for the time being}
+
+@syindex zero?
+@syindex non-zero?
+@syindex positive?
+@syindex non-positive?
+@syindex negative?
+@syindex non-negative?
+@deffn  {primitive wrapper} zero? x
+@deffnx {primitive wrapper} non-zero? x
+@deffnx {primitive wrapper} positive? x
+@deffnx {primitive wrapper} non-positive? x
+@deffnx {primitive wrapper} negative? x
+@deffnx {primitive wrapper} non-negative? x
+@end deffn
+
+@syindex =
+@syindex <
+@syindex >
+@syindex <=
+@syindex >=
+@syindex <>
+@deffn  {primitive wrapper} = x y
+@deffnx {primitive wrapper} < x y
+@deffnx {primitive wrapper} > x y
+@deffnx {primitive wrapper} <= x y
+@deffnx {primitive wrapper} >= x y
+@deffnx {primitive wrapper} <> x y
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Symbol handling
+@section Symbol handling
+
+@syindex gensym
+@deffn {primitive wrapper} gensym
+@end deffn
+
+@syindex constant?
+@deffn {primitive wrapper} constant? s
+@end deffn
+
+@syindex defined?
+@deffn {primitive wrapper} defined? s
+@end deffn
+
+@syindex undefine
+@deffn {primitive wrapper} undefine s
+@end deffn
+
+@syindex interned-symbols
+@deffn {primitive wrapper} interned-symbols
+@end deffn
+
+@syindex symbol-global
+@deffn {primitive wrapper} symbol-global s
+@end deffn
+
+@syindex make-constant!
+@deffn {primitive wrapper} make-constant! s
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Box handling
+@section Box handling
+
+@syindex box
+@deffn {primitive wrapper} box x
+@end deffn
+
+@syindex box-get
+@deffn {primitive wrapper} box-get b
+@end deffn
+
+@syindex box-set!
+@deffn {primitive wrapper} box-set! b x
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Cons handling
+@section Cons handling
+
+@syindex cons
+@deffn {primitive wrapper} cons a b
+@end deffn
+
+@syindex car
+@syindex cdr
+@deffn  {primitive wrapper} car c
+@deffnx {primitive wrapper} cdr c
+@end deffn
+
+@syindex caar
+@syindex cdar
+@syindex cadr
+@syindex cddr
+@syindex caaar
+@syindex cadar
+@syindex caadr
+@syindex caddr
+@syindex cdaar
+@syindex cddar
+@syindex cdadr
+@syindex cdddr
+@syindex caaaar
+@syindex caadar
+@syindex caaadr
+@syindex caaddr
+@syindex cadaar
+@syindex caddar
+@syindex cadadr
+@syindex cadddr
+@syindex cdaaar
+@syindex cdadar
+@syindex cdaadr
+@syindex cdaddr
+@syindex cddaar
+@syindex cdddar
+@syindex cddadr
+@syindex cddddr
+@deffn  {procedure} caar c
+@deffnx {procedure} cdar c
+@deffnx {procedure} cadr c
+@deffnx {procedure} cddr c
+@deffnx {procedure} caaar c
+@deffnx {procedure} cadar c
+@deffnx {procedure} caadr c
+@deffnx {procedure} caddr c
+@deffnx {procedure} cdaar c
+@deffnx {procedure} cddar c
+@deffnx {procedure} cdadr c
+@deffnx {procedure} cdddr c
+@deffnx {procedure} caaaar c
+@deffnx {procedure} caadar c
+@deffnx {procedure} caaadr c
+@deffnx {procedure} caaddr c
+@deffnx {procedure} cadaar c
+@deffnx {procedure} caddar c
+@deffnx {procedure} cadadr c
+@deffnx {procedure} cadddr c
+@deffnx {procedure} cdaaar c
+@deffnx {procedure} cdadar c
+@deffnx {procedure} cdaadr c
+@deffnx {procedure} cdaddr c
+@deffnx {procedure} cddaar c
+@deffnx {procedure} cdddar c
+@deffnx {procedure} cddadr c
+@deffnx {procedure} cddddr c
+@end deffn
+
+@syindex set-car!
+@syindex set-cdr!
+@deffn  {primitive wrapper} set-car! c x
+@deffnx {primitive wrapper} set-cdr! c x
+@end deffn
+
+@syindex set-caar!
+@syindex set-cdar!
+@syindex set-cadr!
+@syindex set-cddr!
+@syindex set-caaar!
+@syindex set-cadar!
+@syindex set-caadr!
+@syindex set-caddr!
+@syindex set-cdaar!
+@syindex set-cddar!
+@syindex set-cdadr!
+@syindex set-cdddr!
+@syindex set-caaaar!
+@syindex set-caadar!
+@syindex set-caaadr!
+@syindex set-caaddr!
+@syindex set-cadaar!
+@syindex set-caddar!
+@syindex set-cadadr!
+@syindex set-cadddr!
+@syindex set-cdaaar!
+@syindex set-cdadar!
+@syindex set-cdaadr!
+@syindex set-cdaddr!
+@syindex set-cddaar!
+@syindex set-cdddar!
+@syindex set-cddadr!
+@syindex set-cddddr!
+@deffn  {procedure} set-caar! c x
+@deffnx {procedure} set-cdar! c x
+@deffnx {procedure} set-cadr! c x
+@deffnx {procedure} set-cddr! c x
+@deffnx {procedure} set-caaar! c x
+@deffnx {procedure} set-cadar! c x
+@deffnx {procedure} set-caadr! c x
+@deffnx {procedure} set-caddr! c x
+@deffnx {procedure} set-cdaar! c x
+@deffnx {procedure} set-cddar! c x
+@deffnx {procedure} set-cdadr! c x
+@deffnx {procedure} set-cdddr! c x
+@deffnx {procedure} set-caaaar! c x
+@deffnx {procedure} set-caadar! c x
+@deffnx {procedure} set-caaadr! c x
+@deffnx {procedure} set-caaddr! c x
+@deffnx {procedure} set-cadaar! c x
+@deffnx {procedure} set-caddar! c x
+@deffnx {procedure} set-cadadr! c x
+@deffnx {procedure} set-cadddr! c x
+@deffnx {procedure} set-cdaaar! c x
+@deffnx {procedure} set-cdadar! c x
+@deffnx {procedure} set-cdaadr! c x
+@deffnx {procedure} set-cdaddr! c x
+@deffnx {procedure} set-cddaar! c x
+@deffnx {procedure} set-cdddar! c x
+@deffnx {procedure} set-cddadr! c x
+@deffnx {procedure} set-cddddr! c x
+@end deffn
+
+@syindex cdr-or-nil
+@deffn {procedure} cdr-or-nil c
+@end deffn
+
+@syindex improper-list
+@syindex cons*
+@deffn  {macro} improper-list first-element . more-elements
+@deffnx {macro} cons* first-element . more-elements
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node List handling
+@section List handling
+
+@syindex singleton
+@deffn {procedure} singleton
+@end deffn
+
+@syindex list
+@deffn {macro} list . elements
+@end deffn
+
+@syindex circular-list
+@deffn {macro} circular-list first-element . more-elements
+@end deffn
+
+@syindex replicate
+@syindex make-list
+@deffn  {procedure} replicate n x
+@deffnx {procedure} make-list n x
+@end deffn
+
+@syindex last-cons
+@deffn {procedure} last-cons xs
+@end deffn
+
+@syindex last
+@deffn {procedure} last xs
+@end deffn
+
+@syindex all-but-last
+@syindex all-but-last-reversed
+@deffn  {procedure} all-but-last xs
+@deffnx {procedure} all-but-last-reversed xs
+@end deffn
+
+@syindex length
+@deffn {procedure} length xs
+@end deffn
+
+@syindex reverse
+@syindex reverse!
+@deffn  {procedure} reverse xs
+@deffnx {procedure} reverse! xs
+@end deffn
+
+@syindex append
+@syindex append!
+@syindex append-reversed
+@deffn  {procedure} append xs ys
+@deffnx {procedure} append-reversed xs ys
+@deffnx {procedure} append! xs ys
+@fixme{Update this after I make append a variadic macro}
+@end deffn
+
+@syindex flatten
+@syindex flatten!
+@syindex flatten-reversed
+@syindex flatten-reversed!
+@deffn  {procedure} flatten xss
+@deffnx {procedure} flatten! xss
+@deffnx {procedure} flatten-reversed xss
+@deffnx {procedure} flatten-reversed! xss
+@end deffn
+
+@syindex list-copy
+@deffn {procedure} list-copy xs
+@end deffn
+
+@syindex nth-cons
+@syindex nth-cons-or-nil
+@deffn  {procedure} nth-cons xs n
+@deffnx {procedure} nth-cons-or-nil xs n
+@end deffn
+
+@syindex nth
+@deffn {procedure} nth xs n
+@end deffn
+
+@syindex take
+@syindex take-reversed
+@syindex take!
+@deffn  {procedure} take xs n
+@deffnx {procedure} take-reversed xs n
+@deffnx {procedure} take! xs n
+@end deffn
+
+@syindex drop
+@syindex drop!
+@deffn  {procedure} drop xs n
+@deffnx {procedure} drop! xs n
+@end deffn
+
+@syindex zip
+@syindex zip-reversed
+@deffn  {procedure} zip xs n
+@deffnx {procedure} zip-reversed xs n
+@end deffn
+
+@syindex unzip
+@syindex unzip-reversed
+@deffn  {procedure} unzip xs n
+@deffnx {procedure} unzip-reversed xs n
+@end deffn
+
+@syindex map
+@syindex map-reversed
+@syindex map!
+@deffn  {procedure} map f xs
+@deffnx {procedure} map-reversed f xs
+@deffnx {procedure} map! f xs
+@end deffn
+
+@syindex fold-left
+@deffn {procedure} fold-left f x xs
+@end deffn
+
+@syindex fold-right
+@syindex fold-right!
+@deffn  {procedure} fold-right f xs y
+@deffnx {procedure} fold-right! f xs y
+@end deffn
+
+@syindex exists?
+@syindex for-all?
+@deffn  {procedure} exists? p xs
+@deffnx {procedure} for-all? p xs
+@end deffn
+
+@syindex filter
+@syindex filter-reversed
+@deffn  {procedure} filter p xs
+@deffnx {procedure} filter-reversed p xs
+@end deffn
+
+@syindex range
+@syindex range-reversed
+@deffn  {procedure} range a b
+@deffnx {procedure} range-reversed a b
+@end deffn
+
+@syindex iota
+@deffn {procedure} iota n
+@end deffn
+
+@syindex sort
+@deffn {procedure} sort xs
+@end deffn
+
+@syindex list-has?
+@deffn {procedure} list-has? xs x
+@end deffn
+
+@syindex list-without
+@syindex list-without!
+@deffn  {procedure} list-without xs x
+@deffnx {procedure} list-without! xs x
+@end deffn
+
+@syindex all-different?
+@deffn {procedure} all-different?
+@fixme{quadratic}
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Alist handling
+@section Alist handling
+
+@syindex assq
+@deffn {procedure} assq key alist
+@end deffn
+
+@syindex rassq
+@deffn {procedure} rassq value alist
+@end deffn
+
+@syindex del-assq-1
+@deffn {procedure} del-assq-1 key alist
+@end deffn
+
+@syindex del-assq
+@syindex del-assq-noncopying
+@deffn  {procedure} del-assq key alist
+@deffnx {procedure} del-assq-noncopying key alist
+@end deffn
+
+@syindex del-assq-list
+@syindex del-assq-list-noncopying
+@deffn  {procedure} del-assq-list keys alist
+@deffnx {procedure} del-assq-list-noncopying keys alist
+@end deffn
+
+@syindex alist-copy
+@deffn {procedure} alist-copy alist
+@end deffn
+
+@syindex alist-get
+@deffn {procedure} alist-get key alist
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Higher order
+@section Higher order
+
+@syindex compose-procedure
+@syindex compose-eta
+@deffn  {procedure} compose-procedure f g
+@deffnx {procedure} compose-eta f g
+@end deffn
+
+@syindex compose
+@syindex compose-pipeline
+@deffn  {macro} compose . fs
+@deffnx {macro} compose-pipeline . fs
+@end deffn
+
+@syindex square-function
+@syindex square-function-eta
+@deffn  {procedure} square-function f
+@deffnx {procedure} square-function-eta f
+@end deffn
+
+@syindex iterate
+@syindex iterate-eta
+@syindex iterate-pre
+@syindex iterate-post
+@deffn  {procedure} iterate f n
+@deffnx {procedure} iterate-eta f n
+@deffnx {procedure} iterate-pre f n
+@deffnx {procedure} iterate-post f n
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Variadic utility
+@section Variadic utility
+
+@syindex define-left-nested-variadic-extension
+@syindex define-right-nested-variadic-extension
+@syindex define-associative-variadic-extension
+@deffn  {macro} define-left-nested-variadic-extension operator original-name neutral
+@deffnx {macro} define-right-nested-variadic-extension operator original-name neutral
+@deffnx {macro} define-associative-variadic-extension operator original-name neutral
+@end deffn
+
+@fixme{yes, the things that follow are really procedures}
+@syindex variadic-left-deep
+@syindex variadic-right-deep
+@deffn  {procedure} variadic-left-deep rator neutral rands
+@deffnx {procedure} variadic-right-deep rator neutral rands
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Sets as lists
+@section Sets as lists
+
+@fixme{I've scanned the sources looking for definitions up to this point}
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Input and output
@@ -800,6 +1442,19 @@ Error out on syntax error, or if a second object starts after the first.
 @deffn {primitive wrapper} display thing
 Emit the printed representation of @var{thing} to the standard output.
 No newline character or other terminator is added.
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Unclassified
+@section Unclassified (move)
+
+@syindex identity
+@deffn {procedure} identity x
+@end deffn
+
+@syindex eq?
+@deffn {primitive wrapper} eq? x y
 @end deffn
 
 
