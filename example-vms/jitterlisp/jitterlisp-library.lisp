@@ -201,7 +201,7 @@
 
 (define-constant (qq-append xs ys)
   (if (list? xs)
-      (append xs ys)
+      (append-procedure xs ys)
       (error '(unquote-splicing argument evaluates to non-list))))
 
 (define-constant (qq-atom x)
@@ -244,9 +244,9 @@
                       ''unquote-splicing
                       (qq-recursive x-cdr (1- depth))))))
         (#t
-         ;;`(append ,(qq-recursive-as-car x-car depth)
-         ;;         ,(qq-recursive x-cdr depth))
-         (list3 'append ;; no qq-append here: qq-recursive-as-car returns a list.
+         ;;`(append-procedure ,(qq-recursive-as-car x-car depth)
+         ;;                   ,(qq-recursive x-cdr depth))
+         (list3 'append-procedure ;; no qq-append here: qq-recursive-as-car returns a list.
                 (qq-recursive-as-car x-car depth)
                 (qq-recursive x-cdr depth)))))
 
@@ -310,10 +310,10 @@
                            ''unquote-splicing
                            (qq-recursive x-cdr (1- depth))))))
         (#t
-         ;;`(list (append ,(qq-recursive-as-car x-car depth)
-         ;;               ,(qq-recursive x-cdr depth))))
+         ;;`(list (append-procedure ,(qq-recursive-as-car x-car depth)
+         ;;                         ,(qq-recursive x-cdr depth))))
          (list2 'list1
-                (list3 'append
+                (list3 'append-procedure
                        (qq-recursive-as-car x-car depth)
                        (qq-recursive x-cdr depth))))))
 
@@ -607,14 +607,14 @@
 (define-constant (reverse-iterative xs)
   (append-reversed-iterative xs ()))
 
-;; This uses append instead of append-non-tail-recursive .
+;; This uses append-procedure instead of append-non-tail-recursive .
 (define-constant (reverse-non-tail-recursive xs)
   (if (null? xs)
       ()
-      (append (reverse-non-tail-recursive (cdr xs))
-              (singleton (car xs)))))
+      (append-procedure (reverse-non-tail-recursive (cdr xs))
+                        (singleton (car xs)))))
 
-;; This uses append-non-tail-recursive instead of append .
+;; This uses append-non-tail-recursive instead of append-procedure .
 (define-constant (reverse-really-non-tail-recursive xs)
   (if (null? xs)
       ()
@@ -687,7 +687,7 @@
   (append-reversed-tail-recursive (reverse-tail-recursive xs)
                                   ys))
 
-(define-constant (append xs ys)
+(define-constant (append-procedure xs ys)
   (append-iterative xs ys))
 
 
@@ -2223,8 +2223,8 @@
                                        (map cdr bindings)))
          (user-variable-bindings (zip (map car bindings)
                                       (map singleton fresh-variables))))
-    `(let* ,(append fresh-variable-bindings
-                    user-variable-bindings)
+    `(let* ,(append-procedure fresh-variable-bindings
+                              user-variable-bindings)
        ,@body-forms)))
 
 
@@ -2678,12 +2678,8 @@
 ;;;; Variadic list operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-constant previous-append append)
-
-;; FIXME: rename the append operator above in quasiquoting functions before
-;; renaming this to append.
-;; Calls in code which is already in AST form will be affected otherwise.
-(define-right-nested-variadic-extension variadic-append previous-append ())
+;;; Define a variadic version of append, now finally named append.
+(define-right-nested-variadic-extension append append-procedure ())
 
 
 
@@ -4339,23 +4335,27 @@
   (cond ;; Successor and predecessor; multiplication, division and remainder by
         ;; two.
         ((and (eq? primitive primitive-primordial-+) (ast-one? (car operands)))
-         ;; [primitive + 1 E] ==> [primitive 1+ E]
+         ;; [primitive primordial-+ 1 E] ==> [primitive 1+ E]
          (ast-optimize-primitive primitive-1+ (list (cadr operands))))
         ((and (eq? primitive primitive-primordial-+) (ast-one? (cadr operands)))
-         ;; [primitive + E 1] ==> [primitive 1+ E]
+         ;; [primitive primordial-+ E 1] ==> [primitive 1+ E]
          (ast-optimize-primitive primitive-1+ (list (car operands))))
         ((and (eq? primitive primitive-primordial-*) (ast-two? (car operands)))
-         ;; [primitive * 2 E] ==> [primitive 2* E]
+         ;; [primitive primordial-* 2 E] ==> [primitive 2* E]
          (ast-optimize-primitive primitive-2* (list (cadr operands))))
         ((and (eq? primitive primitive-primordial-*) (ast-two? (cadr operands)))
-         ;; [primitive * E 2] ==> [primitive 2* E]
+         ;; [primitive primordial-* E 2] ==> [primitive 2* E]
          (ast-optimize-primitive primitive-2* (list (car operands))))
         ((and (eq? primitive primitive-primordial--) (ast-one? (cadr operands)))
-         ;; [primitive - E 1] ==> [primitive 1- E]
+         ;; [primitive primordial-- E 1] ==> [primitive 1- E]
          (ast-optimize-primitive primitive-1- (list (car operands))))
         ((and (eq? primitive primitive-primordial-/) (ast-two? (cadr operands)))
-         ;; [primitive / E 2] ==> [primitive 2/ E]
+         ;; [primitive primordial-/ E 2] ==> [primitive 2/ E]
          (ast-optimize-primitive primitive-2/ (list (car operands))))
+        ((and (eq? primitive primitive-quotient)
+              (ast-two? (cadr operands)))
+         ;; [primitive quotient E 2] ==> [primitive 2quotient E]
+         (ast-optimize-primitive primitive-2quotient (list (car operands))))
         ((and (eq? primitive primitive-remainder) (ast-two? (cadr operands)))
          ;; [primitive remainder E 2] ==> [primitive 2remainder E]
          (ast-optimize-primitive primitive-2remainder (list (car operands))))

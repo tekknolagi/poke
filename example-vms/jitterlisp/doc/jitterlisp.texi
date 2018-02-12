@@ -727,6 +727,7 @@ backwards-compatible way}
 
 @menu
 * Type checking::                             Testing a datum's type at run time.
+* Boolean operations::                        Working with booleans.
 * Arithmetic::                                Operations on numbers.
 * Number comparison::                         Comparing numbers.
 * Symbol handling::                           Working with symbols.
@@ -769,26 +770,36 @@ backwards-compatible way}
 @syindex nothing?
 @syindex undefined?
 @syindex box?
+@syindex symbol?
 @syindex cons?
 @syindex primitive?
 @syindex primitive-macro?
 @syindex macro?
 @syindex interpreted-closure?
 @syindex compiled-closure?
-@deffn  {procedure} fixnum?
-@deffnx {procedure} boolean?
-@deffnx {procedure} character?
-@deffnx {procedure} null?
-@deffnx {procedure} eof?
-@deffnx {procedure} nothing?
-@deffnx {procedure} undefined?
-@deffnx {procedure} box?
-@deffnx {procedure} cons?
-@deffnx {procedure} primitive?
-@deffnx {procedure} primitive-macro?
-@deffnx {procedure} macro?
-@deffnx {procedure} interpreted-closure?
-@deffnx {procedure} compiled-closure?
+@deffn  {primitive wrapper} fixnum?
+@deffnx {primitive wrapper} boolean?
+@deffnx {primitive wrapper} character?
+@deffnx {primitive wrapper} null?
+@deffnx {primitive wrapper} eof?
+@deffnx {primitive wrapper} nothing?
+@deffnx {primitive wrapper} undefined?
+@deffnx {primitive wrapper} box?
+@deffnx {primitive wrapper} symbol?
+@deffnx {primitive wrapper} cons?
+@deffnx {primitive wrapper} primitive?
+@deffnx {primitive wrapper} primitive-macro?
+@deffnx {primitive wrapper} macro?
+@deffnx {primitive wrapper} interpreted-closure?
+@deffnx {primitive wrapper} compiled-closure?
+@end deffn
+
+@syindex non-null?
+@syindex non-cons?
+@syindex non-symbol?
+@deffn  {primitive wrapper} non-null?
+@deffnx {primitive wrapper} non-cons?
+@deffnx {primitive wrapper} non-symbol?
 @end deffn
 
 @c @@@@@@@@@@@@
@@ -817,15 +828,54 @@ backwards-compatible way}
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Boolean operations
+@section Boolean operations
+
+@syindex not
+@deffn {primitive wrapper} not x
+@end deffn
+
+@syindex and
+@syindex lispy-and
+@deffn  {macro} and . clauses
+@deffnx {macro} lispy-and . clauses
+@end deffn
+
+@syindex or
+@syindex lispy-or
+@deffn  {macro} or . clauses
+@deffnx {macro} lispy-or . clauses
+@end deffn
+
+@syindex boolean-canonicalize
+@deffn {primitive wrapper} boolean-canonicalize x
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Arithmetic
 @section Arithmetic
 
 @fixme{fixnum only for the time being}
 
+@syindex negate
+@deffn  {primitive wrapper} negate x
+@end deffn
+
 @syindex 1+
 @syindex 1-
 @deffn  {primitive wrapper} 1+ x
 @deffnx {primitive wrapper} 1- x
+@end deffn
+
+@syindex 2*
+@syindex 2/
+@syindex 2remainder
+@syindex 2quotient
+@deffn  {primitive wrapper} 2* x
+@deffnx {primitive wrapper} 2/ x
+@deffnx {primitive wrapper} 2quotient x
+@deffnx {primitive wrapper} 2remainder x
 @end deffn
 
 @syindex primordial-+
@@ -1151,13 +1201,16 @@ backwards-compatible way}
 @deffnx {procedure} reverse! xs
 @end deffn
 
-@syindex append
+@syindex append-procedure
 @syindex append!
 @syindex append-reversed
-@deffn  {procedure} append xs ys
+@deffn  {procedure} append-procedure xs ys
 @deffnx {procedure} append-reversed xs ys
 @deffnx {procedure} append! xs ys
-@fixme{Update this after I make append a variadic macro}
+@end deffn
+
+@syindex append
+@deffn  {macro} append . xss
 @end deffn
 
 @syindex flatten
@@ -1454,7 +1507,9 @@ No newline character or other terminator is added.
 @end deffn
 
 @syindex eq?
-@deffn {primitive wrapper} eq? x y
+@syindex not-eq?
+@deffn  {primitive wrapper} eq? x y
+@deffnx {primitive wrapper} not-eq? x y
 @end deffn
 
 
