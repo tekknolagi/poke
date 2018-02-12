@@ -302,8 +302,59 @@ succeeded and eventually grew into an independent project, Jitter.
 @fixme{Write this}
 
 @menu
-* epsilonian features::                  Some choices are reminiscent of GNU epsilon.
+* Comparison with other Lisps::     Some features come from Common Lisp and Scheme.
+* Simplifications::                 What JitterLisp lacks and why.
+* epsilonian features::             Others are reminiscent of GNU epsilon.
 @end menu
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Comparison with other Lisps
+@subsection Comparison with other Lisps
+
+@fixme{@code{define} operating at the top level, like Common Lisp's
+@code{defun} but differently from Scheme}
+
+@fixme{both interpreted and compiled closures, like in many Common Lisp
+implementations, interoperable; compilation on the fly}
+
+@fixme{proper sibling call support like in Scheme, except when calling
+compiled code from interpreted code or vice-versa}
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Simplifications
+@subsection Simplifications
+
+@menu
+* Intentionally omitted features::            What I didn't include, on purpose.
+* Desirable but not implemented features::    What I would like to include.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Intentionally omitted features
+@subsubsection Intentionally omitted features
+
+@fixme{no @code{values}}
+
+@fixme{no continuations}
+
+@fixme{no exceptions}
+
+@fixme{no variadic procedures (but I do have variadic macros)}
+
+@fixme{no OO}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Desirable but not implemented features
+@subsubsection Desirable but not implemented features
+
+@fixme{no stack traces}
+
+@fixme{no type dispatching}
+
+@fixme{only a small library}
+
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -311,6 +362,9 @@ succeeded and eventually grew into an independent project, Jitter.
 @subsection epsilonian features
 
 @fixme{Write this}
+
+@xref{Interaction example} for a quick demo session introducing most
+of the non-traditional features which might surprise a Lisp user.
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -374,6 +428,8 @@ process follows the GNU conventions, and supports cross-compilation.
                                            the same time as Jitter.
 * Installing JitterLisp::                  No need to.
 * Invoking @command{jitterlisp}::                    The command line interface.
+* Interaction example::                    A demo session showing the main
+                                           features.
 @end menu
 
 
@@ -465,6 +521,26 @@ Cross-compilation is also well supported.
 
 @fixme{add a jitterlisp-install target, just for resolving Libtool libraries.}
 
+@cindex installing
+The Jitter build system does not support installing examples at the
+present time.
+
+As a workaround it is possible to configure JitterLisp
+to generate static libraries only by configuring with
+@option{--disable-shared},
+and then build the examples.  Each JitterLisp executable will be one
+self-contained file with no external run-time dependencies, easy to
+copy by hand into some directory from @env{PATH}.
+@cindex library file, JitterLisp
+@cindex license, text in JitterLisp executables
+@cindex GPL
+@cindex GNU General Public License
+If JitterLisp libraries are statically linked and every dynamic
+library is installed then the JitterLisp executables will not access
+any other file by default: the JitterLisp library file and the GPL
+license text are in fact embedded as byte vectors within the compiled
+file (@pxref{constant-strings}).
+
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @c This node name is required by the GNU Coding Standards.  However nothing
@@ -476,6 +552,26 @@ Cross-compilation is also well supported.
 @cindex @command{jitterlisp}, invoking
 
 @fixme{Write this}
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Interaction example
+@section Interaction example
+
+@fixme{Write this}
+
+@fixme{@code{+} is a macro}
+
+@fixme{look at an interpreted closure}
+
+@fixme{@code{macroexpand}}
+
+@fixme{do some simple computation over ASTs}
+
+@fixme{optimize explicitly}
+
+@fixme{optimize retroactively}
+
 
 
 @c Lisp language form reference
@@ -1823,6 +1919,7 @@ No newline character or other terminator is added.
 @node Internals
 @chapter Internals
 
+@anchor{constant-strings}
 @fixme{Write this}
 
 
