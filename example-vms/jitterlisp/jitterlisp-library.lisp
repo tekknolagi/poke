@@ -3,7 +3,7 @@
 ;;; Copyright (C) 2017, 2018 Luca Saiu
 ;;; Written by Luca Saiu
 
-;;; This file is part of the Jittery Lisp language implementation, distributed as
+;;; This file is part of the JitterLisp language implementation, distributed as
 ;;; an example along with Jitter under the same license.
 
 ;;; Jitter is free software: you can redistribute it and/or modify
@@ -1070,29 +1070,30 @@
 ;;; I've discovered Emacs Lisp's seq-let , less powerful but conceptually very
 ;;; similar, only now in 2017.
 
-;;; Return the result of destructuring-bind with the given formal template bound
+;;; Return the result of destructuring-bind with the given formal pattern bound
 ;;; to low-level-macro-args or some sub-component of it.  The result is code,
 ;;; not executed by this function: of course we cannot do that until we have an
 ;;; actual value for low-level-macro-args .
 ;;; Notice that component may be evaluated multiple times in the returned code,
 ;;; and therefore should be a literal or a variable.  This is ensured out of
 ;;; this recursive procedure, by calling it with an appropriate actual.
-(define-constant (destructuring-bind-recursive formals-template
+;;; Common Lisp calls "template" what we call "pattern" here.
+(define-constant (destructuring-bind-recursive formals-pattern
                                                component
                                                body-forms)
-  (cond ((null? formals-template)
-         ;; There is nothing to bind in the template.  Return code to check
+  (cond ((null? formals-pattern)
+         ;; There is nothing to bind in the pattern.  Return code to check
          ;; that there are also no actuals, and then either proceeds or fails.
          `(if (null? ,component)
               (begin
                 ,@body-forms)
               (error `(destructuring-bind: excess actuals: ,,component))))
-        ((symbol? formals-template)
-         ;; The macro template is dotted, or this is a recursive call on a
-         ;; template car: in either case bind one variable to every actual.
-         `(let* ((,formals-template ,component))
+        ((symbol? formals-pattern)
+         ;; The macro pattern is dotted, or this is a recursive call on a
+         ;; pattern car: in either case bind one variable to every actual.
+         `(let* ((,formals-pattern ,component))
             ,@body-forms))
-        ((cons? formals-template)
+        ((cons? formals-pattern)
          ;; Bind both the car and the cdr.  For efficiency's sake name the two
          ;; sub-components in the generated code.
          (let* ((car-name (gensym))
@@ -1100,23 +1101,23 @@
            `(let* ((,car-name (car ,component))
                    (,cdr-name (cdr ,component)))
               ,(destructuring-bind-recursive
-                  (car formals-template)
+                  (car formals-pattern)
                   car-name
                   ;; The inner quasiquoting serves to make a (singleton) list of
                   ;; the body forms.
-                  `(,(destructuring-bind-recursive (cdr formals-template)
+                  `(,(destructuring-bind-recursive (cdr formals-pattern)
                                                    cdr-name
                                                    body-forms))))))
-        ((vector? formals-template)
-         (error `(vector ,formals-template in macro formals template)))
+        ((vector? formals-pattern)
+         (error `(vector ,formals-pattern in macro formals pattern)))
         (#t
-         ;; The template is, hopefully, something which can be compared with eq?
+         ;; The pattern is, hopefully, something which can be compared with eq?
          ;; .  Return code checking that it's equal to the actual and in that
          ;; case proceeds without binding anything.
-         `(if (eq? ,formals-template ,component)
+         `(if (eq? ,formals-pattern ,component)
               (begin
                 ,@body-forms)
-              (error `(non-matching template argument: ,formals-template
+              (error `(non-matching pattern argument: ,formals-pattern
                                     ,component))))))
 
 ;;; The args argument represents "actuals" in a symbolic form; their values
@@ -1128,14 +1129,14 @@
 ;;;   '((display a) (display b)))
 ;;; This would return code binding a and b as local variable to the car and
 ;;; cadr of some-arguments, assumed to be bound, and display them.
-(define-constant (destructuring-bind-procedure formals-template args body-forms)
+(define-constant (destructuring-bind-procedure formals-pattern args body-forms)
   (let* ((args-value-name (gensym)))
     `(let* ((,args-value-name ,args))
-       ,(destructuring-bind-recursive formals-template
+       ,(destructuring-bind-recursive formals-pattern
                                       args-value-name
                                       body-forms))))
 
-;; FIXME: check that the formals-template doesn't require non-linear bindings.
+;; FIXME: check that the formals-pattern doesn't require non-linear bindings.
 
 
 
@@ -1146,15 +1147,15 @@
 ;;; This will be convenient to define high-level macros on top of low-level
 ;;; macros, by destructuring the one low-level macro argument.
 
-;;; Arguments: template structure . body-forms Evaluate structure and locally
-;;; bind its components with the variables in the template; return the result of
+;;; Arguments: pattern structure . body-forms Evaluate structure and locally
+;;; bind its components with the variables in the pattern; return the result of
 ;;; evaluating the body forms with the bindings visible.
 (define-constant destructuring-bind
   (low-level-macro
-    (let* ((template (car low-level-macro-args))
+    (let* ((pattern (car low-level-macro-args))
            (structure (cadr low-level-macro-args))
            (body-forms (cddr low-level-macro-args)))
-      (destructuring-bind-procedure template structure body-forms))))
+      (destructuring-bind-procedure pattern structure body-forms))))
 
 
 
@@ -1176,8 +1177,8 @@
                              ,@macro-body-forms)))))
 
 ;;; Globally define a high-level named macro.
-;;; Arguments: (name . formals) . body-forms
-;;; Scheme-style, where formals can be an improper list.
+;;; Arguments: (name . pattern) . body-forms
+;;; The pattern is of the form accepted by destructuring-bind.
 (define-constant define-macro
   (macro ((macro-name . macro-formals) . macro-body-forms)
     `(define ,macro-name
@@ -1992,13 +1993,34 @@
 ;;;; list-has?.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; Return non-#f iff x is eq? to at least one of the elements of xs, assumed
+;;; to be a list.
+;; (define-constant (list-has? xs x)
+;;   (let* ((res #f)
+;;          (done #f)) ;; A break or return form would be nice here.
+;;     (while (not done)
+;;       (cond ((null? xs)
+;;              (set! done #t))
+;;             ((eq? (car xs) x)
+;;              (set! res #t)
+;;              (set! done #t))
+;;             (#t
+;;              (set! xs (cdr xs)))))
+;;     res))
+
+(define-constant (non-empty-list-has? xs x)
+  (let* ((res #f))
+    (while (not (null? xs))
+      (if (eq? (car xs) x)
+          (begin
+            (set! res #t)
+            (set! xs ()))
+          (set! xs (cdr xs))))
+    res))
 (define-constant (list-has? xs x)
-  (cond ((null? xs)
-         #f)
-        ((eq? (car xs) x)
-         #t)
-        (#t
-         (list-has? (cdr xs) x))))
+  (if (null? xs)
+      #f
+      (non-empty-list-has? xs x)))
 
 
 
@@ -5622,7 +5644,7 @@
              ;; the body AST, and we can compile it.  Any remaining variable
              ;; occurring in the body but not in the state bindings is a global.
              (compile-ast! s body)))
-      (print-compiler-state s)
+      ;;(print-compiler-state s)
       ;; We can now destructively modify the interpreted closure.
       (interpreted-closure-make-compiled!
           c
@@ -5814,74 +5836,6 @@
        (newline)
        (compiled-closure-disassemble ,closure-name))))
 
-(define-constant (fibo n)
-  (if (< n 2)
-      n
-      (+ (fibo (- n 2))
-         (fibo (- n 1)))))
-
-(define-constant (euclid a b)
-  (cond ((= a b)
-         a)
-        ((< a b)
-         (euclid a (- b a)))
-        (#t
-         (euclid (- a b) b))))
-(define-constant (euclid-i a b)
-  (while (<> a b)
-    (if (< a b)
-        (set! b (- b a))
-        (set! a (- a b))))
-  a)
-
-(define-constant (average-procedure a b)
-  (/ (+ a b) 2))
-
-(define-constant (fact n)
-  (if (zero? n)
-      1
-      (* n (fact (- n 1)))))
-(define-constant (fact-tail-recursive-helper n acc)
-  (if (zero? n)
-      acc
-      (fact-tail-recursive-helper (- n 1)
-                                  (* acc n))))
-(define-constant (fact-tail-recursive n)
-  (fact-tail-recursive-helper n 1))
-(define-constant (fact-i n)
-  (let ((res 1))
-    (while (not (zero? n))
-      (set! res (* res n))
-      (set! n (- n 1)))
-    res))
-
-(define-constant (gauss n)
-  (if (zero? n)
-      0
-      (+ n (gauss (- n 1)))))
-(define-constant (gauss-tail-recursive-helper n acc)
-  (if (zero? n)
-      acc
-      (gauss-tail-recursive-helper (- n 1)
-                                   (+ acc n))))
-(define-constant (gauss-tail-recursive n)
-  (gauss-tail-recursive-helper n 0))
-(define-constant (gauss-i n)
-  (let ((res 0))
-    (while (not (zero? n))
-      (set! res (+ res n))
-      (set! n (- n 1)))
-    res))
-
-(define-constant (count a)
-  (if (zero? a)
-      0
-      (count (- a 1))))
-(define-constant (count-i a)
-  (while (not (zero? a))
-    (set! a (- a 1)))
-  a)
-
 ;;; This is useful to test run-time type checking, particularly in compiled
 ;;; code.
 (define-constant (count-i-incorrect a)
@@ -5889,23 +5843,8 @@
     (set! a (- a 'b)))
   a)
 
-(define-constant (count2 a b)
-  (if (zero? a)
-      b
-      (count2 (- a 1) (+ b 1))))
-(define-constant (count2-i a b)
-  (while (not (zero? a))
-    (set! a (- a 1))
-    (set! b (+ b 1)))
-  b)
-
-(define-constant (month->days m)
-  (unless (and (>= m 1) (<= m 13))
-    (error `(the month ,m is not between 1 and 12)))
-  (case m
-    ((9 4 6 11) 30)
-    ((2) 28)
-    (else 31)))
+(define-constant (average-procedure a b)
+  (/ (+ a b) 2))
 
 (define-macro (average . things)
   (when (zero? (length things))
@@ -5918,21 +5857,6 @@
     (while (not (null? xs))
       (set! res (+ res (car xs)))
       (set! xs (cdr xs))) res))
-
-(define (e? n)
-  (cond ((zero? n)
-         #t)
-        ((= n 1)
-         #f)
-        (#t
-         (o? (- n 1)))))
-(define (o? n)
-  (cond ((zero? n)
-         #f)
-        ((= n 1)
-         #t)
-        (#t
-         (e? (- n 1)))))
 
 (define (qq n)
   (length (flatten (map iota (iota n)))))
@@ -6190,8 +6114,9 @@
 ;; This fails: why?
 ;; (c ast-equal?)
 
-
-(define-constant (ap f x) (f x))
-(define (w) (ap 1+ 10))
-(disassemble-vm w)
-(disassemble-vm ap)
+(when #f
+  (define-constant (ap f x) (f x))
+  (define (w) (ap 1+ 10))
+  (disassemble-vm w)
+  (disassemble-vm ap)
+  )

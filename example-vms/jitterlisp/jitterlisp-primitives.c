@@ -634,6 +634,44 @@ JITTERLISP_PRIMITIVE_FUNCTION_0_(copying,
   { printf ("%s\n", jitterlisp_gpl); })
 JITTERLISP_PRIMITIVE_FUNCTION_0_(no_warranty,
   { printf ("%s\n", jitterlisp_no_warranty); })
+/* Scratch / tentative. */
+JITTERLISP_PRIMITIVE_FUNCTION_2_(catch_any, CLOSURE, CLOSURE,
+  { jitterlisp_object jitterlisp_possibly_failing_thunk = args [0];
+    jitterlisp_object jitterlisp_recovery_thunk = args [1];
+    jitterlisp_object jitterlisp_either_branch_res;
+    /* The basic idea here is correct.  But I have to:
+       (a) exit cleanly from the VM on error , using EXIT_VM.  There should
+           be no need to copy back the VM state from registers, as that entire
+           state can be lost.
+       (b) store a Lisp object as an exception ("condition" in Common Lisp)
+           along with / instead of the current C string, and use it here from
+           the error branch.  That should be the only argument for the recovery
+           thunk.
+       I think that (a) might be complicated to implement as stated, just for
+       the need of distinguishing whether error is being called from the VM
+       or not.  What about having a non-initializing VM run (within the
+       generated-vm2.c) wrapped into something similar to
+       JITTERLISP_HANDLE_ERRORS ?
+       Exceptions must propagate out of as many VMs are currently in use; this
+       is important when multiple layers of mixed-mode (compiled vs. interpreted)
+       calls are active. */
+    JITTERLISP_HANDLE_ERRORS(
+      {
+        printf ("Hello from catch-any: NON-error branch 100\n");
+        jitterlisp_either_branch_res
+          = jitterlisp_apply_interpreter (jitterlisp_possibly_failing_thunk,
+                                          JITTERLISP_EMPTY_LIST);
+        printf ("Hello from catch-any: NON-error branch 1000\n");
+      },
+      {
+        printf ("Hello from catch-any: ERROR branch 100\n");
+        jitterlisp_either_branch_res
+          = jitterlisp_apply_interpreter (jitterlisp_recovery_thunk,
+                                          JITTERLISP_EMPTY_LIST);
+        printf ("Hello from catch-any: ERROR branch 1000\n");
+      });
+    res = jitterlisp_either_branch_res;
+  })
 
 /* Primitive macro functions. */
 JITTERLISP_PRIMITIVE_MACRO_FUNCTION_(define)
@@ -837,6 +875,8 @@ jitterlisp_primitives []
       /* Operations to display legal notices. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("copying", 0, copying),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("no-warranty", 0, no_warranty),
+      /* Scratch / tentative. */
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("catch-any", 2, catch_any),
 
       /* Primitive macros */
       JITTERLISP_PRIMITIVE_MACRO_STRUCT_("define", define),

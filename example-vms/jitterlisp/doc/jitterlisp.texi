@@ -321,6 +321,8 @@ implementations, interoperable; compilation on the fly}
 @fixme{proper sibling call support like in Scheme, except when calling
 compiled code from interpreted code or vice-versa}
 
+@fixme{quoting and quasiquoting are Lispy, not epsilonian}
+
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Simplifications
@@ -335,12 +337,19 @@ compiled code from interpreted code or vice-versa}
 @node Intentionally omitted features
 @subsubsection Intentionally omitted features
 
+@fixme{no modules, packages or namespaces}
+
+@syindex values@r{ (non-existing form)}
 @fixme{no @code{values}}
 
+@syindex call/cc@r{ (non-existing form)}
 @fixme{no continuations}
 
+@syindex throw@r{ (non-existing form)}
+@syindex catch@r{ (non-existing form)}
 @fixme{no exceptions}
 
+@cindex variadic, procedure (non-existing)
 @fixme{no variadic procedures (but I do have variadic macros)}
 
 @fixme{no OO}
@@ -382,6 +391,9 @@ License, version 3 or later.
 @ifset includelicenses
   @xref{GNU General Public License} for the full text of the software license.
 @end ifset @c includelicenses
+@cindex no warranty
+@cindex warranty, lack thereof
+There is no warranty.
 
 @cindex free documentation
 @cindex FDL
@@ -449,6 +461,8 @@ on my web site at the URL @url{http://ageinghacker.net/projects/jitter/}.
 
 @cindex branch, git
 @cindex git branch
+@cindex @code{jitterlisp}, git branch
+@cindex @code{master}, git branch
 As of early 2018 JitterLisp's development takes place on the
 @code{jitterlisp} git branch, to be merged into @code{master} as soon
 as the code approaches a stable form.
@@ -476,6 +490,13 @@ the @code{examples} target from the Jitter build directory.
 test cases to the test suite.}
 JitterLisp appears very useful as a way to stress Jitter and test its
 generated code.
+@cindex branch, git
+@cindex git branch
+@cindex @code{jitterlisp}, git branch
+@cindex @code{master}, git branch
+@cindex @code{check}, make target (Jitter)
+@cindex @command{make check} (Jitter)
+@cindex test suite (Jitter)
 After merging the @code{jitterlisp} git branch into @code{master} I plan
 to add test cases using JitterLisp to the Jitter test suite.  At that point
 running Jitter's test suite with
@@ -502,6 +523,8 @@ additional requirements for ``developers'' including GNU Autoconf and GNU
 Automake.
 @cindex Boehm-Demers garbage collector
 @cindex GC, Boehm-Demers
+@cindex Readline
+@cindex GNU Readline
 Even if the dependency is not mandatory I strongly recommend the
 Boehm-Demers garbage collector, packaged by every modern GNU/Linux
 distributions and also easy to install from sources.  Another optional
@@ -521,7 +544,7 @@ Cross-compilation is also well supported.
 
 @fixme{add a jitterlisp-install target, just for resolving Libtool libraries.}
 
-@cindex installing
+@cindex installing (by hand, for the time being)
 The Jitter build system does not support installing examples at the
 present time.
 
@@ -538,8 +561,8 @@ copy by hand into some directory from @env{PATH}.
 If JitterLisp libraries are statically linked and every dynamic
 library is installed then the JitterLisp executables will not access
 any other file by default: the JitterLisp library file and the GPL
-license text are in fact embedded as byte vectors within the compiled
-file (@pxref{constant-strings}).
+license text are in fact embedded as constants within the native
+compiled file image (@pxref{constant-strings}).
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -722,12 +745,41 @@ use the most specific form available, for readability and occasionally
 also for efficiency's sake.}
 
 @menu
+* Definitions::              Adding or changing global variable bindings.
 * Sequencing::               Executing multiple forms one after the other.
 * Conditionals::             Evaluating different forms according to the result of another.
+* Procedures::               Making anonymous procedure objects or ``closures''.
 * Blocks::                   Establishing local variable bindings.
 * Assignment::               Changing existing variable bindings.
 * Loops::                    Performing the same action multiple times.
+* Macros::                   Making macros.
+* Quoting and quasiquoting:: Building literal or mostly literal objects.
 @end menu
+
+@c @@@@@@@@@@@
+@node Definitions
+@subsection Definitions
+
+@syindex define
+@deffn  {macro} define defined-thing . forms
+@syindex define-constant
+@deffnx {macro} define-constant defined-thing . forms
+@syindex define-non-optimized
+@deffnx {macro} define-non-optimized defined-thing . forms
+@syindex define-constant-non-optimized
+@deffnx {macro} define-constant-non-optimized defined-thing . forms
+@fixme{Write this}
+@end deffn
+
+@anchor{define-macro}
+@syindex define-macro
+@deffn  {macro} define-macro (name . args-pattern) . forms
+@end deffn
+
+@syindex macrolet@r{ (non-existing form)}
+There is currently no syntactic support for local macros, such as
+Common Lisp's @code{macrolet}.
+
 
 @c @@@@@@@@@@@
 @node Sequencing
@@ -816,6 +868,16 @@ result of the condition.
 
 
 @c @@@@@@@@@@@
+@node Procedures
+@subsection Procedures
+
+@anchor{lambda}
+@syindex lambda
+@deffn {core macro} lambda formals . forms
+@end deffn
+
+
+@c @@@@@@@@@@@
 @node Blocks
 @subsection Blocks
 
@@ -849,8 +911,10 @@ but belongs with looping forms; @pxref{named-let,, named @code{let}} for its des
 
 @anchor{destructuring-bind}
 @syindex destructuring-bind
-@deffn {macro} destructuring-bind template structure . forms
-@fixme{Write this}
+@deffn {macro} destructuring-bind pattern structure . forms
+@cindex template (Common Lisp)
+@cindex pattern
+@fixme{Write this.  Common Lisp calls ``template'' what I call ``pattern''.}
 @end deffn
 
 @c @@@@@@@@@@@
@@ -915,10 +979,10 @@ times, in sequence.
 @end deffn
 
 @anchor{named-let}
+@syindex named-let
+@deffn  {macro} named-let name bindings . forms
 @syindex @r{named} let
 @syindex let@r{, named}
-@syindex named-let
-@deffn {macro} named-let name bindings . forms
 @deffnx {macro} let name bindings . forms
 @fixme{Write this}
 
@@ -926,6 +990,54 @@ The other, simpler, syntax for @code{let} is described among block
 forms: @pxref{let,, @code{let}}.
 @end deffn
 
+@c @@@@@@@@@@@
+@node Macros
+@subsection Macros
+
+@syindex low-level-macro
+@deffn {core macro} low-level-macro . forms
+@syindex low-level-macro-args
+@fixme{Write this.  Speak of @code{low-level-macro-args}}
+@end deffn
+
+@syindex macro
+@deffn {macro} macro (macro-name . pattern) . forms
+@fixme{Write this.  This uses @code{destructuring bind}
+@pxref{destructuring-bind}}
+@end deffn
+
+@syindex define
+@syindex define-macro
+The macros above would suffice, along with @code{define}, for globally
+binding macros.  However @code{define-macro} is provided as a more convenient
+syntax: @pxref{define-macro} for a global macro-defining facility.
+
+
+@c @@@@@@@@@@@
+@node Quoting and quasiquoting
+@subsection Quoting and quasiquoting
+
+@cindex quoting
+@syindex quote
+@deffn {core macro} quote thing
+@end deffn
+
+@cindex quasiquoting
+@syindex quasiquote
+@syindex unquote
+@syindex unquote-splicing
+@deffn {macro} quasiquote template
+@end deffn
+
+@syindex quote
+@syindex quasiquote
+@syindex unquote
+@syindex unquote-splicing
+@syindex '@r{ (apostrophe, prefix for @code{quote})}
+@syindex `@r{ (backtick, prefix for @code{quasiquote})}
+@syindex ,@r{ (comma, prefix for @code{unquote})}
+@syindex ,@@@r{ (comma at, prefix for @code{unquote-splicing})}
+@fixme{speak of prefixes}
 
 @c Lisp library reference
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -941,21 +1053,25 @@ backwards-compatible way}
 
 
 @menu
-* Type checking::                             Testing a datum's type at run time.
-* Boolean operations::                        Working with booleans.
-* Arithmetic::                                Operations on numbers.
-* Number comparison::                         Comparing numbers.
-* Symbol handling::                           Working with symbols.
-* Box handling::                              Working with boxes.
-* Cons handling::                             Working with conses.
-* List handling::                             Working with list-shaped objects.
-* Alist handling::                            Working with association lists.
-* Higher order::                              Procedures working with procedures.
-* Variadic utility::                          Helpers for defining variadic macros.
-* Sets as lists::                             Sets as unordered @code{eq?}-compared lists.
-* AST operations::                            Working with Abstract Syntax Trees.
-* Input and output::                          How to read and write.
-* Unclassified::                              stuff to move
+* Type checking::                     Testing a datum's type at run time.
+* Boolean operations::                Working with booleans.
+* Arithmetic::                        Operations on numbers.
+* Number comparison::                 Comparing numbers.
+* Symbol handling::                   Working with symbols.
+* Box handling::                      Working with boxes.
+* Cons handling::                     Working with conses.
+* List handling::                     Working with list-shaped objects.
+* Alist handling::                    Working with association lists.
+* Higher order::                      Procedures working with procedures.
+* Variadic utility::                  Helpers for defining variadic macros.
+* Sets as lists::                     Sets as unordered list of elements
+                                      compared with @code{eq?}.
+* AST operations::                    Working with Abstract Syntax Trees.
+* Macroexpanding::                    Explicitly expanding macros from user
+                                      code.
+* Interpreting::                      @code{eval}, @code{apply} and friends.
+* Input and output::                  How to read and write.
+* Unclassified::                      stuff to move
 @end menu
 
 
@@ -1190,18 +1306,6 @@ definition does introducing no inefficiencies in this case.}
 @deffn {primitive wrapper} gensym
 @end deffn
 
-@syindex constant?
-@deffn {primitive wrapper} constant? s
-@end deffn
-
-@syindex defined?
-@deffn {primitive wrapper} defined? s
-@end deffn
-
-@syindex undefine
-@deffn {primitive wrapper} undefine s
-@end deffn
-
 @syindex interned-symbols
 @deffn {primitive wrapper} interned-symbols
 @end deffn
@@ -1212,6 +1316,18 @@ definition does introducing no inefficiencies in this case.}
 
 @syindex make-constant!
 @deffn {primitive wrapper} make-constant! s
+@end deffn
+
+@syindex constant?
+@deffn {primitive wrapper} constant? s
+@end deffn
+
+@syindex defined?
+@deffn {primitive wrapper} defined? s
+@end deffn
+
+@syindex undefine
+@deffn {primitive wrapper} undefine s
 @end deffn
 
 
@@ -1816,9 +1932,46 @@ to highlight the lexical conventions.}
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Macroexpanding
+@section Macroexpanding
+
+@syindex macrolet@r{ (non-existing form)}
+@fixme{There is currently no syntactic support for local macros, such as
+Common Lisp's @code{macrolet}.}
+
+@syindex primordial-macroexpand
+@deffn {primitive wrapper} primordial-macroexpand form env
+@end deffn
+
+@syindex macroexpand
+@deffn {macro} macroexpand form . optional-env
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Interpreting
+@section Interpreting
+
+@syindex apply
+@deffn  {primitive wrapper} apply operator operands
+@syindex apply-primitive
+@deffnx {primitive wrapper} apply-primitive operator operands
+@end deffn
+
+@syindex primordial-eval
+@deffn {primitive wrapper} primordial-eval form env
+@end deffn
+
+@syindex eval
+@deffn {macro} eval form . optional-env
+@end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Input and output
 @section Input and output
 
+@cindex GNU Readline
 @cindex Readline
 @cindex I/O
 @cindex input
@@ -1909,7 +2062,17 @@ No newline character or other terminator is added.
 @end deffn
 
 @syindex error
-@deffn {primitive wrapper} error x
+@deffn {primitive wrapper} error thing
+@end deffn
+
+@syindex copying
+@deffn  {primitive wrapper} copying
+@syindex no-warranty
+@cindex no warranty
+@cindex warranty, lack thereof
+@deffnx {primitive wrapper} no-warranty
+Display legal notices by printing, respectively, the full text of the GNU GPL
+or an excerpt explaining how there is no warranty of any kind.
 @end deffn
 
 

@@ -504,7 +504,9 @@ jitterlisp_compile (struct jitterlisp_closure *c,
   // FIXME: don't leak.
   cc->vm_program = jitterlisp_generate_jittery (code_as_sexpression);
   cc->first_program_point = JITTERLISPVM_PROGRAM_BEGINNING(cc->vm_program);
-printf ("codegen: first program point at %p\n", cc->first_program_point);
+  /*
+    printf ("codegen: first program point at %p\n", cc->first_program_point);
+  */
 }
 
 

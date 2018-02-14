@@ -98,18 +98,18 @@ end
 
 initialization-c
   code
-    printf ("Hello from the Jittery per-run initialization...\n");
+    //printf ("Hello from the Jittery per-run initialization...\n");
     //jitter_log_instruction (BEFORE, 0, NULL/*& jitter_state_runtime*/, jitter_state_runtime, & jitter_original_state->vmprefix_state_backing);
     //printf ("Done with the Jittery per-run initialization\n");
-printf ("TOP: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
-printf ("UT:  %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());
-    printf ("...Now running the code.\n");
+//printf ("TOP: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
+//printf ("UT:  %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());
+    //printf ("...Now running the code.\n");
   end
 end
 
 finalization-c
   code
-    printf ("Goodbye from the Jittery run\n");
+    //printf ("Goodbye from the Jittery run\n");
   end
 end
 
@@ -1467,10 +1467,10 @@ instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
           = (& JITTER_UNDER_TOP_MAINSTACK()) - in_arity + 1;
 
         /* Call the interpreter. */
-putchar ('['); putchar ('i');
+//putchar ('['); putchar ('i');
         jitterlisp_object interpretation_result
           = jitterlisp_call_interpreted (ic, actuals, in_arity);
-putchar (']');
+//putchar (']');
 
         /* Remove as many elements as the in-arity plus one (the callee) from
            the stack, without affecting the top.  Unless JITTER_ARGN0 is
@@ -1489,14 +1489,14 @@ putchar (']');
 end
 
 instruction tail-call (?n)
-  caller
+  #caller
   code
     /* FIXME: this is currently a dummy instruction, always rewritten away. */
     // FIXME: can I make compiled->interpreted calls tail?
   end
 end
 instruction tail-call-compiled (?n)
-  caller
+  #caller
   code
     /* FIXME: this is currently a dummy instruction, always rewritten away. */
     // FIXME: can I make compiled->interpreted calls tail?
