@@ -19,9 +19,13 @@
 @c to be distributed.
 @c @set preview
 
-@c @set This if I decide to include license texts.  It will look silly unless
+@c @set this if I decide to include license texts.  It will look silly unless
 @c the manual is long.
 @c @set includelicenses
+
+@c @set this is I really want to typeset the PDF version in color.  It is
+@c probably a bad idea.
+@set color
 
 
 @c Index settings which must come early
@@ -47,6 +51,25 @@
 
 @syncodeindex pg cp
 @documentencoding UTF-8
+
+@c @ignore
+@afourpaper
+@c @end ignore
+
+@c Use color for previews, which are not to be printed.  On screen it is
+@c convenient to check that links point to the right thing.
+@ifset preview
+@set color
+@end ifset @c preview
+
+@ifclear color
+@c Don't use color for hyperlinks.  If the manual is really to be printed
+@c out it will almost certainly be in black and white.
+@tex
+\global\def\linkcolor{0 0 0}
+\global\def\urlcolor{0 0 0}
+@end tex
+@end ifclear @c color
 
 @ignore
 @fonttextsize 10
@@ -112,6 +135,10 @@ epsilon\subscript\
 @strong{[@emph{FIXME}: \text\]}
 @end rmacro
 
+@rmacro fill
+@fixme{Fill this.}
+@end rmacro
+
 @rmacro rephrase{text}
 @strong{[@emph{REPHRASE}: \text\]}
 @end rmacro
@@ -146,7 +173,7 @@ A copy of the GNU Free Documentation License is
   Documentation License'', and the license text is also
 @end ifset @c includelicenses
 distributed in electronic form along with the software in the file
-@file{doc/COPYING.DOC} and available on the web at the URL
+@file{doc/COPYING.DOC}, and available on the web at the URL
 @url{https://www.gnu.org/licenses/fdl.html}.
 @end quotation
 
@@ -393,7 +420,7 @@ License, version 3 or later.
 @end ifset @c includelicenses
 @cindex no warranty
 @cindex warranty, lack thereof
-There is no warranty.
+There is no warranty whatsoever.
 
 @cindex free documentation
 @cindex FDL
@@ -482,27 +509,32 @@ JitterLisp please
 @section Building JitterLisp
 
 JitterLisp belongs to Jitter's examples.  The examples are not built
-by the default @command{make} target but are easy to generate by building
-the @code{examples} target from the Jitter build directory.
+by the default @command{make} target but are easy to generate by running
+@example
+make examples
+@end example
+@noindent
+from the Jitter build directory, or by running the test suite as
+explained below.
 
 @cindex test suite, Jitter
-@fixme{Update this and merge into the paragraph above after adding JitterLisp
-test cases to the test suite.}
-JitterLisp appears very useful as a way to stress Jitter and test its
-generated code.
-@cindex branch, git
-@cindex git branch
-@cindex @code{jitterlisp}, git branch
-@cindex @code{master}, git branch
 @cindex @code{check}, make target (Jitter)
 @cindex @command{make check} (Jitter)
 @cindex test suite (Jitter)
-After merging the @code{jitterlisp} git branch into @code{master} I plan
-to add test cases using JitterLisp to the Jitter test suite.  At that point
-running Jitter's test suite with
-@command{make check}
+The Jitter test suite includes many cases based on JitterLisp, as compiled
+JitterLisp procedures are a convenient and realistic way of stressing Jitter
+and testing its generated code.
+Running Jitter's test suite with
+@example
+make check
+@end example
+@noindent
 (@pxref{Running the test suite,,, jitter, The Jitter Manual})
-will become sufficient to build JitterLisp as a side effect.
+from its build directory is sufficient to build JitterLisp as a side
+effect, in all of the variants (@pxref{JitterLisp executables}) supported
+by the Jitter configuration.
+I highly recommend running the test suite in any case before using
+Jitter.
 
 @cindex cross compilation
 @cindex Jitter
@@ -514,54 +546,85 @@ will become sufficient to build JitterLisp as a side effect.
 @cindex GNU Automake
 @cindex Autoconf
 @cindex Automake
+@cindex tarball, stable release (not yet)
 @xref{Working with the Jitter sources,,, jitter, The Jitter Manual} for
-detailed building instructions.  The build system follows the GNU conventions
-and in particular the common practice and suggestions from the GNU Coding
-Standards
+detailed building instructions.  The build system follows the modern GNU
+style and in particular the common practice and suggestions from the GNU
+Coding Standards
 (@pxref{Top,,, standards, The GNU Coding Standards}), which sets a few
-additional requirements for ``developers'' including GNU Autoconf and GNU
-Automake.
+additional requirements such as GNU Autoconf and GNU Automake for
+``developers''---at the present time before I release official stable
+tarballs every user has to follow the developer instructions.
+
 @cindex Boehm-Demers garbage collector
 @cindex GC, Boehm-Demers
 @cindex Readline
 @cindex GNU Readline
+@cindex @file{configure} script, Jitter
 Even if the dependency is not mandatory I strongly recommend the
 Boehm-Demers garbage collector, packaged by every modern GNU/Linux
 distributions and also easy to install from sources.  Another optional
 dependency is the GNU Readline library.
+@*
+Both dependencies are automatically checked by Jitter's @file{configure}
+script; if a library or its C headers are missing the corresponding
+functionality will be disabled, or some JitterLisp variants will not be
+built.
 
 @cindex cross compiling
 @cindex directory, build (Jitter)
 @cindex build directory (Jitter)
-A separate build directory is supported, and encouraged.
-Cross-compilation is also well supported.
+Jitter's build system encourages a separate build directory and
+supports advanced features such as cross compilation, but should be
+standard enough to just work with the usual command line
+@example
+./bootstrap && ./configure && make
+@end example
+@noindent in most practical cases.
 
-@fixme{different executables}
+@menu
+* JitterLisp executables:: Several JitterLisp systems, compatible but different.
+@end menu
+
+@node JitterLisp executables
+@subsection JitterLisp executables
+
+@fixme{fill}
+
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Installing JitterLisp
 @section Installing JitterLisp
 
-@fixme{add a jitterlisp-install target, just for resolving Libtool libraries.}
-
 @cindex installing (by hand, for the time being)
 The Jitter build system does not support installing examples at the
 present time.
 
-As a workaround it is possible to configure JitterLisp
-to generate static libraries only by configuring with
-@option{--disable-shared},
+@cindex GNU Libtool
+@cindex Libtool
+It would certainly be possible to directly use Libtool and install
+Jitter's libraries and executables.
+@cindex @file{configure} script, Jitter
+@cindex @option{--disable-shared}, @file{configure} option
+@cindex shared library
+@cindex static library
+@cindex library (native, non-Lisp)
+However, as a simpler workaround, it is possible to configure
+Jitter to generate static libraries only by calling @file{configure}
+the with @option{--disable-shared},
 and then build the examples.  Each JitterLisp executable will be one
 self-contained file with no external run-time dependencies, easy to
 copy by hand into some directory from @env{PATH}.
+
 @cindex library file, JitterLisp
+@cindex initialization file, JitterLisp
 @cindex license, text in JitterLisp executables
 @cindex GPL
 @cindex GNU General Public License
-If JitterLisp libraries are statically linked and every dynamic
+If the Jitter libraries are statically linked and every dynamic
 library is installed then the JitterLisp executables will not access
-any other file by default: the JitterLisp library file and the GPL
-license text are in fact embedded as constants within the native
+any other file by default: the large Lisp initialization file and the
+GPL license text are in fact embedded as constants within the native
 compiled file image (@pxref{constant-strings}).
 
 
@@ -1010,7 +1073,7 @@ forms: @pxref{let,, @code{let}}.
 @syindex define-macro
 The macros above would suffice, along with @code{define}, for globally
 binding macros.  However @code{define-macro} is provided as a more convenient
-syntax: @pxref{define-macro} for a global macro-defining facility.
+syntax: @pxref{define-macro}.
 
 
 @c @@@@@@@@@@@
@@ -1738,11 +1801,11 @@ definition does introducing no inefficiencies in this case.}
 @section Variadic utility
 
 @syindex define-left-nested-variadic-extension
-@deffn  {macro} define-left-nested-variadic-extension operator original-name neutral
+@deffn  {macro} define-left-nested-variadic-extension name original-name neutral
 @syindex define-right-nested-variadic-extension
-@deffnx {macro} define-right-nested-variadic-extension operator original-name neutral
+@deffnx {macro} define-right-nested-variadic-extension name original-name neutral
 @syindex define-associative-variadic-extension
-@deffnx {macro} define-associative-variadic-extension operator original-name neutral
+@deffnx {macro} define-associative-variadic-extension name original-name neutral
 @end deffn
 
 @fixme{yes, the things that follow are really procedures}
@@ -2083,7 +2146,9 @@ or an excerpt explaining how there is no warranty of any kind.
 @chapter Internals
 
 @anchor{constant-strings}
-@fixme{Write this}
+@cindex library file, JitterLisp
+@cindex initialization file, JitterLisp
+@fill
 
 
 @ifset includelicenses
