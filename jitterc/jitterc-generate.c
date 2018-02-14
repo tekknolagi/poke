@@ -914,7 +914,7 @@ jitterc_emit_rewrite_rule (FILE *f, const struct jitterc_vm *vm,
   /* Emit the rule body, by compiling instruction templates one after the
      other. */
   EMIT("  JITTER_RULE_BEGIN_BODY\n");
-  EMIT("    fprintf (stderr, \"* The rule %s (line %i) fires...\\n\");\n",
+  EMIT("  //fprintf (stderr, \"* The rule %s (line %i) fires...\\n\");\n",
        rule->name, rule->line_no);
   FOR_LIST(i, comma, rule->out_instruction_templates)
     {
@@ -2669,9 +2669,26 @@ jitterc_emit_interpreter_main_function
   EMIT("                                 \" at %%[next_program_point] based on\"\n");
   EMIT("                                 \" jitter_state_runtime at %%[runtime]\"\n");
   EMIT("                                 \" and * jitter_original_state %%[jitter_original_state].\")\n");
-  EMIT("       : [next_program_point] \"+m\" (jitter_next_program_point)\n");
-  EMIT("       : [runtime] \"X\" (jitter_state_runtime)\n");
-  EMIT("         , [jitter_original_state] \"m\" (* jitter_original_state));\n");
+  EMIT("       : [next_program_point] \"+m\" (jitter_next_program_point) // m\n");
+  /* About the constraints on [runtime], GCC 8 20170430 snapshot,
+     tested on the JitterLisp VM:
+     - "X":
+        aarch64: invalid 'asm': invalid expression as operand
+        alpha:   ok
+        sh:      ok
+     - "ro", "rom", "romg", "roX":
+        aarch64: ok
+        alpha:   cannot reload integer constant operand in 'asm'
+        sh:      cannot reload integer constant operand in 'asm'
+     Any constraint works on the other architectures I'm testing.
+
+     This is ugly.  I consider SH to be important, and Aarch64 is popular.
+     Alpha is lower-priority, but I like to support it as well.  This will
+     need a conditional.  The "X" constraint is more reasonable, so I will
+     single out aarch64. */
+  EMIT("       : [runtime] \"X\" (jitter_state_runtime) // \"X\"\n");
+  EMIT("         , [jitter_original_state] \"m\" (* jitter_original_state) // m\n");
+  EMIT("      );\n");
   EMIT("  goto * jitter_next_program_point;\n");
   EMIT("#endif // #ifdef JITTER_REPLICATE\n");
   EMIT("\n");
