@@ -1,0 +1,145 @@
+#!@SHELL@
+# Jitter testsuite: VM programs.  This is -*- sh -*-, to be preprocessed.
+# Copyright (C) 2017, 2018 Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Include my little testsuite library.  Among the rest this sourcing enters the
+# directory containing *this* script (not the utility script).
+. "@abs_top_builddir@/tests/utility"
+
+
+# Preliminary definitions.
+################################################################
+
+# FIXME: possibly move the content of this section to the utility script,
+# generalize and factor.
+
+# Run a JitterLisp test, as a non-interactive execution loading a file with
+# preliminary definitions (always the same) and then evaluating a form using
+# some definition.
+# Run one test case per configuration where a configuration is a triple <safety,
+# gc, dispatching-model>, skipping disabled configurations.
+# Arguments:
+# - description base
+# - Lisp form, or forms, to evaluate
+# - expected result
+# - "skip" if the case is to be skipped, an empty string otherwise.
+jitterlisp_case_all_confs ()
+{
+  description_base="$1"
+  lisp_form="$2"
+  expected_output="$3"
+  skip="$4"
+
+  options="--no-repl"
+  for dispatch in "switch" "direct-threading" "minimal-threading" \
+                  "no-threading"; do
+      for gc in "litter" "boehm"; do
+        case $gc in
+          litter) gc_suffix="";;
+          boehm) gc_suffix="--boehm";;
+          *) echo "invalid gc"; exit 1;;
+        esac
+    for safety in "unsafe" "safe"; do
+      case $safety in
+        unsafe) safety_suffix="--unsafe";;
+        safe) safety_suffix="";;
+        *) echo "invalid safety"; exit 1;;
+      esac
+        description="$description_base $dispatch $safety $gc"
+        jitterlisp_program="@abs_top_builddir@/bin/jitterlisp${safety_suffix}${gc_suffix}--${dispatch}@EXEEXT@"
+        echo "$expected_output" > "$jitter_expected_stdout_file"
+        # The file named in $jitterlisp_form_file will be deleted by make clean.
+        jitterlisp_form_file="$(pwd)/jitterlisp-${jitter_case_index}-form.tmp"
+        echo "(display (begin $lisp_form)) (newline)" > "$jitterlisp_form_file"
+
+        if   (test "x$skip" = "xskip") \
+          || (! (echo " @JITTER_ENABLED_DISPATCHES@ " \
+                  | grep -q " $dispatch ")) \
+          || (test "x$gc" = "xboehm" \
+              && test "x@JITTER_HAVE_BOEHM_GC_SUBST@" = "x"); then
+          jitter_skip_case "$description"
+        else
+          jitter_run_case_checking_output "$description" \
+            @JITTER_EMULATOR@ \
+              "${jitterlisp_program}" \
+                $options \
+                "@abs_top_srcdir@/tests/jitterlisp/test-definitions.scm" \
+                "$jitterlisp_form_file"
+        fi # skip
+      done
+    done
+  done
+}
+
+
+# Output: range.
+################################################################
+
+# Print a range for test case indices.
+echo 1..$((26 * 16))
+
+
+# Run the test cases.
+################################################################
+
+# Compute literal constants.
+jitterlisp_case_all_confs 'forty-two' '42' '42' ''
+jitterlisp_case_all_confs 'true' '#t' '#t' ''
+
+# Test simple arithmetic, also thru macros.
+jitterlisp_case_all_confs 'successor' '(1+ 42)' '43' ''
+jitterlisp_case_all_confs 'plus' '(+ 1 2 3 4)' '10' ''
+
+# Test list library.
+jitterlisp_case_all_confs 'lists-1' '(length (reverse! (iota 100)))' '100' ''
+jitterlisp_case_all_confs 'lists-2' '(append (iota 3) (reverse! (iota 3)))' \
+                          '(0 1 2 2 1 0)' ''
+
+# Test a procedure with nested conditionals.
+jitterlisp_case_all_confs 'month 9' '(month->days 9)' '30' ''
+jitterlisp_case_all_confs 'month 10' '(month->days 10)' '31' ''
+jitterlisp_case_all_confs 'month 11' '(month->days 11)' '30' ''
+
+# Call iterative procedures.
+jitterlisp_case_all_confs 'count-i' '(count-i 100)' '0' ''
+jitterlisp_case_all_confs 'count2-i' '(count2-i 100 3)' '103' ''
+jitterlisp_case_all_confs 'gauss-i' '(gauss-i 20)' '210' ''
+jitterlisp_case_all_confs 'fact-i' '(fact-i 10)' '3628800' ''
+jitterlisp_case_all_confs 'euclid-i' '(euclid 120 150)' '30' ''
+
+# Call recursive procedures.
+jitterlisp_case_all_confs 'count' '(count 100)' '0' ''
+jitterlisp_case_all_confs 'count2' '(count2 100 3)' '103' ''
+jitterlisp_case_all_confs 'gauss-tr' '(gauss-tail-recursive 20)' '210' ''
+jitterlisp_case_all_confs 'gauss-ntr' '(gauss 20)' '210' ''
+jitterlisp_case_all_confs 'fact-tr' '(fact-tail-recursive 10)' '3628800' ''
+jitterlisp_case_all_confs 'fact-ntr' '(fact 10)' '3628800' ''
+jitterlisp_case_all_confs 'fibo' '(fibo 10)' '55' ''
+jitterlisp_case_all_confs 'euclid' '(euclid 120 150)' '30' ''
+
+# Call mutually recursive procedures.
+jitterlisp_case_all_confs 'even' '(even?-tail-recursive 100)' '#t' ''
+jitterlisp_case_all_confs 'odd' '(odd?-tail-recursive 100)' '#f' ''
+
+# Call more complex procedures.
+jitterlisp_case_all_confs 'sort-1' '(sort (iota 10))' \
+                          '(0 1 2 3 4 5 6 7 8 9)' ''
+jitterlisp_case_all_confs 'sort-2' '(sort (reverse (iota 10)))' \
+                          '(0 1 2 3 4 5 6 7 8 9)' ''

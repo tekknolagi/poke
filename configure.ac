@@ -1143,6 +1143,8 @@ AC_CONFIG_FILES([tests/uninspired/programs.test],
                 [chmod +x tests/uninspired/programs.test])
 AC_CONFIG_FILES([tests/structured/programs.test],
                 [chmod +x tests/structured/programs.test])
+AC_CONFIG_FILES([tests/jitterlisp/jitterlisp.test],
+                [chmod +x tests/jitterlisp/jitterlisp.test])
 
 # Generate convenience emulator script.
 AC_CONFIG_FILES([scripts/emulator],
@@ -1175,6 +1177,15 @@ AC_MSG_CHECKING([if Boehm's GC is usable for JitterLisp])
 AC_MSG_RESULT([$JITTER_HAVE_BOEHM_GC])
 AM_CONDITIONAL([JITTER_HAVE_BOEHM_GC],
                [test "x$JITTER_HAVE_BOEHM_GC" = "xyes"])
+
+# Also set a substitution telling whether Boehm's GC is used, which is useful
+# to check from the test suite.
+if test "x$JITTER_HAVE_BOEHM_GC" = "xyes"; then
+  AC_SUBST([JITTER_HAVE_BOEHM_GC_SUBST], [1])
+else
+  AC_SUBST([JITTER_HAVE_BOEHM_GC_SUBST], [])
+  true
+fi
 
 
 # ChangeLog generation.
