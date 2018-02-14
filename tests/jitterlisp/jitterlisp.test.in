@@ -122,7 +122,7 @@ jitterlisp_case_all_confs 'count-i' '(count-i 100)' '0' ''
 jitterlisp_case_all_confs 'count2-i' '(count2-i 100 3)' '103' ''
 jitterlisp_case_all_confs 'gauss-i' '(gauss-i 20)' '210' ''
 jitterlisp_case_all_confs 'fact-i' '(fact-i 10)' '3628800' ''
-jitterlisp_case_all_confs 'euclid-i' '(euclid 120 150)' '30' ''
+jitterlisp_case_all_confs 'euclid-i' '(euclid-i 120 150)' '30' ''
 
 # Call recursive procedures.
 jitterlisp_case_all_confs 'count' '(count 100)' '0' ''
