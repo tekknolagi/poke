@@ -150,9 +150,21 @@
 ;;; Compile a few predefined procedures -- only a few.  This way I will
 ;;; have a lot of interplay between interpreted and compiled code, which
 ;;; is useful to test.
-
 (map interpreted-closure-compile!
      (list 1+ 1- cdr))
+
+;;; Compile other procedures used in the test suite.
+;;; FIXME: this doesn't really compile all the interesting part yet.  I have
+;;; to be able to compile lambdas in the general case before uncommenting
+;;; the procedure names below.
+(map interpreted-closure-compile!
+     (list identity ;;compose-procedure square-function
+           ;;iterate-iterative-post
+           iterate-iterative-pre
+           iterate-squaring-pre
+           iterate-squaring-eta ;;iterate-squaring-post
+           iterate-pre iterate-post iterate
+           ))
 
 
 

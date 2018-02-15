@@ -93,7 +93,7 @@ jitterlisp_case_all_confs ()
 ################################################################
 
 # Print a range for test case indices.
-echo 1..$((26 * 16))
+echo 1..$((31 * 16))
 
 
 # Run the test cases.
@@ -109,8 +109,8 @@ jitterlisp_case_all_confs 'plus' '(+ 1 2 3 4)' '10' ''
 
 # Test list library.
 jitterlisp_case_all_confs 'lists-1' '(length (reverse! (iota 100)))' '100' ''
-jitterlisp_case_all_confs 'lists-2' '(append (iota 3) (reverse! (iota 3)))' \
-                          '(0 1 2 2 1 0)' ''
+jitterlisp_case_all_confs 'lists-2' '(append (iota 2) (reverse! (iota 3)))' \
+                          '(0 1 2 1 0)' ''
 
 # Test a procedure with nested conditionals.
 jitterlisp_case_all_confs 'month 9' '(month->days 9)' '30' ''
@@ -123,6 +123,16 @@ jitterlisp_case_all_confs 'count2-i' '(count2-i 100 3)' '103' ''
 jitterlisp_case_all_confs 'gauss-i' '(gauss-i 20)' '210' ''
 jitterlisp_case_all_confs 'fact-i' '(fact-i 10)' '3628800' ''
 jitterlisp_case_all_confs 'euclid-i' '(euclid-i 120 150)' '30' ''
+
+# Test higher order features.
+jitterlisp_case_all_confs 'months-ho' '(map month->days (range 1 12))' \
+                          '(31 28 31 30 31 30 31 31 30 31 30 31)' ''
+jitterlisp_case_all_confs 'iterate-pre-i' \
+                          '((iterate-iterative-pre 1+ 100) 10)' '110' ''
+jitterlisp_case_all_confs 'iterate-post-i' \
+                          '((iterate-iterative-post 1+ 100) 10)' '110' ''
+jitterlisp_case_all_confs 'iterate-pre' '((iterate-pre 1+ 100) 10)' '110' ''
+jitterlisp_case_all_confs 'iterate-post' '((iterate-post 1+ 100) 10)' '110' ''
 
 # Call recursive procedures.
 jitterlisp_case_all_confs 'count' '(count 100)' '0' ''
