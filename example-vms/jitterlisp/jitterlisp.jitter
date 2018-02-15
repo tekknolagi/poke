@@ -162,10 +162,11 @@ jitter_log_instruction (int order,
       jitter_fatal ("unknown order %i", (int) order);
     }
   //const struct jitterlispvm_state_runtime r = *rp;
-  printf ("%i.  %s specialized instruction %s\n",
+  printf ("%i.  %s specialized instruction %s (specialized opcode %i)\n",
           counter ++,
           order_string,
-          jitterlispvm_specialized_instruction_names [specialized_opcode]);
+          jitterlispvm_specialized_instruction_names [specialized_opcode],
+          (int) specialized_opcode);
 
   const struct jitter_stack_backing *mainstack_backing
     = & b->jitter_stack_mainstack_backing;
@@ -457,22 +458,22 @@ end
 
 instruction-beginning-c
   code
-  /*
     if (JITTER_SPECIALIZED_INSTRUCTION_OPCODE
         != jitterlispvm_specialized_instruction_opcode_debug
         )
       {
-        last_specialized_opcode = JITTER_SPECIALIZED_INSTRUCTION_OPCODE;
+        //last_specialized_opcode = JITTER_SPECIALIZED_INSTRUCTION_OPCODE;
+  //      asm volatile ("sw $0, %[opcode]" : [opcode] "+o" (last_specialized_opcode));
+  /*
         jitter_log_instruction (BEGINNING,
                                 last_specialized_opcode,
                                 ((const struct jitterlispvm_state_runtime)
                                  jitter_state_runtime),
                                 ((const struct jitterlispvm_state_backing *)
                                  & jitter_original_state->vmprefix_state_backing));
-        asm volatile ("nop");
-        asm volatile ("nop");
-      }
+        asm volatile ("nop" : "+X" (last_specialized_opcode));
   */
+      }
 //putchar ('[');
   end
 end
@@ -513,8 +514,9 @@ opcode = last_specialized_opcode;
   //(void)previous_specialized_opcode;
   /*
   static int i = 0;
-  printf ("%i. After specialized instruction %s\n", i ++,
-          jitterlispvm_specialized_instruction_names [previous_specialized_opcode]);
+  printf ("%i. After specialized instruction %s (specialized opcode %i)\n", i ++,
+          jitterlispvm_specialized_instruction_names [previous_specialized_opcode],
+          (int) previous_specialized_opcode);
   struct jitterlispvm_state_backing * const b
     = & jitter_original_state->vmprefix_state_backing;
 
@@ -1007,20 +1009,21 @@ instruction primitive-cdr (?f)
   end
 end
 
-instruction primitive-cons (?f)
+instruction primitive-cons ()
   code
     /* When this compiles to a total of five or six instructions in the
-       fast path I'll be a happy man. */
+       fast path I'll be a happy man.  Make it even eight including the
+       initialization. */
     JITTERLISP_CONS_(JITTER_TOP_MAINSTACK(),
                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     JITTER_NIP_MAINSTACK();
   end
 end
 
-# The two VM instructions for the set-car! and set-cdr! operations do not consume any
-# operand from the stack, and so are followed by other VM instructions to adjust
-# the stack and set the TOS in compiled code.  Such separate instructions can often
-# be rewritten away.
+# The two VM instructions for the set-car! and set-cdr! operations do not
+# consume any operand from the stack, and so are followed by other VM
+# instructions to adjust the stack and set the TOS in compiled code.  Such
+# separate instructions can often be rewritten away.
 instruction primitive-set-carb-special (?f)
   code
     JITTERLISPVM_CHECK_TYPES_2(CONS, ANYTHING, JITTER_ARGF0);
@@ -1040,7 +1043,7 @@ instruction primitive-set-cdrb-special (?f)
   end
 end
 
-instruction primitive-eqp (?f)
+instruction primitive-eqp ()
   code
     JITTERLISPVM_CHECK_TYPES_2(ANYTHING, ANYTHING, JITTER_ARGF0);
     JITTERLISP_EQP_(JITTER_TOP_MAINSTACK(),
@@ -1049,7 +1052,7 @@ instruction primitive-eqp (?f)
   end
 end
 
-instruction primitive-not-eqp (?f)
+instruction primitive-not-eqp ()
   code
     JITTERLISPVM_CHECK_TYPES_2(ANYTHING, ANYTHING, JITTER_ARGF0);
     JITTERLISP_NOT_EQP_(JITTER_TOP_MAINSTACK(),
@@ -1264,67 +1267,67 @@ instruction primitive-remainder-unsafe (?f)
   end
 end
 
-instruction primitive-nullp (?f)
+instruction primitive-nullp ()
   code
     JITTERLISP_NULLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-non-nullp (?f)
+instruction primitive-non-nullp ()
   code
     JITTERLISP_NON_NULLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-nothingp (?f)
+instruction primitive-nothingp ()
   code
     JITTERLISP_NOTHINGP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-fixnump (?f)
+instruction primitive-fixnump ()
   code
     JITTERLISP_FIXNUMP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-characterp (?f)
+instruction primitive-characterp ()
   code
     JITTERLISP_CHARACTERP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-consp (?f)
+instruction primitive-consp ()
   code
     JITTERLISP_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-non-consp (?f)
+instruction primitive-non-consp ()
   code
     JITTERLISP_NON_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-symbolp (?f)
+instruction primitive-symbolp ()
   code
     JITTERLISP_SYMBOLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-non-symbolp (?f)
+instruction primitive-non-symbolp ()
   code
     JITTERLISP_NON_SYMBOLP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-not (?f)
+instruction primitive-not ()
   code
     JITTERLISP_NOT_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
   end
 end
 
-instruction primitive-boolean-canonicalize (?f)
+instruction primitive-boolean-canonicalize ()
   code
     JITTERLISP_BOOLEAN_CANONICALIZE_(JITTER_TOP_MAINSTACK(),
                                      JITTER_TOP_MAINSTACK());
@@ -1811,7 +1814,7 @@ end
 # conditional branch at the end).  It's easier to optimize this pattern here
 # than to add a special case to the compiler.
 rule not-branch-if-true rewrite
-  primitive-not $a; branch-if-true $b
+  primitive-not; branch-if-true $b
 into
   branch-if-false $b
 end
@@ -1991,7 +1994,7 @@ end
 # FIXME: this version is temporary, and relies on a nipping primitive-cons.
 # Test case: (lambda () (while #t (cons 1 2)))
 rule useless-cons-elimination rewrite
-  primitive-cons $a; drop
+  primitive-cons; drop
 into
   # Don't cons at all and drop the two cons operands as well, which will
   # hopefully rewrite further.  I don't generate just one nip-drop instruction
