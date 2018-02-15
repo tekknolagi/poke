@@ -53,7 +53,8 @@ enum jitterlisp_negative_option
     jitterlisp_negative_option_vm = -5,
     jitterlisp_negative_option_repl = -6,
     jitterlisp_negative_option_no_colorize = -7,
-    jitterlisp_negative_option_no_cross_disassembler = -8
+    jitterlisp_negative_option_no_cross_disassembler = -8,
+    jitterlisp_negative_option_optimization_rewriting = -9
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
@@ -67,6 +68,7 @@ enum jitterlisp_long_only_option
     jitterlisp_long_only_option_no_repl = -24,
     jitterlisp_long_only_option_dump_version = -25,
     jitterlisp_long_only_option_cross_disassembler = -26,
+    jitterlisp_long_only_option_no_optimization_rewriting = -27
   };
 
 /* Command-line option specification. */
@@ -113,6 +115,10 @@ static struct argp_option jitterlisp_option_specification[] =
     0, "Print uninterned symbols in compact notation" },
    {"cross-disassembler", jitterlisp_long_only_option_cross_disassembler, NULL,
     0, "Use the cross-disassembler instead of the native disassembler" },
+   {"no-optimization-rewriting",
+    jitterlisp_long_only_option_no_optimization_rewriting, NULL, 0,
+    "Disable optimization rewriting (this is mostly useful for debugging "
+    "rewrite rules and for measuring the speedup they introduce)" },
    /* Debugging negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 41},
    {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
@@ -129,6 +135,9 @@ static struct argp_option jitterlisp_option_specification[] =
    {"no-cross-disassembler", jitterlisp_negative_option_no_cross_disassembler,
     NULL, 0, "Use the native disassembler instead of the cross-disassembler "
     "(default)" },
+   {"optimization-rewriting",
+    jitterlisp_negative_option_optimization_rewriting, NULL, 0,
+    "Enable optimization rewriting (default)" },
 
    {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 50},
    {"dump-version", jitterlisp_long_only_option_dump_version, NULL, 0,
@@ -220,6 +229,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case jitterlisp_long_only_option_cross_disassembler:
       sp->cross_disassembler = true;
       break;
+    case jitterlisp_long_only_option_no_optimization_rewriting:
+      sp->optimization_rewriting = false;
+      break;
 
     /* Debugging negative options. */
     case jitterlisp_negative_option_no_colorize:
@@ -239,6 +251,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case jitterlisp_negative_option_no_cross_disassembler:
       sp->cross_disassembler = false;
+      break;
+    case jitterlisp_negative_option_optimization_rewriting:
+      sp->optimization_rewriting = true;
       break;
 
     /* Scripting options. */

@@ -357,8 +357,37 @@
 (define-constant (singleton x)
   (cons x ()))
 
+
 
 
+;;;; singleton?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (singleton? x)
+  (if (cons? x)
+      (null? (cdr x))
+      #f))
+
+
+
+
+;;;; null-or-singleton?.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Return non-#f iff the argument is either () or a singleton list.
+;;; Rationale: this is useful in macros with a single optional argument,
+;;; for checking that the optional part of the arguments has the correct
+;;; shape.
+(define-constant (null-or-singleton? x)
+  (cond ((null? x)
+         #t)
+        ((cons? x)
+         (null? (cdr x)))
+        (#t
+         #f)))
+
+
+
 
 ;;;; list?.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -834,6 +863,17 @@
 
 (define-constant (list-copy xs)
   (list-copy-iterative xs))
+
+
+
+
+;;;; car-or-nil.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-constant (car-or-nil xs)
+  (if (null? xs)
+      ()
+      (car xs)))
 
 
 
@@ -4707,7 +4747,7 @@
 
 ;;; Return an optimized version of the given AST where the given set-as-list of
 ;;; variables is bound.
-(define-constant (ast-optimize ast-0 bounds)
+(define-constant (ast-optimize-procedure ast-0 bounds)
   (let* (;; Fold global constants into the AST.  This will introduce, in
          ;; particular, closure literals as operators.
          ;;(_ (display `(ast-0: ,ast-0)) (newline))
@@ -4731,6 +4771,14 @@
          ;;(_  (newline))
          )
     ast-4))
+
+;;; A convenience macro allowing to omit the bounds argument, taken as () when
+;;; missing.
+(define-macro (ast-optimize ast . optional-bounds)
+  (unless (null-or-singleton? optional-bounds)
+    (error `(ast-optimize: optional arguments ,optional-bounds
+                           not null nor a singleton)))
+  `(ast-optimize-procedure ,ast ,(car-or-nil optional-bounds)))
 
 ;;; Given a closure consistently alpha-convert it and return a list of
 ;;; three elements:
@@ -4865,6 +4913,9 @@
 
 ;;;; Variadic eval and macroexpand.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; FIXME: use null-or-singleton? and car-or-nil .  Possibly define a
+;;; helper macro just for this case, which should be common.
 
 (define-macro (eval form . optional-environment)
   (if (null? optional-environment)
@@ -5711,6 +5762,7 @@
     (display x)
     (newline)))
 
+;;; A debugging procedure.
 (define-constant (print-compiler-state s)
   (display `(USED LABELS: ,@(sort (compiler-used-labels s))))
   (newline)

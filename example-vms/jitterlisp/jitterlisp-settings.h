@@ -72,6 +72,9 @@ struct jitterlisp_settings
      emulators. */
   bool cross_disassembler;
 
+  /* If true then enable optimization rewriting. */
+  bool optimization_rewriting;
+
   /* Non-false iff we are to uses the Jittery VM, and not a naïf interpreter. */
   bool vm;
 

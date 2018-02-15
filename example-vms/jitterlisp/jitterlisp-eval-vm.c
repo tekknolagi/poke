@@ -93,6 +93,10 @@ jitterlisp_initialize_vm (void)
   /* Call the Jitter-generated function initializing the VM subsystem. */
   jitterlispvm_initialize ();
 
+  /* Disable optimization rewriting, on by default, if the settings say so. */
+  if (! jitterlisp_settings.optimization_rewriting)
+    jitterlispvm_disable_optimization_rewriting ();
+
   /* Initialize the global VM state. */
   jitterlispvm_state_initialize (& jitterlispvm_state);
 
