@@ -138,16 +138,14 @@ jitterlisp_apply_compiled (jitterlisp_object rator_value,
 /* Not for the user: VM initialization and finalization.
  * ************************************************************************** */
 
-/* Differently from the rest of initialization and finalization functions these
-   are currently called from main, so that the user can entirely disable VM
-   code. */
+/* These are called from the global initialization and finalization code. */
 
 /* Initialize the VM substystem and the global VM state. */
 void
-jitterlisp_initialize_vm (void);
+jitterlisp_vm_initialize (void);
 
 /* Finalize the VM substystem and the global VM state. */
 void
-jitterlisp_finalize_vm (void);
+jitterlisp_vm_finalize (void);
 
 #endif // #ifndef JITTERLISP_EVAL_VM_H_

@@ -40,6 +40,7 @@ jitterlisp_initialize (void)
   jitterlisp_sexpression_initialize ();
   jitterlisp_primitives_initialize ();
   jitterlisp_error_initialize ();
+  jitterlisp_vm_initialize ();
 
 #ifdef JITTER_HAS_GNU_READLINE
   /* Enable blink-matching-paren if using GNU Readline.  Some people might find
@@ -53,6 +54,7 @@ void
 jitterlisp_finalize (void)
 {
   /* Finalize every subsystem, in the opposite order of initialization. */
+  jitterlisp_vm_finalize ();
   jitterlisp_error_finalize ();
   jitterlisp_primitives_finalize ();
   jitterlisp_sexpression_finalize ();

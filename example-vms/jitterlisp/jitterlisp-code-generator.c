@@ -552,10 +552,6 @@ jitterlisp_compile (struct jitterlisp_closure *c,
                     jitterlisp_object nonlocals,
                     jitterlisp_object code_as_sexpression)
 {
-  /* Error out if the Jittery VM is disabled. */
-  if (! jitterlisp_settings.vm)
-    jitterlisp_error_cloned ("can't compile: Jittery VM disabled");
-
   c->kind = jitterlisp_closure_type_compiled;
   struct jitterlisp_compiled_closure * const cc = & c->compiled;
   cc->in_arity = in_arity;

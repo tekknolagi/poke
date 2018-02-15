@@ -75,9 +75,6 @@ struct jitterlisp_settings
   /* If true then enable optimization rewriting. */
   bool optimization_rewriting;
 
-  /* Non-false iff we are to uses the Jittery VM, and not a naïf interpreter. */
-  bool vm;
-
   /* Non-false iff output s-expressions need to be colorized with terminal
      escape sequences. */
   bool colorize;

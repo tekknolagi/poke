@@ -50,7 +50,6 @@ enum jitterlisp_negative_option
     jitterlisp_negative_option_library = -2,
     jitterlisp_negative_option_no_compact_uninterned = -3,
     jitterlisp_negative_option_omit_nothing = -4,
-    jitterlisp_negative_option_vm = -5,
     jitterlisp_negative_option_repl = -6,
     jitterlisp_negative_option_no_colorize = -7,
     jitterlisp_negative_option_no_cross_disassembler = -8,
@@ -64,7 +63,6 @@ enum jitterlisp_long_only_option
     jitterlisp_long_only_option_compact_uninterned = -20,
     jitterlisp_long_only_option_no_library = -21,
     jitterlisp_long_only_option_no_omit_nothing = -22,
-    jitterlisp_long_only_option_no_vm = -23,
     jitterlisp_long_only_option_no_repl = -24,
     jitterlisp_long_only_option_dump_version = -25,
     jitterlisp_long_only_option_cross_disassembler = -26,
@@ -106,8 +104,6 @@ static struct argp_option jitterlisp_option_specification[] =
     "Colorize s-expressions with ANSI terminal escape sequences" },
    {"verbose", 'v', NULL, 0,
     "Show progress information at run time" },
-   {"no-vm", jitterlisp_long_only_option_no_vm, NULL, 0,
-    "Use a naïf C interpreter instead of the Jittery VM" },
    {"no-jittery", '\0', NULL, OPTION_ALIAS },
    {"no-library", jitterlisp_long_only_option_no_library, NULL, 0,
     "Don't load the Lisp library" },
@@ -125,8 +121,6 @@ static struct argp_option jitterlisp_option_specification[] =
     "Don't colorize s-expressions (default)"},
    {"no-verbose", jitterlisp_negative_option_no_verbose, NULL, 0,
     "Don't show progress information (default)"},
-   {"vm", jitterlisp_negative_option_vm, NULL, 0,
-    "Use the Jittery VM (default)"},
    {"jittery", '\0', NULL, OPTION_ALIAS },
    {"library", jitterlisp_negative_option_library, NULL, 0,
     "Load the Lisp library (default)" },
@@ -217,9 +211,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'v':
       sp->verbose = true;
       break;
-    case jitterlisp_long_only_option_no_vm:
-      sp->vm = false;
-      break;
     case jitterlisp_long_only_option_no_library:
       sp->library = false;
       break;
@@ -239,9 +230,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case jitterlisp_negative_option_no_verbose:
       sp->verbose = false;
-      break;
-    case jitterlisp_negative_option_vm:
-      sp->vm = true;
       break;
     case jitterlisp_negative_option_library:
       sp->library = true;
@@ -302,13 +290,13 @@ main (int argc, char **argv)
                 : jitterlisp_run_repl_yes);
   /* From now on sp->repl can be used as a boolean. */
 
+  /* Disable optimization rewriting, on by default, if the settings say so. */
+  if (! jitterlisp_settings.optimization_rewriting)
+    jitterlispvm_disable_optimization_rewriting ();
+
   /* If running interactively print the banner, as per the GPL. */
   if (sp->repl)
     jitterlisp_interactive_banner ();
-
-  /* Initialize the VM substystem, unless disabled. */
-  if (sp->vm)
-    jitterlisp_initialize_vm ();
 
   /* Run input files and s-expressions from the command-line, halting at the
      first error; still free the resources before exiting, even in case of
@@ -350,10 +338,6 @@ main (int argc, char **argv)
      needed right before exiting, but is convenient when checking for memory
      leaks with Valgrind which this way won't show false positives. */
   jitterlisp_finalize ();
-
-  /* Finalize the VM substystem, unless disabled. */
-  if (sp->vm)
-    jitterlisp_finalize_vm ();
 
   /* Return success or failure, as we decided before.  Yes, we go to the trouble
      of freeing resources even on fatal errors: see the comment above. */
