@@ -1398,6 +1398,7 @@ if JITTER_ENABLE_TEST_SUITE
   TESTS += tests/jitterlisp/jitterlisp.test
   check_PROGRAMS += $(PROGRAMS_JITTERLISP)
   tests/jitterlisp/jitterlisp.log: $(check_PROGRAMS)
+  EXTRA_DIST += tests/jitterlisp/jitterlisp/test-definitions.scm
 endif # if JITTER_ENABLE_TEST_SUITE
 
 # Brainfuck example VM.
