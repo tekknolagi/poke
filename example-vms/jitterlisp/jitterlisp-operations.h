@@ -845,6 +845,13 @@
       = JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_CHARACTER(_jitterlisp_in0));  \
   JITTER_END_
 
+/* Compute a tagged boolean, #t iff the given in-argument is unique . */
+#define JITTERLISP_UNIQUEP_(_jitterlisp_out, _jitterlisp_in0)              \
+  JITTER_BEGIN_                                                            \
+    (_jitterlisp_out)                                                      \
+      = JITTERLISP_BOOLEAN_ENCODE(JITTERLISP_IS_UNIQUE(_jitterlisp_in0));  \
+  JITTER_END_
+
 /* Compute a tagged boolean, #t iff the given in-argument is a boolean . */
 #define JITTERLISP_BOOLEANP_(_jitterlisp_out, _jitterlisp_in0)              \
   JITTER_BEGIN_                                                             \

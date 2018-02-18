@@ -637,7 +637,7 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
       struct jitterlisp_interpreted_closure * const ic
         = & JITTERLISP_CLOSURE_DECODE(o)->interpreted;
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_string (cp, cps, "#<closure ");
+      jitterlisp_print_string (cp, cps, "#<interpreted-closure ");
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_recursive (cp, cps, st, ic->environment);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);

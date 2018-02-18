@@ -6166,6 +6166,9 @@
 ;; This fails: why?
 ;; (c ast-equal?)
 
+;; MIPS: the 18 test suite failures are prevented by undefining
+;; JITTER_MACHINE_SUPPORTS_PROCEDURE.  I have to understand why.
+
 (when #f
   (define-constant (ap f x) (f x))
   (define (w) (ap 1+ 10))

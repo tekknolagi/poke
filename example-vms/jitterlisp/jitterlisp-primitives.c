@@ -339,6 +339,8 @@ jitterlisp_apply_primitive (jitterlisp_object primitive,
 /* Type checking. */
 JITTERLISP_PRIMITIVE_FUNCTION_1_(fixnump, ANYTHING,
   { JITTERLISP_FIXNUMP_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(uniquep, ANYTHING,
+  { JITTERLISP_UNIQUEP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(characterp, ANYTHING,
   { JITTERLISP_CHARACTERP_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(nullp, ANYTHING,
@@ -701,6 +703,7 @@ jitterlisp_primitives []
   = {
       /* Type checking. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("fixnum?", 1, fixnump),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("unique?", 1, uniquep),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("character?", 1, characterp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("null?", 1, nullp),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("non-null?", 1, non_nullp),
