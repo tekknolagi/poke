@@ -157,14 +157,24 @@
 ;;; FIXME: this doesn't really compile all the interesting part yet.  I have
 ;;; to be able to compile lambdas in the general case before uncommenting
 ;;; the procedure names below.
-(map interpreted-closure-compile!
-     (list identity ;;compose-procedure square-function
+(map (lambda (c)
+       (display `(compiling ,c)) (newline)
+       (interpreted-closure-compile! c))
+     (list append-reversed-iterative append-reversed
+           append-procedure ;;append-iterative
+           reverse-iterative reverse
+           reverse! ;; reverse!-iterative
+           iota-iterative iota
+           identity ;;compose-procedure square-function
            ;;iterate-iterative-post
            iterate-iterative-pre
            iterate-squaring-pre
            iterate-squaring-eta ;;iterate-squaring-post
            iterate-pre iterate-post iterate
+           ;;cons
+           ;;car
            ))
+(display `(ok)) (newline)
 
 
 
