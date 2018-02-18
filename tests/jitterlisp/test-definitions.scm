@@ -158,7 +158,7 @@
 ;;; to be able to compile lambdas in the general case before uncommenting
 ;;; the procedure names below.
 (map (lambda (c)
-       (display `(compiling ,c)) (newline)
+       ;;(display `(compiling ,c)) (newline)
        (interpreted-closure-compile! c))
      (list append-reversed-iterative append-reversed
            append-procedure ;;append-iterative
