@@ -38,7 +38,7 @@ jitterlisp_macroexpand_multiple (jitterlisp_object os,
   /* This logic is slightly more complex than the obvious recursive alternative,
      but uses constant stack space and doesn't use any temporary heap data
      structure. */
-  jitterlisp_object res;
+  jitterlisp_object res = JITTERLISP_UNDEFINED; /* Invalid, to catch bugs. */
   jitterlisp_object *res_restp = & res;
   while (! JITTERLISP_IS_EMPTY_LIST(os))
     {

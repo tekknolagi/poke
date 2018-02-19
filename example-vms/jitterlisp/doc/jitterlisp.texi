@@ -694,6 +694,11 @@ In the following examples I will refer to @file{bin/jitterlisp--boehm}
 as the executable to run.  The executable name is easy to replace with
 another, in case that configuration is not available; every JitterLisp
 executable supports the same command-line interface.
+@cindex current working directory
+@cindex directory, current working
+The current working directory is always irrelevant when invoking any
+JitterLisp executable; the @file{bin/} component of the path name
+is therefore safe to freely adapt as well.
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -2504,6 +2509,10 @@ or an excerpt explaining how there is no warranty of any kind.
 
 @syindex error
 @deffn {primitive wrapper} error thing
+@end deffn
+
+@syindex gc
+@deffn {primitive wrapper} gc
 @end deffn
 
 

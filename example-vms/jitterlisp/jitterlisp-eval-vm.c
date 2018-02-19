@@ -68,8 +68,7 @@ jitterlisp_apply_vm (jitterlisp_object closure_value,
 /* VM initialization and finalization.
  * ************************************************************************** */
 
-// FIXME: register and unregister GC roots as needed.  They are only two, one
-// per stack backing.
+/* The one global VM state. */
 struct jitterlispvm_state
 jitterlispvm_state;
 
@@ -95,6 +94,14 @@ jitterlisp_vm_initialize (void)
 
   /* Initialize the global VM state. */
   jitterlispvm_state_initialize (& jitterlispvm_state);
+
+  /* Register the two stack backings as GC roots. */
+  struct jitterlispvm_state_backing *sb
+    = & jitterlispvm_state.jitterlispvm_state_backing;
+  jitterlisp_push_stack_backing_as_gc_root
+     (& sb->jitter_stack_mainstack_backing);
+  jitterlisp_push_stack_backing_as_gc_root
+     (& sb->jitter_stack_returnstack_backing);
 
   /* Make the driver program and keep it ready to be use, pre-specialized.
      The driver program consists of exactly two instructions:
@@ -124,6 +131,9 @@ jitterlisp_vm_finalize (void)
   /* Destroy the driver program and invalidate its pointer to catch mistakes. */
   jitterlispvm_destroy_program (jitterlisp_driver_vm_program);
   jitterlisp_driver_vm_program = NULL;
+
+  /* Unregister the two stack backings as GC roots. */
+  jitterlisp_pop_gc_roots (2);
 
   /* Finalize the global VM state. */
   jitterlispvm_state_finalize (& jitterlispvm_state);

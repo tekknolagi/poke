@@ -1026,6 +1026,18 @@
 
 
 
+/* GC operations.
+ * ************************************************************************** */
+
+#define JITTERLISP_GC_(_jitterlisp_out)      \
+  JITTER_BEGIN_                              \
+    jitterlisp_gc ();                        \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;  \
+  JITTER_END_
+
+
+
+
 /* AST operations.
  * ************************************************************************** */
 
