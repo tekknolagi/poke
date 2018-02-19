@@ -37,6 +37,7 @@ void
 jitterlisp_settings_set_default (void)
 {
   jitterlisp_settings.verbose = false;
+  jitterlisp_settings.verbose_litter = true;
   jitterlisp_settings.library = true;
   jitterlisp_settings.print_nothing_results = false;
   jitterlisp_settings.print_compact_uninterned_symbols = false;

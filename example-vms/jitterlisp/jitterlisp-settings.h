@@ -53,6 +53,10 @@ struct jitterlisp_settings
   /* Non-false iff the output needs to be verbose. */
   bool verbose;
 
+  /* Non-false iff littering output needs to be verbose.  Ignored when not
+     littering. */
+  bool verbose_litter;
+
   /* Non-false iff we have to load the Lisp library. */
   bool library;
 

@@ -494,8 +494,8 @@ JITTERLISP_PRIMITIVE_FUNCTION_4_(interpreted_closure_setb,
                                  INTERPRETED_CLOSURE, ENVIRONMENT, SYMBOLS, AST,
   { JITTERLISP_INTERPRETED_CLOSURE_SET_(res, args [0], args [1], args [2],
                                         args [3]); })
-JITTERLISP_PRIMITIVE_FUNCTION_1_(compiled_closure_in_arity, COMPILED_CLOSURE,
-  { JITTERLISP_COMPILED_CLOSURE_IN_ARITY_(res, args [0]); })
+JITTERLISP_PRIMITIVE_FUNCTION_1_(closure_in_arity, CLOSURE,
+  { JITTERLISP_CLOSURE_IN_ARITY_(res, args [0]); })
 /* Vector operations. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(make_vector, FIXNUM, ANYTHING,
   { JITTERLISP_VECTOR_MAKE_(res, args [0], args [1]); })
@@ -796,8 +796,8 @@ jitterlisp_primitives []
                                              interpreted_closure_body),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("interpreted-closure-set!", 4,
                                              interpreted_closure_setb),
-      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compiled-closure-in-arity", 1,
-                                             compiled_closure_in_arity),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("closure-in-arity", 1,
+                                             closure_in_arity),
       /* Vector operations. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("make-vector", 2, make_vector),
       /* I/O operations. */

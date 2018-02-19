@@ -560,21 +560,37 @@
  * ************************************************************************** */
 
 /* Make a fresh interpreted closure with the given fields. */
-#define JITTERLISP_CLOSURE_(_jitterlisp_out,                         \
-                            _jitterlisp_in0,                         \
-                            _jitterlisp_in1,                         \
-                            _jitterlisp_in2)                         \
-  JITTER_BEGIN_                                                      \
-    struct jitterlisp_closure *_jitterlisp_tmp                       \
-      = JITTERLISP_CLOSURE_MAKE_UNINITIALIZED_UNENCODED();           \
-    _jitterlisp_tmp->kind = jitterlisp_closure_type_interpreted;     \
-    _jitterlisp_tmp->interpreted.environment = (_jitterlisp_in0);    \
-    _jitterlisp_tmp->interpreted.formals = (_jitterlisp_in1);        \
-    _jitterlisp_tmp->interpreted.body = (_jitterlisp_in2);           \
-    (_jitterlisp_out) = JITTERLISP_CLOSURE_ENCODE(_jitterlisp_tmp);  \
+#define JITTERLISP_CLOSURE_(_jitterlisp_out,                                \
+                            _jitterlisp_in0,                                \
+                            _jitterlisp_in1,                                \
+                            _jitterlisp_in2)                                \
+  JITTER_BEGIN_                                                             \
+    struct jitterlisp_closure *_jitterlisp_tmp                              \
+      = JITTERLISP_CLOSURE_MAKE_UNINITIALIZED_UNENCODED();                  \
+    _jitterlisp_tmp->kind = jitterlisp_closure_type_interpreted;            \
+    jitterlisp_object _jitterlisp_formals = (_jitterlisp_in1);              \
+    _jitterlisp_tmp->interpreted.formals = _jitterlisp_formals;             \
+    _jitterlisp_tmp->in_arity = 0;                                          \
+    while (! JITTERLISP_IS_EMPTY_LIST(_jitterlisp_formals))                 \
+      {                                                                     \
+        _jitterlisp_formals = JITTERLISP_EXP_C_A_CDR(_jitterlisp_formals);  \
+        _jitterlisp_tmp->in_arity ++;                                       \
+      };                                                                    \
+    _jitterlisp_tmp->interpreted.environment = (_jitterlisp_in0);           \
+    _jitterlisp_tmp->interpreted.body = (_jitterlisp_in2);                  \
+    (_jitterlisp_out) = JITTERLISP_CLOSURE_ENCODE(_jitterlisp_tmp);         \
   JITTER_END_
 
 /* Lookup a closure field. */
+#define JITTERLISP_CLOSURE_IN_ARITY_(_jitterlisp_out, _jitterlisp_in0)   \
+  JITTER_BEGIN_                                                          \
+    struct jitterlisp_closure *_jitterlisp_tmp                           \
+      = JITTERLISP_CLOSURE_DECODE(_jitterlisp_in0);                      \
+    jitter_uint _jitterlisp_in_arity = _jitterlisp_tmp->in_arity;        \
+    (_jitterlisp_out) = JITTERLISP_FIXNUM_ENCODE(_jitterlisp_in_arity);  \
+  JITTER_END_
+
+/* Lookup a closure field from the union within a closure, knowing its kind. */
 #define JITTERLISP_KINDED_CLOSURE_FIELD_(_jitterlisp_out,                 \
                                          _jitterlisp_in0,                 \
                                          _jitterlisp_kind_suffix,         \
@@ -598,19 +614,11 @@
   JITTERLISP_KINDED_CLOSURE_FIELD_(_jitterlisp_out, _jitterlisp_in0,  \
                                    interpreted, body)
 
-#define JITTERLISP_COMPILED_CLOSURE_IN_ARITY_(_jitterlisp_out,              \
-                                              _jitterlisp_in0)              \
-  JITTER_BEGIN_                                                             \
-    jitter_uint _jitterlisp_in_arity;                                       \
-    JITTERLISP_KINDED_CLOSURE_FIELD_(_jitterlisp_in_arity,                  \
-                                     _jitterlisp_in0, compiled, in_arity);  \
-    (_jitterlisp_out) = JITTERLISP_FIXNUM_ENCODE(_jitterlisp_in_arity);     \
-  JITTER_END_
-
-/* Destructively modify all the fields in an interpreted closure.  By setting
-   them all in the same operation I can guarantee that no Lisp code will see a
-   closure partly updated, which would be dangerous in case closure-updating
-   code used the same closure. */
+/* Destructively modify all the modifiable fields in an interpreted closure.  By
+   setting them all in the same operation I can guarantee that no Lisp code will
+   see a closure partly updated, which would be dangerous in case
+   closure-updating code used the same closure.  Notice that the in-arity
+   doesn't change: it is assumed to be immutable after initialization. */
 #define JITTERLISP_INTERPRETED_CLOSURE_SET_(_jitterlisp_out,       \
                                             _jitterlisp_in0,       \
                                             _jitterlisp_in1,       \

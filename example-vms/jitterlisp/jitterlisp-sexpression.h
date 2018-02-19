@@ -448,9 +448,6 @@ struct jitterlisp_interpreted_closure
 /* The fields of a compiled closure object. */
 struct jitterlisp_compiled_closure
 {
-  /* How many arguments this closure takes. */
-  jitter_uint in_arity;
-
   /* How many nonlocals there are.  FIXME: remove this unless it's needed
      for garbage collection. */
   jitter_uint nonlocal_no;
@@ -481,6 +478,9 @@ struct jitterlisp_closure
 {
   /* The kind of this closure. */
   enum jitterlisp_closure_kind kind;
+
+  /* How many arguments this closure takes. */
+  jitter_uint in_arity;
 
   /* The kind determines which field of the anonymous union is actually used.
      Notice that it's allowed, and useful, for a closure to change kind at run

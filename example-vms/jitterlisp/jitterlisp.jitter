@@ -831,11 +831,10 @@ instruction check-in-arity--alt (?n 0 1 2 3 4 5 6 7 8 9 10, ?f)
     struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(top);
 
     /* FIXME: this is optimizable.  I should store the in-arity as a field, independently
-       from the closure compiledness. */
+       from the closure compiledness.  [Done] */
     if (JITTERLISP_IS_COMPILED_CLOSURE(top))
       {
-        struct jitterlisp_compiled_closure *cc = & c->compiled;
-        if (cc->in_arity != JITTER_ARGN0)
+        if (c->in_arity != JITTER_ARGN0)
           JITTER_BRANCH_FAST(JITTER_ARGF1);
       }
     else
@@ -860,37 +859,13 @@ end
 instruction check-in-arity (?n 0 1 2 3 4 5 6 7 8 9 10, ?f)
   code
 #   ifndef JITTERLISP_UNSAFE
-      // FIXME: this loops forever with no-threading (not with the other dispatching models
-      // including minimal threading) when the callee is compiled.  A Jitter bug.
-      /* Here we can assume that the top object is a closure, without checking: we either
-         already performed a type check, or the compiler decided it wasn't necessary. */
+      /* Here we can assume that the top object is a closure, without checking:
+         we either already performed a type check, or the compiler decided it
+         wasn't necessary. */
       jitterlisp_object top = JITTER_TOP_MAINSTACK();
       struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(top);
 
-      /* FIXME: this is optimizable.  I should store the in-arity as a field, independently
-         from the closure compiledness. */
-      if (JITTERLISP_IS_COMPILED_CLOSURE(top))
-        {
-          struct jitterlisp_compiled_closure *cc = & c->compiled;
-          if (cc->in_arity != JITTER_ARGN0)
-            JITTER_BRANCH_FAST(JITTER_ARGF1);
-        }
-      else
-        {
-          /* The closure is interpreted.  Compute its in-arity.  We can assume that
-             the formal list is well-formal, which is to say actually a proper list
-             of distinct symbols. */
-          struct jitterlisp_interpreted_closure *ic = & c->interpreted;
-          jitterlisp_object rest = ic->formals;
-          jitter_uint in_arity = 0;
-          while (! JITTERLISP_IS_EMPTY_LIST(rest))
-            {
-              in_arity ++;
-              rest = JITTERLISP_EXP_C_A_CDR(rest);
-            }
-          if (in_arity != JITTER_ARGN0)
-            JITTER_BRANCH_FAST(JITTER_ARGF1);
-        }
+      JITTER_BRANCH_FAST_IF_NOTEQUAL(c->in_arity, JITTER_ARGN0, JITTER_ARGF1);
 #   endif // #ifndef JITTERLISP_UNSAFE
   end
 end

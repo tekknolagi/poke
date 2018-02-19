@@ -188,10 +188,8 @@ jitterlisp_call_compiled (jitterlisp_object rator_value,
                           jitter_uint rand_ast_no,
                           jitterlisp_object env)
 {
-  /* Here I can be sure that operator_value is a compiled closure: decode it
-     with no checks. */
+  /* Here I can be sure that operator_value is a compiled closure. */
   const struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(rator_value);
-  const struct jitterlisp_compiled_closure *cc = & c->compiled;
   /*
 printf ("The encoded rator is %p\n", (void*)rator_value);
 printf ("The decoded rator is %p\n", c);
@@ -205,7 +203,7 @@ printf ("The cc first program point is at %p\n", cc->first_program_point);
   // is faster on compiled code.  There are two other identical cases below.
 
   /* Check that the arity matches. */
-  if (__builtin_expect ((cc->in_arity != rand_ast_no), false))
+  if (__builtin_expect ((c->in_arity != rand_ast_no), false))
     jitterlisp_error_cloned ("arity mismatch in call to compiled closure");
 
   /* Push the compiled closure, tagged, on the VM stack. */
@@ -241,10 +239,8 @@ jitterlisp_apply_compiled (jitterlisp_object rator_value,
   // that doesn't need to be done here: error recovery code in the REPL should
   // simply reset the state.
 
-  /* Here I can be sure that operator_value is a compiled closure: decode it
-     with no checks. */
+  /* Here I can be sure that operator_value is a compiled closure. */
   const struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(rator_value);
-  const struct jitterlisp_compiled_closure *cc = & c->compiled;
 
   /* Push the compiled closure on the VM stack. */
   JITTERLISPVM_PUSH_MAINSTACK(rator_value);
@@ -259,9 +255,9 @@ jitterlisp_apply_compiled (jitterlisp_object rator_value,
       rest = JITTERLISP_EXP_C_A_CDR(rest);
       provided_in_arity ++;
     }
-  
+
   /* Check that the arity matches. */
-  if (__builtin_expect ((cc->in_arity != provided_in_arity), false))
+  if (__builtin_expect ((c->in_arity != provided_in_arity), false))
     jitterlisp_error_cloned ("arity mismatch in apply to compiled closure");
 
   /* Push the number of closure operands, unencoded.  The driver programs

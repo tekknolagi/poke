@@ -615,13 +615,13 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
     }
   else if (JITTERLISP_IS_COMPILED_CLOSURE(o))
     {
-      struct jitterlisp_compiled_closure *cc
-        = & JITTERLISP_CLOSURE_DECODE(o)->compiled;
+      struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(o);
+      struct jitterlisp_compiled_closure *cc = & c->compiled;
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
       jitterlisp_print_string (cp, cps, "#<compiled-closure ");
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);
-      jitterlisp_print_long_long (cp, cps, cc->in_arity, false, 10);
+      jitterlisp_print_long_long (cp, cps, c->in_arity, false, 10);
       jitterlisp_print_string (cp, cps, "-ary");
       jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_decoration (cp, cps, CLOSUREATTR);

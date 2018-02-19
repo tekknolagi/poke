@@ -47,9 +47,10 @@
 enum jitterlisp_negative_option
   {
     jitterlisp_negative_option_no_verbose = -1,
-    jitterlisp_negative_option_library = -2,
-    jitterlisp_negative_option_no_compact_uninterned = -3,
-    jitterlisp_negative_option_omit_nothing = -4,
+    jitterlisp_negative_option_verbose_litter = -2,
+    jitterlisp_negative_option_library = -3,
+    jitterlisp_negative_option_no_compact_uninterned = -4,
+    jitterlisp_negative_option_omit_nothing = -5,
     jitterlisp_negative_option_repl = -6,
     jitterlisp_negative_option_no_colorize = -7,
     jitterlisp_negative_option_no_cross_disassembler = -8,
@@ -60,9 +61,10 @@ enum jitterlisp_negative_option
    with any value in enum jitterlisp_negative_option . */
 enum jitterlisp_long_only_option
   {
-    jitterlisp_long_only_option_compact_uninterned = -20,
-    jitterlisp_long_only_option_no_library = -21,
-    jitterlisp_long_only_option_no_omit_nothing = -22,
+    jitterlisp_long_only_option_no_verbose_litter = -20,
+    jitterlisp_long_only_option_compact_uninterned = -21,
+    jitterlisp_long_only_option_no_library = -22,
+    jitterlisp_long_only_option_no_omit_nothing = -23,
     jitterlisp_long_only_option_no_repl = -24,
     jitterlisp_long_only_option_dump_version = -25,
     jitterlisp_long_only_option_cross_disassembler = -26,
@@ -104,7 +106,8 @@ static struct argp_option jitterlisp_option_specification[] =
     "Colorize s-expressions with ANSI terminal escape sequences" },
    {"verbose", 'v', NULL, 0,
     "Show progress information at run time" },
-   {"no-jittery", '\0', NULL, OPTION_ALIAS },
+   {"no-verbose-litter", jitterlisp_long_only_option_no_verbose_litter, NULL, 0,
+    "Don't show littering information at run time" },
    {"no-library", jitterlisp_long_only_option_no_library, NULL, 0,
     "Don't load the Lisp library" },
    {"compact-uninterned", jitterlisp_long_only_option_compact_uninterned, NULL,
@@ -121,7 +124,8 @@ static struct argp_option jitterlisp_option_specification[] =
     "Don't colorize s-expressions (default)"},
    {"no-verbose", jitterlisp_negative_option_no_verbose, NULL, 0,
     "Don't show progress information (default)"},
-   {"jittery", '\0', NULL, OPTION_ALIAS },
+   {"verbose-litter", jitterlisp_negative_option_verbose_litter, NULL, 0,
+    "Show littering information at run time (default)" },
    {"library", jitterlisp_negative_option_library, NULL, 0,
     "Load the Lisp library (default)" },
    {"no-compact-uninterned", jitterlisp_negative_option_no_compact_uninterned,
@@ -211,6 +215,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'v':
       sp->verbose = true;
       break;
+    case jitterlisp_long_only_option_no_verbose_litter:
+      sp->verbose_litter = false;
+      break;
     case jitterlisp_long_only_option_no_library:
       sp->library = false;
       break;
@@ -230,6 +237,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case jitterlisp_negative_option_no_verbose:
       sp->verbose = false;
+      break;
+    case jitterlisp_negative_option_verbose_litter:
+      sp->verbose_litter = true;
       break;
     case jitterlisp_negative_option_library:
       sp->library = true;

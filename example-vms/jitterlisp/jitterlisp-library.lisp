@@ -33,23 +33,8 @@
     (error '(you are trying to load the library more than once))
     #t)
 
-
 
 
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; FIXME: move: closure utility procedures.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define-constant (closure-in-arity closure)
-  (cond ((interpreted-closure? closure)
-         (length (interpreted-closure-formals closure)))
-        ((compiled-closure? closure)
-         (compiled-closure-in-arity closure))
-        (#t
-         (error `(closure-in-arity called on the non-closure ,closure)))))
-
-
-
 
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Type checking.
