@@ -141,6 +141,11 @@ epsilon\subscript\
 @fixme{Fill this.}
 @end rmacro
 
+@c This occurs a lot of times, so a macro is handy.
+@rmacro nothing
+@code{#<nothing>}
+@end rmacro
+
 @rmacro rephrase{text}
 @strong{[@emph{REPHRASE}: \text\]}
 @end rmacro
@@ -287,11 +292,11 @@ relying on the Jitter virtual machine generator for compiling code.
 @cindex epsilon
 @cindex GNU epsilon
 @cindex Jitter
-@cindex @ @epsilonzero{} @c The initial forced space is less ugly than the alternative.
+@c @cindex @ @epsilonzero{} @c The initial forced space is less ugly than the alternative.
 Jitter (@pxref{Top,,, jitter, The Jitter Manual}) was born out of an
 attempt to optimize the programming language GNU epsilon
-(@pxref{Top,,, epsilon, The GNU epsilon Manual}), my main
-long-term project.  Dissatisfied with the speedup provided by a simple
+(@pxref{Top,,, epsilon, The GNU epsilon Manual}), my main long-term
+project.  Dissatisfied with the speedup provided by a simple
 direct-threaded virtual machine I started exploring more advanced
 techniques, and the experiment eventually grew into the current
 virtual-machine generator.  Even if it can certainly be said that
@@ -317,9 +322,12 @@ end result, and believe that others will find it useful.
 Still, Jitter had seen no major application yet.  It needed to be
 stressed to find bugs and embedded in a practical system for me to
 discover what was still missing and fill the gaps.  I needed a
-real application.  A real programming language.  A Lisp.  And so
-JitterLisp began, and at some point this sub-sub-project got out of
-hand itself.
+real application.  A real programming language.  A Lisp.
+
+And the sub-sub-project has now also gotten out of hand, again
+branching off in its own interesting direction.
+
+@c independent goals of its own.
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -350,12 +358,11 @@ any.  Still it appears more efficient than every mature ``dynamic
 language'', in some cases to a spectacular degree---due more to the
 faults of others than to any merit of mine.
 
-On a personal level I have one goal for JitterLisp, that I will not
-even try to hide:
+I will not even try to hide my personal goal for JitterLisp:
 @c This is my very personal goal for JitterLisp:
-being able to say that
-most language implementations are terrible---they are---with numbers
-to show it.  And here I am.  Rubbing JitterLisp on everyone's face.
+being able to say that most language implementations are terrible, as
+in fact they are, with numbers to show it.  And here I am, rubbing
+JitterLisp on everyone's face.
 
 @c I want to be able to say that 
 @c And here I am, rubbing
@@ -379,6 +386,9 @@ to show it.  And here I am.  Rubbing JitterLisp on everyone's face.
 @cindex influences
 @cindex Common Lisp
 @cindex Scheme
+
+
+@fixme{JitterLisp is a project about performance}
 
 @fixme{Write this}
 
@@ -801,8 +811,9 @@ compiled file image (@pxref{constant-strings}).
 @cindex non-option argument
 @fixme{file names as arguments}
 
-@cindex options, command-line
 @fixme{Write this}
+@fixme{negative options}
+@fixme{multiple options: which one wins}
 
 @cindex common GNU options, command-line
 @cindex GNU, common options, command-line
@@ -818,14 +829,90 @@ with success.
 @cindex @option{-?}, command-line option
 @cindex @option{--help}, command-line option
 @item -?@r{, }--help
-Print a terse description of the options documented here, then exit
-with success.
+Print a terse description of JitterLisp's command-line interface including
+the options documented here, then exit with success.
 
 @cindex @option{--usage}, command-line option
 @item --usage
 Print a list of the options documented here with no explanation, then
 exit with success.
 @end table
+
+Scripting options:
+@table @option
+@cindex @option{--dump-version}, command-line option
+@item --dump-version
+@end table
+
+REPL options:
+@table @option
+@cindex @option{-r}, command-line option
+@cindex @option{--no-repl}, command-line option
+@cindex @option{--batch}, command-line option
+@item -q@r{, }--no-repl@r{, }--batch
+@end table
+Interactivity negative options:
+@table @option
+@cindex @option{--repl}, command-line option
+@cindex @option{--no-batch}, command-line option
+@item --repl@r{, }--no-batch
+@end table
+
+Interaction:
+@table @option
+@cindex @option{--no-omit-nothing}, command-line option
+@item --no-omit-nothing
+@fixme{This is about @nothing.}
+@end table
+
+Interaction negative options:
+@table @option
+@cindex @option{--omit-nothing}, command-line option
+@item --omit-nothing
+@end table
+
+Command-line form evaluation:
+@table @option
+@cindex @option{-e}, command-line option
+@cindex @option{--eval}, command-line option
+@item -e @var{sexprs}@r{, }--eval=@var{sexprs}
+@end table
+
+Debugging and benchmarking options:
+@table @option
+@cindex @option{-c}, command-line option
+@cindex @option{--colorize}, command-line option
+@item -c@r{, }--colorize
+@cindex @option{--compact-uninterned}, command-line option
+@item --compact-uninterned
+@cindex @option{--cross-disassembler}, command-line option
+@item --cross-disassembler
+@cindex @option{--no-library}, command-line option
+@item --no-library
+@cindex @option{--no-optimization-rewriting}, command-line option
+@item --no-optimization-rewriting
+@cindex @option{--no-verbose-litter}, command-line option
+@item --no-verbose-litter
+@cindex @option{-v}, command-line option
+@cindex @option{--verbose}, command-line option
+@item -v@r{, }--verbose
+@end table
+Debugging and benchmarking negative options:
+@table @option
+@cindex @option{--no-colorize}, command-line option
+@item --no-colorize
+@cindex @option{--no-compact-uninterned}, command-line option
+@item --no-compact-uninterned
+@cindex @option{--no-cross-disassembler}, command-line option
+@item --no-cross-disassembler
+@cindex @option{--no-verbose}, command-line option
+@item --no-verbose
+@cindex @option{--optimization-rewriting}, command-line option
+@item --optimization-rewriting
+@cindex @option{--verbose-litter}, command-line option
+@item --verbose-litter
+@end table
+
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Interaction example
@@ -1105,8 +1192,7 @@ closure (but not vice-versa) without changing its identity.}
 
 @node Abstract Syntax Trees
 @subsubsection Abstract Syntax Trees
-@cindex AST
-@cindex Abstract Syntax Tree
+@cindex Abstract Syntax Tree (AST)
 An @dfn{Abstract Syntax Tree} or @dfn{AST} is a recursive type
 representing code as a data structure.  ASTs only support the core
 language forms which remain after macroexpanding away

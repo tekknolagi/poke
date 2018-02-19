@@ -73,12 +73,12 @@ enum jitterlisp_long_only_option
 
 /* Command-line option specification. */
 static struct argp_option jitterlisp_option_specification[] =
-  {/* File options. */
-   {NULL, '\0', NULL, OPTION_DOC, "File options:", 10},
+  {/* Read-Eval-Print Loop options. */
+   {NULL, '\0', NULL, OPTION_DOC, "Read-Eval-Print Loop options:", 10},
    {"no-repl", jitterlisp_long_only_option_no_repl, NULL, 0,
     "Run non-interactively, without a REPL" },
    {"batch", 'q', NULL, OPTION_ALIAS },
-   /* File negative options. */
+   /* Interactivity negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 11},
    {"repl", jitterlisp_negative_option_repl, NULL, 0,
     "Run interactively, with a REPL (default unless files are given on the "
@@ -94,10 +94,10 @@ static struct argp_option jitterlisp_option_specification[] =
    {"omit-nothing", jitterlisp_negative_option_omit_nothing, NULL, 0,
     "Omit #<nothing> evaluation results (default)"},
 
-   /* Command-line s-expression evaluation. */
-   {NULL, '\0', NULL, OPTION_DOC, "Command-line s-expression evaluation:", 30},
+   /* Command-line form evaluation. */
+   {NULL, '\0', NULL, OPTION_DOC, "Command-line form evaluation:", 30},
    {"eval", 'e', "SEXPRS", 0,
-    "Evaluate the given s-expressions after running the files (if any) "
+    "Evaluate the given Lisp forms after running the files (if any) "
     "and before running the REPL (if enabled)" },
 
    /* Debugging options. */
