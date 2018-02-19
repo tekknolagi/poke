@@ -274,7 +274,8 @@ JitterLisp is a comparatively simple and efficient Lisp system,
 relying on the Jitter virtual machine generator for compiling code.
 
 @menu
-* History::                            Why I though the world needed another Lisp.
+* History::                            How JitterLisp came to be.
+* Goals::                              Why I though the world needed another Lisp.
 * Features and influences::            What JitterLisp can do and where it comes from.
 * License::                            JitterLisp is released under the GNU GPLv3+.
 @end menu
@@ -285,41 +286,90 @@ relying on the Jitter virtual machine generator for compiling code.
 @cindex history
 @cindex epsilon
 @cindex GNU epsilon
+@cindex Jitter
 @cindex @ @epsilonzero{} @c The initial forced space is less ugly than the alternative.
+Jitter (@pxref{Top,,, jitter, The Jitter Manual}) was born out of an
+attempt to optimize the programming language GNU epsilon
+(@pxref{Top,,, epsilon, The GNU epsilon Manual}), my main
+long-term project.  Dissatisfied with the speedup provided by a simple
+direct-threaded virtual machine I started exploring more advanced
+techniques, and the experiment eventually grew into the current
+virtual-machine generator.  Even if it can certainly be said that
+Jitter is a sub-project which got way out of hand I am happy with the
+end result, and believe that others will find it useful.
 
-@fixme{@pxref{Top,,, jitter, The Jitter Manual}}
-The programming language GNU epsilon (@pxref{Top,,, epsilon, The GNU
-epsilon Manual}), my main long-term project, has yet to live to my
-expectations.  And even if I keep believing in the superiority of its
-design, as I firmly do, epsilon's concrete implementation still looks
-like a promise waiting to be fulfilled.
+@c Shortly after my public presentation of Jitter at the 2017 edition of
+@c the GNU Hackers Meeting a friend @fixme{ask permission to mention him
+@c by name} expressed interest in Jitter and wanted to use it in a new
+@c software of his, even in its unpolished state.
 
-@ignore
-epsilon is written in itself, and every language form seen by the user
-is a syntactic extension rewriting to fundamental forms or, more
-typically, to other syntactic extensions.
-@end ignore
-Among the missed opportunities in epsilon its performance has always
-bothered me.  If on one hand there are good technical reasons making
-high efficiency more difficult to achieve in epsilon than in other
-systems, on the other I conceived its architecture with that end,
-amongst others, always in mind, to be competitive with the best.
+@c In order to provide him with a practical example to use as a reference
+@c before the official Jitter documentation was ready I quickly put
+@c together the ``structured'' example, a simple imperative programming
+@c language based on a Jittery VM.
 
-@fixme{shorten this paragraph: there's no need to talk of
-the first failed attempt.}
-In late 2015 I decided to implement a direct-threaded virtual machine
-for epsilon mostly intended to make interactive usage more convenient
-and to reduce bootstrap time.  The speedup I obtained, about 4-6x, was
-disappointing.
+@c The structured example proved useful as a stopgap solution and I added
+@c a few more features to Jitter at my friend's @fixme{see above}
+@c request, but we both knew it was not enough.  Jitter needed to be
+@c stressed to find bugs and tested on a practical application.  A real
+@c programming language.  A Lisp.
 
-At that point I made a new repository and started experimenting with
-more advanced VM techniques, reading the scientific literature and
-adding ideas of my own.  That second more ambitious experiment
-succeeded and eventually grew into an independent project, Jitter.
+Still, Jitter had seen no major application yet.  It needed to be
+stressed to find bugs and embedded in a practical system for me to
+discover what was still missing and fill the gaps.  I needed a
+real application.  A real programming language.  A Lisp.  And so
+JitterLisp began, and at some point this sub-sub-project got out of
+hand itself.
 
-@fixme{Go on.}
 
-@fixme{this is a terse specification, not a tutorial}
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Goals
+@section Goals
+
+JitterLisp lives somewhere near the boundary between the end of the
+domain of complex toys, and where simple real Lisp systems begin.
+@c
+As long as we keep seeing it as an example for Jitter either
+classification will do.
+@c JitterLisp is a complex toy, or a simple real Lisp system; either will
+@c work as long as we keep seeing it as an example for Jitter.
+As to
+concrete applications it can certainly be made useful: the Lisp
+library can be extended, and JitterLisp itself could become both
+embeddable and extensible in C without much work.  I might do some of
+this myself in the future and the result would be useful, but writing
+yet another Lisp system was never my primary goal.
+
+Even without the ambitious scope of Jitter I believe JitterLisp will
+be useful
+@c , if not for anything else
+to show the level of performance
+within the reach of ``simple'', clean systems.  JitterLisp gets many
+design points correct but is not perfect or exceptionally clever in
+any.  Still it appears more efficient than every mature ``dynamic
+language'', in some cases to a spectacular degree---due more to the
+faults of others than to any merit of mine.
+
+On a personal level I have one goal for JitterLisp, that I will not
+even try to hide:
+@c This is my very personal goal for JitterLisp:
+being able to say that
+most language implementations are terrible---they are---with numbers
+to show it.  And here I am.  Rubbing JitterLisp on everyone's face.
+
+@c I want to be able to say that 
+@c And here I am, rubbing
+@c @c my victory
+@c JitterLisp
+@c on their faces.
+
+@c We can, we must do better.
+
+@c The fashionable solutions are incredibly easy to beat.  Let us do it,
+@c and rub the victory in their faces.
+
+@c And if somebody read these words more like a criticism of others than
+@c an endorsement of myself, she would be correct.
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -847,23 +897,19 @@ accept either an interpreted closure or a compiled closure as a
 @fixme{talk about macroexpansion}
 
 @menu
-* Fixnums::                 Smallish-range integers.
 * Uniques::                 A few special objects.
+* Fixnums::                 Smallish-range integers.
 * Characters::              The fundamental elements of text.
 * Symbols::                 Comparable and usually named objects.
+* Conses::                  Mutable object pairs.
+* Boxes::                   Mutable objects contining another object.
 * Interpreted closures::    Procedures to be interpreted.
 * Compiled closures::       Faster procedures for the VM.
 * Primitives::              Procedure-like objects implemented in C.
 * Abstract Syntax Trees::   Code to be interpreted or compiled.
-* Boxes::                   Mutable objects contining another object.
-* Conses::                  Mutable object pairs.
 * Macros::                  Procedure-like things to generate ASTs.
 * Primitive macros::        Macros implemented in C.
 @end menu
-
-@node Fixnums
-@subsubsection Fixnums
-@cindex fixnum
 
 @node Uniques
 @subsubsection Uniques
@@ -874,7 +920,7 @@ accept either an interpreted closure or a compiled closure as a
 
 @cindex empty list
 @cindex list, empty
-An important unique object is @dfn{the empty list}:
+A unique object important in practice is @dfn{the empty list}:
 @syindex ()
 @deffn {unique} ()
 In read syntax it is acceptable to separate the open and closed
@@ -922,6 +968,10 @@ course generalized booleans are not necessarily unique objects.
 @deffnx {unique, no read syntax} #<undefined>
 @end deffn
 
+@node Fixnums
+@subsubsection Fixnums
+@cindex fixnum
+
 @node Characters
 @subsubsection Characters
 @cindex character
@@ -929,56 +979,6 @@ course generalized booleans are not necessarily unique objects.
 @node Symbols
 @subsubsection Symbols
 @cindex symbol
-
-@node Interpreted closures
-@subsubsection Interpreted closures
-@cindex interpreted closure
-
-@node Compiled closures
-@subsubsection Compiled closures
-@cindex compiled closure
-@fixme{An interpreted closure can destructively change to a compiled
-closure (but not vice-versa) without changing its identity.}
-
-@node Primitives
-@subsubsection Primitives
-@cindex primitive
-
-@node Abstract Syntax Trees
-@subsubsection Abstract Syntax Trees
-@cindex AST
-@cindex Abstract Syntax Tree
-An @dfn{Abstract Syntax Tree} or @dfn{AST} is a recursive type
-representing code as a data structure.  ASTs only support the core
-language forms which remain after macroexpanding away
-(@pxref{macroexpansion}, @pxref{Macroexpanding})
-every macro use: Lisp code rewritten
-not to use any macro turns into an AST, which can be then interpreted or
-compiled, or even analyzed and transformed by other Lisp code.
-
-@cindex reflection
-@cindex self-compiler
-@cindex self-optimizer
-@cindex compiler, self-
-@cindex optimizer, self-
-JitterLisp in fact contains no executor for Lisp: there are only an
-@dfn{AST interpreter}, written in C, and an @dfn{AST compiler}
-generating code for the Jittery VM, written in Lisp.  It is thanks to
-the reflection capabilities provided by the AST data type that it is
-possible to write a self-compiler, and also a self-optimizer, in the
-language itself.
-
-@fill
-
-ASTs have no read syntax, however the JitterLisp library provides
-facilities to conveniently inspect and build ASTs: @pxref{AST
-operations}.
-
-@node Boxes
-@subsubsection Boxes
-@cindex box
-
-Boxes have no read syntax.
 
 @node Conses
 @subsubsection Conses
@@ -990,8 +990,8 @@ be changed at run time while keeping the identity of the cons object.
 
 @cindex car
 @cindex cdr
-The first object in a cons is called the @dfn{car}, the second is
-called the @dfn{cdr}.
+The first object contained in a cons is called its @dfn{car}, the second is
+called its @dfn{cdr}.
 
 @cindex syntax, cons
 @cindex read syntax, cons
@@ -1082,6 +1082,56 @@ in output.  Its use in input, again, is optional.
 @noindent
 The prefix notation serves to express quoting and quasiquoting in a more
 convenient way: @pxref{Quoting and quasiquoting}.
+
+@node Boxes
+@subsubsection Boxes
+@cindex box
+
+Boxes have no read syntax.
+
+@node Interpreted closures
+@subsubsection Interpreted closures
+@cindex interpreted closure
+
+@node Compiled closures
+@subsubsection Compiled closures
+@cindex compiled closure
+@fixme{An interpreted closure can destructively change to a compiled
+closure (but not vice-versa) without changing its identity.}
+
+@node Primitives
+@subsubsection Primitives
+@cindex primitive
+
+@node Abstract Syntax Trees
+@subsubsection Abstract Syntax Trees
+@cindex AST
+@cindex Abstract Syntax Tree
+An @dfn{Abstract Syntax Tree} or @dfn{AST} is a recursive type
+representing code as a data structure.  ASTs only support the core
+language forms which remain after macroexpanding away
+(@pxref{macroexpansion}, @pxref{Macroexpanding})
+every macro use: Lisp code rewritten
+not to use any macro turns into an AST, which can be then interpreted or
+compiled, or even analyzed and transformed by other Lisp code.
+
+@cindex reflection
+@cindex self-compiler
+@cindex self-optimizer
+@cindex compiler, self-
+@cindex optimizer, self-
+JitterLisp in fact contains no executor for Lisp: there are only an
+@dfn{AST interpreter}, written in C, and an @dfn{AST compiler}
+generating code for the Jittery VM, written in Lisp.  It is thanks to
+the reflection capabilities provided by the AST data type that it is
+possible to write a self-compiler, and also a self-optimizer, in the
+language itself.
+
+@fill
+
+ASTs have no read syntax, however the JitterLisp library provides
+facilities to conveniently inspect and build ASTs: @pxref{AST
+operations}.
 
 @node Macros
 @subsubsection Macros
@@ -2514,7 +2564,6 @@ or an excerpt explaining how there is no warranty of any kind.
 @syindex gc
 @deffn {primitive wrapper} gc
 @end deffn
-
 
 
 @c C API
