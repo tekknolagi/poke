@@ -61,6 +61,9 @@ jitterlisp_eval_interpreter_ast_primitive (jitterlisp_object rator,
   for (i = 0; i < rand_no; i ++)
     values [i] = jitterlisp_eval_interpreter_ast (rand_asts [i], env);
 
+  /* FIXME: does GCC guarantee that this will not be compiled as a sibling
+     call?  It is important that the current stack frame is not popped until
+     the callee returns. */
   return JITTERLISP_PRIMITIVE_DECODE(rator)->function (values);
 }
 
