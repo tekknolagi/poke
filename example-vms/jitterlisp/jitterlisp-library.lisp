@@ -2696,6 +2696,9 @@
       (set! b (square b)))
     res))
 
+(define-constant **-procedure
+  **-procedure-iterative)
+
 (define-right-nested-variadic-extension **-non-tail-recursive **-procedure-non-tail-recursive 1)
 (define-right-nested-variadic-extension **-iterative **-procedure-iterative 1)
 
@@ -4323,22 +4326,93 @@
                           bounds))
         ((and (ast-literal? optimized-condition)
               (ast-literal-value optimized-condition))
-         ;; The condition has been simplified to non-#f.
+         ;; The condition has been simplified to non-#f: rewrite
+         ;; [if [literal non-#f] E1 E2] into E1.
          (ast-optimize-helper then bounds))
         ((ast-literal? optimized-condition)
          ;; The condition has been simplified to #f, since we didn't
-         ;; get to the previous clause.
+         ;; get to the previous clause: rewrite [if [literal #f] E1 E2] into E2.
          (ast-optimize-helper else bounds))
         ((ast-equal? then else)
          ;; The two branches are equal, so we don't need to have a conditional
          ;; at all: turn it into a sequence of the condition and one branch;
          ;; this will usually be further optimizable as the condition tends not
          ;; to have effects.
+         ;; Rewrite [if E1 E2 E2] into [sequence E1 E2].
          (ast-optimize-helper (ast-sequence optimized-condition
                                             then)
                               bounds))
+        ((and (ast-equal? optimized-condition
+                          (ast-optimize-helper then bounds))
+              (ast-literal? else)
+              (not (ast-literal-value else))
+              (not (ast-effectful? optimized-condition bounds)))
+         ;; The condition has no effects and is equal to the then branch, with
+         ;; an else branch which is the literal #f.  This occurs in the
+         ;; expansion of (and X X) with a non-effectul X.
+         ;; Rewrite [if E1 E1 [literal #f]] into E1.
+         optimized-condition)
+        ((and (ast-equal? optimized-condition
+                          (ast-optimize-helper else bounds))
+              (ast-literal? then)
+              (eq? (ast-literal-value then) #t) ;; Exactly the canonical #t.
+              (not (ast-effectful? optimized-condition bounds)))
+         ;; The condition has no effects and is equal to the else branch, with
+         ;; an then branch which is the literal #t -- exactly that canonical
+         ;; boolean, not any other non-#f value.  This occurs in the
+         ;; expansion of the non-lispy (or X X) with a non-effectul X.
+         ;; Rewrite [if E1 [literal #t] E1] into
+         ;; [primitive boolean-canonicalize E1].
+         ;; This is provided for symmetry with the previous case, mostly for
+         ;; fun.
+         (ast-optimize-helper (ast-primitive primitive-boolean-canonicalize
+                                             (list optimized-condition))
+                              bounds))
+        ((let ((optimized-else (ast-optimize-helper else bounds)))
+           (and (ast-primitive? optimized-else)
+                (eq? (ast-primitive-operator optimized-else)
+                     primitive-boolean-canonicalize)
+                (ast-equal? optimized-condition
+                            (car (ast-primitive-operands optimized-else)))
+                (ast-literal? then)
+                (eq? (ast-literal-value then) #t) ;; Exactly the canonical #t.
+                (not (ast-effectful? optimized-condition bounds))))
+         ;; A generalization of the previous case to the expansion of non-lispy
+         ;; (or X X ... X).
+         ;; Rewrite [if E1 [literal #t] [primitive boolean-canonicalize E1]]
+         ;; into [primitive boolean-canonicalize E1].
+         (ast-optimize-helper (ast-primitive primitive-boolean-canonicalize
+                                             (list optimized-condition))
+                              bounds))
+        ((let ((optimized-then (ast-optimize-helper then bounds))
+               (optimized-else (ast-optimize-helper else bounds)))
+           (and (ast-literal? optimized-then)
+                (ast-literal? optimized-else)
+                (eq? (ast-literal-value optimized-then) #t) ;; The canonical #t.
+                (not (ast-literal-value optimized-else))))
+         ;; Rewrite [if E #t #f] into [primitive boolean-canonicalize E]; notice
+         ;; that there is no requirement on effectfulness or on the shape of the
+         ;; condition.
+         ;; This doesn't only occur in dumb code written by human beginners: it
+         ;; occurs, for example, in the expansion of non-lispy (or X #f), which
+         ;; may well come from the expansion of another macro.
+         (ast-optimize-helper (ast-primitive primitive-boolean-canonicalize
+                                             (list optimized-condition))
+                              bounds))
+        ((let ((optimized-then (ast-optimize-helper then bounds))
+               (optimized-else (ast-optimize-helper else bounds)))
+           (and (ast-literal? optimized-then)
+                (ast-literal? optimized-else)
+                (not (ast-literal-value optimized-then))
+                (eq? (ast-literal-value optimized-else) #t))) ;; The canonical #t.
+         ;; Rewrite [if E #f #t] into [primitive not E]; again there is no
+         ;; requirement on effectfulness or on the shape of the condition.
+         ;; This is symmetrical with respect to the previous case.
+         (ast-optimize-helper (ast-primitive primitive-not
+                                             (list optimized-condition))
+                              bounds))
         (#t
-         ;; Keep both branches.
+         ;; Generic case.  Keep both branches, each optimized separately.
          (ast-if optimized-condition
                  (ast-optimize-helper then bounds)
                  (ast-optimize-helper else bounds)))))
