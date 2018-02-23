@@ -2682,9 +2682,9 @@
   (cond ((zero? e)
          1)
         ((even? e)
-         (square (**-procedure-non-tail-recursive b (2quotient e))))
+         (square (**-procedure-non-tail-recursive b (quotient e 2))))
         (#t
-         (* b (square (**-procedure-non-tail-recursive b (2quotient e)))))))
+         (* b (square (**-procedure-non-tail-recursive b (quotient e 2)))))))
 
 (define-constant (**-procedure-iterative b e)
   (let ((res 1))
@@ -2692,7 +2692,7 @@
       (when (odd? e)
         (set! res (* res b))
         (set! e (- e 1)))
-      (set! e (2quotient e))
+      (set! e (quotient e 2))
       (set! b (square b)))
     res))
 
@@ -5861,7 +5861,37 @@
 
 
 
-;;;; Implicit optimization.
+;;;; Implicit optimization: lambdas.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; From now on the lambda form will macroexpand to an optimized body.  The
+;;; optimization is computed at macroexpansion time by lambda, not at evaluation
+;;; time when building a closure.
+
+;; Keep the original non-optimizing lambda with a different name, which will be
+;; useful in the definition of lambda-optimized and for testing.
+(define lambda-non-optimized
+  lambda)
+
+(define-macro (lambda-optimized formals . body)
+  (unless (symbols? formals)
+    (error `(lambda: formals not a list of symbols: ,formals)))
+  (unless (all-different? formals)
+    (error `(lambda: non-distinct formals ,formals)))
+  ;; AST rewriting as invoked here cannot know the exact set of variables bound
+  ;; in the body, but assuming that only the formals are bound is a correct
+  ;; conservative approximation.
+  (ast-optimize (macroexpand `(lambda-non-optimized ,formals ,@body))
+                formals))
+
+;; Redefine lambda to make it implicitly optimizing.
+(define lambda
+  lambda-optimized)
+
+
+
+
+;;;; Implicit optimization: definitions.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; From now on definition forms will automatically optimize new globally bound
@@ -5911,7 +5941,7 @@
 (define-macro (define-constant-optimized thing . body)
   `(define-optimized-possibly-constant #t ,thing ,@body))
 
-;; Re-define define and define-constant.
+;; Re-define define and define-constant to make them implicitly optimizing.
 (define-macro (define thing . body)
   `(define-optimized ,thing ,@body))
 (define-macro (define-constant thing . body)
