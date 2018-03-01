@@ -141,7 +141,7 @@ epsilon\subscript\
 @fixme{Fill this.}
 @end rmacro
 
-@c This occurs a lot of times, so a macro is handy.
+@c This occurs a lot of times, so a macro comes in handy.
 @rmacro nothing
 @code{#<nothing>}
 @end rmacro
@@ -549,9 +549,9 @@ a REPL, or by running Lisp code from text files.
 @node Obtaining the software
 @section Obtaining the software
 
-@cindex obtaining (JitterLisp)
-@cindex downloading (JitterLisp)
-@cindex distribution (JitterLisp)
+@cindex obtaining
+@cindex downloading
+@cindex distribution
 
 @cindex C
 @cindex source
@@ -699,8 +699,8 @@ in case of user error;
 @cindex litter
 @item garbage collection
 JitterLisp supports the Boehm-Demers garbage collector but can also
-allocate memory without ever freeing the space, either because the
-garbage collection library is not available, or for performance testing.
+allocate heap memory without ever freeing the space, either because the
+garbage collection library is not available or for performance testing.
 The two possible configuration values are called @dfn{Boehm} or
 @dfn{litter}, respectively.
 
@@ -712,20 +712,20 @@ there are currently four @dfn{dispatching models} supported by Jitter:
 @dfn{minimal threading} and
 @dfn{no threading} (@pxref{Dispatch models,,, jitter, The Jitter Manual}),
 each with its own performance and portability profile.
-JitterLisp will run with any of them.
+JitterLisp will run with any dispatching model.
 @end table
 
 @cindex build directory (Jitter)
 Unless some configuration item is disabled this makes up a total of 16
 combinations and therefore 16 executables, recognizable by suffixes in
 their file name.
-The safety suffix may be empty or @file{--unsafe},
-the garbage collection suffix @file{--boehm} or empty,
+The safety suffix may be empty or @samp{--unsafe},
+the garbage collection suffix @samp{--boehm} or empty,
 and the dispatching model suffix one of
-@file{--switch},
-@file{--direct-threading},
-@file{--minimal-threading} and
-@file{--no-threading}.
+@samp{--switch},
+@samp{--direct-threading},
+@samp{--minimal-threading} and
+@samp{--no-threading}.
 @*
 A good combination for general use will be
 @emph{safe}-@emph{Boehm}-@emph{no-threading}, implemented in the file
@@ -932,6 +932,112 @@ Debugging and benchmarking negative options:
 
 @fixme{optimize retroactively}
 
+@ignore
+@result{} foo
+@expansion{} foo
+@print{} foo
+@error{} foo
+@end ignore
+
+@fixme{These are just ideas.  The variable @code{x} is unbound.}
+@example
+(append '(a b c) '(1 2 3 4))
+  @result{} (a b c 1 2 3 4)
+
+
+x
+  @error{} unbound variable x
+'x
+  @result{} x
+(macroexpand x)
+  @error{} unbound variable x
+
+(macroexpand 'x)
+  @result{} [variable x]
+(macroexpand ''x)
+  @result{} [literal x]
+(macroexpand '''x)
+  @result{} [literal (quote x)]
+(macroexpand ''''x)
+  @result{} [literal (quote (quote x))]
+
+(define (twice n)
+  (* n 2))
+(twice 10)
+  @result{} 20
+twice
+  @result{}
+  #<interpreted-closure () (#<u680>)
+    [primitive #<primitive 2* 1-ary> [variable #<u680>]]>
+
+(define-macro (when-zero discriminand . body)
+  `(when (zero? ,discriminand) ,@@body))
+
+(macroexpand '(when-zero a b c))
+  @result{}
+  [if [call [variable zero?] [variable a]]
+        [sequence [variable b]
+                  [variable c]]
+        [literal #<nothing>]]
+(when-zero 42 (display 'foo) (newline))
+  @expansion{}
+  [if [call [variable zero?] [literal 42]]
+      [sequence [call [variable display] [literal foo]]
+                [call [variable newline]]]
+      [literal #<nothing>]]
+  @result{}
+  @nothing
+
+;; For people familiar with Common Lisp:
+(define-macro (defun operator formals . body-forms)
+  `(define (,operator ,@@formals)
+     ,@@body-forms))
+(define-macro (defmacro operator formals . body-forms)
+  `(define-macro (,operator . ,formals)
+     ,@@body-forms))
+;; And then:
+(defun successor (n)
+  (+ n 1))
+(defmacro when-zero (discriminand . body)
+  `(when (zero? ,discriminand)
+     ,@@body))
+
+(define my-even?
+  (letrec ((my-even? (lambda (n)
+                       (cond ((= n 0)  #t)
+                             ((= n 1)  #f)
+                             (#t       (odd? (- n 1))))))
+           (my-odd? (lambda (n)
+                      (cond ((= n 0)  #f)
+                            ((= n 1)  #t)
+                            (#t       (even? (- n 1)))))))
+    my-even?))
+(lambda () (letrec ((f 1) (g 2)) f))
+  @result{}
+  #<interpreted-closure () ()
+    [let #<u702> [literal #<undefined>]
+      [let #<u703> [literal #<undefined>]
+        [sequence [set! #<u702> [literal 1]]
+                  [sequence [set! #<u703> [literal 2]]
+                            [variable #<u702>]]]]]>
+(macroexpand '(begin))
+  @result{} [literal #<nothing>]
+(macroexpand '(begin (newline)))
+  @result{} [call [variable newline]]
+(macroexpand '(newline))
+  @result{} [call [variable newline]]
+(macroexpand '(begin (display 42) (newline)))
+  @result{}
+  [sequence [call [variable display] [literal 42]]
+            [call [variable newline]]]
+(macroexpand '(begin (display 42) (newline) (newline)))
+  @result{}
+  [sequence [call [variable display] [literal 42]]
+            [sequence [call [variable newline]]
+                      [call [variable newline]]]]
+
+@end example
+
 
 
 @c Lisp reference
@@ -1041,7 +1147,7 @@ the true object is written as @code{#t}.
 @cindex conditional
 @cindex loop
 In practical use @code{#f} tends to be more important than @code{#t},
-as JitterLisp conditionals and loops distinguish between @code{#f}
+as JitterLisp conditionals and loops distinguish between the @code{#f}
 value and @emph{any other} Lisp object which is taken as ``true'' for
 the purposes of tests.  A Lisp object used as a boolean
 in this extended sense is called a @dfn{generalized boolean}.  Of
@@ -1093,28 +1199,44 @@ If @var{a} and @var{b} are two Lisp objects, then
 @end quotation
 
 @cindex composed selector, cons
-Let @var{S} be any sequence of the characters ``a'' and ``d''.  Then
-the @dfn{ca@var{S}r} of a cons is the car of the c@var{S}r of
-the cons, and its @dfn{cd@var{S}r} is the cdr of its c@var{S}r.
-For example the caddr of an object is the car of the cdr of its cdr.
-Such @dfn{composed cons selector} names are convenient to use when
-referring to nested components of a cons, and the JitterLisp library
-provides convenient functionality to access them with any @var{S} of
-length 1, 2, 3 and 4.
+Let @var{S} be any nonempty sequence of the characters ``a'' and
+``d''.  Then the @dfn{ca@var{S}r} of a cons is the car of the
+c@var{S}r of the cons, and its @dfn{cd@var{S}r} is the cdr of its
+c@var{S}r.
+@cindex caddr
+For example the caddr of an object is the car of the cdr
+of its cdr.  Such @dfn{composed cons selector} names are convenient to
+use when referring to nested components of a cons, and the JitterLisp
+library provides convenient functionality to access them with any
+@var{S} of length 1, 2, 3 and 4.
 
 @anchor{lists}
 @cindex list
 A @dfn{list} is either the empty list object or a cons whose cdr is
 another list.
-For example @code{()}, @code{(#t . ())}, @code{(#t . (3 . ()))}
-and @code{((1 . 2) . ())} are lists.
+For example @code{()}, @code{(#t . ())}, @code{(#f . (3 . ()))}
+and @code{((1 . 2) . ())} are lists;
 @code{(#t . #t)} is not a list.
 
 @cindex sublist
 @cindex element, list
-A @dfn{sublist} of a list is either its cdr or a sublist of its cdr.
-The @dfn{elements} of a list are the car the list and the elements
-of its sublists.
+A @dfn{sublist} of a nonempty list is either its cdr or a sublist of
+its cdr.
+The @dfn{elements} of a nonempty list are the car the list and the
+elements of its sublists.
+For example the list
+@code{(foo . (10 . (bar . ())))} has the three sublists
+@code{(10 . (bar . ()))},
+@code{(bar . ())}
+and
+@code{()},
+and the three elements
+@code{foo}, @code{10} and @code{bar}; the empty list
+@code{()} has no sublists and no elements.
+Given a nonempty list its first element and its first sublist can always
+be found by taking, respectively, the car and the cdr of the list.  Taking
+the car and cdr of the first sublist yields the second element and the
+second sublist of the original list, and so on.
 
 @cindex spine, list
 The following notation makes lists much easier to write, as it
@@ -1143,7 +1265,8 @@ For example
 and @code{(10 a . #t)} is a compact way of writing the non-list
 @code{(10 . (a . #t))}.
 
-A further syntactic convenience is available for particular lists:
+A further syntactic convenience is available for particular conses,
+which are also lists:
 @cindex notation, prefix
 @cindex prefix notation
 @quotation Prefix notation
@@ -1169,6 +1292,12 @@ in output.  Its use in input, again, is optional.
 @noindent
 The prefix notation serves to express quoting and quasiquoting in a more
 convenient way: @pxref{Quoting and quasiquoting}.
+
+It is worth stressing that lists are not special at the language
+level and do not constitute a separate type: the name ``list'' is
+just a characterization of the shape of some objects, common in
+practice, which include the empty list object and some conses.
+
 
 @node Boxes
 @subsubsection Boxes
@@ -1428,7 +1557,13 @@ result of the condition.
 
 @anchor{lambda}
 @syindex lambda
-@deffn {core macro} lambda formals . forms
+@deffn  {macro} lambda formals . forms
+@syindex lambda-optimized
+@deffnx {macro} lambda-optimized formals . forms
+@end deffn
+
+@syindex lambda-non-optimized
+@deffn {core macro} lambda-non-optimized formals . forms
 @end deffn
 
 
@@ -1482,7 +1617,7 @@ An @dfn{assignment} operation destructively modifies an existing variable bindin
 @syindex set!
 @deffn {core macro} set! x . forms
 Evaluate the forms @var{forms} left-to-right, then assign the result of the last one
-(or @code{#<nothing>} if no forms were given) to the innermost binding for the variable
+(or @nothing{} if no forms were given) to the innermost binding for the variable
 @var{x}.
 
 Error out if @var{x} is not a symbol, if @var{x} is unbound, or if the binding for
@@ -1676,8 +1811,6 @@ backwards-compatible way}
 @deffnx {primitive wrapper} cons? x
 @syindex primitive?
 @deffnx {primitive wrapper} primitive? x
-@syindex primitive-macro?
-@deffnx {primitive wrapper} primitive-macro? x
 @syindex macro?
 @deffnx {primitive wrapper} macro? x
 @syindex interpreted-closure?
