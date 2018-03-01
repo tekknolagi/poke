@@ -103,6 +103,7 @@ static void
 jitterc_add_implicit_instructions (struct jitterc_vm *vm)
 {
   jitterc_add_implicit_instruction (vm, "exitvm", "JITTER_EXIT();");
+  jitterc_add_implicit_instruction (vm, "unreachable", "");
 }
 
 

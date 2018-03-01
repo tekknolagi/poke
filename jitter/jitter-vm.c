@@ -1,6 +1,6 @@
 /* Jitter: VM-specific configuration and internal implementation header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -53,7 +53,7 @@ jitter_print_vm_configuration (FILE *f,
 
 
 
-/* VM rewriting: enabling and disabling.
+/* VM run-time settings.
  * ************************************************************************** */
 
 void
@@ -72,4 +72,16 @@ void
 jitter_vm_disable_optimization_rewriting (struct jitter_vm *vm)
 {
   vm->rewrite = jitter_dont_rewrite;
+}
+
+void
+jitter_vm_disable_final_exitvm (struct jitter_vm *vm)
+{
+  vm->add_final_exitvm = false;
+}
+
+void
+jitter_vm_enable_final_exitvm (struct jitter_vm *vm)
+{
+  vm->add_final_exitvm = true;
 }

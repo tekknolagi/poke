@@ -1,6 +1,6 @@
 /* VM library: main VM C file template.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -271,6 +271,9 @@ vmprefix_initialize (void)
          is not fixed. */
       the_vmprefix_vm.exitvm_meta_instruction
         = (vmprefix_meta_instructions + vmprefix_meta_instruction_id_exitvm);
+      the_vmprefix_vm.unreachable_meta_instruction
+        = (vmprefix_meta_instructions
+           + vmprefix_meta_instruction_id_unreachable);
 
       /* Threads or pointers to native code blocks of course don't exist with
    switch-dispatching. */
@@ -324,6 +327,10 @@ vmprefix_initialize (void)
       /* Rewriting is on by default. */
       jitter_vm_enable_optimization_rewriting (& the_vmprefix_vm);
 
+      /* By default we implicitly generate an "exitvm" instruction instead of an
+         "unreachable" instruction at the end of each program. */
+      jitter_vm_enable_final_exitvm (& the_vmprefix_vm);
+
       vm_struct_initialized = true;
     }
 
@@ -347,20 +354,32 @@ vmprefix_finalize (void)
 /* Global VM settings.
  * ************************************************************************** */
 
+/* These are all trivial wrappers doing the obvious thing on the struct
+   jitter_vm object for the VM in question, which the user is not supposed to
+   see. */
+
 void
 vmprefix_enable_optimization_rewriting (void)
 {
-  /* Do the obvious thing on the struct jitter_vm object, which the user
-     is not supposed to see. */
   jitter_vm_enable_optimization_rewriting (& the_vmprefix_vm);
 }
 
 void
 vmprefix_disable_optimization_rewriting (void)
 {
-  /* Do the obvious thing on the struct jitter_vm object, which the user
-     is not supposed to see. */
   jitter_vm_disable_optimization_rewriting (& the_vmprefix_vm);
+}
+
+void
+vmprefix_disable_final_exitvm (void)
+{
+  jitter_vm_disable_final_exitvm (& the_vmprefix_vm);
+}
+
+void
+vmprefix_enable_final_exitvm (void)
+{
+  jitter_vm_enable_final_exitvm (& the_vmprefix_vm);
 }
 
 

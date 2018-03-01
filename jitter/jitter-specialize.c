@@ -1,6 +1,6 @@
 /* VM library: specializer.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -127,11 +127,14 @@ jitter_backpatch_labels_in_specialized_program (struct jitter_program *p)
 static void
 jitter_add_program_epilog (struct jitter_program *p)
 {
-  /* Add a final exitvm instruction.  This is needed anyway, and it is also good
-     to have each label, including one at the very end of the program,
-     associated to an actual unspecialized instruction; this simplifies
-     things. */
-  jitter_append_meta_instruction (p, p->vm->exitvm_meta_instruction);
+  /* Add the final instructions which are supposed to close every VM program.
+     Having each label, including the ones at the very end of the program when
+     they exist, associated to an actual unspecialized instruction makes
+     replication easier. */
+  if (p->vm->add_final_exitvm)
+    jitter_append_meta_instruction (p, p->vm->exitvm_meta_instruction);
+  else
+    jitter_append_meta_instruction (p, p->vm->unreachable_meta_instruction);
 }
 
 void
