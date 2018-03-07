@@ -273,7 +273,8 @@ Temporary stuff, for myself
 @c distinction should be kept.
 
 @node Introduction
-@unnumbered Introduction
+@c @unnumbered Introduction
+@chapter Introduction
 
 JitterLisp is a comparatively simple and efficient Lisp system,
 relying on the Jitter virtual machine generator for compiling code.
@@ -292,6 +293,7 @@ relying on the Jitter virtual machine generator for compiling code.
 @cindex epsilon
 @cindex GNU epsilon
 @cindex Jitter
+@cindex sub-project
 @c @cindex @ @epsilonzero{} @c The initial forced space is less ugly than the alternative.
 Jitter (@pxref{Top,,, jitter, The Jitter Manual}) was born out of an
 attempt to optimize the programming language GNU epsilon
@@ -299,9 +301,21 @@ attempt to optimize the programming language GNU epsilon
 project.  Dissatisfied with the speedup provided by a simple
 direct-threaded virtual machine I started exploring more advanced
 techniques, and the experiment eventually grew into the current
-virtual-machine generator.  Even if it can certainly be said that
+virtual-machine generator.
+@ignore
+Even if it can certainly be said that
 Jitter is a sub-project which got way out of hand I am happy with the
 end result, and believe that others will find it useful.
+@end ignore
+@ignore
+Useful as it is, Jitter could certainly be called a sub-project which
+got out of hand.
+@end ignore
+@ignore
+Even if it could certainly be called a sub-project which got out of hand I
+am happy with Jitter, and believe that others will find it useful as well.
+@end ignore
+A sub-project, some might argue, that got out of hand.
 
 @c Shortly after my public presentation of Jitter at the 2017 edition of
 @c the GNU Hackers Meeting a friend @fixme{ask permission to mention him
@@ -321,9 +335,10 @@ end result, and believe that others will find it useful.
 
 Still, Jitter had seen no major application yet.  It needed to be
 stressed to find bugs and embedded in a practical system for me to
-discover what was still missing and fill the gaps.  I needed a
-real application.  A real programming language.  A Lisp.
+discover what was missing and fill the gaps.  I wanted a real
+application.  A real programming language.  A Lisp.
 
+@cindex sub-sub-project
 And the sub-sub-project has now also gotten out of hand, again
 branching off in its own interesting direction.
 
@@ -335,18 +350,18 @@ branching off in its own interesting direction.
 @section Goals
 
 JitterLisp lives somewhere near the boundary between the end of the
-domain of complex toys, and where simple real Lisp systems begin.
+domain of complex toys, and where simple real Lisp systems begin;
 @c
-As long as we keep seeing it as an example for Jitter either
+as long as we keep seeing it as an example for Jitter either
 classification will do.
 @c JitterLisp is a complex toy, or a simple real Lisp system; either will
 @c work as long as we keep seeing it as an example for Jitter.
-As to
-concrete applications it can certainly be made useful: the Lisp
+As for concrete applications it can certainly be made useful: the Lisp
 library can be extended, and JitterLisp itself could become both
-embeddable and extensible in C without much work.  I might do some of
-this myself in the future and the result would be useful, but writing
-yet another Lisp system was never my primary goal.
+embeddable and extensible in C without unreasonable effort.  I might
+bend the system in some of these directions myself in the future, and
+the result would be useful, but writing yet another Lisp system was
+never my primary goal.
 
 Even without the ambitious scope of Jitter I believe JitterLisp will
 be useful
@@ -358,11 +373,11 @@ any.  Still it appears more efficient than every mature ``dynamic
 language'', in some cases to a spectacular degree---due more to the
 faults of others than to any merit of mine.
 
-I will not even try to hide my personal goal for JitterLisp:
-@c This is my very personal goal for JitterLisp:
-being able to say that most language implementations are terrible, as
-in fact they are, with numbers to show it.  And here I am, rubbing
-JitterLisp on everyone's face.
+I will not even try to hide my own personal goal for JitterLisp: being
+able to say that @emph{most language implementations are terrible}, as
+in fact they are, with numbers to show it.  And here I am, claiming my
+right to rub JitterLisp on everyone's face.
+How good it feels.
 
 @c I want to be able to say that 
 @c And here I am, rubbing
@@ -382,15 +397,62 @@ JitterLisp on everyone's face.
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Features and influences
 @section Features and influences
+@cindex design criterion
+@cindex criterion, for feature inclusion
+@cindex feature inclusion criterion
 @cindex feature
-@cindex influences
+Every time I had to choose whether to support a feature or to omit it
+for simplicity my decision relied on two criteria:
+@itemize @bullet
+@cindex criterion, for feature inclusion
+@cindex feature inclusion criterion
+@item
+@emph{Can the feature be omitted while keeping the language
+realistic?}
+JitterLisp should remain a Lisp, not more difficult to learn for a
+Lisper than another simple dialect nor too fundamentally different.
+JitterLisp must also be a practical system with the core features a
+programmer would expect, and not just an idealized prototype.
+@*
+It must be possible to compare the JitterLisp @emph{language} with
+standard dialects, and find them similar in practice.
+
+@cindex criterion, for feature inclusion
+@cindex feature inclusion criterion
+@item
+@emph{Is the feature critical for performance?}  If omitting the
+feature granted JitterLisp a performance advantage with respect to
+other Lisps at the cost of making JitterLisp very cumbersome to use,
+then not supporting it would make performance comparisons unfair.
+When, on the other hand, a feature has no performance overhead
+(particularly when not in use), I can in good conscience leave it out
+and claim that an extended JitterLisp with the feature would still
+perform as well as the current system.
+@*
+The language must make comparisons between the JitterLisp
+@emph{implementation} and other Lisp implementations possible, and fair.
+@end itemize
+@noindent
+In the end the relative weight associated to each of the two criteria
+can only be a judgment call and some grey areas will remain, no matter
+how I strive for fairness.
+In case some reader felt that I unbalanced the comparison to
+JitterLisp's advantage by choosing to include or exclude some feature,
+I am open to discussion.
+
+@cindex compatibility, other Lisp dialects (none)
+@cindex influence
 @cindex Common Lisp
 @cindex Scheme
+@cindex macro
+JitterLisp draws inspiration from both Common Lisp and Scheme, without
+being compatible with either.
+However a competent programmer should be able to write code running
+unchanged on top of a Common Lisp or Scheme system, through a layer of
+simple macros.
 
-
-@fixme{JitterLisp is a project about performance}
-
-@fixme{Write this}
+@cindex epsilon
+Several implementation ideas originate from my own GNU epsilon.
 
 @menu
 * Comparison with other Lisps::     Some features come from Common Lisp and Scheme.
@@ -402,17 +464,87 @@ JitterLisp on everyone's face.
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Comparison with other Lisps
 @subsection Comparison with other Lisps
+The JitterLisp language is first of all a Lisp dialect, and as such
+will feel familiar to any programmer already mastering any other Lisp.
+
+@cindex feature
+@cindex lexical scoping
+@cindex scoping, lexical
+@cindex static scoping
+@cindex iteration
+@cindex recursion
+@cindex macro
+@cindex procedure
+@cindex higher order
+@cindex order, higher
+@cindex compiled procedure
+@cindex interpreted procedure
+@cindex garbage collection
+@cindex homoiconic
+JitterLisp is a lexically-scoped higher-order homoiconic language
+featuring closures, garbage collection, quasiquoting and
+Turing-complete macros.
+
+@cindex feature
+@cindex expression
+@cindex sub-expression
+@cindex statement (no)
+@cindex top-level form (no)
+@cindex form, top-level (no)
+Every syntactic form in JitterLisp is an expression, and nontrivial
+expressions will contain sub-expressions; there are no statements as
+a distinct syntactic category, nor special forms which are only valid
+at the top level.
+@cindex feature
+@cindex tail call
+@cindex space overhead, tail call
+@cindex mutability, variable
+@cindex variable
+Variables are mutable by default, and iteration and recursion are both
+supported.  Tail calls incur no space overhead except in inter-calls
+between compiled and interpreted code.
+
+@cindex feature
+@cindex type
+@cindex datatype
+@cindex empty list
+@cindex symbol
+@cindex cons
+@cindex cdr
+@cindex list
+@cindex character
+@cindex procedure
+@c FIXME: mention strings when I add them
+@c FIXME: mention vectors when I add them
+Typing is dynamic.  JitterLisp datatypes include the empty list object,
+symbols, characters, conses and procedures.  Non-empty lists are
+cdr-nested conses.
+@cindex fixnum
+@cindex number
+@c FIXME: fixnum only -- no floats -- no bignums -- change when I add more types
+At the present time fixnums are the only numeric type.
+
+@cindex feature
+@cindex procedure
+@cindex compiled procedure
+@cindex interpreted procedure
+@cindex procedure, compiled
+@cindex procedure, interpreted
+@cindex identity, procedure across compiling
+Each procedure may be either interpreted or compiled, and procedures of
+different kinds are allowed to call each other with no restrictions
+and no difference in observable behavior.  Interpreted procedures can
+be compiled at run time without affecting their identity as objects.
+
+@fixme{quoting and quasiquoting are Lispy, not epsilonian}
+
+@fixme{compare with standard Lisp dialects}
+
+@fixme{Many of the superficial features of JitterLisp, particularly at the
+lexical level, come from Scheme}
 
 @fixme{@code{define} operating at the top level, like Common Lisp's
 @code{defun} but differently from Scheme}
-
-@fixme{both interpreted and compiled closures, like in many Common Lisp
-implementations, interoperable; compilation on the fly}
-
-@fixme{proper sibling call support like in Scheme, except when calling
-compiled code from interpreted code or vice-versa}
-
-@fixme{quoting and quasiquoting are Lispy, not epsilonian}
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -461,7 +593,36 @@ compiled code from interpreted code or vice-versa}
 @node epsilonian features
 @subsection epsilonian features
 
-@fixme{Write this}
+@cindex dynamic langauge
+@cindex reflection
+@cindex AST
+@cindex Abstract Syntax Tree
+@cindex macroexpansion
+@cindex compiler
+JitterLisp is at the same time more ``dynamic'' and more reflective
+than typical Lisp dialects: any expression is allowed to define,
+remove or alter any non-constant global binding; the Abstract Syntax
+Tree returned by macroexpansion and contained within each closure is a
+recursive data structure describing an expression in a minimalistic
+core language which can be interpreted, compiled, analyzed, optimized
+or in general used like any other data structure---in fact exposed
+ASTs and reflection make it possible and natural for the compiler to
+be just a procedure, itself written in Lisp and running on top of the
+interpreter or compiled by itself at run time.
+
+@cindex quasiquoting
+@cindex macro
+@cindex Common Lisp
+@cindex GNU epsilon
+@cindex epsilon
+These features, distinctly epsilonian, make the internal
+implementation simpler and more elegant but are meant to be invisible
+to the casual user.  In particular user macros operate on ordinary
+non-AST Lisp data structures, usually through Lisp quasiquoting, and
+will feel instantly familiar to any Common Lisp programmer; the fact
+that the core Lisp forms are themselves predefined macros expanding to
+ASTs may be safely ignored in ordinary programs as an implementation
+detail.
 
 @xref{Interaction example} for a quick demo session introducing most
 of the non-traditional features which might surprise a Lisp user.
