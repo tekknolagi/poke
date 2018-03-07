@@ -456,8 +456,8 @@ Several implementation ideas originate from my own GNU epsilon.
 
 @menu
 * Comparison with other Lisps::     Some features come from Common Lisp and Scheme.
-* Simplifications::                 What JitterLisp lacks and why.
 * epsilonian features::             Others are reminiscent of GNU epsilon.
+* Simplifications::                 What JitterLisp lacks and why.
 @end menu
 
 
@@ -480,10 +480,18 @@ will feel familiar to any programmer already mastering any other Lisp.
 @cindex compiled procedure
 @cindex interpreted procedure
 @cindex garbage collection
-@cindex homoiconic
-JitterLisp is a lexically-scoped higher-order homoiconic language
-featuring closures, garbage collection, quasiquoting and
-Turing-complete macros.
+@cindex homoiconicity
+@cindex quoting
+@cindex quasiquoting
+JitterLisp is a
+@emph{lexically-scoped}
+@emph{higher-order}
+@emph{homoiconic} language
+featuring
+@emph{closures},
+@emph{garbage collection},
+@emph{quasiquoting} and
+Turing-complete @emph{macros}.
 
 @cindex feature
 @cindex expression
@@ -491,7 +499,7 @@ Turing-complete macros.
 @cindex statement (no)
 @cindex top-level form (no)
 @cindex form, top-level (no)
-Every syntactic form in JitterLisp is an expression, and nontrivial
+Every syntactic form in JitterLisp is an @emph{expression}, and nontrivial
 expressions will contain sub-expressions; there are no statements as
 a distinct syntactic category, nor special forms which are only valid
 at the top level.
@@ -500,9 +508,10 @@ at the top level.
 @cindex space overhead, tail call
 @cindex mutability, variable
 @cindex variable
-Variables are mutable by default, and iteration and recursion are both
-supported.  Tail calls incur no space overhead except in inter-calls
-between compiled and interpreted code.
+Variables are @emph{mutable} by default, and @emph{iteration} and
+@emph{recursion} are both supported.  @emph{Tail calls} incur no
+space overhead except in inter-calls between compiled and interpreted
+code.
 
 @cindex feature
 @cindex type
@@ -516,13 +525,14 @@ between compiled and interpreted code.
 @cindex procedure
 @c FIXME: mention strings when I add them
 @c FIXME: mention vectors when I add them
-Typing is dynamic.  JitterLisp datatypes include the empty list object,
-symbols, characters, conses and procedures.  Non-empty lists are
-cdr-nested conses.
+Typing is @emph{dynamic}.  JitterLisp datatypes include the
+@emph{empty list} object,
+@emph{symbols}, @emph{characters}, @emph{conses} and
+@emph{procedures}.  Non-empty lists are cdr-nested conses.
 @cindex fixnum
 @cindex number
 @c FIXME: fixnum only -- no floats -- no bignums -- change when I add more types
-At the present time fixnums are the only numeric type.
+At the present time @emph{fixnums} are the only numeric type.
 
 @cindex feature
 @cindex procedure
@@ -531,10 +541,11 @@ At the present time fixnums are the only numeric type.
 @cindex procedure, compiled
 @cindex procedure, interpreted
 @cindex identity, procedure across compiling
-Each procedure may be either interpreted or compiled, and procedures of
-different kinds are allowed to call each other with no restrictions
-and no difference in observable behavior.  Interpreted procedures can
-be compiled at run time without affecting their identity as objects.
+Each procedure may be either @emph{interpreted} or @emph{compiled},
+and procedures of different kinds are allowed to call each other
+with no restrictions and no difference in observable behavior.
+Interpreted procedures can be compiled at run time without
+affecting their @emph{identity} as objects.
 
 @fixme{quoting and quasiquoting are Lispy, not epsilonian}
 
@@ -545,6 +556,48 @@ lexical level, come from Scheme}
 
 @fixme{@code{define} operating at the top level, like Common Lisp's
 @code{defun} but differently from Scheme}
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node epsilonian features
+@subsection epsilonian features
+
+@cindex dynamic langauge
+@cindex reflection
+@cindex AST
+@cindex Abstract Syntax Tree
+@cindex macroexpansion
+@cindex compiler
+JitterLisp is
+@c at the same time
+more @emph{``dynamic''} and more
+@emph{reflective} than typical Lisp dialects: any expression is
+allowed to define, remove or alter any non-constant global binding;
+the @emph{Abstract Syntax Tree} returned by macroexpansion and contained
+within each closure is a recursive data structure describing an
+expression in a @emph{minimalistic core language} which can be interpreted,
+compiled, analyzed, optimized or in general used like any other data
+structure---in fact exposed ASTs and reflection make it possible and
+natural for the compiler to be just a procedure, itself written in
+Lisp and running on top of the interpreter or compiled by itself at
+run time.
+
+@cindex quasiquoting
+@cindex macro
+@cindex Common Lisp
+@cindex GNU epsilon
+@cindex epsilon
+These features, distinctly epsilonian, make the internal
+implementation simpler and more elegant but are meant to be invisible
+to the casual user.  In particular user macros operate on ordinary
+non-AST Lisp data structures, usually through Lisp quasiquoting, and
+will feel instantly familiar to any Common Lisp programmer; the fact
+that the core Lisp forms are themselves predefined macros expanding to
+ASTs may be safely ignored in ordinary programs as an implementation
+detail.
+
+@xref{Interaction example} for a quick demo session introducing most
+of the non-traditional features likely to surprise a Lisp user.
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -590,45 +643,6 @@ lexical level, come from Scheme}
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
-@node epsilonian features
-@subsection epsilonian features
-
-@cindex dynamic langauge
-@cindex reflection
-@cindex AST
-@cindex Abstract Syntax Tree
-@cindex macroexpansion
-@cindex compiler
-JitterLisp is at the same time more ``dynamic'' and more reflective
-than typical Lisp dialects: any expression is allowed to define,
-remove or alter any non-constant global binding; the Abstract Syntax
-Tree returned by macroexpansion and contained within each closure is a
-recursive data structure describing an expression in a minimalistic
-core language which can be interpreted, compiled, analyzed, optimized
-or in general used like any other data structure---in fact exposed
-ASTs and reflection make it possible and natural for the compiler to
-be just a procedure, itself written in Lisp and running on top of the
-interpreter or compiled by itself at run time.
-
-@cindex quasiquoting
-@cindex macro
-@cindex Common Lisp
-@cindex GNU epsilon
-@cindex epsilon
-These features, distinctly epsilonian, make the internal
-implementation simpler and more elegant but are meant to be invisible
-to the casual user.  In particular user macros operate on ordinary
-non-AST Lisp data structures, usually through Lisp quasiquoting, and
-will feel instantly familiar to any Common Lisp programmer; the fact
-that the core Lisp forms are themselves predefined macros expanding to
-ASTs may be safely ignored in ordinary programs as an implementation
-detail.
-
-@xref{Interaction example} for a quick demo session introducing most
-of the non-traditional features which might surprise a Lisp user.
-
-
-@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node License
 @section License
 
@@ -638,6 +652,7 @@ of the non-traditional features which might surprise a Lisp user.
 @cindex General Public License
 @cindex license, for JitterLisp
 @cindex software, license
+@cindex copying (software software)
 JitterLisp is free software, distributed under the GNU General Public
 License, version 3 or later.
 @ifset includelicenses
@@ -2912,6 +2927,7 @@ No newline character or other terminator is added.
 @node Legal notices
 @subsection Legal notices
 
+@cindex copying (software software)
 @syindex copying
 @deffn  {primitive wrapper} copying
 @syindex no-warranty
