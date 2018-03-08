@@ -363,20 +363,22 @@ bend the system in some of these directions myself in the future, and
 the result would be useful, but writing yet another Lisp system was
 never my primary goal.
 
-Even without the ambitious scope of Jitter I believe JitterLisp will
-be useful
-@c , if not for anything else
-to show the level of performance
-within the reach of ``simple'', clean systems.  JitterLisp gets many
-design points correct but is not perfect or exceptionally clever in
-any.  Still it appears more efficient than every mature ``dynamic
-language'', in some cases to a spectacular degree---due more to the
-faults of others than to any merit of mine.
+Even without the ambitious scope of Jitter I consider JitterLisp
+useful to show the level of performance within the reach of
+``simple'', clean systems.  JitterLisp gets many design points correct
+but is not perfect or exceptionally clever in any.  Still it appears
+more efficient than every mature ``dynamic language'', in some cases
+to a spectacular degree---due more to the faults of others than to any
+merit of mine.
 
+@cindex Schadenfreude
 I will not even try to hide my own personal goal for JitterLisp: being
-able to say that @emph{most language implementations are terrible}, as
-in fact they are, with numbers to show it.  And here I am, claiming my
-right to rub JitterLisp on everyone's face.
+able to say that @emph{most language implementations are inexcusably
+bad} as in fact they are, with a real implementation to present
+and not just a proof of concept; and numbers.
+
+@cindex Schadenfreude
+Here I stand, claiming my right to rub JitterLisp on everyone's face.
 How good it feels.
 
 @c I want to be able to say that 
@@ -496,9 +498,9 @@ Turing-complete @emph{macros}.
 @cindex feature
 @cindex expression
 @cindex sub-expression
-@cindex statement (no)
-@cindex top-level form (no)
-@cindex form, top-level (no)
+@cindex statement (absent in JitterLisp)
+@cindex top-level form (absent in JitterLisp)
+@cindex form, top-level (absent in JitterLisp)
 Every syntactic form in JitterLisp is an @emph{expression}, and nontrivial
 expressions will contain sub-expressions; there are no statements as
 a distinct syntactic category, nor special forms which are only valid
