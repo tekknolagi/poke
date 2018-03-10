@@ -228,7 +228,7 @@
                (list3 'cons
                       ''unquote-splicing
                       (qq-recursive x-cdr (1- depth))))))
-        (#t
+        (else
          ;;`(append-procedure ,(qq-recursive-as-car x-car depth)
          ;;                   ,(qq-recursive x-cdr depth))
          (list3 'append-procedure ;; no qq-append here: qq-recursive-as-car returns a list.
@@ -294,7 +294,7 @@
                     (list3 'cons
                            ''unquote-splicing
                            (qq-recursive x-cdr (1- depth))))))
-        (#t
+        (else
          ;;`(list (append-procedure ,(qq-recursive-as-car x-car depth)
          ;;                         ,(qq-recursive x-cdr depth))))
          (list2 'list1
@@ -324,7 +324,7 @@
            (error '(quasiquote arguments not a list)))
           ((non-null? (cdr low-level-macro-args))
            (error '(quasiquote arguments more than one or not a list)))
-          (#t
+          (else
            (quasiquote-procedure (car low-level-macro-args))))))
 
 
@@ -368,7 +368,7 @@
          #t)
         ((cons? x)
          (null? (cdr x)))
-        (#t
+        (else
          #f)))
 
 
@@ -387,7 +387,7 @@
             ((non-cons? xs)
              (set! res #f)
              (set! go-on #f))
-            (#t
+            (else
              (set! xs (cdr xs)))))
     res))
 
@@ -396,7 +396,7 @@
          #t)
         ((cons? xs)
          (list?-tail-recursive (cdr xs)))
-        (#t
+        (else
          #f)))
 
 (define-constant (list? xs)
@@ -418,7 +418,7 @@
              (set! res #f))
             ((symbol? (car xs))
              (set! xs (cdr xs)))
-            (#t
+            (else
              (set! xs ())
              (set! res #f))))
     res))
@@ -430,7 +430,7 @@
          #f)
         ((symbol? (car xs))
          (symbols?-tail-recursive (cdr xs)))
-        (#t
+        (else
          #f)))
 
 (define-constant (symbols? xs)
@@ -886,7 +886,7 @@
              (set! go-on #f))
             ((null? xs)
              (set! go-on #f))
-            (#t
+            (else
              (set! n (1- n))
              (set! xs (cdr xs)))))
     xs))
@@ -896,7 +896,7 @@
          xs)
         ((null? xs)
          ())
-        (#t
+        (else
          (nth-cons-or-nil-tail-recursive (cdr xs) (1- n)))))
 
 (define-constant (nth-cons-or-nil xs n)
@@ -949,7 +949,7 @@
              (set! go-on #f))
             ((zero? n)
              (set! go-on #f))
-            (#t
+            (else
              (set! res (cons (car xs) res))
              (set! xs (cdr xs))
              (set! n (1- n)))))
@@ -965,7 +965,7 @@
          ())
         ((null? xs)
          ())
-        (#t
+        (else
          (cons (car xs) (take-non-tail-recursive (cdr xs) (1- n))))))
 
 (define-constant (take-reversed-tail-recursive-helper xs n acc)
@@ -973,7 +973,7 @@
          acc)
         ((null? xs)
          acc)
-        (#t
+        (else
          (take-reversed-tail-recursive-helper (cdr xs)
                                               (1- n)
                                               (cons (car xs) acc)))))
@@ -1006,7 +1006,7 @@
              'do-nothing
              (set-cdr! xs ())))
         ((null? xs))
-        (#t
+        (else
          (take!-tail-recursive-helper (cdr xs) (1- n)))))
 (define-constant (take!-tail-recursive xs n)
   (if (zero? n)
@@ -1032,7 +1032,7 @@
              (set! go-on #f))
             ((zero? n)
              (set! go-on #f))
-            (#t
+            (else
              (set! xs (cdr xs))
              (set! n (1- n)))))
     xs))
@@ -1042,7 +1042,7 @@
          xs)
         ((null? xs)
          ())
-        (#t
+        (else
          (drop-tail-recursive (cdr xs) (1- n)))))
 
 (define-constant (drop xs n)
@@ -1135,7 +1135,7 @@
                                                    body-forms))))))
         ((vector? formals-pattern)
          (error `(vector ,formals-pattern in macro formals pattern)))
-        (#t
+        (else
          ;; The pattern is, hopefully, something which can be compared with eq?
          ;; .  Return code checking that it's equal to the actual and in that
          ;; case proceeds without binding anything.
@@ -1228,7 +1228,7 @@
          #f)
         ((cons? (car x))
          (alist? (cdr x)))
-        (#t
+        (else
          #f)))
 
 (define-constant (assq key alist)
@@ -1236,7 +1236,7 @@
          #f)
         ((eq? (caar alist) key)
          (car alist))
-        (#t
+        (else
          (assq key (cdr alist)))))
 
 (define-constant (rassq value alist)
@@ -1244,7 +1244,7 @@
          #f)
         ((eq? (cdar alist) value)
          (car alist))
-        (#t
+        (else
          (rassq value (cdr alist)))))
 
 ;;; Return a new alist, possibly sharing structure with alist, without the
@@ -1254,7 +1254,7 @@
          ())
         ((eq? (caar alist) object)
          (cdr alist))
-        (#t
+        (else
          (cons (car alist) (del-assq-1-noncopying object (cdr alist))))))
 
 (define-constant (del-assq-1 object alist)
@@ -1265,7 +1265,7 @@
          ())
         ((eq? (caar alist) object)
          (del-assq-noncopying object (cdr alist)))
-        (#t
+        (else
          (cons (car alist) (del-assq-noncopying object (cdr alist))))))
 
 (define-constant (del-assq object alist)
@@ -1326,7 +1326,7 @@
              acc))
         ((null? bs)
          (error '(zip-tail-recursive: first list longer)))
-        (#t
+        (else
          (zip-reversed-tail-recursive-helper (cdr as)
                                              (cdr bs)
                                              (cons (cons (car as)
@@ -1357,7 +1357,7 @@
              ()))
         ((null? bs)
          (error '(zip-non-tail-recursive: first list longer)))
-        (#t
+        (else
          (cons (cons (car as) (car bs))
                (zip-non-tail-recursive (cdr as) (cdr bs))))))
 
@@ -1581,7 +1581,7 @@
              (begin
                (set! res #t)
                (set! go-on #f)))
-            (#t
+            (else
              (set! xs (cdr xs)))))
     res))
 
@@ -1590,7 +1590,7 @@
          #f)
         ((p (car xs))
          #t)
-        (#t
+        (else
          (exists?-tail-recursive p (cdr xs)))))
 
 (define-constant (exists? p xs)
@@ -1613,7 +1613,7 @@
              (begin
                (set! res #f)
                (set! go-on #f)))
-            (#t
+            (else
              (set! xs (cdr xs)))))
     res))
 
@@ -1622,7 +1622,7 @@
          #t)
         ((p (car xs))
          (for-all?-tail-recursive p (cdr xs)))
-        (#t
+        (else
          #f)))
 
 (define-constant (for-all? p xs)
@@ -1649,7 +1649,7 @@
          ())
         ((p (car xs))
          (cons (car xs) (filter-non-tail-recursive p (cdr xs))))
-        (#t
+        (else
          (filter-non-tail-recursive p (cdr xs)))))
 
 (define-constant (filter-reversed-tail-recursive-helper p xs acc)
@@ -1657,7 +1657,7 @@
          acc)
         ((p (car xs))
          (filter-reversed-tail-recursive-helper p (cdr xs) (cons (car xs) acc)))
-        (#t
+        (else
          (filter-reversed-tail-recursive-helper p (cdr xs) acc))))
 (define-constant (filter-reversed-tail-recursive p xs)
   (filter-reversed-tail-recursive-helper p xs ()))
@@ -1775,11 +1775,10 @@
              (set! go-on #f))
             ((<= x (car xs))
              (set! go-on #f))
-            (#t
-             (begin
-               (set! smaller-elements-reversed
-                     (cons (car xs) smaller-elements-reversed))
-               (set! xs (cdr xs))))))
+            (else
+             (set! smaller-elements-reversed
+                   (cons (car xs) smaller-elements-reversed))
+             (set! xs (cdr xs)))))
     (append-reversed-iterative smaller-elements-reversed
                                (cons x xs))))
 
@@ -1790,7 +1789,7 @@
         ((<= x (car xs))
          (append-reversed-tail-recursive smaller-elements-reversed
                                          (cons x xs)))
-        (#t
+        (else
          (insert-tail-recursive-helper x
                                        (cdr xs)
                                        (cons (car xs)
@@ -1803,7 +1802,7 @@
          (singleton x))
         ((<= x (car xs))
          (cons x xs))
-        (#t
+        (else
          (cons (car xs)
                (insert-non-tail-recursive x (cdr xs))))))
 
@@ -1839,7 +1838,7 @@
              (begin
                (insert-as-second! x xs)
                (set! go-on #f)))
-            (#t
+            (else
              (set! xs (cdr xs)))))))
 (define-constant (insert!-iterative x xs)
   (if (null? xs)
@@ -1853,7 +1852,7 @@
          (insert-as-first! x xs))
         ((null? (cdr xs))
          (insert-as-second! x xs))
-        (#t
+        (else
          (insert!-tail-recursive-non-null x (cdr xs)))))
 (define-constant (insert!-tail-recursive x xs)
   (if (null? xs)
@@ -1976,7 +1975,7 @@
         ((even? n)
          (let* ((f^n/2 (iterate-squaring-pre f (quotient n 2))))
            (square-function f^n/2)))
-        (#t
+        (else
          (compose-procedure f (iterate-squaring-pre f (1- n))))))
 
 (define-constant (iterate-squaring-eta f n x)
@@ -1986,7 +1985,7 @@
          x)
         ((even? n)
          (iterate-squaring-eta (square-function f) (quotient n 2) x))
-        (#t
+        (else
          (iterate-squaring-eta (square-function f) (quotient n 2) (f x)))))
 (define-constant (iterate-squaring-post f n)
   (lambda (x) (iterate-squaring-eta f n x)))
@@ -2029,7 +2028,7 @@
 ;;             ((eq? (car xs) x)
 ;;              (set! res #t)
 ;;              (set! done #t))
-;;             (#t
+;;             (else
 ;;              (set! xs (cdr xs)))))
 ;;     res))
 
@@ -2065,7 +2064,7 @@
             ((eq? (car xs) x)
              (set! xs (cdr xs))
              (set! go-on #f))
-            (#t
+            (else
              (set! reversed-prefix (cons (car xs) reversed-prefix))
              (set! xs (cdr xs)))))
     (append!-iterative (reverse!-iterative reversed-prefix) xs)))
@@ -2076,7 +2075,7 @@
         ((eq? (car xs) x)
          (append!-tail-recursive (reverse!-tail-recursive acc)
                                  (cdr xs)))
-        (#t
+        (else
          (list-without-tail-recursive-helper (cdr xs)
                                              x
                                              (cons (car xs) acc)))))
@@ -2088,7 +2087,7 @@
          ())
         ((eq? (car xs) x)
          (cdr xs))
-        (#t
+        (else
          (cons (car xs)
                (list-without-non-tail-recursive (cdr xs) x)))))
 
@@ -2114,7 +2113,7 @@
              (set! go-on #f))
             ((eq? (car next-cons) x)
              (set! go-on #f))
-            (#t
+            (else
              (set! xs next-cons)
              (set! next-cons (cdr next-cons)))))
     ;; Now xs is either the predecessor we were looking for or ().
@@ -2137,7 +2136,7 @@
          ;; modify xs to turn it into the result, but we already have the
          ;; result as a substructure of xs.
          (cdr xs))
-        (#t
+        (else
          ;; Here we may have the opportunity to actually modify the list.
          ;; Find the predecessor cons, if any.
          (let* ((predecessor-or-nil (cons-before-or-nil xs x)))
@@ -2162,7 +2161,7 @@
          #t)
         ((list-has? (cdr xs) (car xs))
          #f)
-        (#t
+        (else
          (all-different? (cdr xs)))))
 
 
@@ -2199,7 +2198,7 @@
          (error '(or: non-list arguments)))
         ((null? (cdr clauses))
          (car clauses))
-        (#t
+        (else
          `(if ,(car clauses)
               '#t
               (or ,@(cdr clauses))))))
@@ -2218,7 +2217,7 @@
          (error '(and: non-list arguments)))
         ((null? (cdr clauses))
          (car clauses))
-        (#t
+        (else
          `(if ,(car clauses)
               (and ,@(cdr clauses))
               '#f))))
@@ -2234,7 +2233,7 @@
          '#f)
         ((null? (cdr args))
          (car args))
-        (#t
+        (else
          (let* ((first-name (gensym)))
            `(let* ((,first-name ,(car args)))
               (if ,first-name
@@ -2331,7 +2330,7 @@
          'identity)
         ((null? (cdr args))
          (car args))
-        (#t
+        (else
          `(compose-procedure ,(car args)
                              (compose ,@(cdr args))))))
 
@@ -2387,8 +2386,7 @@
 
 ;; FIXME: use let-macro
 (define-macro (case-variable-matches? variable literals)
-  (if (or (eq? literals 'else)
-          (eq? literals '#t))
+  (if (eq? literals 'else)
       '#t
       `(or ,@(map (lambda (a-literal)
                     `(eq? ,variable ,a-literal))
@@ -2553,7 +2551,7 @@
          neutral)
         ((null? (cdr rands))
          (car rands))
-        (#t
+        (else
          (let* ((last-rand (last rands))
                 (all-but-last-rands (all-but-last rands)))
            `(,rator ,(variadic-left-deep rator neutral
@@ -2570,7 +2568,7 @@
          neutral)
         ((null? (cdr rands))
          (car rands))
-        (#t
+        (else
          `(,rator ,(car rands)
                   ,(variadic-right-deep rator neutral (cdr rands))))))
 
@@ -2614,7 +2612,7 @@
          (error '(-: no arguments)))
         ((null? (cdr operands))
          `(negate ,@operands))
-        (#t
+        (else
          `(primordial-- ,(car operands)
                         (+ ,@(cdr operands))))))
 
@@ -2623,7 +2621,7 @@
          (error '(/: no arguments)))
         ((null? (cdr operands))
          `(primordial-/ 1 ,@operands))
-        (#t
+        (else
          `(primordial-/ ,(car operands)
                         (* ,@(cdr operands))))))
 
@@ -2646,7 +2644,7 @@
         ((odd? b)
          (+ a (*-nonnegative-b-by-sums-non-tail-recursive (2* a)
                                                           (2quotient b))))
-        (#t
+        (else
          (*-nonnegative-b-by-sums-non-tail-recursive (2* a)
                                                      (2quotient b)))))
 (define-constant (*-by-sums-non-tail-recursive a b)
@@ -2683,7 +2681,7 @@
          1)
         ((even? e)
          (square (**-procedure-non-tail-recursive b (quotient e 2))))
-        (#t
+        (else
          (* b (square (**-procedure-non-tail-recursive b (quotient e 2)))))))
 
 (define-constant (**-procedure-iterative b e)
@@ -2755,7 +2753,7 @@
          reversed-left-part)
         ((eq? (car xs) x)
          (append! reversed-left-part (cdr xs)))
-        (#t
+        (else
          (set-without-helper (cdr xs) x (cons (car xs) reversed-left-part)))))
 (define-constant (set-without xs x)
   (set-without-helper xs x ()))
@@ -2913,7 +2911,7 @@
           ((p? (stream-car s))
            (stream-cons (stream-car s)
                         (stream-filter p? (stream-cdr s))))
-          (#t
+          (else
            (stream-filter p? (stream-cdr s))))))
 
 (define-constant (stream-map f s)
@@ -2929,7 +2927,7 @@
            stream-empty)
           ((stream-null? s)
            stream-empty)
-          (#t
+          (else
            (stream-cons (stream-car s)
                         (stream-take (stream-cdr s) (1- n)))))))
 
@@ -2939,7 +2937,7 @@
            s)
           ((stream-null? s)
            stream-empty)
-          (#t
+          (else
            (stream-drop (stream-cdr s) (1- n))))))
 
 (define-constant (stream-fold-left f x xs)
@@ -3418,7 +3416,7 @@
          #f)
         ((ast-equal? (car as) (car bs))
          (ast-equal?-list (cdr as) (cdr bs)))
-        (#t
+        (else
          ;; Different first elements.
          #f)))
 
@@ -3433,7 +3431,7 @@
          #f)
         ((eq? (car as) (car bs))
          (eq?-list (cdr as) (cdr bs)))
-        (#t
+        (else
          ;; Different first elements.
          #f)))
 
@@ -3621,7 +3619,7 @@
                ((constant? (ast-variable-name ast))
                 ;; Reading a global constant has no effects.
                 #f)
-               (#t
+               (else
                 ;; Reading a global non-constant may fail, which counts as an
                 ;; effect.
                 #t)))
@@ -3682,7 +3680,7 @@
          #f)
         ((ast-effectful? (car asts) bounds)
          #t)
-        (#t
+        (else
          (ast-effectful?-list (cdr asts) bounds))))
 
 ;;; A set-as-list of non-effectful primitives.  FIXME: add a
@@ -3848,7 +3846,7 @@
          #t)
         ((ast-leaf? (car asts))
          (ast-leaf?-list (cdr asts)))
-        (#t
+        (else
          #f)))
 
 
@@ -3898,7 +3896,7 @@
            ;; implemented, but this is very common and important to have from
            ;; the get go.
            (ast-rewrite-wrapper-call body actuals))
-          (#t
+          (else
            ;; The environment is empty, and the argument number is correct:
            ;; rewrite into nested lets binding the closure formals to the call
            ;; actuals, and then evaluating the closure body.  alpha-convert the
@@ -3952,7 +3950,7 @@
                 (ast-wrapper-arguments? formals (ast-call-operands body)))
            ;; The call case as defined above.
            #t)
-          (#t
+          (else
            ;; In any other case, the body is not a wrapper.
            #f))))
 
@@ -3970,7 +3968,7 @@
               (eq? (car formals)
                    (ast-variable-name (car actuals))))
          (ast-wrapper-arguments? (cdr formals) (cdr actuals)))
-        (#t
+        (else
          ;; Non-variable actual, or variable not matching the
          ;; formal in its position.
          #f)))
@@ -4002,7 +4000,7 @@
          ;; primitive case.  This does require the operator not to have effects,
          ;; but that has been checked already by this procedure's caller.
          (ast-call (ast-call-operator body) actuals))
-        (#t
+        (else
          ;; This shouldn't happen.
          (error `(ast-rewrite-wrapper-call: operator ,body not a
                                             wrapper body)))))
@@ -4105,7 +4103,7 @@
                   (ast-simplify-known-closure-call-helper (ast-literal-value
                                                            simplified-operator)
                                                           simplified-operands))
-                 (#t
+                 (else
                   (ast-call simplified-operator simplified-operands)))))
         ((ast-lambda? ast)
          (ast-lambda (ast-lambda-formals ast)
@@ -4201,7 +4199,7 @@
          ;; even if x is not known to be bound, as no effects are removed; the removed
          ;; (second) reference is guaranteed not to have effects.
          optimized-first)
-        (#t
+        (else
          ;; If fhe first form in the sequence has no effect rewrite to the
          ;; second form only.
          (if (not (ast-effectful? optimized-first bounds))
@@ -4226,7 +4224,7 @@
          ;; case; the condition checks whether the variable is bound in the
          ;; non-global environement only, on purpose.
          (ast-literal (begin)))
-        (#t
+        (else
          ;; Fallback case, in which we optimize nothing.
          (ast-set! name body))))
 
@@ -4284,7 +4282,7 @@
          ;; an opportunity to improve tailness.  It can occur as a consequence
          ;; of other rewrites.
          bound-form)
-        (#t
+        (else
          ;; Default case: keep the let AST in our rewriting.
          (ast-let bound-name
                   bound-form
@@ -4410,7 +4408,7 @@
          (ast-optimize-helper (ast-primitive primitive-not
                                              (list condition))
                               bounds))
-        (#t
+        (else
          ;; Generic case.  Keep both branches, each optimized separately.
          (ast-if condition
                  then
@@ -4445,7 +4443,7 @@
          ;; Remove a (while #f ...).  Notice that we can't simplify
          ;; a while with a constantly non-#f guard.
          (ast-literal (begin)))
-        (#t
+        (else
          ;; Keep the while form.
          (ast-while optimized-guard
                     (ast-optimize-helper body bounds)))))
@@ -4472,6 +4470,18 @@
         ((and (eq? primitive primitive-primordial--) (ast-one? (cadr operands)))
          ;; [primitive primordial-- E 1] ==> [primitive 1- E]
          (ast-optimize-primitive primitive-1- (list (car operands))))
+        ((and (eq? primitive primitive-primordial-+)
+              (ast-minus-one? (car operands)))
+         ;; [primitive primordial-+ -1 E] ==> [primitive 1- E]
+         (ast-optimize-primitive primitive-1- (list (cadr operands))))
+        ((and (eq? primitive primitive-primordial-+)
+              (ast-minus-one? (cadr operands)))
+         ;; [primitive primordial-+ E -1] ==> [primitive 1- E]
+         (ast-optimize-primitive primitive-1- (list (car operands))))
+        ((and (eq? primitive primitive-primordial--)
+              (ast-minus-one? (cadr operands)))
+         ;; [primitive primordial-- E -1] ==> [primitive 1+ E]
+         (ast-optimize-primitive primitive-1+ (list (car operands))))
         ((and (eq? primitive primitive-primordial-/) (ast-two? (cadr operands)))
          ;; [primitive primordial-/ E 2] ==> [primitive 2/ E]
          (ast-optimize-primitive primitive-2/ (list (car operands))))
@@ -4573,7 +4583,7 @@
          (ast-optimize-primitive-known-actuals primitive
                                                (map ast-literal-value
                                                     operands)))
-        (#t
+        (else
          ;; Fallback case: we have nothing to rewrite.
          (ast-primitive primitive operands))))
 
@@ -4582,11 +4592,13 @@
   (and (ast-literal? ast)
        (eq? (ast-literal-value ast) value)))
 
-;;; Return non-#f iff the given AST is the literal 0, 1, 2, respectively.
+;;; Return non-#f iff the given AST is repsectively the literal 0, 1, -1, 2.
 (define-constant (ast-zero? ast)
   (ast-literal-value? ast 0))
 (define-constant (ast-one? ast)
   (ast-literal-value? ast 1))
+(define-constant (ast-minus-one? ast)
+  (ast-literal-value? ast -1))
 (define-constant (ast-two? ast)
   (ast-literal-value? ast 2))
 
@@ -4659,7 +4671,7 @@
         ((eq? primitive primitive->=)
          ;; [primitive not [primitive >= . Es]] ==> [primitive < . Es]
          (ast-optimize-primitive primitive-< operands))
-        (#t
+        (else
          ;; Fallback case: don't rewrite anything.
          (ast-primitive primitive-not
                         (list (ast-primitive primitive operands))))))
@@ -4709,7 +4721,7 @@
                    ;; The first condition on the first actual is satisfied.
                    ;; Check the others.
                    (inner-loop (cdr conditions) (cdr values)))
-                  (#t
+                  (else
                    ;; The first condition on the first actual is not satisfied.
                    ;; Leave this signature and try with the next.
                    (outer-loop (cdr signatures)))))))))
@@ -5146,7 +5158,7 @@
         ((eq? place 'global)
          ;; We don't have a register to return.
          (error '(compiler-place->register: globals not supported)))
-        (#t
+        (else
          ;; Nonlocals don't have an associated register.
          (error '(compiler-place->register: place ,place supported)))))
 
@@ -5323,7 +5335,7 @@
          (let ((place (compiler-bind-local-boxed! s variable-name)))
            (compiler-add-instruction! s `(pop-to-register ,(cadr place)))
            place))
-        (#t
+        (else
          ;; The variable is used and doesn't require boxing.
          (let ((place (compiler-bind-local-unboxed! s variable-name)))
            (compiler-add-instruction! s `(pop-to-register ,(cadr place)))
@@ -5360,7 +5372,7 @@
             ((ast-requires-boxing-for? body formal)
              ;; The variable is used and requires boxing.
              (compiler-non-dropping-bind-at-depth! s formal depth #t))
-            (#t
+            (else
              ;; The variable is used and doesn't require boxing.
              (compiler-non-dropping-bind-at-depth! s formal depth #f)))
       (set! depth (1+ depth)))
@@ -5512,7 +5524,7 @@
                (compiler-add-instruction! s `(nonlocal ,nonlocal-index))
                (when (eq? (car place) 'nonlocal-boxed)
                  (compiler-add-instruction! s `(unbox))))))
-          (#t
+          (else
            (error `(unimplemented variable place ,place)))))
   (compiler-emit-return-when-tail! s))
 
@@ -5561,7 +5573,7 @@
                  (index (cadr place)))
              (compiler-add-instruction! s `(push-register ,nonlocal-register))
              (compiler-add-instruction! s `(set-nonlocal ,index))))
-          (#t
+          (else
            (error `(unsupported set! place ,place)))))
   (when (compiler-used-result? s)
     (compiler-push-nothing! s))
@@ -5627,7 +5639,7 @@
                  ;; The operator is a variable globally bound to a constant
                  ;; and not shadowed.
                  (symbol-global (ast-variable-name operator)))
-                (#t
+                (else
                  ;; The closure is not known: I can't omit run-time checks.
                  #f)))
          (known-compiled
@@ -5642,7 +5654,7 @@
                  'tail-call)
                 (known-compiled
                  'call-compiled)
-                (#t
+                (else
                  'call))))
     (compiler-with-non-tail s
       (compiler-with-used-result s
@@ -5743,7 +5755,7 @@
                (compiler-add-instruction! s `(primitive ,primitive))
                (compiler-add-instruction! s '(nip))
                (compiler-add-instruction! s '(return))))
-            (#t
+            (else
              ;; General case.
              ;; Generate code binding the formals we use and the nonlocals in
              ;; registers, ignoring the others and dropping them all, including
@@ -5786,7 +5798,7 @@
          ;; Macros are only interpreted.  This is a current limitation that
          ;; could be lifted.
          (error `(macros not currently compilable: ,thing)))
-        (#t
+        (else
          ;; This is a non-closure non-macro.
          (error `(cannot compile ,thing)))))
 
@@ -5925,7 +5937,7 @@
              (not (all-different? (cdr thing))))
          (error `(define-optimized-possibly-constant: ill-formed defined
                    thing ,thing)))
-        (#t
+        (else
          (let ((value-name (gensym))
                (thing-name (car thing))
                (thing-formals (cdr thing)))
@@ -6170,7 +6182,7 @@
                           `((not ,clause)
                             (set! ,res-name #f)))
                         (all-but-last clauses))
-                 (#t
+                 (else
                   (set! ,res-name ,(last clauses))))
            ,res-name))))
 
@@ -6250,6 +6262,50 @@
 ;; (disassemble-vm (let* ((a 1)) (lambda (x) (+ x a))))
 ;; (disassemble-vm (lambda (x) y))
 
+;; Similar on x86_64, GCC 7 only:
+;; # 0x55578e8: call-from-c/retR 0xffffffffffffffff (93 bytes):
+;;     0x000000000402a000 48 8b 74 24 18       	movq   0x18(%rsp),%rsi
+;;     0x000000000402a005 48 8b 54 24 10       	movq   0x10(%rsp),%rdx
+;;     0x000000000402a00a 48 8b 06             	movq   (%rsi),%rax
+;;     0x000000000402a00d 48 83 ee 08          	subq   $0x8,%rsi
+;;     0x000000000402a011 48 89 74 24 18       	movq   %rsi,0x18(%rsp)
+;;     0x000000000402a016 48 89 c1             	movq   %rax,%rcx
+;;     0x000000000402a019 48 85 d2             	testq  %rdx,%rdx
+;;     0x000000000402a01c 74 09                	je     0x000000000402a027
+;;     0x000000000402a01e 48 6b d2 f8          	imulq  $0xfffffffffffffff8,%rdx,%rdx
+;;     0x000000000402a022 48 8b 4c 16 08       	movq   0x8(%rsi,%rdx,1),%rcx
+;;     0x000000000402a027 0f 1f 04 25 aa 00 00 00 	nopl   0xaa
+;;     0x000000000402a02f 48 8b 74 24 20       	movq   0x20(%rsp),%rsi
+;;     0x000000000402a034 48 8d 56 08          	leaq   0x8(%rsi),%rdx
+;;     0x000000000402a038 0f 1f 04 25 bb 00 00 00 	nopl   0xbb
+;;     0x000000000402a040 48 c7 46 08 aa aa 42 42 	movq   $0x4242aaaa,0x8(%rsi)
+;;     0x000000000402a048 0f 1f 04 25 cc 00 00 00 	nopl   0xcc
+;;     0x000000000402a050 ff 51 25             	callq  *0x25(%rcx)
+;;     0x000000000402a053 48 89 54 24 20       	movq   %rdx,0x20(%rsp)
+;;     0x000000000402a058 48 89 44 24 10       	movq   %rax,0x10(%rsp)
+;; The two nopl instructions are for debugging.  The two movq are run too late,
+;; after the call: 0x20(%rsp) is the return stack pointer, in this case held
+;; in memory.  The instruction run after the call would have stored the correct
+;; value if run before.
+;;
+;; Should JITTER_BRANCH_AND_LINK and JITTER_BRANCH_AND_LINK_FAST end with
+;; __builtin_unreachable to prevent this kind of behavior?  I guess not:
+;; sometimes I really want a jump instruction to be generated after the
+;; branch-and-link instruction, to skip the rest of the VM instruction code
+;; which is not empty.
+;; Should JITTER_BRANCH_AND_LINK and JITTER_BRANCH_AND_LINK_FAST clobber
+;; memory?  Would that help? [Tested: no it wouldn't]
+;;
+;; I have understood the problem now.
+;; -fno-sched-interblock might work as a last-ditch workaround, but I should
+;; do something more solid. [No, it wouldn't]
+
+;; The GCC parameter max-goto-duplication-insns was defined following Anton
+;; Ertl's complaint about unconditional branches to branches, which bothers
+;; me as well, in https://gcc.gnu.org/bugzilla/show_bug.cgi?id=15242 .
+;; It is supposed to be a solution.
+;; https://gcc.gnu.org/bugzilla/show_bug.cgi?id=15242 reported by Bernd Paysan
+;; is about similar issues, again also concerning me.
 
 ;; This fails: why?
 ;; (c ast-equal?)
@@ -6264,3 +6320,7 @@
   (disassemble-vm ap)
   )
 
+;; As of 2018-03-02, after changing runtime definitions and code generation but before
+;; cleaning them up, I'm seeing failures only on minimal-threading.  I think the problem
+;; is in the call VM instruction: I don't see the link register in 0x10(%rsp) ever being
+;; set.
