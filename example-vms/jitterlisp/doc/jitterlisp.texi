@@ -476,6 +476,8 @@ will feel familiar to any programmer already mastering any other Lisp.
 @cindex iteration
 @cindex recursion
 @cindex macro
+@cindex Lisp/1
+@cindex /1, Lisp
 @cindex procedure
 @cindex higher order
 @cindex order, higher
@@ -488,7 +490,8 @@ will feel familiar to any programmer already mastering any other Lisp.
 JitterLisp is a
 @emph{lexically-scoped}
 @emph{higher-order}
-@emph{homoiconic} language
+@emph{homoiconic}
+@emph{Lisp/1}
 featuring
 @emph{closures},
 @emph{garbage collection},
@@ -569,7 +572,6 @@ lexical level, come from Scheme}
 @cindex AST
 @cindex Abstract Syntax Tree
 @cindex macroexpansion
-@cindex compiler
 JitterLisp is
 @c at the same time
 more @emph{``dynamic''} and more
@@ -579,8 +581,13 @@ the @emph{Abstract Syntax Tree} returned by macroexpansion and contained
 within each closure is a recursive data structure describing an
 expression in a @emph{minimalistic core language} which can be interpreted,
 compiled, analyzed, optimized or in general used like any other data
-structure---in fact exposed ASTs and reflection make it possible and
-natural for the compiler to be just a procedure, itself written in
+structure.
+
+@cindex compiler
+@cindex AST
+@cindex Abstract Syntax Tree
+Exposed ASTs and reflection make it possible and natural for the
+compiler to be implemented as an ordinary procedure, itself written in
 Lisp and running on top of the interpreter or compiled by itself at
 run time.
 
@@ -627,7 +634,7 @@ of the non-traditional features likely to surprise a Lisp user.
 @syindex catch@r{ (non-existing form)}
 @fixme{no exceptions}
 
-@cindex variadic, procedure (non-existing)
+@cindex variadic, procedure (absent in JitterLisp)
 @fixme{no variadic procedures (but I do have variadic macros)}
 
 @fixme{no OO}
@@ -778,7 +785,6 @@ explained below.
 @cindex test suite, Jitter
 @cindex @code{check}, make target (Jitter)
 @cindex @command{make check} (Jitter)
-@cindex test suite (Jitter)
 @cindex build directory (Jitter)
 The Jitter test suite includes many cases based on JitterLisp, as compiled
 JitterLisp procedures are a convenient and realistic way of stressing Jitter

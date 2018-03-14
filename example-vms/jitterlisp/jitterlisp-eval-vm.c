@@ -92,6 +92,11 @@ jitterlisp_vm_initialize (void)
   /* Call the Jitter-generated function initializing the VM subsystem. */
   jitterlispvm_initialize ();
 
+  /* JitterLisp VM programs, with the one exception right below in this
+     function, don't end with an exitvm instruction.  This way we save space in
+     the replicated code for each Lisp procedure, and make it nicer to read. */
+  jitterlispvm_disable_final_exitvm ();
+
   /* Initialize the global VM state. */
   jitterlispvm_state_initialize (& jitterlispvm_state);
 
@@ -113,16 +118,12 @@ jitterlisp_vm_initialize (void)
   JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program,
                                   call_mfrom_mc);
 //JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, debug);
+  /* By default we do not add exitvm to VM programs in JitterLisp: the only
+     place where we need to pass back control from VM code to C code is here in
+     the driver. */
+  JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, exitvm);
+//JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, debug);
   jitterlispvm_specialize_program (jitterlisp_driver_vm_program);
-
-  /*
-printf ("Driver:\n");
-  if (jitterlisp_settings.cross_disassembler)
-    jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_CROSS_OBJDUMP, NULL);
-  else
-    jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_OBJDUMP, NULL);
-printf ("\n");
-  */
 }
 
 void
@@ -160,6 +161,19 @@ jitterlisp_vm_finalize (void)
 static inline jitterlisp_object
 jitterlisp_jump_to_driver_and_return_result (void)
 {
+  /*
+  static bool d = false;
+  if (! d)
+    {
+      d = true;
+      printf ("Driver:\n");
+      if (jitterlisp_settings.cross_disassembler)
+        jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_CROSS_OBJDUMP, NULL);
+      else
+        jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_OBJDUMP, NULL);
+      printf ("\n");
+    }
+  */
   /*
 printf ("E: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
 printf ("R: %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());

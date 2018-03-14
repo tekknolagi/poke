@@ -258,6 +258,11 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
       can_fail = false;
       jitterlispvm_append_instruction_name (p, "primitive-characterp");
     }
+  else if (! strcmp (name, "unique?"))
+    {
+      can_fail = false;
+      jitterlispvm_append_instruction_name (p, "primitive-uniquep");
+    }
   else if (! strcmp (name, "1+"))
     jitterlispvm_append_instruction_name (p, "primitive-one-plus");
   else if (! strcmp (name, "1-"))
@@ -445,6 +450,15 @@ jitterlisp_translate_instruction (struct jitterlispvm_program *p,
       JITTERLISP_NO_MORE_ARGUMENTS(insn);
       jitterlispvm_append_instruction_name (p, name);
       jitterlispvm_append_unsigned_literal_parameter (p, in_arity_arg);
+      jitterlispvm_label error_label = jitterlisp_error_label (p, map);
+      jitterlispvm_append_label_parameter (p, error_label);
+    }
+  else if (! strcmp (name, "check-global-defined"))
+    {
+      JITTERLISP_ARGUMENT(symbol_arg, insn, SYMBOL);
+      JITTERLISP_NO_MORE_ARGUMENTS(insn);
+      jitterlispvm_append_instruction_name (p, name);
+      jitterlispvm_append_unsigned_literal_parameter (p, symbol_arg);
       jitterlispvm_label error_label = jitterlisp_error_label (p, map);
       jitterlispvm_append_label_parameter (p, error_label);
     }

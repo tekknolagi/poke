@@ -38,7 +38,7 @@ end
 #################################################################
 
 # We only need one register class.
-register-class r 6
+register-class r 2
   code
     jitterlisp_object
   end
@@ -818,6 +818,17 @@ instruction check-closure (?f)
   end
 end
 
+# Fast-branch to the given error label if the given argument, a tagged symbol,
+# is not globally bound.
+instruction check-global-defined (?n print_object, ?f)
+  code
+    jitterlisp_object tagged_symbol = JITTER_ARGN0;
+    struct jitterlisp_symbol * symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
+    JITTER_BRANCH_FAST_IF_EQUAL (symbol->global_value, JITTERLISP_UNDEFINED,
+                                 JITTER_ARGF1);
+  end
+end
+
 # This versions is the one failing under no-threading.  I want to keep it for tests
 # even if it's not the best implementation.
 # # The fixnum argument is untagged.
@@ -944,8 +955,9 @@ end
 
 # The first argument is a primitive function pointer.
 # The second is its in-arity.
+# instruction primitive (?n, ?n 0 1 2 3 4, ?l)
+#  non-relocatable
 instruction primitive (?n, ?n 0 1 2 3 4, ?f)
-  # non-relocatable
   code
     /* The error-handling label is not actually used in this case: the
        primitive function, written in C, has its own handling.  It's
@@ -959,13 +971,29 @@ instruction primitive (?n, ?n 0 1 2 3 4, ?f)
     jitterlisp_object *first_arg
       // FIXME: add a stack operator to compute this address.
       = (& JITTER_UNDER_TOP_MAINSTACK()) - in_arity + 1;
-    //asm volatile ("nop" : : "X" (first_arg));
+    /* This workaround is needed for Alpha.  I have macros to make this nicer in
+       ~luca/repos/jitter/gcc-call-function-macro.c , still to be integrated into
+       Jitter. */
+/*
+    void *saved_gp;
+    asm volatile ("stq $gp, %[saved_gp]"
+                  : [saved_gp] "=o" (saved_gp),
+                    "+X" (p));
+*/
     jitterlisp_object res = p (first_arg);
+    /* Second part of the Alpha workaround. */
+/*
+    asm volatile ("ldq $gp, %[saved_gp]"
+                  : "+X" (res)
+                  : [saved_gp] "o" (saved_gp));
+*/
+
     jitter_uint i;
     // Remove as many elements as the primitive in-arity, but not more:
     // the top unspecified value we pushed will be replaced with the result.
     for (i = 0; i < in_arity; i ++)
       JITTER_NIP_MAINSTACK();
+    //asm ("unop" : "+g" (jitter_state_runtime));
     JITTER_TOP_MAINSTACK() = res;
   end
 end
@@ -1270,6 +1298,12 @@ instruction primitive-characterp ()
   end
 end
 
+instruction primitive-uniquep ()
+  code
+    JITTERLISP_UNIQUEP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
 instruction primitive-consp ()
   code
     JITTERLISP_CONSP_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
@@ -1368,8 +1402,11 @@ debug_pointer (4, cc->first_program_point);*/
 
     /* Make place for the return address in the return stack.  The
        actual value will be written by the callee. */
+//asm volatile ("nopl (0xaa)");
     JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
+//asm volatile ("nopl (0xbb)");
     JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
+//asm volatile ("nopl (0xcc)");
 
     /* Branch-and-link.  This follows the ordinary calling convention,
        with the main stack containing the closure and its actuals, known
@@ -1380,30 +1417,8 @@ debug_pointer (4, cc->first_program_point);*/
   end
 end
 
-# FIXME: factor.
-instruction call-compiled (?n 0 1 2 3 4 5 6 7 8 9 10)
-  caller
-  code
-    const jitter_uint in_arity = JITTER_ARGN0;
-    jitterlisp_object callee = JITTER_AT_DEPTH_MAINSTACK(in_arity);
-    struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
-
-    /* Here we can that * c is a compiled closure without checking. */
-    struct jitterlisp_compiled_closure *cc = & c->compiled;
-
-    /* Make place for the return address in the return stack.  The
-       actual value will be written by the callee. */
-    JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
-    JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
-
-    /* Branch-and-link to the native code, whose first instruction
-       will be a prolog. */
-    JITTER_BRANCH_AND_LINK(cc->first_program_point);
-  end
-end
-
 # This is the generic code working for both compiled and interpreted closures.
-# FIXME: factor with call-compiled.
+# FIXME: factor with the other call instructions.
 instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
   caller
   code
@@ -1464,18 +1479,119 @@ instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
   end
 end
 
-instruction tail-call (?n)
-  #caller
+# FIXME: factor with the other call instructions.
+instruction call-compiled (?n 0 1 2 3 4 5 6 7 8 9 10)
+  caller
   code
-    /* FIXME: this is currently a dummy instruction, always rewritten away. */
-    // FIXME: can I make compiled->interpreted calls tail?
+    const jitter_uint in_arity = JITTER_ARGN0;
+    jitterlisp_object callee = JITTER_AT_DEPTH_MAINSTACK(in_arity);
+    struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
+
+    /* Here we can assume that * c is a compiled closure without checking. */
+    struct jitterlisp_compiled_closure *cc = & c->compiled;
+
+    /* Make place for the return address in the return stack.  The
+       actual value will be written by the callee. */
+    JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
+    JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
+
+    /* Branch-and-link to the native code, whose first instruction
+       will be a prolog. */
+    JITTER_BRANCH_AND_LINK(cc->first_program_point);
   end
 end
-instruction tail-call-compiled (?n)
+
+# FIXME: factor with the other call instructions.
+instruction tail-call (?n 0 1 2 3 4 5 6 7 8 9 10)
+  code
+    const jitter_uint in_arity = JITTER_ARGN0;
+    jitterlisp_object callee = JITTER_AT_DEPTH_MAINSTACK(in_arity);
+    struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
+
+    if (c->kind == jitterlisp_closure_type_compiled)
+      {
+        /* Extract the current return address from the return stack, to be
+           reused.  Differently from non-tail calls, don't push anything on
+           the return stack: the callee will overwrite the top with its
+           current value, which is what we want. */
+        jitterlispvm_program_point current_link
+          = (jitterlispvm_program_point) JITTER_TOP_RETURNSTACK();
+
+        /* Branch-and-relink to the native code, whose first instruction
+           will be a prolog. */
+        struct jitterlisp_compiled_closure *cc = & c->compiled;
+        JITTER_BRANCH_AND_LINK_WITH(cc->first_program_point, current_link);
+      }
+    else
+      {
+        /* Unfortunately I cannot really tail-call from compiled code to
+           interpreted code.  Instead I will call the interpreter as a C
+           function and then return. */
+        const struct jitterlisp_interpreted_closure *ic = & c->interpreted;
+
+        /* Push an element on the main stack.  This way we can ensure that
+           every actual is accessible thru memory in a contiguous array,
+           even if the main stack is TOS-optimized.  Compute the address
+           (on the main stack backing) where the actuals begin.
+
+           Notice that the interpreted function we are calling is allowed
+           to call into compiled code in its turn.  This is not a problem,
+           as we are not moving stack pointers down until the call ends:
+           the unused part of the main and return stacks is available to
+           the callee. */
+        JITTER_PUSH_UNSPECIFIED_MAINSTACK();
+        jitterlisp_object *actuals
+          // FIXME: add a stack operator to compute this address.
+          = (& JITTER_UNDER_TOP_MAINSTACK()) - in_arity + 1;
+
+        /* Call the interpreter. */
+//putchar ('['); putchar ('i');
+        jitterlisp_object interpretation_result
+          = jitterlisp_call_interpreted (ic, actuals, in_arity);
+//putchar (']');
+
+        /* Remove as many elements as the in-arity plus one (the callee) from
+           the stack, without affecting the top.  Unless JITTER_ARGN0 is
+           residual this whole loops compiles to one instruction when the main
+           stack is TOS-optimized, and doesn't touch memory. */
+        int i;
+        for (i = 0; i < in_arity + 1; i ++)
+          JITTER_NIP_MAINSTACK();
+
+        /* Now the stack is one element higher than it was before the call,
+           containing the unspecified element at the top.  Replace it with
+           the result.  Again this doesn't touch memory. */
+        JITTER_TOP_MAINSTACK() = interpretation_result;
+
+        /* Return to our original caller. */
+        jitter_uint return_address = JITTER_TOP_RETURNSTACK();
+        JITTER_DROP_RETURNSTACK();
+        JITTER_RETURN(return_address);
+      }
+  end
+end
+
+# FIXME: factor with the other call instructions.
+instruction tail-call-compiled (?n 0 1 2 3 4 5 6 7 8 9 10)
   #caller
   code
-    /* FIXME: this is currently a dummy instruction, always rewritten away. */
-    // FIXME: can I make compiled->interpreted calls tail?
+    const jitter_uint in_arity = JITTER_ARGN0;
+    jitterlisp_object callee = JITTER_AT_DEPTH_MAINSTACK(in_arity);
+    struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
+
+    /* Here we can assume that * c is a compiled closure without checking. */
+    struct jitterlisp_compiled_closure *cc = & c->compiled;
+
+    /* Take the current return address from the return stack: I want to keep
+       returning there.  Differently from the case of non-tail calls I don't
+       push anything on the return stack: the callee prolog will overwrite
+       the current top with a copy of itself, which is fine. */
+    jitterlispvm_program_point current_link
+      = (jitterlispvm_program_point) JITTER_TOP_RETURNSTACK();
+
+    /* Branch-and-relink to the native code, whose first instruction
+       will be a prolog. */
+    JITTER_BRANCH_AND_LINK_WITH(cc->first_program_point, current_link);
   end
 end
 
@@ -1553,6 +1669,11 @@ rule drop-push-literal rewrite
   drop; push-literal $a
 into
   copy-from-literal $a
+end
+rule drop-push-unspecified rewrite
+  drop; push-unspecified
+into
+  # Nothing.
 end
 
 rule push-register-pop-to-register rewrite
@@ -1813,18 +1934,18 @@ into
 end
 
 
-# FIXME: this is a temporary kludge, to be used before I actually implement
-# tail calls.
-rule remove-tail-call--kludge rewrite
-  tail-call $a
-into
-  call $a; return
-end
-rule remove-tail-call-compiled--kludge rewrite
-  tail-call-compiled $a
-into
-  call-compiled $a; return
-end
+# # FIXME: this is a temporary kludge, to be used before I actually implement
+# # tail calls.
+# rule remove-tail-call--kludge rewrite
+#   tail-call $a
+# into
+#   call $a; return
+# end
+# rule remove-tail-call-compiled--kludge rewrite
+#   tail-call-compiled $a
+# into
+#   call-compiled $a; return
+# end
 
 
 
