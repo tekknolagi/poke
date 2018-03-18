@@ -1,5 +1,5 @@
 # Autoconf macros for Jitter.
-# Copyright (C) 2017 Luca Saiu
+# Copyright (C) 2017, 2018 Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -148,7 +148,7 @@ fi
 # AC_JITTER_CONFIG
 # ----------------
 # Look for the jitter-config script, by default in $PATH or, if the option
-# --with-jitter-config="DIRECTORY" is given, in DIRECTORY (only).
+# --with-jitter="PREFIX" is given, in PREFIX/bin (only).
 #
 # Define the substitution JITTER_CONFIG to either the full pathname of a
 # jitter-config script which appears to be working, or nothing in case of
@@ -193,20 +193,21 @@ if test "x$ac_cv_prog_cc_c99" = "no"; then
                try to go on, but there may be problems])
 fi
 
-# Provide an option for the user to explicitly set the path to jitter-config .
-# ac_jitter_config_path will be defined as either the given path, or $PATH.
-AC_ARG_WITH([jitter-config],
-            [AS_HELP_STRING([--with-jitter-config="DIRECTORY"],
-               [use the jitter-config script from the given directory instead
-                of searching for it in $PATH])],
-            [ac_jitter_config_path="$withval"],
-            [ac_jitter_config_path="$PATH"])
+# Provide an option for the user to explicitly set the prefix to
+# bin/jitter .  ac_jitter_path will be defined as either the given
+# path with "/bin" appended, or $PATH.
+AC_ARG_WITH([jitter],
+            [AS_HELP_STRING([--with-jitter="PREFIX"],
+               [use the jitter program from the bin directory of the given
+                prefix instead of searching for it in $PATH])],
+            [ac_jitter_path="$withval/bin"])
 
-# Search for jitter-config.
+# Search for the "jitter-config" script and perform the JITTER_CONFIG
+# substitution.
 AC_PATH_PROG([JITTER_CONFIG],
              [jitter-config],
              ,
-             [$ac_jitter_config_path])
+             [$ac_jitter_path])
 
 # However jitter-config was found, verify that it can be used; if not, unset the
 # JITTER_CONFIG variable (and substitution).
@@ -280,7 +281,7 @@ AC_LANG_POP([C])
 # AC_JITTER_C_GENERATOR
 # ---------------------
 # Look for jitter, the C code generator program in $PATH if the option
-# --with-jitter="DIRECTORY" is given, in DIRECTORY (only).
+# --with-jitter="PREFIX" is given, in DIRECTORY/bin (only).
 #
 # Substitute:
 # * JITTER                            (the jitter program full path, or empty
@@ -298,20 +299,11 @@ AC_REQUIRE([AC_PROG_CC])
 # the project is actually using Automake.
 AC_REQUIRE([AC_JITTER_USING_AUTOMAKE])
 
-# Provide an option for the user to explicitly set the path to jitter-config .
-# ac_jitter_config_path will be defined as either the given path, or $PATH.
-AC_ARG_WITH([jitter],
-            [AS_HELP_STRING([--with-jitter="DIRECTORY"],
-               [use the jitter program from the given directory instead
-                of searching for it in $PATH])],
-            [ac_jitter_path="$withval"],
-            [ac_jitter_path="$PATH"])
-
 # Search for the "jitter" program and perform the JITTER substitution.
 AC_PATH_PROG([JITTER],
              [jitter],
              ,
-             [$ac_jitter_path])
+             [$ac_jitter_path:$PATH])
 
 # However jitter was found, verify that it can be used; if not, unset the JITTER
 # variable (and substitution).

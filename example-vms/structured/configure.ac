@@ -36,6 +36,13 @@ AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
 
 
+# Autoconf macro inclusion.
+################################################################
+
+# Make the file jitter.m4 visible from here, to get access to AC_JITTER .
+AC_CONFIG_MACRO_DIR([build-aux])
+
+
 # Automake initialization.
 ################################################################
 
