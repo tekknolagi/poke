@@ -277,7 +277,7 @@ Temporary stuff, for myself
 @chapter Introduction
 
 JitterLisp is a comparatively simple and efficient Lisp system,
-relying on the Jitter virtual machine generator for compiling code.
+relying on a Jitter virtual machine for compiled code.
 
 @menu
 * History::                            How JitterLisp came to be.
@@ -301,7 +301,7 @@ attempt to optimize the programming language GNU epsilon
 project.  Dissatisfied with the speedup provided by a simple
 direct-threaded virtual machine I started exploring more advanced
 techniques, and the experiment eventually grew into the current
-virtual-machine generator.
+virtual machine generator.
 @ignore
 Even if it can certainly be said that
 Jitter is a sub-project which got way out of hand I am happy with the
@@ -365,7 +365,7 @@ never my primary goal.
 
 Even without the ambitious scope of Jitter I consider JitterLisp
 useful to show the level of performance within the reach of
-``simple'', clean systems.  JitterLisp gets many design points correct
+small, clean systems.  JitterLisp gets many design points correct
 but is not perfect or exceptionally clever in any.  Still it appears
 more efficient than every mature ``dynamic language'', in some cases
 to a spectacular degree---due more to the faults of others than to any
@@ -1190,11 +1190,11 @@ twice
   (letrec ((my-even? (lambda (n)
                        (cond ((= n 0)  #t)
                              ((= n 1)  #f)
-                             (#t       (odd? (- n 1))))))
+                             (else     (odd? (- n 1))))))
            (my-odd? (lambda (n)
                       (cond ((= n 0)  #f)
                             ((= n 1)  #t)
-                            (#t       (even? (- n 1)))))))
+                            (else     (even? (- n 1)))))))
     my-even?))
 (lambda () (letrec ((f 1) (g 2)) f))
   @result{}
@@ -1246,7 +1246,63 @@ twice
 @node Lisp data
 @section Lisp data
 
-@fixme{Write this}
+@cindex homoiconicity
+@fixme{we will first define Lisp data structures, then show how some
+of them are mapped into expressions}
+
+@cindex boxed, Lisp object
+@cindex unboxed, Lisp object
+@fixme{boxed and unboxed objects}
+
+@cindex read syntax
+@cindex write syntax
+@cindex syntax
+All Lisp data have an @dfn{output notation}, and some can be
+read from input via a @dfn{read syntax} as well.  The two syntaxes,
+where both defined, are compatible.
+@*
+For example the number @code{1234}, the boolean @code{#t} and the
+symbol @code{this-is-a-symbol} are written back by the system (for
+example when they occur as results in the REPL) as @code{1234},
+@code{#t} and @code{this-is-a-symbol}, in the same syntax available to
+the user for data input.  However some other objects such as
+procedures can be described in the output (for example
+@samp{#<interpreted-closure () (x-1 x-0) [primitive #<primitive cons
+2-ary> [variable x-1] [variable x-0]]>}), but have no corresponding
+read syntax to be directly input as immediates.  Any object can still
+be built programmatically.
+
+@cindex address
+@cindex sharing
+@cindex substructure sharing
+@cindex Direct Acyclic Graph
+@cindex circularity
+@cindex cycle (of pointers, within a Lisp object)
+@fixme{Out of convenience the written notation of an object does not
+necessarily convey all of the information about it; for example, the
+memory address where an object is stored does not appear, yet is
+important in the execution semantics in order to check whether two
+objects are the same.  The output notation @emph{does} express the presence of
+substructure sharing within a single Lisp object, currently without
+showing more detail: an ellipsis (@samp{...}) within a printed object
+stands for another boxed Lisp sub-object, it is not specified which,
+that has been already printed at least once as part of object being
+shown.  This does not distinguish between Direct-Acyclic-Graph
+structures, where two pointers simply converge to the same address,
+and pointer cycles making circular or ``infinite'' structures.  Shared
+structures have no read syntax but can be built programmatically.}
+
+It is worth to repeat how the language defined in the rest of
+this section describes @emph{Lisp data}, and not necessarily valid
+Lisp expressions.  For example @code{foo} denotes a symbol object, but
+simply typing @code{foo} to the REPL prompt will cause an
+unbound-variable error---in this case the symbol object @code{foo}
+is macroexpanded to a @emph{variable} named @samp{foo}.
+In the same way the read (and write) syntax @code{(1 2 3)} denotes a
+well-formed Lisp datum, but would macroexpand to a @emph{procedure call} with
+@code{1} as the operator, immediately causing a failure on evaluation.
+@xref{Quoting and quasiquoting} for information about the @dfn{quoting}
+syntax for building expressions evaluating to literal Lisp objects.
 
 @menu
 * Types::                                     Every possible shape of data.
@@ -2310,61 +2366,61 @@ definition does introducing no inefficiencies in this case.}
 @end deffn
 
 @syindex set-caar!
-@deffn  {procedure} set-caar! c
+@deffn  {procedure} set-caar! c x
 @syindex set-cdar!
-@deffnx {procedure} set-cdar! c
+@deffnx {procedure} set-cdar! c x
 @syindex set-cadr!
-@deffnx {procedure} set-cadr! c
+@deffnx {procedure} set-cadr! c x
 @syindex set-cddr!
-@deffnx {procedure} set-cddr! c
+@deffnx {procedure} set-cddr! c x
 @syindex set-caaar!
-@deffnx {procedure} set-caaar! c
+@deffnx {procedure} set-caaar! c x
 @syindex set-cadar!
-@deffnx {procedure} set-cadar! c
+@deffnx {procedure} set-cadar! c x
 @syindex set-caadr!
-@deffnx {procedure} set-caadr! c
+@deffnx {procedure} set-caadr! c x
 @syindex set-caddr!
-@deffnx {procedure} set-caddr! c
+@deffnx {procedure} set-caddr! c x
 @syindex set-cdaar!
-@deffnx {procedure} set-cdaar! c
+@deffnx {procedure} set-cdaar! c x
 @syindex set-cddar!
-@deffnx {procedure} set-cddar! c
+@deffnx {procedure} set-cddar! c x
 @syindex set-cdadr!
-@deffnx {procedure} set-cdadr! c
+@deffnx {procedure} set-cdadr! c x
 @syindex set-cdddr!
-@deffnx {procedure} set-cdddr! c
+@deffnx {procedure} set-cdddr! c x
 @syindex set-caaaar!
-@deffnx {procedure} set-caaaar! c
+@deffnx {procedure} set-caaaar! c x
 @syindex set-caadar!
-@deffnx {procedure} set-caadar! c
+@deffnx {procedure} set-caadar! c x
 @syindex set-caaadr!
-@deffnx {procedure} set-caaadr! c
+@deffnx {procedure} set-caaadr! c x
 @syindex set-caaddr!
-@deffnx {procedure} set-caaddr! c
+@deffnx {procedure} set-caaddr! c x
 @syindex set-cadaar!
-@deffnx {procedure} set-cadaar! c
+@deffnx {procedure} set-cadaar! c x
 @syindex set-caddar!
-@deffnx {procedure} set-caddar! c
+@deffnx {procedure} set-caddar! c x
 @syindex set-cadadr!
-@deffnx {procedure} set-cadadr! c
+@deffnx {procedure} set-cadadr! c x
 @syindex set-cadddr!
-@deffnx {procedure} set-cadddr! c
+@deffnx {procedure} set-cadddr! c x
 @syindex set-cdaaar!
-@deffnx {procedure} set-cdaaar! c
+@deffnx {procedure} set-cdaaar! c x
 @syindex set-cdadar!
-@deffnx {procedure} set-cdadar! c
+@deffnx {procedure} set-cdadar! c x
 @syindex set-cdaadr!
-@deffnx {procedure} set-cdaadr! c
+@deffnx {procedure} set-cdaadr! c x
 @syindex set-cdaddr!
-@deffnx {procedure} set-cdaddr! c
+@deffnx {procedure} set-cdaddr! c x
 @syindex set-cddaar!
-@deffnx {procedure} set-cddaar! c
+@deffnx {procedure} set-cddaar! c x
 @syindex set-cdddar!
-@deffnx {procedure} set-cdddar! c
+@deffnx {procedure} set-cdddar! c x
 @syindex set-cddadr!
-@deffnx {procedure} set-cddadr! c
+@deffnx {procedure} set-cddadr! c x
 @syindex set-cddddr!
-@deffnx {procedure} set-cddddr! c
+@deffnx {procedure} set-cddddr! c x
 @end deffn
 
 @syindex car-or-nil
