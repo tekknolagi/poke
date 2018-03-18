@@ -984,12 +984,20 @@ EXTRA_DIST += \
   example-vms/structured/examples/count-down.structured \
   example-vms/structured/examples/euclid.structured
 
+# The jitter.m4 file distributed with the structured example is just taken from
+# Jitter.  We distribute a second copy of it for the structured build system, as
+# an easy example to follow.
+$(srcdir)/example-vms/structured/build-aux/jitter.m4: autoconf/jitter.m4
+	$(mkdir_p) $(srcdir)/example-vms/structured/build-aux || true
+	cp "$^" "$@"
+
 # The structured-language example comes with its own clean build system as an
 # example of an independent software using Jitter.  The sub-build system is not
 # used here, but we have to distribute the files.
 EXTRA_DIST += \
   example-vms/structured/configure.ac \
   example-vms/structured/Makefile.am \
+  $(srcdir)/example-vms/structured/build-aux/jitter.m4 \
   example-vms/structured/COPYING \
   example-vms/structured/README \
   example-vms/structured/AUTHORS \
