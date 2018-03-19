@@ -163,12 +163,15 @@ fi
 #                               dashes separating words, one space separating
 #                               dispatch names);
 # * JITTER_BEST_DISPATCH       (the best dispatch in JITTER_DISPATCHES);
-# * for every dispatching model $D (in all caps, with underscores separating
-#   words):
-#   - JITTER_$D_CFLAGS         (CFLAGS for using $D);
-#   - JITTER_$D_CPPFLAGS       (CPPFLAGS for using $D);
-#   - JITTER_$D_LDADD          (LDADD for using $D);
-#   - JITTER_$D_LDFLAGS        (LDFLAGS for using $D).
+# * JITTER_CFLAGS              (CFLAGS with the best dispatch);
+# * JITTER_CPPFLAGS            (CPPFLAGS with the best dispatch);
+# * JITTER_LDADD               (LDADD with the best dispatch);
+# * JITTER_LDFLAGS             (LDFLAGS with the best dispatch);
+# * for every dispatch $D (in all caps, with underscores separating words):
+#   - JITTER_$D_CFLAGS         (CFLAGS with dispatch $D);
+#   - JITTER_$D_CPPFLAGS       (CPPFLAGS with dispatch $D);
+#   - JITTER_$D_LDADD          (LDADD with dispatch $D);
+#   - JITTER_$D_LDFLAGS        (LDFLAGS with dispatch $D).
 #
 # When Automake is used, also define the following Automake conditionals
 # for each dispatching model $D (in all caps, with underscores separating
