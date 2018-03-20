@@ -85,102 +85,113 @@
 
 /* Fast branch if the given operand is zero. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_ZERO)
-# define JITTER_BRANCH_FAST_IF_ZERO(operand0, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK(operand0 == 0, target)
+# define JITTER_BRANCH_FAST_IF_ZERO(operand0, target)                 \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((operand0) == 0, (target))
 #endif
 
 /* Fast branch if the given operand is nonzero. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_NONZERO)
-# define JITTER_BRANCH_FAST_IF_NONZERO(operand0, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK(operand0 != 0, target)
+# define JITTER_BRANCH_FAST_IF_NONZERO(operand0, target)              \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((operand0) != 0, (target))
 #endif
 
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_POSITIVE)
-# define JITTER_BRANCH_FAST_IF_POSITIVE(operand0, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int)operand0 < 0, target)
+# define JITTER_BRANCH_FAST_IF_POSITIVE(operand0, target)                 \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK(((jitter_int) (operand0)) < 0,  \
+                                          (target))
 #endif
 
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_NONPOSITIVE)
-# define JITTER_BRANCH_FAST_IF_NONPOSITIVE(operand0, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int)operand0 >= 0, target)
+# define JITTER_BRANCH_FAST_IF_NONPOSITIVE(operand0, target)               \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK(((jitter_int) (operand0)) >= 0,  \
+                                          (target))
 #endif
 
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_NEGATIVE)
-# define JITTER_BRANCH_FAST_IF_NEGATIVE(operand0, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int)operand0 < 0, target)
+# define JITTER_BRANCH_FAST_IF_NEGATIVE(operand0, target)                 \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK(((jitter_int) (operand0)) < 0,  \
+                                          (target))
 #endif
 
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_NONNEGATIVE)
-# define JITTER_BRANCH_FAST_IF_NONNEGATIVE(operand0, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int)operand0 >= 0, target)
+# define JITTER_BRANCH_FAST_IF_NONNEGATIVE(operand0, target)             \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int) (operand0) >= 0,  \
+                                          (target))
 #endif
 
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_EQUAL)
-# define JITTER_BRANCH_FAST_IF_EQUAL(operand0, operand1, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK(operand0 == operand1, target)
+# define JITTER_BRANCH_FAST_IF_EQUAL(operand0, operand1, target)     \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((operand0) == (operand1),  \
+                                          (target))
 #endif
 
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_NOTEQUAL)
-# define JITTER_BRANCH_FAST_IF_NOTEQUAL(operand0, operand1, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK(operand0 != operand1, target)
+# define JITTER_BRANCH_FAST_IF_NOTEQUAL(operand0, operand1, target)  \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((operand0) != (operand1),  \
+                                          (target))
 #endif
 
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_LESS_SIGNED)
-# define JITTER_BRANCH_FAST_IF_LESS_SIGNED(operand0, operand1, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int)operand0 \
-                                          < (jitter_int)operand1, target)
+# define JITTER_BRANCH_FAST_IF_LESS_SIGNED(operand0, operand1, target)  \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int) (operand0)       \
+                                          < (jitter_int) (operand1),    \
+                                          (target))
 #endif
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_LESS_UNSIGNED)
-# define JITTER_BRANCH_FAST_IF_LESS_UNSIGNED(operand0, operand1, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint)operand0 \
-                                          < (jitter_uint)operand1, target)
+# define JITTER_BRANCH_FAST_IF_LESS_UNSIGNED(operand0, operand1, target)  \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint) (operand0)        \
+                                          < (jitter_uint) (operand1),     \
+                                          (target))
 #endif
 
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED)
-# define JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(operand0, operand1, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int)operand0 \
-                                          >= (jitter_int)operand1, target)
+# define JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(operand0, operand1, target)  \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int) (operand0)          \
+                                          >= (jitter_int) (operand1),      \
+                                          (target))
 #endif
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED)
-# define JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED(operand0, operand1, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint)operand0 \
-                                          >= (jitter_uint)operand1, target)
+# define JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED(operand0, operand1, target)  \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint) (operand0)           \
+                                          >= (jitter_uint) (operand1),       \
+                                          (target))
 #endif
 
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_GREATER_SIGNED)
-# define JITTER_BRANCH_FAST_IF_GREATER_SIGNED(operand0, operand1, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int)operand0 \
-                                          > (jitter_int)operand1, target)
+# define JITTER_BRANCH_FAST_IF_GREATER_SIGNED(operand0, operand1, target)       \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int) (operand0)               \
+                                          > (jitter_int) (operand1), (target))
 #endif
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED)
-# define JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED(operand0, operand1, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint)operand0 \
-                                          > (jitter_uint)operand1, target)
+# define JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED(operand0, operand1, target)      \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint) (operand0)               \
+                                          > (jitter_uint) (operand1), (target))
 #endif
 
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED)
-# define JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED(operand0, operand1, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int)operand0 \
-                                          <= (jitter_int)operand1, target)
+# define JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED(operand0, operand1, target)    \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int) (operand0)               \
+                                          <= (jitter_int) (operand1), (target))
 #endif
 /* FIXME: comment. */
 #if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED)
-# define JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED(operand0, operand1, target) \
-  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint)operand0 \
-                                          <= (jitter_uint)operand1, target)
+# define JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED(operand0, operand1, target)  \
+  JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint) (operand0)              \
+                                          <= (jitter_uint) (operand1),          \
+                                          (target))
 #endif
 
 /* This is convenient to have as a macroexpansion of conditions known to be
