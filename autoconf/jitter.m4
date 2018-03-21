@@ -149,6 +149,8 @@ fi
 # ----------------
 # Look for the jitter-config script, by default in $PATH or, if the option
 # --with-jitter="PREFIX" is given, in PREFIX/bin (only).
+# Choose the default dispatch, using --with-jitter-dispatch="DISPATCH" or
+# the best available dispatch if the option is not given.
 #
 # Define the substitution JITTER_CONFIG to either the full pathname of a
 # jitter-config script which appears to be working, or nothing in case of
@@ -163,10 +165,11 @@ fi
 #                               dashes separating words, one space separating
 #                               dispatch names);
 # * JITTER_BEST_DISPATCH       (the best dispatch in JITTER_DISPATCHES);
-# * JITTER_CFLAGS              (CFLAGS with the best dispatch);
-# * JITTER_CPPFLAGS            (CPPFLAGS with the best dispatch);
-# * JITTER_LDADD               (LDADD with the best dispatch);
-# * JITTER_LDFLAGS             (LDFLAGS with the best dispatch);
+# * JITTER_DEFAULT_DISPATCH    (the dispatch chosen by default);
+# * JITTER_CFLAGS              (CFLAGS with the default dispatch);
+# * JITTER_CPPFLAGS            (CPPFLAGS with the default dispatch);
+# * JITTER_LDADD               (LDADD with the default dispatch);
+# * JITTER_LDFLAGS             (LDFLAGS with the default dispatch);
 # * for every dispatch $D (in all caps, with underscores separating words):
 #   - JITTER_$D_CFLAGS         (CFLAGS with dispatch $D);
 #   - JITTER_$D_CPPFLAGS       (CPPFLAGS with dispatch $D);
@@ -226,6 +229,24 @@ AS_IF([test "x$JITTER_CONFIG" = "x"],
         [AC_MSG_WARN([non-working jitter-config at $JITTER_CONFIG])
          JITTER_CONFIG=""])
 
+# Provide an option for the user to explicitly choose a default dispatching
+# model.  Decide on the default dispatch at this point, either using the option
+# or choosing the best.
+# ac_jitter_default_dispatch will be defined as the dispatching model in lower
+# case with dashes separating words.  Default flag variables will refer to the
+# selected dispatching model.
+# If the requested dispatch is not avaiable the variable will be redefined later
+# to use the best, with a warning.
+AC_ARG_WITH([jitter-dispatch],
+            [AS_HELP_STRING([--with-jitter-dispatch="DISPATCH"],
+               [use the given dispatching model (either one given by
+                jitter-config --dispatches or "best", which is the default)
+                for the default jitter flag variables; if the requested
+                dispatch is not available in the current Jitter
+                configuration warn and use the best])],
+            [ac_jitter_default_dispatch="$withval"],
+            [ac_jitter_default_dispatch="best"])
+
 # Define the Automake conditional JITTER_HAVE_JITTER_CONFIG , if we are using
 # Automake.
 if test "x$ac_jitter_using_automake" != "x"; then
@@ -244,17 +265,34 @@ if test "x$JITTER_CONFIG" != "x"; then
   # Define the list of enabled dispatching models.
   AC_SUBST([JITTER_DISPATCHES],
            [$("$JITTER_CONFIG" --dispatches)])
-  AC_MSG_NOTICE([the available Jitter dispatching models are $JITTER_DISPATCHES])
+  AC_MSG_NOTICE([the available Jitter dispatches are $JITTER_DISPATCHES])
 
-  # Define the best dispatching model.
+  # Define the best available dispatching model.
   AC_SUBST([JITTER_BEST_DISPATCH],
            [$("$JITTER_CONFIG" --best-dispatch)])
-  AC_MSG_NOTICE([the best Jitter dispatching model is $JITTER_BEST_DISPATCH])
+  AC_MSG_NOTICE([the best available Jitter dispatch is \"$JITTER_BEST_DISPATCH\"])
 
-  # Define flags for the best dispatching model.
+  # Define the default dispatching model.  In case "best" was requested, replace
+  # it with the actual name.  If the dispatching model selected as default is
+  # not available warn, and use the best available.
+  if test "$ac_jitter_default_dispatch" = "best"; then
+    ac_jitter_default_dispatch="$JITTER_BEST_DISPATCH"
+  elif ! "$JITTER_CONFIG" --has-dispatch="$ac_jitter_default_dispatch"; then
+    AC_MSG_WARN([the requested Jitter dispatch \
+\"$ac_jitter_default_dispatch\" is not available: choosing the best available \
+\"$JITTER_BEST_DISPATCH\" instead])
+    ac_jitter_default_dispatch="$JITTER_BEST_DISPATCH"
+  fi
+  AC_SUBST([JITTER_DEFAULT_DISPATCH],
+           [$ac_jitter_default_dispatch])
+  AC_MSG_NOTICE([the default Jitter dispatching model used here will be \
+\"$JITTER_DEFAULT_DISPATCH\"])
+
+  # Define flags for the default dispatching model.
   jitter_for_flag([a_flag],
     [AC_SUBST([JITTER_]jitter_tocpp(a_flag),
-              [$("$JITTER_CONFIG" --a_flag)])])
+              [$("$JITTER_CONFIG" --dispatch="$JITTER_DEFAULT_DISPATCH" \
+                 --a_flag)])])
 
   # For every dispatch and flag define a substitution JITTER_$dispatch_$flag .
   jitter_for_dispatch([a_dispatch],
@@ -283,8 +321,8 @@ AC_LANG_POP([C])
 
 # AC_JITTER_C_GENERATOR
 # ---------------------
-# Look for jitter, the C code generator program in $PATH if the option
-# --with-jitter="PREFIX" is given, in DIRECTORY/bin (only).
+# Look for jitter, the C code generator program in $PATH, or if the option
+# --with-jitter="PREFIX" is given in PREFIX/bin (only).
 #
 # Substitute:
 # * JITTER                            (the jitter program full path, or empty

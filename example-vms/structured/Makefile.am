@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in .
-# Copyright (C) 2016, 2017 Luca Saiu
+# Copyright (C) 2016, 2017, 2018 Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of the Jitter structured-language example,
@@ -32,8 +32,9 @@ bin_structured_SOURCES = \
   structured-main.c
 
 # The structured executable must be built using the preprocessor, compiler and
-# linker options mandated by Jitter -- in this case we only use the best Jitter
-# dispatching mode, which is what most people will want.
+# linker options mandated by Jitter -- in this case we only use the default
+# Jitter dispatching mode as selected at configure time, which is what most
+# people will want.
 # The fourth line is not a mistake: Automake provides no AM_LDADD variable.
 bin_structured_CPPFLAGS = $(AM_CPPFLAGS) $(JITTER_CPPFLAGS)
 bin_structured_CFLAGS = $(AM_CFLAGS) $(JITTER_CFLAGS)
