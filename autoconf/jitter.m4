@@ -275,7 +275,7 @@ if test "x$JITTER_CONFIG" != "x"; then
   # Define the default dispatching model.  In case "best" was requested, replace
   # it with the actual name.  If the dispatching model selected as default is
   # not available warn, and use the best available.
-  if test "$ac_jitter_default_dispatch" = "best"; then
+  if test "x$ac_jitter_default_dispatch" = "xbest"; then
     ac_jitter_default_dispatch="$JITTER_BEST_DISPATCH"
   elif ! "$JITTER_CONFIG" --has-dispatch="$ac_jitter_default_dispatch"; then
     AC_MSG_WARN([the requested Jitter dispatch \
