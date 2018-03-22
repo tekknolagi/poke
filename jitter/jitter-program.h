@@ -1,6 +1,6 @@
 /* Jitter: VM-independent program data structures: header.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -187,7 +187,7 @@ struct jitter_program*
 jitter_make_program (const struct jitter_vm *vm)
   __attribute__ ((nonnull (1), returns_nonnull));
 
-/* Destroy the pointed program. */
+/* Destroy the pointed program, if any.  Do nothing if p is NULL. */
 void
 jitter_destroy_program (struct jitter_program *p);
 

@@ -107,6 +107,9 @@ jitter_make_program (const struct jitter_vm *vm)
 void
 jitter_destroy_program (struct jitter_program *p)
 {
+  if (p == NULL)
+    return;
+
   jitter_finalize_program (p);
   free (p);
 }
