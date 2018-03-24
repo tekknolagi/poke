@@ -249,6 +249,29 @@ void
 jitter_append_instruction_name (struct jitter_program *p,
                                 const char *instruction_name);
 
+/* Update the pointed program, beginning a new instruction with the given
+   unspecialized opcode, from the given array of meta-instructions.  When this
+   function is called the previous instruction, if any, must have been
+   completed.  The unspecialized_opcode argument is meant to be one case of enum
+   vmprefix_meta_instruction_id ; the enum name depends on the VM, which is why
+   this VM-independent prototype uses a generic integer type.
+
+   The recommended way of using this function is via the VM-specific macro
+   wrapper VMPREFIX_APPEND_INSTRUCTION_ID , which lets the user ignore the
+   meta-instruction array and the number of meta-instructions.
+
+   This function is flexible enough to use from user code where the instruction
+   to be added is the result of some previous computation; the macro API
+   recommended in the comment before jitter_append_meta_instruction doesn't fit
+   the problem as the instruction name would need to be supplied as a literal,
+   and the string-based API above would require a useless run-time hash
+   lookup. */
+void
+jitter_append_instruction_id (struct jitter_program *p,
+                              const struct jitter_meta_instruction * const mis,
+                              size_t meta_instruction_no,
+                              unsigned unspecialized_opcode);
+
 /* Update the given program, beginning a new instruction which is an instance of
    the pointed meta-instruction; the instruction parameters, if any, have to be
    supplied with calls to vmprefix_append_*_parameter .  When this function is

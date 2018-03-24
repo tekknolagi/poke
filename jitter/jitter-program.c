@@ -499,6 +499,25 @@ jitter_append_meta_instruction (struct jitter_program *p,
 }
 
 void
+jitter_append_instruction_id (struct jitter_program *p,
+                              const struct jitter_meta_instruction * const mis,
+                              size_t meta_instruction_no,
+                              unsigned unspecialized_opcode)
+{
+  /* Sanity check. */
+  if (unspecialized_opcode >= meta_instruction_no)
+    jitter_fatal ("jitter_append_instruction_id: invalid id %u",
+                  unspecialized_opcode);
+
+  /* Find the address of the appropriate meta-instruction in the array. */
+  const struct jitter_meta_instruction * const mi
+    = mis + unspecialized_opcode;
+
+  /* Append the meta-instruction. */
+  jitter_append_meta_instruction (p, mi);
+}
+
+void
 jitter_append_instruction_name (struct jitter_program *p,
                                 const char *instruction_name)
 {

@@ -154,10 +154,13 @@ vmprefix_make_program (void)
    usable when the VM instruction opcode is known at compile time.  The
    unspecialized instruction name must be explicitly mangled by the user as per
    the rules in jitterc_mangle.c .  For example an instruction named foo_bar can
-   be added to the program pointed by p with either
+   be added to the program pointed by p with any one of
      vmprefix_append_instruction_name (p, "foo_bar");
-   or
+   ,
      VMPREFIX_APPEND_INSTRUCTION(p, foo_ubar);
+   , and
+     VMPREFIX_APPEND_INSTRUCTION_ID(p, vmprefix_meta_instruction_id_foo_ubar);
+   .
    The string "foo_bar" is not mangled, but the token foo_ubar is. */
 #define VMPREFIX_APPEND_INSTRUCTION(program_p, instruction_mangled_name_root)  \
   do                                                                           \
@@ -168,6 +171,23 @@ vmprefix_make_program (void)
           + JITTER_CONCATENATE_TWO(vmprefix_meta_instruction_id_,              \
                                    instruction_mangled_name_root));            \
     }                                                                          \
+  while (false)
+
+/* Append the unspecialized instruction whose id is given to the pointed program.
+   The id must be a case of enum vmprefix_meta_instruction_id ; such cases have
+   a name starting with vmprefix_meta_instruction_id_ .
+   This is slightly less convenient to use than VMPREFIX_APPEND_INSTRUCTION
+   but more general, as the instruction id is allowed to be a non-constant C
+   expression. */
+#define VMPREFIX_APPEND_INSTRUCTION_ID(_jitter_program_p,          \
+                                       _jitter_instruction_id)     \
+  do                                                               \
+    {                                                              \
+      jitter_append_instruction_id ((_jitter_program_p),           \
+                                    vmprefix_meta_instructions,    \
+                                    VMPREFIX_META_INSTRUCTION_NO,  \
+                                    (_jitter_instruction_id));     \
+    }                                                              \
   while (false)
 
 /* This is the preferred way of appending a register argument to the instruction
