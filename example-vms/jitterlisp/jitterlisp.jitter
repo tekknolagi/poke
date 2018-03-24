@@ -556,6 +556,37 @@ end
 
 
 
+## User-defined state fields (scratch).
+#################################################################
+
+late-header-c
+  code
+    extern uint32_t
+    foo;
+  end
+end
+
+late-c
+  code
+    uint32_t
+    foo;
+
+    void
+    boo (uint32_t new_foo)
+    {
+      foo = new_foo;
+    }
+  end
+end
+
+state-struct-runtime-c
+  code
+  end
+end
+
+
+
+
 ## Instructions.
 #################################################################
 
@@ -712,11 +743,19 @@ instruction push-literal (?n print_object)
   end
 end
 
-instruction push-global (?n print_object)
+instruction push-global (?n print_object, ?f)
   code
     jitterlisp_object tagged_symbol = JITTER_ARGN0;
-    struct jitterlisp_symbol *symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
-    JITTER_PUSH_MAINSTACK(symbol->global_value);
+    struct jitterlisp_symbol * symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
+
+#ifndef JITTERLISP_UNSAFE
+    JITTER_BRANCH_FAST_IF_EQUAL (symbol->global_value, JITTERLISP_UNDEFINED,
+                                 JITTER_ARGF1);
+#endif // #ifndef JITTERLISP_UNSAFE
+
+//    JITTER_PUSH_MAINSTACK(symbol->global_value);
+    JITTER_PUSH_UNSPECIFIED_MAINSTACK();
+    JITTER_TOP_MAINSTACK() = symbol->global_value;
   end
 end
 
@@ -754,10 +793,27 @@ instruction pop-to-register (!R)
   end
 end
 
-instruction pop-to-global (?n print_object)
+instruction pop-to-global (?n print_object, ?f)
   code
     jitterlisp_object tagged_symbol = JITTER_ARGN0;
     struct jitterlisp_symbol *symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
+#ifndef JITTERLISP_UNSAFE
+    JITTER_BRANCH_FAST_IF_NONZERO (symbol->global_constant, JITTER_ARGF1);
+#endif // #ifndef JITTERLISP_UNSAFE
+    symbol->global_value = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+  end
+end
+
+instruction pop-to-global-defined (?n print_object, ?f)
+  code
+    jitterlisp_object tagged_symbol = JITTER_ARGN0;
+    struct jitterlisp_symbol *symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
+#ifndef JITTERLISP_UNSAFE
+    JITTER_BRANCH_FAST_IF_NONZERO (symbol->global_constant, JITTER_ARGF1);
+    JITTER_BRANCH_FAST_IF_EQUAL (symbol->global_value, JITTERLISP_UNDEFINED,
+                                 JITTER_ARGF1);
+#endif // #ifndef JITTERLISP_UNSAFE
     symbol->global_value = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
   end
@@ -822,10 +878,12 @@ end
 # is not globally bound.
 instruction check-global-defined (?n print_object, ?f)
   code
+#ifndef JITTERLISP_UNSAFE
     jitterlisp_object tagged_symbol = JITTER_ARGN0;
     struct jitterlisp_symbol * symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
     JITTER_BRANCH_FAST_IF_EQUAL (symbol->global_value, JITTERLISP_UNDEFINED,
                                  JITTER_ARGF1);
+#endif // #ifndef JITTERLISP_UNSAFE
   end
 end
 
@@ -892,41 +950,7 @@ instruction branch-if-false (?f)
   code
     jitterlisp_object top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
-/*
-asm volatile (""//"add $0, %[old_top], %[new_top]"
-     : [old_top] "+X" (top)
-       , [new_top] "+X" (JITTER_TOP_MAINSTACK())
-     );
-*/
-/*
-// Not only this generates terrible code: it also makes the TOS update
-// e nd up after the branch.
-asm volatile (""
-     : [top] "+X" (top)
-     : [state] "X" (jitter_state_runtime)
-     );
-*/
-/*
-// Equally useless.
-asm volatile ("" : : : "memory");
-*/
-//asm volatile ("" : "+X" (top) : : "memory");
-asm goto ("" : : "X"(top): : after);
     JITTER_BRANCH_FAST_IF_EQUAL(top, JITTERLISP_FALSE, JITTER_ARGF0);
-//__builtin_unreachable ();
-after:;
-/*asm volatile ("addi $0, $0, 20"
-     : "+X" (JITTER_TOP_MAINSTACK())
-     );*/
-//a_label: ;
-  end
-end
-
-# Just an instruction using the top, even in an incorrect way.  Testing
-# branch-if-false compilation.
-instruction dummy ()
-  code
-    printf ("%li\n", (long)JITTER_TOP_MAINSTACK());
   end
 end
 
@@ -1012,14 +1036,15 @@ instruction primitive-cdr (?f)
   end
 end
 
-instruction primitive-cons ()
+# This doesn't nip, in the hope that the separate nip instruction generated
+# right after this will be rewritten.
+instruction primitive-cons-special ()
   code
     /* When this compiles to a total of five or six instructions in the
        fast path I'll be a happy man.  Make it even eight including the
        initialization. */
     JITTERLISP_CONS_(JITTER_TOP_MAINSTACK(),
                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
-    JITTER_NIP_MAINSTACK();
   end
 end
 
@@ -1405,7 +1430,7 @@ debug_pointer (4, cc->first_program_point);*/
 //asm volatile ("nopl (0xaa)");
     JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
 //asm volatile ("nopl (0xbb)");
-    JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
+//    JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
 //asm volatile ("nopl (0xcc)");
 
     /* Branch-and-link.  This follows the ordinary calling convention,
@@ -1431,7 +1456,7 @@ instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
         /* Make place for the return address in the return stack.  The
            actual value will be written by the callee. */
         JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
-        JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
+//        JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
 
         /* Branch-and-link to the native code, whose first instruction
            will be a prolog. */
@@ -1493,7 +1518,7 @@ instruction call-compiled (?n 0 1 2 3 4 5 6 7 8 9 10)
     /* Make place for the return address in the return stack.  The
        actual value will be written by the callee. */
     JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
-    JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
+//    JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
 
     /* Branch-and-link to the native code, whose first instruction
        will be a prolog. */
@@ -1613,6 +1638,7 @@ instruction return ()
     JITTER_DROP_RETURNSTACK();
     //dump_stacks (2, the_jitter_state_runtime_pointer);
     JITTER_RETURN(return_address);
+    //dump_stacks (1, the_jitter_state_runtime_pointer);
   end
 end
 
@@ -2044,8 +2070,6 @@ into
   nip-six; copy-from-register $a
 end
 
-# These will be used if I make primitive-cons not nip its first operand, and
-# compile cons to primitive-cons; nip .
 # For these rule to fire the cons primitive use must be in a non-tail position,
 # used as a non-last operand of a primitive or procedure.
 # Testcases: alist-copy zip-reversed-iterative zip-reversed-tail-recursive-helper
@@ -2073,22 +2097,9 @@ into
   nip-push-register $a
 end
 
-# # FIXME: enable this after I make primitive-cons not nip its first operand.
-# # Test case: (lambda () (while #t (cons 1 2)))
-# rule useless-cons-elimination rewrite
-#   primitive-cons $a; nip-drop
-# into
-#   # Don't cons at all and drop the two cons operands as well, which will
-#   # hopefully rewrite further.  I don't generate just one nip-drop instruction
-#   # because the first rewritten drop might already rewrite along with its
-#   # previous instruction; and so may the second.
-#   drop; drop
-# end
-
-# FIXME: this version is temporary, and relies on a nipping primitive-cons.
 # Test case: (lambda () (while #t (cons 1 2)))
 rule useless-cons-elimination rewrite
-  primitive-cons; drop
+  primitive-cons-special; nip-drop
 into
   # Don't cons at all and drop the two cons operands as well, which will
   # hopefully rewrite further.  I don't generate just one nip-drop instruction

@@ -4199,13 +4199,14 @@
          ;; even if x is not known to be bound, as no effects are removed; the removed
          ;; (second) reference is guaranteed not to have effects.
          optimized-first)
+        ((not (ast-effectful? optimized-first bounds))
+         ;; The first form in the sequence has no effect: rewrite to the second
+         ;; form only.
+         optimized-second)
         (else
-         ;; If fhe first form in the sequence has no effect rewrite to the
-         ;; second form only.
-         (if (not (ast-effectful? optimized-first bounds))
-             optimized-second
-             (ast-sequence optimized-first
-                           optimized-second)))))
+         ;; Fallback case: keep the sequence.
+         (ast-sequence optimized-first
+                       optimized-second))))
 
 ;;; A helper for ast-optimize-helper in the set! case.  The body should already
 ;;; be optimized.
@@ -5507,10 +5508,9 @@
                (let ((value (symbol-global name)))
                  (when (compiler-used-result? s)
                    (compiler-add-instruction! s `(push-literal ,value))))
-               (begin
-                 (compiler-add-instruction! s `(check-global-defined ,name))
-                 (when (compiler-used-result? s)
-                   (compiler-add-instruction! s `(push-global ,name))))))
+               (if (compiler-used-result? s)
+                   (compiler-add-instruction! s `(push-global ,name))
+                   (compiler-add-instruction! s `(check-global-defined ,name)))))
           ((compiler-place-local? place)
            (when (compiler-used-result? s)
              (compiler-add-instruction! s `(push-register ,(cadr place)))
@@ -5532,7 +5532,6 @@
   (compiler-with-non-tail s
     (compiler-with-used-result s
       (compile-ast! s body)))
-  (compiler-add-instruction! s `(check-global-non-constant ,name))
   (compiler-add-instruction! s `(pop-to-global ,name))
   (when (compiler-used-result? s)
     (compiler-push-nothing! s))
@@ -5559,9 +5558,7 @@
       (compiler-with-used-result s
         (compile-ast! s body)))
     (cond ((compiler-place-global? place)
-           (compiler-add-instruction! s `(check-global-defined ,name))
-           (compiler-add-instruction! s `(check-global-non-constant ,name))
-           (compiler-add-instruction! s `(pop-to-global ,name)))
+           (compiler-add-instruction! s `(pop-to-global-defined ,name)))
           ((eq? (car place) 'local-unboxed)
            (compiler-add-instruction! s `(pop-to-register ,(cadr place))))
           ((eq? (car place) 'local-boxed)

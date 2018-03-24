@@ -46,29 +46,29 @@
    to reset a setting to its default value. */
 enum jitterlisp_negative_option
   {
-    jitterlisp_negative_option_no_verbose = -1,
-    jitterlisp_negative_option_verbose_litter = -2,
-    jitterlisp_negative_option_library = -3,
-    jitterlisp_negative_option_no_compact_uninterned = -4,
-    jitterlisp_negative_option_omit_nothing = -5,
-    jitterlisp_negative_option_repl = -6,
-    jitterlisp_negative_option_no_colorize = -7,
-    jitterlisp_negative_option_no_cross_disassembler = -8,
-    jitterlisp_negative_option_optimization_rewriting = -9
+    jitterlisp_negative_option_no_verbose = -50,
+    jitterlisp_negative_option_verbose_litter,
+    jitterlisp_negative_option_library,
+    jitterlisp_negative_option_no_compact_uninterned,
+    jitterlisp_negative_option_omit_nothing,
+    jitterlisp_negative_option_repl,
+    jitterlisp_negative_option_no_colorize,
+    jitterlisp_negative_option_no_cross_disassembler,
+    jitterlisp_negative_option_optimization_rewriting
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum jitterlisp_negative_option . */
 enum jitterlisp_long_only_option
   {
-    jitterlisp_long_only_option_no_verbose_litter = -20,
-    jitterlisp_long_only_option_compact_uninterned = -21,
-    jitterlisp_long_only_option_no_library = -22,
-    jitterlisp_long_only_option_no_omit_nothing = -23,
-    jitterlisp_long_only_option_no_repl = -24,
-    jitterlisp_long_only_option_dump_version = -25,
-    jitterlisp_long_only_option_cross_disassembler = -26,
-    jitterlisp_long_only_option_no_optimization_rewriting = -27
+    jitterlisp_long_only_option_colorize = -100,
+    jitterlisp_long_only_option_no_verbose_litter,
+    jitterlisp_long_only_option_no_library,
+    jitterlisp_long_only_option_no_omit_nothing,
+    jitterlisp_long_only_option_no_repl,
+    jitterlisp_long_only_option_dump_version,
+    jitterlisp_long_only_option_cross_disassembler,
+    jitterlisp_long_only_option_no_optimization_rewriting
   };
 
 /* Command-line option specification. */
@@ -78,69 +78,79 @@ static struct argp_option jitterlisp_option_specification[] =
    {"no-repl", jitterlisp_long_only_option_no_repl, NULL, 0,
     "Run non-interactively, without a REPL" },
    {"batch", 'q', NULL, OPTION_ALIAS },
-   /* Interactivity negative options. */
+   /* Read-Eval-Print Loop negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 11},
    {"repl", jitterlisp_negative_option_repl, NULL, 0,
     "Run interactively, with a REPL (default unless files are given on the "
     "command line)"},
    {"no-batch", '\0', NULL, OPTION_ALIAS },
 
-   /* Interaction options. */
-   {NULL, '\0', NULL, OPTION_DOC, "Interaction options:", 20},
-   {"no-omit-nothing", jitterlisp_long_only_option_no_omit_nothing, NULL, 0,
-    "Show #<nothing> evaluation results" },
-   /* Interaction negative options. */
-   {NULL, '\0', NULL, OPTION_DOC, "", 21},
-   {"omit-nothing", jitterlisp_negative_option_omit_nothing, NULL, 0,
-    "Omit #<nothing> evaluation results (default)"},
-
    /* Command-line form evaluation. */
-   {NULL, '\0', NULL, OPTION_DOC, "Command-line form evaluation:", 30},
+   {NULL, '\0', NULL, OPTION_DOC, "Command-line form evaluation:", 20},
    {"eval", 'e', "SEXPRS", 0,
     "Evaluate the given Lisp forms after running the files (if any) "
     "and before running the REPL (if enabled)" },
 
-   /* Debugging options. */
-   {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 40},
-   {"colorize", 'c', NULL, 0,
+   /* Interaction options. */
+   {NULL, '\0', NULL, OPTION_DOC, "Interaction options:", 30},
+   {"no-omit-nothing", jitterlisp_long_only_option_no_omit_nothing, NULL, 0,
+    "Show interactive evaluation results even when they are #<nothing>" },
+   {"colorize", jitterlisp_long_only_option_colorize, NULL, 0,
     "Colorize s-expressions with ANSI terminal escape sequences" },
-   {"verbose", 'v', NULL, 0,
-    "Show progress information at run time" },
-   {"no-verbose-litter", jitterlisp_long_only_option_no_verbose_litter, NULL, 0,
-    "Don't show littering information at run time" },
-   {"no-library", jitterlisp_long_only_option_no_library, NULL, 0,
-    "Don't load the Lisp library" },
-   {"compact-uninterned", jitterlisp_long_only_option_compact_uninterned, NULL,
+   {"compact-uninterned", 'c', NULL,
     0, "Print uninterned symbols in compact notation" },
    {"cross-disassembler", jitterlisp_long_only_option_cross_disassembler, NULL,
     0, "Use the cross-disassembler instead of the native disassembler" },
+   {"no-verbose-litter", jitterlisp_long_only_option_no_verbose_litter, NULL, 0,
+    "Don't show littering information at run time"
+#ifndef JITTERLISP_LITTER
+    " (no effect with this exectuable)"
+#endif // #ifndef JITTERLISP_LITTER
+   },
+   /* Interaction negative options. */
+   {NULL, '\0', NULL, OPTION_DOC, "", 31},
+   {"omit-nothing", jitterlisp_negative_option_omit_nothing, NULL, 0,
+    "Omit #<nothing> interactive evaluation results (default)"},
+   {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
+    "Don't colorize s-expressions (default)"},
+   {"no-compact-uninterned", jitterlisp_negative_option_no_compact_uninterned,
+    NULL, 0, "Don't print uninterned symbols in compact notation (default)" },
+   {"no-cross-disassembler", jitterlisp_negative_option_no_cross_disassembler,
+    NULL, 0, "Use the native disassembler instead of the cross-disassembler "
+    "(default)" },
+   {"verbose-litter", jitterlisp_negative_option_verbose_litter, NULL, 0,
+    "Show littering information at run time (default"
+#ifndef JITTERLISP_LITTER
+    ", no effect with this exectuable"
+#endif // #ifndef JITTERLISP_LITTER
+    ")"
+   },
+
+   /* Debugging options. */
+   {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 40},
+   {"verbose", 'v', NULL, 0,
+    "Show progress information at run time" },
+   {"no-library", jitterlisp_long_only_option_no_library, NULL, 0,
+    "Don't load the Lisp library" },
    {"no-optimization-rewriting",
     jitterlisp_long_only_option_no_optimization_rewriting, NULL, 0,
     "Disable optimization rewriting (this is mostly useful for debugging "
     "rewrite rules and for measuring the speedup they introduce)" },
    /* Debugging negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 41},
-   {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
-    "Don't colorize s-expressions (default)"},
    {"no-verbose", jitterlisp_negative_option_no_verbose, NULL, 0,
     "Don't show progress information (default)"},
-   {"verbose-litter", jitterlisp_negative_option_verbose_litter, NULL, 0,
-    "Show littering information at run time (default)" },
    {"library", jitterlisp_negative_option_library, NULL, 0,
     "Load the Lisp library (default)" },
-   {"no-compact-uninterned", jitterlisp_negative_option_no_compact_uninterned,
-    NULL, 0, "Don't print uninterned symbols in compact notation (default)" },
-   {"no-cross-disassembler", jitterlisp_negative_option_no_cross_disassembler,
-    NULL, 0, "Use the native disassembler instead of the cross-disassembler "
-    "(default)" },
    {"optimization-rewriting",
     jitterlisp_negative_option_optimization_rewriting, NULL, 0,
     "Enable optimization rewriting (default)" },
 
+   /* Scripting options. */
    {NULL, '\0', NULL, OPTION_DOC, "Scripting options:", 50},
    {"dump-version", jitterlisp_long_only_option_dump_version, NULL, 0,
-    "Print the JitterLisp version only, without any surrounding text; this "
-    "is convenient for scripts" },
+    "Print the JitterLisp version only, without any surrounding text, and "
+    "exit with success; this is convenient for scripts" },
 
    /* Common GNU-style options. */
    {NULL, '\0', NULL, OPTION_DOC, "Common GNU-style options:", -1},
@@ -182,25 +192,15 @@ parse_opt (int key, char *arg, struct argp_state *state)
   struct jitterlisp_settings *sp = state->input;
   switch (key)
     {
-    /* File options. */
+    /* Read-Eval-Print Loop options. */
     case jitterlisp_long_only_option_no_repl:
     case 'q':
       sp->repl = jitterlisp_run_repl_no;
       break;
 
-    /* File negative options. */
+    /* Read-Eval-Print Loop negative options. */
     case jitterlisp_negative_option_repl:
       sp->repl = jitterlisp_run_repl_yes;
-      break;
-
-    /* Interaction options. */
-    case jitterlisp_long_only_option_no_omit_nothing:
-      sp->print_nothing_results = true;
-      break;
-
-    /* Interaction negative options. */
-    case jitterlisp_negative_option_omit_nothing:
-      sp->print_nothing_results = false;
       break;
 
     /* Command-line s-expression evaluation. */
@@ -208,47 +208,57 @@ parse_opt (int key, char *arg, struct argp_state *state)
       sp->sexps_string = arg;
       break;
 
-    /* Debugging options. */
-    case 'c':
+    /* Interaction options. */
+    case jitterlisp_long_only_option_no_omit_nothing:
+      sp->print_nothing_results = true;
+      break;
+    case jitterlisp_long_only_option_colorize:
       sp->colorize = true;
       break;
-    case 'v':
-      sp->verbose = true;
-      break;
-    case jitterlisp_long_only_option_no_verbose_litter:
-      sp->verbose_litter = false;
-      break;
-    case jitterlisp_long_only_option_no_library:
-      sp->library = false;
-      break;
-    case jitterlisp_long_only_option_compact_uninterned:
+    case 'c':
       sp->print_compact_uninterned_symbols = true;
       break;
     case jitterlisp_long_only_option_cross_disassembler:
       sp->cross_disassembler = true;
       break;
-    case jitterlisp_long_only_option_no_optimization_rewriting:
-      sp->optimization_rewriting = false;
+    case jitterlisp_long_only_option_no_verbose_litter:
+      sp->verbose_litter = false;
       break;
 
-    /* Debugging negative options. */
+    /* Interaction negative options. */
+    case jitterlisp_negative_option_omit_nothing:
+      sp->print_nothing_results = false;
+      break;
     case jitterlisp_negative_option_no_colorize:
       sp->colorize = false;
-      break;
-    case jitterlisp_negative_option_no_verbose:
-      sp->verbose = false;
-      break;
-    case jitterlisp_negative_option_verbose_litter:
-      sp->verbose_litter = true;
-      break;
-    case jitterlisp_negative_option_library:
-      sp->library = true;
       break;
     case jitterlisp_negative_option_no_compact_uninterned:
       sp->print_compact_uninterned_symbols = false;
       break;
     case jitterlisp_negative_option_no_cross_disassembler:
       sp->cross_disassembler = false;
+      break;
+    case jitterlisp_negative_option_verbose_litter:
+      sp->verbose_litter = true;
+      break;
+
+    /* Debugging options. */
+    case 'v':
+      sp->verbose = true;
+      break;
+    case jitterlisp_long_only_option_no_library:
+      sp->library = false;
+      break;
+    case jitterlisp_long_only_option_no_optimization_rewriting:
+      sp->optimization_rewriting = false;
+      break;
+
+    /* Debugging negative options. */
+    case jitterlisp_negative_option_no_verbose:
+      sp->verbose = false;
+      break;
+    case jitterlisp_negative_option_library:
+      sp->library = true;
       break;
     case jitterlisp_negative_option_optimization_rewriting:
       sp->optimization_rewriting = true;
