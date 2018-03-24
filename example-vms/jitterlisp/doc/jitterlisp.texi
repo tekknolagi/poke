@@ -364,18 +364,17 @@ the result would be useful, but writing yet another Lisp system was
 never my primary goal.
 
 Even without the ambitious scope of Jitter I consider JitterLisp
-useful to show the level of performance within the reach of
-small, clean systems.  JitterLisp gets many design points correct
-but is not perfect or exceptionally clever in any.  Still it appears
-more efficient than every mature ``dynamic language'', in some cases
-to a spectacular degree---due more to the faults of others than to any
-merit of mine.
+useful to show the level of performance within the reach of small,
+clean systems.  JitterLisp gets many design decisions correct but is
+not perfect or exceptionally clever.  Still it appears more efficient
+than every mature ``dynamic language'', in some cases to a spectacular
+degree---due more to the faults of others than to any merit of mine.
 
 @cindex Schadenfreude
 I will not even try to hide my own personal goal for JitterLisp: being
 able to say that @emph{most language implementations are inexcusably
-bad} as in fact they are, with a real implementation to present
-and not just a proof of concept; and numbers.
+bad}, as in fact they are, with a real implementation to present as
+a comparison point and not just a proof of concept; and numbers.
 
 @cindex Schadenfreude
 Here I stand, claiming my right to rub JitterLisp on everyone's face.
@@ -505,7 +504,7 @@ Turing-complete @emph{macros}.
 @cindex top-level form (absent in JitterLisp)
 @cindex form, top-level (absent in JitterLisp)
 Every syntactic form in JitterLisp is an @emph{expression}, and nontrivial
-expressions will contain sub-expressions; there are no statements as
+expressions will contain sub-expressions; JitterLisp has no statements as
 a distinct syntactic category, nor special forms which are only valid
 at the top level.
 @cindex feature
@@ -569,8 +568,7 @@ lexical level, come from Scheme}
 
 @cindex dynamic langauge
 @cindex reflection
-@cindex AST
-@cindex Abstract Syntax Tree
+@cindex Abstract Syntax Tree (AST)
 @cindex macroexpansion
 JitterLisp is
 @c at the same time
@@ -581,11 +579,10 @@ the @emph{Abstract Syntax Tree} returned by macroexpansion and contained
 within each closure is a recursive data structure describing an
 expression in a @emph{minimalistic core language} which can be interpreted,
 compiled, analyzed, optimized or in general used like any other data
-structure.
+structure, at run time, in the language itself.
 
 @cindex compiler
-@cindex AST
-@cindex Abstract Syntax Tree
+@cindex Abstract Syntax Tree (AST)
 Exposed ASTs and reflection make it possible and natural for the
 compiler to be implemented as an ordinary procedure, itself written in
 Lisp and running on top of the interpreter or compiled by itself at
@@ -596,8 +593,8 @@ run time.
 @cindex Common Lisp
 @cindex GNU epsilon
 @cindex epsilon
-These features, distinctly epsilonian, make the internal
-implementation simpler and more elegant but are meant to be invisible
+While these distinctly epsilonian features make the internal
+implementation simpler and more elegant they are meant to be invisible
 to the casual user.  In particular user macros operate on ordinary
 non-AST Lisp data structures, usually through Lisp quasiquoting, and
 will feel instantly familiar to any Common Lisp programmer; the fact
@@ -941,8 +938,8 @@ executable supports the same command-line interface.
 @cindex current working directory
 @cindex directory, current working
 The current working directory is always irrelevant when invoking any
-JitterLisp executable; the @file{bin/} component of the path name
-is therefore safe to freely adapt as well.
+JitterLisp executable, which makes the @file{bin/} component of the
+path name safe to freely adapt as well.
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -989,26 +986,86 @@ compiled file image (@pxref{constant-strings}).
 @section Invoking JitterLisp
 @cindex invoking
 @cindex command line
-@cindex option, command line (@command{jitterlisp})
-@cindex @command{jitterlisp} and related executables, invoking
+
+@cindex Read-Eval-Print Loop
+A user can either run JitterLisp @dfn{interactively} via a
+@dfn{Read-Eval-Print Loop}, or use it to execute a Lisp programs from
+any number of text files and then exit.
+
+An interactive run is the default: simply invoking JitterLisp with no
+option, for example by typing
+@example
+bin/jitterlisp--boehm
+@end example
+@noindent
+at the shell prompt will print a welcome banner and then wait for the
+user to type in Lisp forms; the system will evaluate one form, print
+its result unless the result is @nothing{}, and then go back to waiting
+for the next form.
+@*
+@cindex GNU Readline
+@cindex Readline
+User input supports the line-editing facilities of GNU Readline, as long
+as Jitter has been configured with Readline support.
+@*
+@cindex input, closing
+@cindex @key{C-d}, terminal input closing
+The user can exit by closing the input, typically by pressing
+@key{C-d} on GNU and other Unix systems.
 
 @cindex non-option argument
-@fixme{file names as arguments}
+@cindex file name, non-option argument
+@cindex path name, file, non-option argument
+Any @dfn{non-option argument} on the command line is taken as the
+relative path name of one Lisp file to run; JitterLisp accepts an
+arbitrary number of file names on the command line, and executes them
+in the given order.  JitterLisp will omit the banner and, by default,
+run @dfn{non-interactively} if it receives any file name, exiting without
+executing the REPL.
+@*
+@cindex @file{-}, command-line non-option argument
+@cindex standard input
+@cindex input, standard
+A single dash @samp{-} is a non-option argument and stands for the
+program standard input.  Like the path name for a Lisp file, a
+@code{-} argument will make JitterLisp default to non-interactive mode.
 
-@fixme{Write this}
-@fixme{negative options}
-@fixme{multiple options: which one wins}
+@cindex output
+@cindex I/O
+Lisp forms @emph{from input files or @code{-}}, in either interactive or
+non-interactive mode, will be evaluated without automatically printing
+each result, to avoid useless distractions.  Of course a program may
+call I/O procedures (@pxref{Input and output}) in order to print out
+information when needed, without such explicit output being suppressed.
+
+A run-time error while executing a Lisp file from the command line will
+cause JitterLisp to exit with failure, without processing any remaining
+Lisp file.
+
+@cindex option, command line (@command{jitterlisp})
+@cindex command line option (@command{jitterlisp})
+@cindex @command{jitterlisp} and related executables, invoking
+By default any command-line argument beginning with a dash (@samp{-})
+is an @dfn{option}, affecting JitterLisp's behavior in one of the ways
+described in this section.  The exceptions are arguments constituted
+by a single dash, as explained above, or any arguments following an
+argument constituted by exactly two dashes (@samp{--}): those are
+interpreted as non-options.
 
 @cindex common GNU options, command-line
-@cindex GNU, common options, command-line
+@cindex standard GNU options, command-line
+@cindex GNU, standard options, command-line
 @cindex command-line options
 @cindex options, command-line
-JitterLisp supports the common GNU-style command-line options:
+JitterLisp supports the standard GNU command-line options:
 @table @option
 @cindex @option{--version}, command-line option
 @item --version
 Print version information and legal notices for JitterLisp, then exit
 with success.
+Since JitterLisp is distributed along with Jitter and currently lacks
+a version number of its own, the output will actually reflect
+@emph{Jitter}'s version.
 
 @cindex @option{-?}, command-line option
 @cindex @option{--help}, command-line option
@@ -1020,83 +1077,162 @@ the options documented here, then exit with success.
 @item --usage
 Print a list of the options documented here with no explanation, then
 exit with success.
+
+@cindex @option{--}, command-line option
+@item --
+Stop option processing, and interpret any following argument in the
+command line as a non-option.  This may be useful to execute Lisp files
+whose path name starts with a dash.
 @end table
 
-Scripting options:
+@cindex shell
+@cindex script, shell
+Checking JitterLisp's version to obtain a version number and nothing
+more may be of some use in shell scripts:
 @table @option
 @cindex @option{--dump-version}, command-line option
 @item --dump-version
+Print JitterLisp's version number and exit with success.  The output is
+in a single line with no spaces, and does not contain JitterLisp's name
+or any other information.
 @end table
 
-REPL options:
+@cindex default, command-line option
+Several JitterLisp options affect the software behavior in some way
+which can be negated by another option restoring the default.  When
+both an option and its opposite are given, the @emph{last} option on
+the command line prevails.
+
+@cindex negative option, command line
+@cindex line editing
+@cindex alias, shell
+@cindex shell alias
+I call @dfn{negative options} the options whose only purpose is to
+negate the effect of other options, therefore restoring the default
+behavior.  Negative options are useful to counteract the effect of
+some option which is convenient to always pass and then occasionally
+override, for example as part of a shell alias or with quick
+interactive line editing of a complex command line.
+@*
+The output of @option{--help} shows negative options marked as
+@samp{(default)}.
+
+The following options affect JitterLisp's interaction mode:
 @table @option
 @cindex @option{-r}, command-line option
 @cindex @option{--no-repl}, command-line option
 @cindex @option{--batch}, command-line option
 @item -q@r{, }--no-repl@r{, }--batch
-@end table
-Interactivity negative options:
-@table @option
+Run in non-interactive mode, without a REPL, independently from
+non-option arguments.
+
 @cindex @option{--repl}, command-line option
 @cindex @option{--no-batch}, command-line option
 @item --repl@r{, }--no-batch
+Run in interactive mode even if non-option arguments are given; in
+this case start the REPL @emph{after} executing the given Lisp files.
 @end table
 
-Interaction:
-@table @option
-@cindex @option{--no-omit-nothing}, command-line option
-@item --no-omit-nothing
-@fixme{This is about @nothing.}
-@end table
-
-Interaction negative options:
-@table @option
-@cindex @option{--omit-nothing}, command-line option
-@item --omit-nothing
-@end table
-
-Command-line form evaluation:
+It may be useful to run JitterLisp for evaluating one or a few Lisp
+forms from the command line, possibly along with some Lisp program
+passed as a non-option argument:
 @table @option
 @cindex @option{-e}, command-line option
 @cindex @option{--eval}, command-line option
 @item -e @var{sexprs}@r{, }--eval=@var{sexprs}
+Evaluate the given possibly empty sequence of forms, printing the
+final result (@pxref{Sequencing}).
+Evaluation and printing takes place @emph{after} running all the Lisp
+files from non-option arguments, and @emph{before} executing the REPL
+(when in interactive mode).
+@*
+Providing this option does not by itself change JitterLisp's mode to
+non-interactive.
 @end table
+@noindent
+Unfortunately the quoting rules for Bourne shells make Lisp quoting
+and quasiquoting
+(@pxref{Quoting and quasiquoting})
+somewhat inconvenient to use from the Unix command line:
+@example
+bin/jitterlisp--boehm --no-repl --eval='(let ((a 42)) `(a is ,a))'
+bin/jitterlisp--boehm --no-repl --eval="(let ((a \'b)) \`(a is ,a))"
+bin/jitterlisp--boehm --no-repl --eval='(let ((a '\''b)) `(a is ,a))'
+bin/jitterlisp--boehm --no-repl --eval=\'the-result-is-a-symbol
+@end example
+@noindent
+At least in simple cases a user should be able to work around such
+problems by defining a macro in a Lisp file, to be used in the
+@option{--eval} argument without requiring complex quoting in the
+command line.
 
-Debugging and benchmarking options:
+@fixme{expand, starting from here}
+Interaction: @fixme{explain what @nothing{} is and why omitting it is reasonable.}
 @table @option
-@cindex @option{-c}, command-line option
+@cindex @option{--no-omit-nothing}, command-line option
+@item --no-omit-nothing
+Print back @nothing{} when it occurs as the result of a user form
+(@pxref{Uniques}),
+in interactive use or with @option{--eval}.  The default is to omit it.
+
 @cindex @option{--colorize}, command-line option
-@item -c@r{, }--colorize
+@item --colorize
+@fill
+
 @cindex @option{--compact-uninterned}, command-line option
-@item --compact-uninterned
+@cindex @option{-c}, command-line option
+@item -c@r{, }--compact-uninterned
+@fill
+
 @cindex @option{--cross-disassembler}, command-line option
 @item --cross-disassembler
-@cindex @option{--no-library}, command-line option
-@item --no-library
-@cindex @option{--no-optimization-rewriting}, command-line option
-@item --no-optimization-rewriting
+@fill
+@fixme{(@pxref{Disassembly,,, jitter, The Jitter Manual})}
+
 @cindex @option{--no-verbose-litter}, command-line option
 @item --no-verbose-litter
-@cindex @option{-v}, command-line option
-@cindex @option{--verbose}, command-line option
-@item -v@r{, }--verbose
-@end table
-Debugging and benchmarking negative options:
-@table @option
+@fill
+
+@cindex @option{--omit-nothing}, command-line option
+@item --omit-nothing
 @cindex @option{--no-colorize}, command-line option
 @item --no-colorize
 @cindex @option{--no-compact-uninterned}, command-line option
 @item --no-compact-uninterned
 @cindex @option{--no-cross-disassembler}, command-line option
 @item --no-cross-disassembler
+@cindex @option{--verbose-litter}, command-line option
+@item --verbose-litter
+These are the negative counterparts of the options above, restoring
+the respective default behaviors.
+@end table
+
+Debugging and benchmarking options:
+@table @option
+@cindex @option{-v}, command-line option
+@cindex @option{--verbose}, command-line option
+@item -v@r{, }--verbose
+@fill
+
+@cindex @option{--no-optimization-rewriting}, command-line option
+@item --no-optimization-rewriting
+@fill
+
+@cindex @option{--no-library}, command-line option
+@item --no-library
+@fill
+
 @cindex @option{--no-verbose}, command-line option
 @item --no-verbose
 @cindex @option{--optimization-rewriting}, command-line option
 @item --optimization-rewriting
-@cindex @option{--verbose-litter}, command-line option
-@item --verbose-litter
+@cindex @option{--library}, command-line option
+@item --library
+The negative versions of the options above.
 @end table
 
+@fixme{re-categorize options like this in the source as well: this is
+more rational than the current presentation in @option{--help}.}
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Interaction example
@@ -1125,8 +1261,8 @@ Debugging and benchmarking negative options:
 
 @fixme{These are just ideas.  The variable @code{x} is unbound.}
 @example
-(append '(a b c) '(1 2 3 4))
-  @result{} (a b c 1 2 3 4)
+(append '(a b c) '(1 (2 3) 4))
+  @result{} (a b c 1 (2 3) 4)
 
 
 x
@@ -1170,7 +1306,7 @@ twice
                 [call [variable newline]]]
       [literal #<nothing>]]
   @result{}
-  @nothing
+  @nothing{}
 
 ;; For people familiar with Common Lisp:
 (define-macro (defun operator formals . body-forms)
@@ -1191,10 +1327,10 @@ twice
                        (cond ((= n 0)  #t)
                              ((= n 1)  #f)
                              (else     (odd? (- n 1))))))
-           (my-odd? (lambda (n)
-                      (cond ((= n 0)  #f)
-                            ((= n 1)  #t)
-                            (else     (even? (- n 1)))))))
+           (my-odd?  (lambda (n)
+                       (cond ((= n 0)  #f)
+                             ((= n 1)  #t)
+                             (else     (even? (- n 1)))))))
     my-even?))
 (lambda () (letrec ((f 1) (g 2)) f))
   @result{}
@@ -1232,23 +1368,25 @@ twice
 
 @fill
 
+@cindex homoiconicity
+@fixme{we will first define Lisp data structures, then show how some
+of them are mapped into expressions}
+
 @menu
-* Lisp data::                      The possible shapes of Lisp objects.
-* Lisp language reference::        About the JitterLisp language.
-* Lisp language form reference::   The JitterLisp predefined language constructs.
-* Lisp library reference::         What predefined globals do.
+* Lisp data::                           The possible shapes of Lisp objects.
+* Abstract Syntax Trees and their semantics:: The core language.
+* Mapping Lisp data to expressions::    Homoiconicity, the JitterLisp way.
+* Program structure::                   What a JitterLisp program looks like.
+* Lisp language forms::                 The JitterLisp predefined language constructs.
+* Lisp library::                        What predefined globals do.
 @end menu
 
 
-@c Lisp language form reference
+@c Lisp data
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 @node Lisp data
 @section Lisp data
-
-@cindex homoiconicity
-@fixme{we will first define Lisp data structures, then show how some
-of them are mapped into expressions}
 
 @cindex boxed, Lisp object
 @cindex unboxed, Lisp object
@@ -1304,14 +1442,7 @@ well-formed Lisp datum, but would macroexpand to a @emph{procedure call} with
 @xref{Quoting and quasiquoting} for information about the @dfn{quoting}
 syntax for building expressions evaluating to literal Lisp objects.
 
-@menu
-* Types::                                     Every possible shape of data.
-* Mapping Lisp data to expressions::          Homoiconicity.
-@end menu
-
-@c @@@@@@@@@@@@@@@@@@@
-@node Types
-@subsection Types
+@fill
 
 Every Lisp datum contains a @dfn{value} and a @dfn{type}.  Given a
 datum it is always possible to check for its type at run time by means
@@ -1345,7 +1476,7 @@ accept either an interpreted closure or a compiled closure as a
 @end menu
 
 @node Uniques
-@subsubsection Uniques
+@subsection Uniques
 @cindex unique
 
 @fill
@@ -1402,19 +1533,19 @@ course generalized booleans are not necessarily unique objects.
 @end deffn
 
 @node Fixnums
-@subsubsection Fixnums
+@subsection Fixnums
 @cindex fixnum
 
 @node Characters
-@subsubsection Characters
+@subsection Characters
 @cindex character
 
 @node Symbols
-@subsubsection Symbols
+@subsection Symbols
 @cindex symbol
 
 @node Conses
-@subsubsection Conses
+@subsection Conses
 @cindex cons
 A @dfn{cons} is a pair object containing exactly two other Lisp
 objects, allowed to be conses in their turn or any other objects.
@@ -1540,27 +1671,27 @@ practice, which include the empty list object and some conses.
 
 
 @node Boxes
-@subsubsection Boxes
+@subsection Boxes
 @cindex box
 
 Boxes have no read syntax.
 
 @node Interpreted closures
-@subsubsection Interpreted closures
+@subsection Interpreted closures
 @cindex interpreted closure
 
 @node Compiled closures
-@subsubsection Compiled closures
+@subsection Compiled closures
 @cindex compiled closure
 @fixme{An interpreted closure can destructively change to a compiled
 closure (but not vice-versa) without changing its identity.}
 
 @node Primitives
-@subsubsection Primitives
+@subsection Primitives
 @cindex primitive
 
 @node Abstract Syntax Trees
-@subsubsection Abstract Syntax Trees
+@subsection Abstract Syntax Trees
 @cindex Abstract Syntax Tree (AST)
 An @dfn{Abstract Syntax Tree} or @dfn{AST} is a recursive type
 representing code as a data structure.  ASTs only support the core
@@ -1582,39 +1713,67 @@ the reflection capabilities provided by the AST data type that it is
 possible to write a self-compiler, and also a self-optimizer, in the
 language itself.
 
-@fill
-
 ASTs have no read syntax, however the JitterLisp library provides
 facilities to conveniently inspect and build ASTs: @pxref{AST
 operations}.
 
+@xref{ASTs} for a complete description of the structure of Abstract
+Syntax Trees and their semantics.
+
+
 @node Macros
-@subsubsection Macros
+@subsection Macros
 @cindex macro (type)
 
 @node Primitive macros
-@subsubsection Primitive macros
+@subsection Primitive macros
 @cindex primitive macro
 
+
+@c @@@@@@@@@@@@@@@@@@@
+@node Abstract Syntax Trees and their semantics
+@section Abstract Syntax Trees and their semantics
+@anchor{ASTs}
+
+@cindex Abstract Syntax Tree (AST)
 
 
 @c @@@@@@@@@@@@@@@@@@@
 @node Mapping Lisp data to expressions
-@subsection Mapping Lisp data to expressions
+@section Mapping Lisp data to expressions
+
+@fill
+@fixme{ASTs are validated at construction time: the implementation
+never needs to worry about whether an already existing AST is
+syntactically well-formed; this makes interpretation more efficient
+and other things simpler.}
 
 
-@c Lisp language reference
+@c Program structure
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-@node Lisp language reference
-@section Lisp language reference
+@node Program structure
+@section Program structure
 
 @fixme{Write this}
 
 @menu
-* Constants::                                 Some symbols can't be globally
-                                              mutated.
+* Expressions::                     Evaluating a form for a result or for side effects.
+* Definitions::                     Giving global names to objects.
+* Constants::                       Some symbols can't be globally mutated.
 @end menu
+
+@c @@@@@@@@@@@@@@@@@@@
+@node Expressions
+@subsection Expressions
+@fill
+
+
+@c @@@@@@@@@@@@@@@@@@@
+@node Definitions
+@subsection Definitions
+@fill
+
 
 @c @@@@@@@@@@@@@@@@@@@
 @node Constants
@@ -1622,11 +1781,11 @@ operations}.
 @fixme{primitive wrappers are global constants}
 
 
-@c Lisp language form reference
+@c Lisp language forms
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-@node Lisp language form reference
-@section Lisp language form reference
+@node Lisp language forms
+@section Lisp language forms
 
 @fixme{Write this.}
 
@@ -1668,7 +1827,7 @@ use the most specific form available, for readability and occasionally
 also for efficiency's sake.}
 
 @menu
-* Definitions::              Adding or changing global variable bindings.
+* Definition forms::         Adding or changing global variable bindings.
 * Sequencing::               Executing multiple forms one after the other.
 * Conditionals::             Evaluating different forms according to the result of another.
 * Procedures::               Making anonymous procedure objects or ``closures''.
@@ -1680,8 +1839,8 @@ also for efficiency's sake.}
 @end menu
 
 @c @@@@@@@@@@@
-@node Definitions
-@subsection Definitions
+@node Definition forms
+@subsection Definition forms
 
 @syindex define
 @deffn  {macro} define defined-thing . forms
@@ -1970,11 +2129,11 @@ syntax: @pxref{define-macro}.
 @fixme{link prefixes.  Remind that ' is usable}
 
 
-@c Lisp library reference
+@c Lisp library
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-@node Lisp library reference
-@section Lisp library reference
+@node Lisp library
+@section Lisp library
 
 @fixme{Write this}
 
@@ -1997,12 +2156,14 @@ backwards-compatible way}
 * Sets as lists::                     Sets as unordered list of elements
                                       compared with @code{eq?}.
 * AST operations::                    Working with Abstract Syntax Trees.
+* Optimization::                      Rewriting an AST into a better AST.
 * Macroexpanding::                    Explicitly expanding macros from user
                                       code.
-* Interpreting::                      @code{eval}, @code{apply} and friends.
+* Code execution::                    @code{eval}, @code{apply} and friends.
+* Compilation::                       Turning interpreted closures into code.
 * Input and output::                  How to read and write.
 * Legal notices::                     Printing legal notices.
-* Unclassified::                      stuff to move
+* Unclassified::                      stuff to move.
 @end menu
 
 
@@ -2873,6 +3034,13 @@ to highlight the lexical conventions.}
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Optimization
+@subsection Optimization
+
+@fill
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Macroexpanding
 @subsection Macroexpanding
 
@@ -2890,8 +3058,8 @@ Common Lisp's @code{macrolet}.}
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
-@node Interpreting
-@subsection Interpreting
+@node Code execution
+@subsection Code execution
 
 @syindex apply
 @deffn  {primitive wrapper} apply operator operands
@@ -2906,6 +3074,13 @@ Common Lisp's @code{macrolet}.}
 @syindex eval
 @deffn {macro} eval form . optional-env
 @end deffn
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node Compilation
+@subsection Compilation
+
+@fill
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -2961,6 +3136,7 @@ If @code{newline} were not already provided in the library it could be defined a
 @end deffn
 
 
+@c @@@@@@@@@
 @node Lisp object I/O
 @subsubsection Lisp object I/O
 
