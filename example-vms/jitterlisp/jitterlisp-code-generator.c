@@ -317,8 +317,7 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
     jitterlispvm_append_instruction_name (p, "primitive-fixnum-eqp");
   else if (! strcmp (name, "<>"))
     jitterlispvm_append_instruction_name (p, "primitive-fixnum-not-eqp");
-  else if (! strcmp (name, "cons")
-           || ! strcmp (name, "boolean-canonicalize")
+  else if (! strcmp (name, "boolean-canonicalize")
            || ! strcmp (name, "not")
            )
     {
@@ -342,6 +341,15 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
       sprintf (full_name, "primitive-%s", name);
       jitterlispvm_append_instruction_name (p, full_name);
       free (full_name);
+    }
+  else if (! strcmp (name, "cons"))
+    {
+      /* This is compiled in a special way, using a VM instruction which doesn't
+         nip, followed by a separate nip instruction.  Hopefully the nip may be
+         combined with what follows. */
+      can_fail = false;
+      JITTERLISPVM_APPEND_INSTRUCTION (p, primitive_mcons_mspecial);
+      JITTERLISPVM_APPEND_INSTRUCTION (p, nip);
     }
   else if (! strcmp (name, "set-car!")
            || ! strcmp (name, "set-cdr!"))
@@ -417,12 +425,15 @@ jitterlisp_translate_instruction (struct jitterlispvm_program *p,
       jitterlispvm_append_unsigned_literal_parameter (p, literal_arg);
     }
   else if (! strcmp (name, "push-global")
-           || ! strcmp (name, "pop-to-global"))
+           || ! strcmp (name, "pop-to-global")
+           || ! strcmp (name, "pop-to-global-defined"))
     {
       JITTERLISP_ARGUMENT(symbol_arg, insn, SYMBOL);
       JITTERLISP_NO_MORE_ARGUMENTS(insn);
       jitterlispvm_append_instruction_name (p, name);
       jitterlispvm_append_unsigned_literal_parameter (p, symbol_arg);
+      jitterlispvm_label error_label = jitterlisp_error_label (p, map);
+      jitterlispvm_append_label_parameter (p, error_label);
     }
   else if (! strcmp (name, "push-register")
            || ! strcmp (name, "pop-to-register")
@@ -533,7 +544,14 @@ jitterlisp_translate_instructions (struct jitterlispvm_program *p,
   if (jitterlisp_has_error_label (map))
     {
       jitterlispvm_append_label (p, jitterlisp_error_label (p, map));
+      /* If this JitterLisp is unsafe I don't even bother generaiting actual
+         instructions in the failure-handling routine; even if I still need to
+         keep its label for instrution arguments which may fail in a safe
+         JitterLisp the routine is not actually reachable, and I can make the
+         generated code will be a little smaller and easier to read. */
+#ifndef JITTERLISP_UNSAFE
       JITTERLISPVM_APPEND_INSTRUCTION(p, fail);
+#endif // #ifndef JITTERLISP_UNSAFE
     }
 }
 
