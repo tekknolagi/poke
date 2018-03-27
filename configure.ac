@@ -537,6 +537,10 @@ AS_CASE([$host_cpu],
                         jitter_objdump_options="--architecture=powerpc:common64"],
         [ppc|powerpc|powerpcle],
                        [JITTER_ASSEMBLY_SUBDIRECTORY=powerpc],
+        [riscv*],
+                       [#JITTER_ASSEMBLY_SUBDIRECTORY=riscv;
+                        jitter_has_host_assembly=no;
+                        jitter_objdump_options="--architecture=riscv:rv64 --disassembler-options=no-aliases,reg-names=numeric"],
         [sh4*],        [JITTER_ASSEMBLY_SUBDIRECTORY=sh
                         jitter_objdump_options="--architecture=sh4a --disassembler-options=no-aliases"],
         [sparc*],      [JITTER_ASSEMBLY_SUBDIRECTORY=sparc
