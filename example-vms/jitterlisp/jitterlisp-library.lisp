@@ -724,7 +724,7 @@
         (set-cdr! (last-cons-tail-recursive xs) ys)
         xs)))
 
-(define-constant (append! xs ys)
+(define-constant (append!-procedure xs ys)
   (append!-iterative xs ys))
 
 
@@ -807,8 +807,8 @@
       ()
       ;; I don't have an append!-non-tail-recursive, as it doesn't seem very
       ;; reasonable.
-      (append! (car list-of-lists)
-               (flatten!-non-tail-recursive (cdr list-of-lists)))))
+      (append!-procedure (car list-of-lists)
+                         (flatten!-non-tail-recursive (cdr list-of-lists)))))
 
 (define-constant (flatten! list-of-lists)
   (flatten!-iterative list-of-lists))
@@ -2726,8 +2726,10 @@
 ;;;; Variadic list operations.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Define a variadic version of append, now finally named append.
+;;; Define variadic versions of append and append! , now finally with the
+;;; appropriate names meant for the user.
 (define-right-nested-variadic-extension append append-procedure ())
+(define-right-nested-variadic-extension append! append!-procedure ())
 
 
 
@@ -6213,21 +6215,21 @@
 ;; A good test case for the used-result flag.
 ;; (c (lambda (a b) (when a (set! b a)) b))
 
-(when #f
-  (define (f x y)
-    (cons x y))
-  f
-  (closure-compile! f)
-  (display (f 10 20))
-  (newline)
+;; (when #f
+;;   (define (f x y)
+;;     (cons x y))
+;;   f
+;;   (closure-compile! f)
+;;   (display (f 10 20))
+;;   (newline)
 
-  (define (g x y z)
-    (display y))
-  g
-  (closure-compile! g)
-  (display (g 10 20 30))
-  (newline)
-  )
+;;   (define (g x y z)
+;;     (display y))
+;;   g
+;;   (closure-compile! g)
+;;   (display (g 10 20 30))
+;;   (newline)
+;;   )
 
 ;; Wrong result on PowerPC:
 ;; Q='bin/jitterlisp--unsafe--no-threading'; make -j && make -j $Q && time -p rj ./scripts/emulator $Q --colorize --no-omit-nothing --vm --repl --cross-disassemble --compact-uninterned --no-repl --eval '(disassemble gauss) (gauss 1)' 2>&1 
