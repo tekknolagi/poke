@@ -49,10 +49,10 @@
 @c Global settings
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+@documentencoding UTF-8
 @documentlanguage en
 
 @syncodeindex pg cp
-@documentencoding UTF-8
 
 @c @ignore
 @afourpaper
@@ -829,7 +829,7 @@ tarballs every user has to follow the developer instructions.
 
 @cindex Boehm-Demers garbage collector
 @cindex garbage collector, Boehm-Demers
-@cindex Hans Boehm, garbage collector
+@cindex Hans Boehm's garbage collector
 Even if the dependency is not mandatory I strongly recommend the
 Boehm-Demers garbage collector, packaged by every modern GNU/Linux
 distributions and also easy to install from sources.
@@ -882,7 +882,7 @@ in case of user error;
 
 @cindex Boehm-Demers garbage collector
 @cindex garbage collector, Boehm-Demers
-@cindex Hans Boehm, garbage collector
+@cindex Hans Boehm's garbage collector
 @cindex litter
 @item garbage collection
 @anchor{litter}
@@ -1046,7 +1046,7 @@ program standard input.  Like the path name for a Lisp file, a
 
 @cindex output
 @cindex I/O
-Lisp forms @emph{from input files or @code{-}}, in either interactive or
+Lisp forms @emph{from input files or @samp{-}}, in either interactive or
 non-interactive mode, will be evaluated without automatically printing
 each result, to avoid useless distractions.  Of course a program may
 call I/O procedures (@pxref{Input and output}) in order to print out
@@ -1065,6 +1065,26 @@ described in this section.  The exceptions are arguments constituted
 by a single dash, as explained above, or any arguments following an
 argument constituted by exactly two dashes (@samp{--}): those are
 interpreted as non-options.
+
+@cindex default, command-line option
+Several JitterLisp options affect the software behavior in some way
+which can be negated by another option restoring the default.  When
+both an option and its opposite are given, the @emph{last} option on
+the command line prevails.
+
+@cindex negative option, command line
+@cindex line editing
+@cindex alias, shell
+@cindex shell alias
+I call @dfn{negative options} the options whose only purpose is to
+negate the effect of other options, therefore restoring the default
+behavior.  Negative options are useful to counteract the effect of
+some option which is convenient to always pass and then occasionally
+override, for example as part of a shell alias or with quick
+interactive line editing of a complex command line.
+@*
+The output of @option{--help} shows negative options marked as
+@samp{(default)}.
 
 @cindex common GNU options, command-line
 @cindex standard GNU options, command-line
@@ -1110,26 +1130,6 @@ Print JitterLisp's version number and exit with success.  The output is
 in a single line with no spaces, and does not contain JitterLisp's name
 or any other information.
 @end table
-
-@cindex default, command-line option
-Several JitterLisp options affect the software behavior in some way
-which can be negated by another option restoring the default.  When
-both an option and its opposite are given, the @emph{last} option on
-the command line prevails.
-
-@cindex negative option, command line
-@cindex line editing
-@cindex alias, shell
-@cindex shell alias
-I call @dfn{negative options} the options whose only purpose is to
-negate the effect of other options, therefore restoring the default
-behavior.  Negative options are useful to counteract the effect of
-some option which is convenient to always pass and then occasionally
-override, for example as part of a shell alias or with quick
-interactive line editing of a complex command line.
-@*
-The output of @option{--help} shows negative options marked as
-@samp{(default)}.
 
 The following options affect JitterLisp's interaction mode:
 @table @option
@@ -1267,7 +1267,11 @@ A JitterLisp executable littering memory (@pxref{litter}) will by
 default print a message on the standard error every time a new block
 of memory is allocated.  Such warnings, although distracting, are
 useful to remind the user that the running program is allocating
-memory from a growing heap which will not be freed.
+memory from a growing heap which will not be freed, and are therefore
+enabled by default.
+@*
+Non-littering executables will accept and silently ignore verbose
+littering options.
 
 @cindex message, litter allocation
 This option suppresses litter-allocation messages.
@@ -1370,6 +1374,7 @@ attempt to learn by following this route; should this be your case,
 please contact me (@pxref{Contacting the author,,, jitter, The Jitter
 Manual}).
 
+???????????
 @fixme{Write this}
 
 @fixme{@code{+} is a macro}
@@ -2101,13 +2106,7 @@ result of the condition.
 
 @anchor{lambda}
 @syindex lambda
-@deffn  {macro} lambda formals . forms
-@syindex lambda-optimized
-@deffnx {macro} lambda-optimized formals . forms
-@end deffn
-
-@syindex lambda-non-optimized
-@deffn {core macro} lambda-non-optimized formals . forms
+@deffn  {core macro} lambda formals . forms
 @end deffn
 
 
@@ -2796,12 +2795,14 @@ definition does introducing no inefficiencies in this case.}
 @deffn  {procedure} append-procedure xs ys
 @syindex append-reversed
 @deffnx {procedure} append-reversed xs ys
-@syindex append!
-@deffnx {procedure} append! xs ys
+@syindex append!-procedure
+@deffnx {procedure} append!-procedure xs ys
 @end deffn
 
 @syindex append
 @deffn  {macro} append . xss
+@syindex append!
+@deffnx  {macro} append! . xss @c Yes, this works even with zero arguments.
 @end deffn
 
 @syindex flatten

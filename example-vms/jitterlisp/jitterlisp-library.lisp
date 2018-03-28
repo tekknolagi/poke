@@ -2604,8 +2604,10 @@
 ;;;; Variadic arithmetic.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-associative-variadic-extension + primordial-+ 0)
-(define-associative-variadic-extension * primordial-* 1)
+(define-associative-variadic-extension +
+  primordial-+ 0)
+(define-associative-variadic-extension *
+  primordial-* 1)
 
 (define-macro (- . operands)
   (cond ((null? operands)
@@ -2668,7 +2670,10 @@
 (define-constant (*-by-sums-procedure a b)
   (*-by-sums-iterative a b))
 
-(define-right-nested-variadic-extension *-by-sums *-by-sums-procedure 1)
+(define-left-nested-variadic-extension *-by-sums
+  ;; This is nested on the left, so that the second argument doesn't become
+  ;; bigger and bigger in nested calls.
+  *-by-sums-procedure 1)
 
 
 
@@ -2697,10 +2702,13 @@
 (define-constant **-procedure
   **-procedure-iterative)
 
-(define-right-nested-variadic-extension **-non-tail-recursive **-procedure-non-tail-recursive 1)
-(define-right-nested-variadic-extension **-iterative **-procedure-iterative 1)
+(define-right-nested-variadic-extension **-non-tail-recursive
+  **-procedure-non-tail-recursive 1)
+(define-right-nested-variadic-extension **-iterative
+  **-procedure-iterative 1)
 
-(define ** **-iterative)
+(define **
+  **-iterative)
 
 
 
@@ -2728,8 +2736,10 @@
 
 ;;; Define variadic versions of append and append! , now finally with the
 ;;; appropriate names meant for the user.
-(define-right-nested-variadic-extension append append-procedure ())
-(define-right-nested-variadic-extension append! append!-procedure ())
+(define-right-nested-variadic-extension append
+  append-procedure ())
+(define-right-nested-variadic-extension append!
+  append!-procedure ())
 
 
 
@@ -4196,10 +4206,11 @@
 (define-constant (ast-optimize-sequence optimized-first optimized-second bounds)
   (cond ((and (ast-variable? optimized-first)
               (ast-equal? optimized-first optimized-second))
-         ;; This can occur as a result of other optimizations.  Rewrite
-         ;; [sequence [variable x] [variable x]] into [variable x].  This is correct
-         ;; even if x is not known to be bound, as no effects are removed; the removed
-         ;; (second) reference is guaranteed not to have effects.
+         ;; Rewrite [sequence [variable x] [variable x]] into [variable x].
+         ;; This is correct even if x is not known to be bound, as no effects
+         ;; are removed: the removed (second) reference is guaranteed not to
+         ;; have observable effects after the first reference succeeds.
+         ;; Other optimizations give opportunity for this case to apply.
          optimized-first)
         ((not (ast-effectful? optimized-first bounds))
          ;; The first form in the sequence has no effect: rewrite to the second
@@ -4213,7 +4224,7 @@
 ;;; A helper for ast-optimize-helper in the set! case.  The body should already
 ;;; be optimized.
 (define-constant (ast-optimize-set! name body bounds)
-  ;; There isn't much we can do here which is not too difficult.
+  ;; There isn't much I can do here without going to extreme lengths.
   (cond ((and (ast-variable? body)
               (eq? (ast-variable-name body) name)
               (set-has? bounds name))
@@ -4236,7 +4247,10 @@
 (define-constant (ast-optimize-let bound-name bound-form body bounds)
   (cond ((ast-sequence? bound-form)
          ;; Rewrite [let x [sequence E1 E2] E3] into [sequence E1 [let x E2 E3]]
-         ;; , which may enable further optimizations...
+         ;; , which may enable further optimizations.  Notice that moving E1 out
+         ;; of the let form doesn't change the set of bound variables at any
+         ;; program point, as the bound x is not visible in E1.
+         ;; So, do the change...
          (let ((rewritten
                 (ast-sequence (ast-sequence-first bound-form)
                               (ast-let bound-name
@@ -4245,9 +4259,7 @@
            ;; ...and then re-optimize the rewritten sequence.  This may trigger
            ;; the same rewrite on a bound-form sub-sequence, or other
            ;; optimizations; in particular the bound form, now smaller, may have
-           ;; been reduced to a variable or a literal.  Notice that moving the
-           ;; first form of the bound-form sequence out of the let form doesn't
-           ;; change the bound variable set at any program point.
+           ;; been reduced to a variable or a literal.
            (ast-optimize-helper rewritten bounds)))
         ((not (ast-has-free? body bound-name))
          ;; The bound variable is not used in the body.  Rewrite the let into
@@ -4279,7 +4291,7 @@
         ((and (ast-variable? body)
               (eq? bound-name (ast-variable-name body)))
          ;; Rewrite [let x E [variable x]] into E , without any restriction on
-         ;; the shape of E , on bound variables or on effects.
+         ;; the shape of E , on x or on effects.
          ;; This rewrite could be subsumed by more general rules which are not
          ;; implemented yet but at least this case is easy to optimize, and
          ;; an opportunity to improve tailness.  It can occur as a consequence
@@ -4365,7 +4377,7 @@
          ;; The condition has no effects and is equal to the else branch, with
          ;; an then branch which is the literal #t -- exactly that canonical
          ;; boolean, not any other non-#f value.  This occurs in the
-         ;; expansion of the non-lispy (or X X) with a non-effectul X.
+         ;; expansion of the non-Lispy (or X X) with a non-effectul X.
          ;; Rewrite [if E1 [literal #t] E1] into
          ;; [primitive boolean-canonicalize E1].
          ;; This is provided for symmetry with the previous case, mostly for
@@ -4381,7 +4393,7 @@
               (ast-literal? then)
               (eq? (ast-literal-value then) #t) ;; Exactly the canonical #t.
               (not (ast-effectful? condition bounds)))
-         ;; A generalization of the previous case to the expansion of non-lispy
+         ;; A generalization of the previous case to the expansion of non-Lispy
          ;; (or X X ... X).
          ;; Rewrite [if E1 [literal #t] [primitive boolean-canonicalize E1]]
          ;; into [primitive boolean-canonicalize E1].
@@ -4396,7 +4408,7 @@
          ;; that there is no requirement on effectfulness or on the shape of the
          ;; condition.
          ;; This doesn't only occur in dumb code written by human beginners: it
-         ;; occurs, for example, in the expansion of non-lispy (or X #f), which
+         ;; occurs, for example, in the expansion of non-Lispy (or X #f), which
          ;; may well come from the expansion of another macro.
          (ast-optimize-helper (ast-primitive primitive-boolean-canonicalize
                                              (list condition))
@@ -4422,8 +4434,7 @@
 (define-constant (ast-optimize-while optimized-guard body bounds)
   (cond ((ast-sequence? optimized-guard)
          ;; Rewrite [while [sequence E1 E2] E3] into
-         ;; [sequence E1 [while E2 [sequence E3 E1]]], and optimize further,
-         ;; which may hopefully reduce to a loop with a literal #f guard.
+         ;; [sequence E1 [while E2 [sequence E3 E1]]] and optimize further.
          ;; The bound variable set doesn't change at any program point.
          (let* ((first (ast-sequence-first optimized-guard))
                 (second (ast-sequence-second optimized-guard))
@@ -4443,8 +4454,9 @@
                              bounds))
         ((and (ast-literal? optimized-guard)
               (not (ast-literal-value optimized-guard)))
-         ;; Remove a (while #f ...).  Notice that we can't simplify
-         ;; a while with a constantly non-#f guard.
+         ;; Replace [while [literal #f] E] with [literal #<nothing>].  This is
+         ;; correct with any E, even if it has effects.  Notice that we can't
+         ;; simplify while with a constantly non-#f guard.
          (ast-literal (begin)))
         (else
          ;; Keep the while form.
@@ -4575,8 +4587,8 @@
         ((and (eq? primitive primitive-not)
               (ast-primitive? (car operands)))
          ;; [primitive not [primitive P . Es]].
-         ;; Some primitives can be rewritten into a faster form when negated.
-         ;; Use the helper procedure for this.
+         ;; Some primitives can be rewritten into a faster form when logically
+         ;; negated.  Use the helper procedure for this.
          (let ((inner-primitive (ast-primitive-operator (car operands)))
                (inner-operands (ast-primitive-operands (car operands))))
            (ast-optimize-not-primitive inner-primitive inner-operands)))
@@ -4610,9 +4622,9 @@
   (and (ast-literal? ast)
        (non-zero? (ast-literal-value ast))))
 
-;;; A helper for ast-optimize-not-primitive.  Return the rewritten version
-;;; of [primitive not [primitive PRIMITIVE . OPERANDS]].  The operands are
-;;; already rewritten.
+;;; A helper for ast-optimize-primitive.  Return the rewritten version of
+;;; [primitive not [primitive PRIMITIVE . OPERANDS]].  The operands are already
+;;; rewritten.
 (define-constant (ast-optimize-not-primitive primitive operands)
   ;; Like in ast-optimize-primitive , I can assume that the in-arity is
   ;; respected.
@@ -4750,6 +4762,7 @@
         (list primitive-null? anything?)
         (list primitive-non-null? anything?)
         (list primitive-fixnum? anything?)
+        (list primitive-character? anything?)
         (list primitive-symbol? anything?)
         (list primitive-non-symbol? anything?)
         (list primitive-cons? anything?)
@@ -4796,20 +4809,19 @@
         (list primitive-> fixnum? fixnum?)
         (list primitive->= fixnum? fixnum?)
 
-        ;; Booleans operations.
-
+        ;; Boolean operations.
         (list primitive-not anything?)
         (list primitive-boolean-canonicalize anything?)
 
         ;; Conses.
-        ;; It is *not* safe to evaluate cons at rewrite time, as it needs
-        ;; to allocate a different fresh object at every use.
-        ;; More subtly, it's also unsafe to evaluate selectors at rewrite time,
-        ;; as the data structures involved might be destructively updated
-        ;; at run time between initialization and selection.
+        ;; It is *not* safe to evaluate cons at rewrite time, as it needs to
+        ;; allocate a different fresh object at every use.  More subtly, it's
+        ;; also unsafe to evaluate selectors at rewrite time, as the data
+        ;; structures involved might be destructively updated at run time
+        ;; between initialization and selection.
 
         ;; Boxes.
-        ;; The comment above about cons selectors is valid for boxes as well.
+        ;; The comment above about cons selectors applies to boxes as well.
         ))
 
 
@@ -5034,10 +5046,17 @@
 ;;;; Compiler state structure.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; The compiler state, conceptually a mutable record, is crudely implemented as
+;;; a mutable list with each field in a fixed position.
+;;; Notice that it's the list *elements* which are modifiable, and not the list
+;;; *spine*.  This makes accessors a little nicer to write.
 (define-constant (compiler-make-state)
   (list ()                          ;; instructions
         0                           ;; next-label
         ()                          ;; bindings
+        ()                          ;; constant names being compiled (set)
+        ;; Here begins the second part of the state (its cddddr).
+        ()                          ;; closures being compiled (set)
         (compiler-flags-default)))  ;; flags
 
 (define-constant (compiler-reversed-instructions state)
@@ -5055,10 +5074,24 @@
 (define-constant (compiler-set-bindings! state new-field)
   (set-caddr! state new-field))
 
-(define-constant (compiler-flags state)
+(define-constant (compiler-constant-names state)
   (cadddr state))
-(define-constant (compiler-set-flags! state new-field)
+(define-constant (compiler-set-constant-names! state new-field)
   (set-cadddr! state new-field))
+
+;;; Make it easier to access the second part of the list.
+(define-constant (compiler-state-second-part state)
+  (cddddr state))
+
+(define-constant (compiler-closures state)
+  (car (compiler-state-second-part state)))
+(define-constant (compiler-set-closures! state new-field)
+  (set-car! (compiler-state-second-part state) new-field))
+
+(define-constant (compiler-flags state)
+  (cadr (compiler-state-second-part state)))
+(define-constant (compiler-set-flags! state new-field)
+  (set-cadr! (compiler-state-second-part state) new-field))
 
 
 
@@ -5225,6 +5258,19 @@
 
 
 
+;;;; Compiler state: known closures.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Add a closure to the set of closures being compiled in the given state.  It
+;;; is harmless to add the same closure more than once.
+(define-constant (compiler-add-closure! state closure)
+  (let* ((old-set (compiler-closures state))
+         (new-set (set-with old-set closure)))
+    (compiler-set-closures! state new-set)))
+
+
+
+
 ;;;; Compiler state: flags.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -5347,7 +5393,7 @@
 ;; FIXME: factor the compilation of lambda and of existing closures into
 ;; this, if indeed there is anything to factor.
 (define-constant (compiler-bind-nonlocals! s ??? formals body)
-  ???)
+  (error '(unimplemented: compiler-bind-nonlocals!)))
 
 ;;; Remove actuals from the stack and bind them to the given formals (here given
 ;;; in the order in which they occur in a lambda, which is the evaluation order
@@ -5624,17 +5670,23 @@
   (compiler-emit-return-when-tail! s))
 
 (define-constant (compile-call! s operator operands)
-  (let* ((known-closure
-          ;; Bind known-closure to the called closure if I can resolve it
-          ;; at this time, or to #f otherwise.
-          (cond ((and (ast-literal? operator)
-                      (closure? (ast-literal-value operator)))
+  (let* ((literal-closure-operator
+          ;; Non-#f iff the operator is a literal closure.
+          (and (ast-literal? operator)
+               (closure? (ast-literal-value operator))))
+         (global-constant-operator
+          ;; Non-#f iff the operator is a non-shadowed global bound to a
+          ;; constant.
+          (and (ast-variable? operator)
+               (not (compiler-bound-variable? s (ast-variable-name operator)))
+               (constant? (ast-variable-name operator))))
+         (known-closure
+          ;; Bind known-closure to the called closure if I can resolve it at
+          ;; this time, otherwise to #f.
+          (cond (literal-closure-operator
                  ;; The operator is a literal closure.
                  (ast-literal-value operator))
-                ((and (ast-variable? operator)
-                      (not (compiler-bound-variable? s (ast-variable-name
-                                                        operator)))
-                      (constant? (ast-variable-name operator)))
+                (global-constant-operator
                  ;; The operator is a variable globally bound to a constant
                  ;; and not shadowed.
                  (symbol-global (ast-variable-name operator)))
@@ -5642,8 +5694,22 @@
                  ;; The closure is not known: I can't omit run-time checks.
                  #f)))
          (known-compiled
-          ;; Non-#f iff the closure is known to be compiled.
-          (and known-closure (compiled-closure? known-closure)))
+          ;; Non-#f iff the closure is known to be compiled.  This can happen
+          ;; as long as we know the operator to be a closure, in three cases:
+          (and known-closure
+               (or ;; (a) I already know what the compiled closure is...
+                   (compiled-closure? known-closure)
+                   ;; (b) I know that the operator is the unshadowed global constant
+                   ;;     name of a global being compiled.
+                   (and global-constant-operator
+                        (set-has? (compiler-constant-names s)
+                                  (ast-variable-name operator)))
+                   ;; (c) The operator is a literal interpreted closure which is
+                   ;;     being compiled now, and therefore counts as if it were
+                   ;;     already compiled when called.
+                   (and literal-closure-operator
+                        (set-has? (compiler-closures s)
+                                  (ast-literal-value operator))))))
          (tail (compiler-tail? s))
          (call-instruction
           ;; The VM instruction to use for calling.
@@ -5695,7 +5761,7 @@
 
 (define-constant (compile-lambda! s formals body)
   (when (compiler-used-result? s)
-    (compiler-add-instruction! s '(LAMBDA-UNIMPLEMENTED))
+    (error '(unimplemented: compile-lambda!))
     (compiler-emit-return-when-tail! s)))
 
 (define-constant (compile-sequence! s first second)
@@ -5714,9 +5780,35 @@
 ;;; closure, without affecting its identity.  The change is irreversible: an
 ;;; interpreted closure can become compiled, but it's not possible to uncompile
 ;;; a compiled closure.
-(define-constant (interpreted-closure-compile! c)
+
+;;; Compile the given closure, knowing the that given set-as-list of symbols are
+;;; global names of constant closures being compiled, possibly including c ,
+;;; and that the given set-of-list of closures are also being compiled (again,
+;;; possibly including the global value of c).
+;;; Rationale: independently from the order of compilation, the compiled will be
+;;; able to assume that any (free) call from c to one of the named procedures
+;;; will be to a compiled procedure: this saves a conditional per call at
+;;; execution time.
+;;; It would be possible to do even better by compiling every closure in one go,
+;;; and directly refer compiled code instead of symbols.
+(define-constant (interpreted-closure-compile!-knowing
+                     c
+                     constant-names-being-compiled
+                     closures-being-compiled)
+  ;; Validate arguments.
   (when (compiled-closure? c)
     (error `(closure ,c is already compiled)))
+  (dolist (name constant-names-being-compiled)
+    (unless (symbol? name)
+      (error `(name for constant closure being compiled not a symbol: ,name)))
+    (unless (defined? name)
+      (error `(name for constant closure being compiled not globally bound:
+                    ,name)))
+    (unless (constant? name)
+      (error `(named constant closure being compiled not constant: ,name)))
+    (unless (interpreted-closure? (symbol-global name))
+      (error `(named constant closure being compiled not an interpreted
+                    closure: ,name))))
   (let ((env (interpreted-closure-environment c))
         (formals (interpreted-closure-formals c))
         (body (interpreted-closure-body c)))
@@ -5724,6 +5816,17 @@
           (next-nonlocal-index 0)
           (bound-nonlocal-names set-empty)
           (reversed-nonlocal-values ()))
+      ;; Record the names of the constant closures being compiled, and their
+      ;; values.
+      (compiler-set-constant-names! s constant-names-being-compiled)
+      (dolist (name constant-names-being-compiled)
+        (compiler-add-closure! s (symbol-global name)))
+      (dolist (closure closures-being-compiled)
+              (compiler-add-closure! s closure))
+      ;; Of course we are compiling the current closures.  Adding it to the
+      ;; set of known-to-be-compiled closures will let the compiler generate
+      ;; better code for recursive calls via literal operators.
+      (compiler-add-closure! s c)
       ;; Emit the procedure prolog.
       (compiler-add-instruction! s '(procedure-prolog))
       ;; Bind every nonlocal which is not shadowed by a formal and which is
@@ -5772,6 +5875,11 @@
           (reverse! reversed-nonlocal-values)
           (reverse! (compiler-reversed-instructions s))))))
 
+;;; A convenient procedure to call when one closure is being compiled in
+;;; isolation.
+(define-constant (interpreted-closure-compile! c)
+  (interpreted-closure-compile!-knowing c () ()))
+
 
 
 
@@ -5793,6 +5901,18 @@
          (interpreted-closure-optimize! thing)
          (interpreted-closure-compile! thing)
          (procedure thing))
+        ((symbol? thing)
+         ;; This is a name, hopefully for a closure.
+         (let ((names (if (and (defined? thing)
+                               (constant? thing))
+                          (list thing)
+                          ()))
+               (c (symbol-global thing)))
+           ;; Optimize the closure and compile it; if it's a global constant
+           ;; we can use its name during compilation, to compile recursive
+           ;; calls more efficiently.
+           (interpreted-closure-optimize! c)
+           (interpreted-closure-compile!-knowing c names ())))
         ((macro? thing)
          ;; Macros are only interpreted.  This is a current limitation that
          ;; could be lifted.
@@ -5802,8 +5922,11 @@
          (error `(cannot compile ,thing)))))
 
 ;;; Compile the given closure if needed.  Return nothing.
-(define-constant (compile thing)
-  (compile!-if-needed-then-call thing (lambda (x))))
+(define-constant (compile! thing)
+  (compile!-if-needed-then-call thing (lambda (unused))))
+
+;; FIXME: generalize the procedures above to compiling a list or set of closures
+;; all at the same time.  This will make inter-calls more efficient.
 
 ;;; Print a native-code disassembly of the given closure, compiling it first if
 ;;; needed.  Return nothing.
@@ -5868,36 +5991,6 @@
 ;; Temporary testing macro: optimized.
 (define-macro (to . forms)
   `(top (macroexpand '(begin ,@forms))))
-
-
-
-
-;;;; Implicit optimization: lambdas.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; From now on the lambda form will macroexpand to an optimized body.  The
-;;; optimization is computed at macroexpansion time by lambda, not at evaluation
-;;; time when building a closure.
-
-;; Keep the original non-optimizing lambda with a different name, which will be
-;; useful in the definition of lambda-optimized and for testing.
-(define lambda-non-optimized
-  lambda)
-
-(define-macro (lambda-optimized formals . body)
-  (unless (symbols? formals)
-    (error `(lambda: formals not a list of symbols: ,formals)))
-  (unless (all-different? formals)
-    (error `(lambda: non-distinct formals ,formals)))
-  ;; AST rewriting as invoked here cannot know the exact set of variables bound
-  ;; in the body, but assuming that only the formals are bound is a correct
-  ;; conservative approximation.
-  (ast-optimize (macroexpand `(lambda-non-optimized ,formals ,@body))
-                formals))
-
-;; Redefine lambda to make it implicitly optimizing.
-(define lambda
-  lambda-optimized)
 
 
 
@@ -6012,6 +6105,12 @@
 (define (qq n)
   (length (flatten (map iota (iota n)))))
 
+
+;;; I CAN DO BETTER IN THIS CASE:
+;;; (lambda (f x) (f (begin y x)))
+;;; Getting this right in the general case (any number of arguments, both
+;;; procedures and primitives) would improve the quality of inlined code.
+;;; The first expression in the sequence, here y, is allowed to have effects.
 
 ;;;  OK
 ;;; (define q (macroexpand '(let ((a a) (b a)) a))) q (ast-alpha-convert q)
@@ -6323,3 +6422,13 @@
 ;; cleaning them up, I'm seeing failures only on minimal-threading.  I think the problem
 ;; is in the call VM instruction: I don't see the link register in 0x10(%rsp) ever being
 ;; set.
+(define-constant (CONS car cdr)
+  (lambda (selector) (selector car cdr)))
+(define-constant (CAR-SELECTOR car cdr)
+  car)
+(define-constant (CDR-SELECTOR car cdr)
+  cdr)
+(define-constant (CAR cons)
+  (cons CAR-SELECTOR))
+(define-constant (CDR cons)
+  (cons CDR-SELECTOR))
