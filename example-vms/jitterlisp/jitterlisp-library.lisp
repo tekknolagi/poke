@@ -4377,7 +4377,7 @@
          ;; The condition has no effects and is equal to the else branch, with
          ;; an then branch which is the literal #t -- exactly that canonical
          ;; boolean, not any other non-#f value.  This occurs in the
-         ;; expansion of the non-lispy (or X X) with a non-effectul X.
+         ;; expansion of the non-Lispy (or X X) with a non-effectul X.
          ;; Rewrite [if E1 [literal #t] E1] into
          ;; [primitive boolean-canonicalize E1].
          ;; This is provided for symmetry with the previous case, mostly for
@@ -4393,7 +4393,7 @@
               (ast-literal? then)
               (eq? (ast-literal-value then) #t) ;; Exactly the canonical #t.
               (not (ast-effectful? condition bounds)))
-         ;; A generalization of the previous case to the expansion of non-lispy
+         ;; A generalization of the previous case to the expansion of non-Lispy
          ;; (or X X ... X).
          ;; Rewrite [if E1 [literal #t] [primitive boolean-canonicalize E1]]
          ;; into [primitive boolean-canonicalize E1].
@@ -4408,7 +4408,7 @@
          ;; that there is no requirement on effectfulness or on the shape of the
          ;; condition.
          ;; This doesn't only occur in dumb code written by human beginners: it
-         ;; occurs, for example, in the expansion of non-lispy (or X #f), which
+         ;; occurs, for example, in the expansion of non-Lispy (or X #f), which
          ;; may well come from the expansion of another macro.
          (ast-optimize-helper (ast-primitive primitive-boolean-canonicalize
                                              (list condition))
@@ -4434,8 +4434,7 @@
 (define-constant (ast-optimize-while optimized-guard body bounds)
   (cond ((ast-sequence? optimized-guard)
          ;; Rewrite [while [sequence E1 E2] E3] into
-         ;; [sequence E1 [while E2 [sequence E3 E1]]], and optimize further,
-         ;; which may hopefully reduce to a loop with a literal #f guard.
+         ;; [sequence E1 [while E2 [sequence E3 E1]]] and optimize further.
          ;; The bound variable set doesn't change at any program point.
          (let* ((first (ast-sequence-first optimized-guard))
                 (second (ast-sequence-second optimized-guard))
@@ -4455,8 +4454,9 @@
                              bounds))
         ((and (ast-literal? optimized-guard)
               (not (ast-literal-value optimized-guard)))
-         ;; Remove a (while #f ...).  Notice that we can't simplify
-         ;; a while with a constantly non-#f guard.
+         ;; Replace [while [literal #f] E] with [literal #<nothing>].  This is
+         ;; correct with any E, even if it has effects.  Notice that we can't
+         ;; simplify while with a constantly non-#f guard.
          (ast-literal (begin)))
         (else
          ;; Keep the while form.
@@ -4587,8 +4587,8 @@
         ((and (eq? primitive primitive-not)
               (ast-primitive? (car operands)))
          ;; [primitive not [primitive P . Es]].
-         ;; Some primitives can be rewritten into a faster form when negated.
-         ;; Use the helper procedure for this.
+         ;; Some primitives can be rewritten into a faster form when logically
+         ;; negated.  Use the helper procedure for this.
          (let ((inner-primitive (ast-primitive-operator (car operands)))
                (inner-operands (ast-primitive-operands (car operands))))
            (ast-optimize-not-primitive inner-primitive inner-operands)))
@@ -4622,9 +4622,9 @@
   (and (ast-literal? ast)
        (non-zero? (ast-literal-value ast))))
 
-;;; A helper for ast-optimize-not-primitive.  Return the rewritten version
-;;; of [primitive not [primitive PRIMITIVE . OPERANDS]].  The operands are
-;;; already rewritten.
+;;; A helper for ast-optimize-primitive.  Return the rewritten version of
+;;; [primitive not [primitive PRIMITIVE . OPERANDS]].  The operands are already
+;;; rewritten.
 (define-constant (ast-optimize-not-primitive primitive operands)
   ;; Like in ast-optimize-primitive , I can assume that the in-arity is
   ;; respected.
@@ -4762,6 +4762,7 @@
         (list primitive-null? anything?)
         (list primitive-non-null? anything?)
         (list primitive-fixnum? anything?)
+        (list primitive-character? anything?)
         (list primitive-symbol? anything?)
         (list primitive-non-symbol? anything?)
         (list primitive-cons? anything?)
@@ -4808,20 +4809,19 @@
         (list primitive-> fixnum? fixnum?)
         (list primitive->= fixnum? fixnum?)
 
-        ;; Booleans operations.
-
+        ;; Boolean operations.
         (list primitive-not anything?)
         (list primitive-boolean-canonicalize anything?)
 
         ;; Conses.
-        ;; It is *not* safe to evaluate cons at rewrite time, as it needs
-        ;; to allocate a different fresh object at every use.
-        ;; More subtly, it's also unsafe to evaluate selectors at rewrite time,
-        ;; as the data structures involved might be destructively updated
-        ;; at run time between initialization and selection.
+        ;; It is *not* safe to evaluate cons at rewrite time, as it needs to
+        ;; allocate a different fresh object at every use.  More subtly, it's
+        ;; also unsafe to evaluate selectors at rewrite time, as the data
+        ;; structures involved might be destructively updated at run time
+        ;; between initialization and selection.
 
         ;; Boxes.
-        ;; The comment above about cons selectors is valid for boxes as well.
+        ;; The comment above about cons selectors applies to boxes as well.
         ))
 
 
@@ -5995,36 +5995,6 @@
 
 
 
-;;;; Implicit optimization: lambdas.
-;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; From now on the lambda form will macroexpand to an optimized body.  The
-;;; optimization is computed at macroexpansion time by lambda, not at evaluation
-;;; time when building a closure.
-
-;; Keep the original non-optimizing lambda with a different name, which will be
-;; useful in the definition of lambda-optimized and for testing.
-(define lambda-non-optimized
-  lambda)
-
-(define-macro (lambda-optimized formals . body)
-  (unless (symbols? formals)
-    (error `(lambda: formals not a list of symbols: ,formals)))
-  (unless (all-different? formals)
-    (error `(lambda: non-distinct formals ,formals)))
-  ;; AST rewriting as invoked here cannot know the exact set of variables bound
-  ;; in the body, but assuming that only the formals are bound is a correct
-  ;; conservative approximation.
-  (ast-optimize (macroexpand `(lambda-non-optimized ,formals ,@body))
-                formals))
-
-;; Redefine lambda to make it implicitly optimizing.
-(define lambda
-  lambda-optimized)
-
-
-
-
 ;;;; Implicit optimization: definitions.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -6135,6 +6105,12 @@
 (define (qq n)
   (length (flatten (map iota (iota n)))))
 
+
+;;; I CAN DO BETTER IN THIS CASE:
+;;; (lambda (f x) (f (begin y x)))
+;;; Getting this right in the general case (any number of arguments, both
+;;; procedures and primitives) would improve the quality of inlined code.
+;;; The first expression in the sequence, here y, is allowed to have effects.
 
 ;;;  OK
 ;;; (define q (macroexpand '(let ((a a) (b a)) a))) q (ast-alpha-convert q)
@@ -6446,3 +6422,13 @@
 ;; cleaning them up, I'm seeing failures only on minimal-threading.  I think the problem
 ;; is in the call VM instruction: I don't see the link register in 0x10(%rsp) ever being
 ;; set.
+(define-constant (CONS car cdr)
+  (lambda (selector) (selector car cdr)))
+(define-constant (CAR-SELECTOR car cdr)
+  car)
+(define-constant (CDR-SELECTOR car cdr)
+  cdr)
+(define-constant (CAR cons)
+  (cons CAR-SELECTOR))
+(define-constant (CDR cons)
+  (cons CDR-SELECTOR))
