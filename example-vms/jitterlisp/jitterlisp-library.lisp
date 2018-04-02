@@ -2604,8 +2604,10 @@
 ;;;; Variadic arithmetic.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-associative-variadic-extension + primordial-+ 0)
-(define-associative-variadic-extension * primordial-* 1)
+(define-associative-variadic-extension +
+  primordial-+ 0)
+(define-associative-variadic-extension *
+  primordial-* 1)
 
 (define-macro (- . operands)
   (cond ((null? operands)
@@ -2668,7 +2670,10 @@
 (define-constant (*-by-sums-procedure a b)
   (*-by-sums-iterative a b))
 
-(define-right-nested-variadic-extension *-by-sums *-by-sums-procedure 1)
+(define-left-nested-variadic-extension *-by-sums
+  ;; This is nested on the left, so that the second argument doesn't become
+  ;; bigger and bigger in nested calls.
+  *-by-sums-procedure 1)
 
 
 
@@ -2697,10 +2702,13 @@
 (define-constant **-procedure
   **-procedure-iterative)
 
-(define-right-nested-variadic-extension **-non-tail-recursive **-procedure-non-tail-recursive 1)
-(define-right-nested-variadic-extension **-iterative **-procedure-iterative 1)
+(define-right-nested-variadic-extension **-non-tail-recursive
+  **-procedure-non-tail-recursive 1)
+(define-right-nested-variadic-extension **-iterative
+  **-procedure-iterative 1)
 
-(define ** **-iterative)
+(define **
+  **-iterative)
 
 
 
@@ -2728,8 +2736,10 @@
 
 ;;; Define variadic versions of append and append! , now finally with the
 ;;; appropriate names meant for the user.
-(define-right-nested-variadic-extension append append-procedure ())
-(define-right-nested-variadic-extension append! append!-procedure ())
+(define-right-nested-variadic-extension append
+  append-procedure ())
+(define-right-nested-variadic-extension append!
+  append!-procedure ())
 
 
 
@@ -4196,10 +4206,11 @@
 (define-constant (ast-optimize-sequence optimized-first optimized-second bounds)
   (cond ((and (ast-variable? optimized-first)
               (ast-equal? optimized-first optimized-second))
-         ;; This can occur as a result of other optimizations.  Rewrite
-         ;; [sequence [variable x] [variable x]] into [variable x].  This is correct
-         ;; even if x is not known to be bound, as no effects are removed; the removed
-         ;; (second) reference is guaranteed not to have effects.
+         ;; Rewrite [sequence [variable x] [variable x]] into [variable x].
+         ;; This is correct even if x is not known to be bound, as no effects
+         ;; are removed: the removed (second) reference is guaranteed not to
+         ;; have observable effects after the first reference succeeds.
+         ;; Other optimizations give opportunity for this case to apply.
          optimized-first)
         ((not (ast-effectful? optimized-first bounds))
          ;; The first form in the sequence has no effect: rewrite to the second
@@ -4213,7 +4224,7 @@
 ;;; A helper for ast-optimize-helper in the set! case.  The body should already
 ;;; be optimized.
 (define-constant (ast-optimize-set! name body bounds)
-  ;; There isn't much we can do here which is not too difficult.
+  ;; There isn't much I can do here without going to extreme lengths.
   (cond ((and (ast-variable? body)
               (eq? (ast-variable-name body) name)
               (set-has? bounds name))
@@ -4236,7 +4247,10 @@
 (define-constant (ast-optimize-let bound-name bound-form body bounds)
   (cond ((ast-sequence? bound-form)
          ;; Rewrite [let x [sequence E1 E2] E3] into [sequence E1 [let x E2 E3]]
-         ;; , which may enable further optimizations...
+         ;; , which may enable further optimizations.  Notice that moving E1 out
+         ;; of the let form doesn't change the set of bound variables at any
+         ;; program point, as the bound x is not visible in E1.
+         ;; So, do the change...
          (let ((rewritten
                 (ast-sequence (ast-sequence-first bound-form)
                               (ast-let bound-name
@@ -4245,9 +4259,7 @@
            ;; ...and then re-optimize the rewritten sequence.  This may trigger
            ;; the same rewrite on a bound-form sub-sequence, or other
            ;; optimizations; in particular the bound form, now smaller, may have
-           ;; been reduced to a variable or a literal.  Notice that moving the
-           ;; first form of the bound-form sequence out of the let form doesn't
-           ;; change the bound variable set at any program point.
+           ;; been reduced to a variable or a literal.
            (ast-optimize-helper rewritten bounds)))
         ((not (ast-has-free? body bound-name))
          ;; The bound variable is not used in the body.  Rewrite the let into
@@ -4279,7 +4291,7 @@
         ((and (ast-variable? body)
               (eq? bound-name (ast-variable-name body)))
          ;; Rewrite [let x E [variable x]] into E , without any restriction on
-         ;; the shape of E , on bound variables or on effects.
+         ;; the shape of E , on x or on effects.
          ;; This rewrite could be subsumed by more general rules which are not
          ;; implemented yet but at least this case is easy to optimize, and
          ;; an opportunity to improve tailness.  It can occur as a consequence
@@ -5381,7 +5393,7 @@
 ;; FIXME: factor the compilation of lambda and of existing closures into
 ;; this, if indeed there is anything to factor.
 (define-constant (compiler-bind-nonlocals! s ??? formals body)
-  ???)
+  (error '(unimplemented: compiler-bind-nonlocals!)))
 
 ;;; Remove actuals from the stack and bind them to the given formals (here given
 ;;; in the order in which they occur in a lambda, which is the evaluation order
@@ -5693,7 +5705,8 @@
                         (set-has? (compiler-constant-names s)
                                   (ast-variable-name operator)))
                    ;; (c) The operator is a literal interpreted closure which is
-                   ;;     being compiled.
+                   ;;     being compiled now, and therefore counts as if it were
+                   ;;     already compiled when called.
                    (and literal-closure-operator
                         (set-has? (compiler-closures s)
                                   (ast-literal-value operator))))))
@@ -5748,7 +5761,7 @@
 
 (define-constant (compile-lambda! s formals body)
   (when (compiler-used-result? s)
-    (compiler-add-instruction! s '(LAMBDA-UNIMPLEMENTED))
+    (error '(unimplemented: compile-lambda!))
     (compiler-emit-return-when-tail! s)))
 
 (define-constant (compile-sequence! s first second)
