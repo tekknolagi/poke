@@ -1376,6 +1376,7 @@ Manual}).
 
 ???????????
 @fixme{Write this}
+@fixme{it's a stack machine}
 
 @fixme{@code{+} is a macro}
 
@@ -1723,7 +1724,8 @@ For example the caddr of an object is the car of the cdr
 of its cdr.  Such @dfn{composed cons selector} names are convenient to
 use when referring to nested components of a cons, and the JitterLisp
 library provides convenient functionality to access them with any
-@var{S} of length 1, 2, 3 and 4.
+@var{S} of length 1, 2 and 3---therefore, for a level of nesting up
+to 4.
 
 @anchor{lists}
 @cindex list
@@ -1761,9 +1763,10 @@ can be used on many non-list conses as well:
 @cindex cons notation, compact
 @cindex notation, cons, compact
 @quotation Compact cons notation
-Let @code{(@var{a} . @var{b})} be a cons.  When @var{b} is either the
-empty list @code{()} or another cons the @dfn{compact cons notation}
-is supported: in compact notation @emph{both} the dot and the
+Let @var{a} and @var{b} be two objects.
+When @var{b} is either the empty list @code{()} or a cons, the
+cons @code{(@var{a} . @var{b})} can be written in the
+the @dfn{compact cons notation}: in compact notation @emph{both} the dot and the
 parentheses around @var{b}
 @c , but not the open parenthesis before @var{a} or the closed
 @c parenthesis after @var{b},
@@ -2984,6 +2987,10 @@ definition does introducing no inefficiencies in this case.}
 @deffnx {procedure} iterate-post f n
 @end deffn
 
+@anchor{lambda-wrapper}
+@syindex lambda-wrapper
+@deffn {macro} lambda-wrapper rator arity
+@end deffn
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Variadic utility
@@ -3023,7 +3030,7 @@ performed by @code{set-@var{thing}!} procedures.}
 @end deffn
 
 @syindex set-empty?
-@deffn {procedure} empty? s
+@deffn {procedure} set-empty? s
 @end deffn
 
 @syindex set-singleton
@@ -3373,6 +3380,10 @@ or an excerpt explaining how there is no warranty of any kind.
 @cindex library file, JitterLisp
 @cindex initialization file, JitterLisp
 @fill
+
+@fixme{it's a stack machine: two stacks plus registers.  Explain calling
+conventions.  Explain closure representations.  Explain tagging, possibly
+at the beginning}
 
 
 @ifset includelicenses

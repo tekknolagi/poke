@@ -2396,9 +2396,15 @@
 (define-macro (case-variable variable . clauses)
   (if (null? clauses)
       '(begin)
-      `(if (case-variable-matches? ,variable ,(caar clauses))
-           (begin ,@(cdar clauses))
-           (case-variable ,variable ,@(cdr clauses)))))
+      (begin
+        (unless (list? (car clauses))
+          (error `(case: non-list clause ,(car clauses))))
+        (unless (or (eq? (caar clauses) 'else)
+                    (list? (caar clauses)))
+          (error `(case: non-list non-else clause pattern ,(caar clauses))))
+        `(if (case-variable-matches? ,variable ,(caar clauses))
+             (begin ,@(cdar clauses))
+             (case-variable ,variable ,@(cdr clauses))))))
 
 (define-macro (case discriminand . clauses)
   (let ((discriminand-variable (gensym)))
@@ -2719,10 +2725,10 @@
 ;;; This is a convenient way to syntactically generate a lambda from a macro
 ;;; name.
 ;;; Example:
-;;;   (lambda-wrapper 2 +)
+;;;   (lambda-wrapper + 2)
 ;;;   expands to something equivalent to
 ;;;   (lambda (a b) (+ a b)) .
-(define-macro (lambda-wrapper arity rator)
+(define-macro (lambda-wrapper rator arity)
   (let ((formals (map (lambda (_) (gensym))
                       (iota arity))))
     `(lambda ,formals
@@ -6432,3 +6438,7 @@
   (cons CAR-SELECTOR))
 (define-constant (CDR cons)
   (cons CDR-SELECTOR))
+(define-macro (LIST . args)
+  (if (null? args)
+      '()
+      `(CONS ,(car args) (LIST ,@(cdr args)))))
