@@ -396,7 +396,7 @@ better.
 @cindex abstract syntax tree
 @cindex git
 @cindex stack
-Attempting to accelerate the @epsilonzero{} interpretation I quickly
+Attempting to accelerate @epsilonzero{} interpretation I quickly
 put together a stack-based direct-threaded interpreter, with the
 intention of using it in place of the current abstract-syntax-tree
 interpreter.  That implementation still lives on a git branch but I
@@ -428,7 +428,7 @@ a program means jumping to its first native instruction, from where
 execution continues.
 @c FIXME: justify the name here?
 
-Soon enough what should I had planned as just a fun hack for a few
+Soon enough what I had planned as just a fun hack for a few
 weekends turned into something ambitious and useful for others,
 independent from epsilon which will now require it, but @emph{without
 being required itself} for compiling or running Jitter.
@@ -474,7 +474,7 @@ the presence of some runtime system, usually very large and either
 written in a low-level language, therefore simply shifting the
 portability problem, or mostly built on the VM language itself making
 programs less efficient than it would be otherwise possible,
-particularly at start up.
+particularly at startup.
 @*
 @cindex portability
 @cindex porting
@@ -504,8 +504,8 @@ compromises on performance.
 @cindex verification, bytecode
 @cindex safety
 @cindex sandboxing
-A few VMs offer also features unrelated to portability, particularly
-sandboxing or some startup safety checking of programs.  Ideas such as
+A few VMs also provide features unrelated to portability, particularly
+sandboxing or some safety checking of programs at startup.  Ideas such as
 the JVM's ``bytecode verification'', while scientifically interesting,
 are a mismatch for most case uses and should never get in the way of
 running compiled code efficiently.
@@ -520,7 +520,7 @@ running compiled code efficiently.
 Exposing a VM as a software API decoupled from a compiler is a source
 of inefficiency when independent projects with different needs
 target the same VM, or even when a single compiler needs to evolve
-but at the same time needs to retain compatibility with a older
+but at the same time needs to retain compatibility with older
 versions of a VM satisfying a given specification; the impossibility
 of implementing efficient method tail calls in the JVM depends on such
 a case of excessive decoupling---and in some measure, I dare to say,
@@ -609,8 +609,8 @@ The performance impact is @emph{not} invisible, and the supposed advantage
 questionable at best:
 being able to run page scripts in some other (very similar) language rather
 than JavaScript, or running programs without having an interpreter
-installed---because of course in 2017 if you
-install software and just @emph{compute} on your computer you are no longer hip.
+installed---because in 2018 people who install software and just
+@emph{compute} on their computers are definitely no longer hip.
 @c ,
 @c @c Saint Steve Jobs will come back to spank you
 @c or something.
@@ -722,7 +722,7 @@ versions: if any check can be moved from run time to VM code
 generation the resulting speedup is almost always worth the trouble:
 translating variable names into register numbers, stack slot indices
 or static chain distances is a good idea, and simpler systems performing
-run-time searches with variable names will be easily outperformed.
+run-time searches on variable names will be easily outperformed.
 @ignore
 FIXME: Compute some numbers and compare against pypy and luajit
 @end ignore
@@ -745,7 +745,7 @@ language being interpreted, and the performance tradeoff of some
 choices may not be obvious; for example parameter passing in a VM can
 employ registers, stacks, or SPARC-style register windows; it is
 entirely reasonable that a software author may want to switch from one
-solution to another in a new version, or even as a configuration-time
+solution to another in a new release, or even as a configuration-time
 decision based on hardware machine features.
 
 @ignore
@@ -774,7 +774,7 @@ attention to efficiency requires some effort.  The idea of
 replication, which I have come to regard as essential, entails in
 practice automatic code generation techniques which, if conceptually
 simple, take time to implement.  The patch-ins infrastructure, if
-just as intuitive to understand, is almost as laborious to
+again intuitive to understand, is almost as laborious to
 implement correctly.  Some other code related to replication is
 also very fragile to handle.  Even worse a few features, technically
 optional but very beneficial for performance, rely on a small amount
@@ -910,8 +910,8 @@ convenient C API and intuitive debugging tools are at the very least
 range of CPUs.
 
 @anchor{compiling-expressions}
-Right now with Jitter the user has to generate (unspecialized) VM
-instruction herself, in particular taking care or register allocation
+Right now a program relying on a Jittery VM has to generate (unspecialized) VM
+instructions explicitly, in particular taking care or register allocation
 for register-based VMs.  A Jittery VM right now is probably easier to
 use than a simple JIT requiring the same explicit register handling by
 the user, but less convenient than JITs which accept high-level
