@@ -1162,7 +1162,7 @@ You can find my contact information on my personal web site
 @cindex mailing list
 I enjoy discussing technical issues in a public forum; there is no
 mailing list specifically about Jitter right now, but you are free to
-use the epsilon public mailing list @email{epsilon-discuss@@gnu.org}
+use the epsilon public mailing list @email{epsilon-devel@@gnu.org}
 for talking about Jitter as well.
 @cindex email
 Still, I particularly value and respect privacy.  If for any reason
