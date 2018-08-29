@@ -877,7 +877,7 @@ following configuration items:
 @item safety
 a JitterLisp program may be @dfn{safe} and check for operand types
 before executing every operation, or @dfn{unsafe} and omitting some
-check.  An unsafe Lisp will be more efficient, but subject to crashes
+checks.  An unsafe Lisp will be more efficient, but subject to crashes
 in case of user error;
 
 @cindex Boehm-Demers garbage collector
@@ -951,8 +951,8 @@ command-line interface.
 @cindex current working directory
 @cindex directory, current working
 The current working directory is always irrelevant when invoking any
-JitterLisp executable, which makes the @file{bin/} component of the
-path name safe to freely adapt as well.
+JitterLisp executable without file arguments, which makes the
+@file{bin/} component of the path name safe to freely adapt as well.
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -1041,20 +1041,20 @@ executing the REPL.
 @cindex standard input
 @cindex input, standard
 A single dash @samp{-} is a non-option argument and stands for the
-program standard input.  Like the path name for a Lisp file, a
+process standard input.  Like the path name for a Lisp file, a
 @code{-} argument will make JitterLisp default to non-interactive mode.
 
 @cindex output
 @cindex I/O
 Lisp forms @emph{from input files or @samp{-}}, in either interactive or
 non-interactive mode, will be evaluated without automatically printing
-each result, to avoid useless distractions.  Of course a program may
+each result, to avoid useless distractions.  Of course a Lisp program may
 call I/O procedures (@pxref{Input and output}) in order to print out
 information when needed, without such explicit output being suppressed.
 
-A run-time error while executing a Lisp file from the command line will
-cause JitterLisp to exit with failure, without processing any remaining
-Lisp file.
+A run-time error while executing a Lisp program given on the command line
+will cause JitterLisp to exit with failure, without processing any
+remaining Lisp file.
 
 @cindex option, command line (@command{jitterlisp})
 @cindex command line option (@command{jitterlisp})
@@ -1081,7 +1081,7 @@ negate the effect of other options, therefore restoring the default
 behavior.  Negative options are useful to counteract the effect of
 some option which is convenient to always pass and then occasionally
 override, for example as part of a shell alias or with quick
-interactive line editing of a complex command line.
+interactive line editing of a complex shell command line.
 @*
 The output of @option{--help} shows negative options marked as
 @samp{(default)}.
@@ -1195,7 +1195,7 @@ users deviate from the default behavior.
 Print back @nothing{} when it occurs as the result of a user form
 (@pxref{Uniques}),
 in interactive use or with @option{--eval}.  The default is to omit
-it, as @nothing{} represents an ``uninteresting'' result for a form
+it, as @nothing{} represents an ``uninteresting'' result from a form
 which is normally evaluated for its side effects.
 
 @cindex @option{--colorize}, command-line option
@@ -1212,7 +1212,7 @@ object types easier to distinguish at a glance.
 @cindex escape sequence, ANSI terminal
 @cindex sequence, escape, ANSI terminal
 The current implementation, quite crude, relies on ANSI terminal
-escape sequences and uses a choice of colors designed for a black
+escape sequences and uses a choice of colors suitable for a black
 or dark background.
 
 @cindex color
@@ -1233,9 +1233,9 @@ around after allocating a very high number of uninterned symbols.
 @cindex disassembly, cross
 @cindex cross-disassembly
 @item --cross-disassembler
-Use the cross-disassembler as configured in Jitter
+Use the cross-disassembler specified at Jitter configuration time
 (@pxref{Disassembly,,, jitter, The Jitter Manual})
-rather than the default native disassembler to print out the native
+rather than the default native disassembler to print out native
 code for compiled closures
 (@pxref{disassembly}).
 
@@ -1264,7 +1264,7 @@ native disassembler.
 @cindex standard error
 @cindex message, litter allocation
 A JitterLisp executable littering memory (@pxref{litter}) will by
-default print a message on the standard error every time a new block
+default print a message to the standard error every time a new block
 of memory is allocated.  Such warnings, although distracting, are
 useful to remind the user that the running program is allocating
 memory from a growing heap which will not be freed, and are therefore
@@ -1290,7 +1290,7 @@ These are the negative counterparts of the options above, restoring
 the respective default behaviors.
 @end table
 
-The last group of option is mostly meant for the development of
+The last group of options is mostly meant for the development of
 JitterLisp itself with respect to debugging or benchmarking.
 @table @option
 @cindex @option{-v}, command-line option
@@ -1451,7 +1451,7 @@ twice
   `(define (,operator ,@@formals)
      ,@@body-forms))
 (define-macro (defmacro operator formals . body-forms)
-  `(define-macro (,operator . ,formals)
+  `(define-macro (,operator . ,formals) ;; FIXME: why not (,operator ,@@formals) ?
      ,@@body-forms))
 ;; And then:
 (defun successor (n)
@@ -1572,8 +1572,8 @@ It is worth to repeat how the language defined in the rest of
 this section describes @emph{Lisp data}, and not necessarily valid
 Lisp expressions.  For example @code{foo} denotes a symbol object, but
 simply typing @code{foo} to the REPL prompt will cause an
-unbound-variable error---in this case the symbol object @code{foo}
-is macroexpanded to a @emph{variable} named @samp{foo}.
+unbound-variable error---in such a case the symbol object @code{foo}
+will be macroexpanded into a @emph{variable} named @samp{foo}.
 In the same way the read (and write) syntax @code{(1 2 3)} denotes a
 well-formed Lisp datum, but would macroexpand to a @emph{procedure call} with
 @code{1} as the operator, immediately causing a failure on evaluation.
@@ -1642,7 +1642,7 @@ is used, in particular, as the trailing part of the of every list
 @cindex true
 @cindex false
 A @dfn{boolean} object or @dfn{canonical boolean} represents a truth
-value, either @dfn{true} or @dfn{false}.  There are exactly two
+value, either @dfn{false} or @dfn{true}.  There are exactly two
 booleans:
 @syindex #f
 @deffn  {unique} #f
@@ -1663,6 +1663,7 @@ the purposes of tests.  A Lisp object used as a boolean
 in this extended sense is called a @dfn{generalized boolean}.  Of
 course generalized booleans are not necessarily unique objects.
 
+@fixme{a few words about the following uniques}
 @syindex #<nothing>@r{ (no read syntax)}
 @deffn  {unique, no read syntax} #<nothing>
 @syindex #<eof>@r{ (no read syntax)}
@@ -1670,6 +1671,7 @@ course generalized booleans are not necessarily unique objects.
 @syindex #<undefined>@r{ (no read syntax)}
 @deffnx {unique, no read syntax} #<undefined>
 @end deffn
+@fixme{what they are used for}
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Fixnums
