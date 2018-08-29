@@ -1165,7 +1165,7 @@ mailing list specifically about Jitter right now, but you are free to
 use the epsilon public mailing list @email{epsilon-devel@@gnu.org}
 for talking about Jitter as well.
 @cindex email
-Still, I particularly value and respect privacy.  If for any reason
+Still, I particularly value and respect privacy: if for any reason
 you prefer to communicate with me in private you can also contact me
 at @email{positron@@gnu.org}.
 
