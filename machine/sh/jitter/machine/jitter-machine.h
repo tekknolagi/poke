@@ -1,6 +1,6 @@
 /* VM library: SH definitions, to be included from both C and assembly.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -153,14 +153,15 @@
 #define JITTER_RETURN(link_rvalue)                                             \
   do                                                                           \
     {                                                                          \
-      const void * jitter_the_return_address = (link_rvalue);                  \
-      asm goto ("lds %[return_addr], pr\n\t"                                   \
+      const void * jitter_the_return_address = (const void*) (link_rvalue);    \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                   \
+                "lds %[return_addr], pr\n\t"                                   \
                 "rts\n\t"                                                      \
                 "nop"                                                          \
                 : /* outputs. */                                               \
                 : [return_addr] "r" (jitter_the_return_address) /* inputs. */  \
                 : "pr" /* clobbers. */                                         \
-                : jitter_jump_anywhere_label /* gotolabels. */);               \
+                : jitter_dispatch_label /* gotolabels. */);               \
       /* The rest of the VM instruction is unreachable. */                     \
       __builtin_unreachable ();                                                \
     }                                                                          \
@@ -176,16 +177,42 @@
     {                                                                        \
       const void * const jitter_destination =                                \
         (const void * const) (callee_rvalue);                                \
-      asm goto ("jsr @%[destination]\n\t"                                    \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                 \
+                "jsr @%[destination]\n\t"                                    \
                 "nop"                                                        \
                 : /* outputs. */                                             \
                 : [destination] "r" (jitter_destination) /* inputs. */       \
                 : "pr" /* clobbers. */                                       \
-                : jitter_jump_anywhere_label /* gotolabels. */);             \
+                : jitter_dispatch_label /* gotolabels. */);             \
       /* Skip the rest of the specialized instruction, for compatibility */  \
       /* with more limited dispatches. */                                    \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                            \
     }                                                                        \
+  while (false)
+
+/* Perform an ordinary jump thru register, and load PR in the delay slot. */
+#define JITTER_BRANCH_AND_LINK_WITH(_jitter_callee_rvalue, _jitter_new_link)  \
+  do                                                                          \
+    {                                                                         \
+      const void * const jitter_callee_rvalue =                               \
+        (const void * const) (_jitter_callee_rvalue);                         \
+      const void * const jitter_new_link =                                    \
+        (const void * const) (_jitter_new_link);                              \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                  \
+                JITTER_ASM_COMMENT_UNIQUE("Branch-and-link-with, pretending"  \
+                                          "to go to "                         \
+                                          "%l[jitter_dispatch_label]")        \
+                "jmp @%[jitter_callee_rvalue]\n\t"                            \
+                "lds %[jitter_new_link], pr"                                  \
+                : /* outputs. */                                              \
+                : [jitter_callee_rvalue] "r" (jitter_callee_rvalue),          \
+                  [jitter_new_link] "r" (jitter_new_link) /* inputs. */       \
+                : "pr" /* clobbers. */                                        \
+                : jitter_dispatch_label /* gotolabels. */);                   \
+      /* The rest of the VM instruction is unreachable: this is an            \
+         unconditional jump. */                                               \
+      __builtin_unreachable ();                                               \
+    }                                                                         \
   while (false)
 
 /* The patch-in has a simple two-instruction routine ( bsr and nop ), of which
@@ -193,15 +220,17 @@
 #define _JITTER_BRANCH_AND_LINK_FAST(target_index)                             \
   do                                                                           \
     {                                                                          \
-      asm goto (JITTER_ASM_PATCH_IN_PLACEHOLDER(                               \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                   \
+                JITTER_ASM_PATCH_IN_PLACEHOLDER(                               \
                    JITTER_PATCH_IN_SIZE_FAST_BRANCH_BRANCH_AND_LINK /*size_in_bytes*/, \
                    JITTER_PATCH_IN_CASE_FAST_BRANCH_BRANCH_AND_LINK /*case*/,  \
                    target_index,                                               \
                    0, 0, 0 /* not used for this case */)                       \
                 : /* outputs. */                                               \
-                : JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs. */          \
+                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                       \
+                  JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs. */          \
                 : /* clobbers. */                                              \
-                : JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL /* gotolabels. */); \
+                : jitter_dispatch_label /* gotolabels. */);                    \
       /* Skip the rest of the specialized instruction, for compatibility */    \
       /* with more limited dispatches. */                                      \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                              \

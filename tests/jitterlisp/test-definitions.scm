@@ -34,7 +34,7 @@
          a)
         ((< a b)
          (euclid a (- b a)))
-        (#t
+        (else
          (euclid (- a b) b))))
 
 (define-constant (euclid-i a b)
@@ -130,7 +130,7 @@
          #t)
         ((= n 1)
          #f)
-        (#t
+        (else
          (odd?-tail-recursive (- n 1)))))
 
 (define-constant (odd?-tail-recursive n)
@@ -138,28 +138,33 @@
          #f)
         ((= n 1)
          #t)
-        (#t
+        (else
          (even?-tail-recursive (- n 1)))))
 
 
 
-
+(when #t
 ;;;; Compile a few predefined procedures.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Compile a few predefined procedures -- only a few.  This way I will
 ;;; have a lot of interplay between interpreted and compiled code, which
 ;;; is useful to test.
+(when #t
 (map interpreted-closure-compile!
      (list 1+ 1- cdr))
+)
 
+(when #t
 ;;; Compile other procedures used in the test suite.
 ;;; FIXME: this doesn't really compile all the interesting part yet.  I have
 ;;; to be able to compile lambdas in the general case before uncommenting
 ;;; the procedure names below.
 (map (lambda (c)
        ;;(display `(compiling ,c)) (newline)
-       (interpreted-closure-compile! c))
+;;(gc)
+       (interpreted-closure-compile! c)
+       )
      (list append-reversed-iterative append-reversed
            append-procedure ;;append-iterative
            reverse-iterative reverse
@@ -175,7 +180,7 @@
            ;;car
            ))
 ;;(display `(ok)) (newline)
-
+)
 
 
 
@@ -196,4 +201,6 @@
                 count2-i
                 month->days
                 even?-tail-recursive odd?-tail-recursive))
+;;(display `(compiling ,name)) (newline)
   (interpreted-closure-compile! (symbol-global name)))
+) ;; close outer when

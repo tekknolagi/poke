@@ -135,7 +135,7 @@ jitter_replicate_program (struct jitter_program *p)
   // FIXME: this is probably safe in most practical cases, but not correct nor efficient.
   // FIXME: implement an integer division rounding up in the utility library.
   size_t code_length
-    = ((specialized_instruction_no * (40 + JITTER_CALLEE_ALIGNMENT - 1)) / page_size + 1) * page_size;
+    = ((specialized_instruction_no * (400 + JITTER_CALLEE_ALIGNMENT - 1)) / page_size + 1) * page_size;
 
   char *code = mmap (NULL,//(void*) (jitter_uint) page_size,//NULL,
                      code_length,

@@ -148,11 +148,10 @@ jitter_patch_load_immediate_to_register (char *native_code,
         const int16_t immediate = * immediate_p;
 
         /* Split the immediate into two bytes.  The high byte will be
-           sign-extended in the end, but herer we work better with unsigned
+           sign-extended in the end, but here we work better with unsigned
            values since we are playing with bit masks. */
         const uint8_t high_byte = immediate >> 8;
         const uint8_t low_byte = ((uint16_t) immediate) & 0xff;
-        printf ("Inserting 0x%x 0x%x\n", high_byte, low_byte);
 
         /* Replace the immediate arguments for the two mov instructions; they
            are the first and the second instruction in the routine.  The high

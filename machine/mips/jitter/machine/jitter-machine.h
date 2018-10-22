@@ -1,6 +1,6 @@
 /* VM library: MIPS definitions, to be included from both C and assembly.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -134,7 +134,8 @@
                                               target_index)                 \
   do                                                                        \
     {                                                                       \
-      asm goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)   \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                \
+                JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)   \
                 "1:\n\t"                                                    \
                 instruction_string " %[jitter_operand], 1b"                 \
                 : /* outputs */                                             \
@@ -142,7 +143,7 @@
                   [jitter_operand] "r" (operand),                           \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */        \
                 : /* clobbers */                                            \
-                : jitter_jump_anywhere_label /* goto labels */);            \
+                : jitter_dispatch_label /* goto labels */);            \
     }                                                                       \
   while (false)
 
@@ -151,7 +152,8 @@
                                                 operand1, target_index)        \
   do                                                                           \
     {                                                                          \
-      asm goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)      \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                   \
+                JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)      \
                 "1:\n\t"                                                       \
                 instruction_string                                             \
                 " %[jitter_operand0], %[jitter_operand1], 1b"                  \
@@ -161,7 +163,7 @@
                   [jitter_operand1] "r" (operand1),                            \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
                 : /* clobbers */                                               \
-                : jitter_jump_anywhere_label /* goto labels */);               \
+                : jitter_dispatch_label /* goto labels */);               \
     }                                                                          \
   while (false)
 
@@ -171,7 +173,8 @@
                                                 target_index)                  \
   do                                                                           \
     {                                                                          \
-      asm goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)      \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                   \
+                JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)      \
                 "1:\n\t"                                                       \
                 instruction_string " $0, %[jitter_operand1], 1b"               \
                 : /* outputs */                                                \
@@ -179,7 +182,7 @@
                   [jitter_operand1] "r" (operand1),                            \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
                 : /* clobbers */                                               \
-                : jitter_jump_anywhere_label /* goto labels */);               \
+                : jitter_dispatch_label /* goto labels */);               \
     }                                                                          \
   while (false)
 
@@ -189,7 +192,8 @@
                                                 target_index)                  \
   do                                                                           \
     {                                                                          \
-      asm goto (JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)      \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                   \
+                JITTER_ASM_MIPS_CONDITIONAL_BRANCH_PATCH_IN(target_index)      \
                 "1:\n\t"                                                       \
                 instruction_string " %[jitter_operand0], $0, 1b"               \
                 : /* outputs */                                                \
@@ -197,7 +201,7 @@
                   [jitter_operand0] "r" (operand0),                            \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
                 : /* clobbers */                                               \
-                : jitter_jump_anywhere_label /* gotolabels */);                \
+                : jitter_dispatch_label /* gotolabels */);                \
     }                                                                          \
   while (false)
 
@@ -426,12 +430,15 @@
         = (const void* const) (link_rvalue);                                   \
       /* Gas seems to do a good job of using the delay slot, which is not */   \
       /* always a nop.  This is why I don't use .set nomacro, noreorder . */   \
-      asm goto ("jr %[return_addr]"                                            \
+      asm goto ("jr %[return_addr]\n\t"                                        \
+                /* Putting the defect descriptor before jr prevents GCC from   \
+                   using the delay slot intelligently.  It's harmless to have  \
+                   it here after the return instruction. */                    \
+                JITTER_ASM_DEFECT_DESCRIPTOR                                   \
                 : /* outputs. */                                               \
-                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                       \
-                  [return_addr] "r" (jitter_the_return_address) /* inputs. */  \
+                : [return_addr] "r" (jitter_the_return_address) /* inputs. */  \
                 : /* clobbers. */                                              \
-                : jitter_jump_anywhere_label /* gotolabels. */);               \
+                : jitter_dispatch_label /* gotolabels. */);               \
       /* The rest of the VM instruction is unreachable. */                     \
       __builtin_unreachable ();                                                \
     }                                                                          \
@@ -447,14 +454,45 @@
       /* Gas seems to do a good job of using the delay slot, which is not */  \
       /* always a nop.  This is why I don't use .set nomacro, noreorder . */  \
       asm goto ("jalr %[destination]"                                         \
+                /* See the comment in JITTER_RETURN. */                       \
+                JITTER_ASM_DEFECT_DESCRIPTOR                                  \
                 : /* outputs. */                                              \
-                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                      \
-                  [destination] "r" (jitter_destination) /* inputs. */        \
+                : [destination] "r" (jitter_destination) /* inputs. */        \
                 : "$31" /* clobbers. */                                       \
-                : jitter_jump_anywhere_label /* gotolabels. */);              \
+                : jitter_dispatch_label /* gotolabels. */);              \
       /* Skip the rest of the specialized instruction, for compatibility */   \
       /* with more limited dispatches. */                                     \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                             \
+    }                                                                         \
+  while (false)
+
+/* Perform an ordinary jump thru register, and load the given return address
+   in $31, exploiting the delay slot. */
+#define JITTER_BRANCH_AND_LINK_WITH(_jitter_callee_rvalue, _jitter_new_link)  \
+  do                                                                          \
+    {                                                                         \
+      const void * const jitter_callee_rvalue =                               \
+        (const void * const) (_jitter_callee_rvalue);                         \
+      const void * const jitter_new_link =                                    \
+        (const void * const) (_jitter_new_link);                              \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                  \
+                JITTER_ASM_COMMENT_UNIQUE("Branch-and-link-with, pretending"  \
+                                          "to go to "                         \
+                                          "%l[jitter_dispatch_label]")        \
+                "\n.set noreorder\n\t"                                        \
+                "\n.set nomacro\n\t"                                          \
+                "jr %[jitter_callee_rvalue]\n\t"                              \
+                "or $31, %[jitter_new_link], $0\n\t"                          \
+                "\n.set macro\n\t"                                            \
+                "\n.set reorder\n\t"                                          \
+                : /* outputs. */                                              \
+                : [jitter_callee_rvalue] "r" (jitter_callee_rvalue),          \
+                  [jitter_new_link] "r" (jitter_new_link) /* inputs. */       \
+                : "$31" /* clobbers. */                                       \
+                : jitter_dispatch_label /* gotolabels. */);                   \
+      /* The rest of the VM instruction is unreachable: this is an            \
+         unconditional jump. */                                               \
+      __builtin_unreachable ();                                               \
     }                                                                         \
   while (false)
 
@@ -465,7 +503,8 @@
 #define _JITTER_BRANCH_AND_LINK_FAST(target_index)                             \
   do                                                                           \
     {                                                                          \
-      asm goto (JITTER_ASM_PATCH_IN_PLACEHOLDER(                               \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                   \
+                JITTER_ASM_PATCH_IN_PLACEHOLDER(                               \
                    JITTER_PATCH_IN_SIZE_FAST_BRANCH_BRANCH_AND_LINK /*size_in_bytes*/, \
                    JITTER_PATCH_IN_CASE_FAST_BRANCH_BRANCH_AND_LINK /*case*/,  \
                    target_index,                                               \
@@ -474,7 +513,7 @@
                 : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                       \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
                 : /* clobbers. */                                              \
-                : jitter_jump_anywhere_label /* gotolabels. */);               \
+                : jitter_dispatch_label /* gotolabels. */);               \
       /* Skip the rest of the specialized instruction, for compatibility */    \
       /* with more limited dispatches. */                                      \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                              \
