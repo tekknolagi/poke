@@ -40,6 +40,7 @@
 #include <jitter/jitter-rewrite.h>
 #include <jitter/jitter-parser.h>
 #include <jitter/jitter-specialize.h>
+#include <jitter/jitter-defect.h>
 #include <jitter/jitter-patch-in.h>
 
 #include "vmprefix-vm.h"
@@ -126,7 +127,8 @@ JITTER_DISPATCH_DEPENDENT_GLOBAL_NAME;
  * ************************************************************************** */
 
 #ifdef JITTER_HAVE_PATCH_IN
-JITTER_PATCH_IN_DESCRIPTOR_DECLARATIONS(vmprefix)
+JITTER_DEFECT_DESCRIPTOR_DECLARATIONS_(vmprefix)
+JITTER_PATCH_IN_DESCRIPTOR_DECLARATIONS_(vmprefix)
 #endif // #ifdef JITTER_HAVE_PATCH_IN
 
 #ifndef JITTER_DISPATCH_SWITCH
@@ -292,8 +294,17 @@ vmprefix_initialize (void)
         = vmprefix_specialized_instruction_fast_label_bitmasks;
       the_vmprefix_vm.patch_in_descriptors =
         JITTER_PATCH_IN_DESCRIPTORS_NAME(vmprefix);
+      const size_t patch_in_descriptor_size
+        = sizeof (struct jitter_patch_in_descriptor);
       the_vmprefix_vm.patch_in_descriptor_no =
-        JITTER_PATCH_IN_DESCRIPTOR_NO_NAME(vmprefix);
+        (JITTER_PATCH_IN_DESCRIPTORS_SIZE_IN_BYTES_NAME(vmprefix)
+         / patch_in_descriptor_size);
+      /* Cheap sanity check: if the size in bytes is not a multiple of
+         the element size, we're doing something very wrong. */
+      if (JITTER_PATCH_IN_DESCRIPTORS_SIZE_IN_BYTES_NAME(vmprefix)
+          % patch_in_descriptor_size != 0)
+        jitter_fatal ("patch-in descriptors total size not a multiple "
+                      "of the element size");
 #else
       the_vmprefix_vm.specialized_instruction_fast_label_bitmasks = NULL;
 #endif // #ifdef JITTER_HAVE_PATCH_IN

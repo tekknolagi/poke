@@ -43,6 +43,9 @@
 #include <jitter/jitter-fatal.h>
 #include <jitter/jitter-string.h>
 
+/* This contains fixed opcodes for special specialized instructions. */
+#include <jitter/jitter-specialize.h>
+
 
 /* Preliminary definitions.
  * ************************************************************************** */
@@ -2431,9 +2434,37 @@ jitterc_emit_patch_in_header (FILE *f, const struct jitterc_vm *vm)
   EMIT("     global asm statement.  This expands into a global definition in\n");
   EMIT("     assembly in a separate subsection, and relies on toplevel C\n");
   EMIT("     definitions not being reordered: vmprefix_interpret_or_initialize\n");
-  EMIT("     will add to the same global. */\n");
+  EMIT("     will add to the same global.  Do the same for defects. */\n");
+  EMIT("  JITTER_DEFECT_HEADER(vmprefix);\n");
   EMIT("  JITTER_PATCH_IN_HEADER(vmprefix);\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
+  EMIT("\n");
+}
+
+/* Emit the case for a special specialized instruction in the interpreter. */
+static void
+jitterc_emit_interpreter_special_specialized_instruction
+   (FILE *f, const struct jitterc_vm *vm,
+    const char *name,
+    enum jitter_specialized_instruction_opcode opcode,
+    const char *hotness, int residual_arity,
+    const char *c_code)
+{
+  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, %s)\n",
+       name, jitterc_mangle (name), hotness);
+  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY %i\n",
+       residual_arity);
+  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_OPCODE  %i\n", opcode);
+  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_NAME  %s\n", name);
+  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_MANGLED_NAME  %s\n",
+       jitterc_mangle (name));
+  EMIT("{\n%s\n}\n", c_code);
+  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, %i)\n",
+       name, jitterc_mangle (name), residual_arity);
+  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_OPCODE\n");
+  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_NAME\n");
+  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_MANGLED_NAME\n");
+  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
   EMIT("\n");
 }
 
@@ -2521,6 +2552,7 @@ jitterc_emit_interpreter_main_function
   EMIT("         the end code with the non-initialization case. */\n");
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("      //JITTER_DUMP_PATCH_IN_DESCRIPTORS(vmprefix);\n");
+  EMIT("      JITTER_DUMP_DEFECT_DESCRIPTORS(vmprefix, VMPREFIX);\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("      goto jitter_possibly_restore_registers_and_return_label;\n");
   EMIT("    }\n");
@@ -2546,9 +2578,10 @@ jitterc_emit_interpreter_main_function
 
   EMIT("  /* Declare the instruction pointer from the thread array, unless the dispatching\n");
   EMIT("     model is no-threading, in which case no thread array even exists. */\n");
-  EMIT("#ifndef JITTER_DISPATCH_NO_THREADING\n");
+  EMIT("//#ifndef JITTER_DISPATCH_NO_THREADING\n");
+  EMIT("// FIXME: comment about the new role of this under no-threading.\n");
   EMIT("  vmprefix_program_point jitter_ip = NULL; /* Invalidate to catch errors. */\n");
-  EMIT("#endif // #ifndef JITTER_DISPATCH_NO_THREADING\n\n");
+  EMIT("//#endif // #ifndef JITTER_DISPATCH_NO_THREADING\n\n");
 
   /* EMIT("  /\* Declare a variable to be supposedly used as a computed goto target for jumping;\n"); */
   /* EMIT("     to any VM instruction; in actuality the variable is not ever accessed by reachable\n"); */
@@ -2629,69 +2662,85 @@ jitterc_emit_interpreter_main_function
   EMIT("     not work as intended (which prevents the use of global and static\n");
   EMIT("     variables, string literals and possibly large literal constants), and\n");
   EMIT("     GDB gets easily confused. */\n");
-  EMIT("  vmprefix_program_point jitter_next_program_point\n");
-  EMIT("    = VMPREFIX_PROGRAM_BEGINNING(jitter_program);\n");
+  EMIT("  jitter_ip = VMPREFIX_PROGRAM_BEGINNING(jitter_program);\n\n");
+  EMIT("  /* This is the actual jump to the first instruction: it's not an\n");
+  EMIT("     inline asm constraint lie like below. */\n\n");
+  EMIT("# if   defined(JITTER_DISPATCH_SWITCH)\n");
+  EMIT("    goto jitter_dispatching_switch_label;\n");
+  EMIT("# elif (defined(JITTER_DISPATCH_DIRECT_THREADING)  \\\n");
+  EMIT("        || defined(JITTER_DISPATCH_MINIMAL_THREADING))\n");
+  EMIT("    goto * (jitter_ip->label);\n");
+  EMIT("# elif defined(JITTER_DISPATCH_NO_THREADING)\n");
+  EMIT("    //printf (\"Jumping to the first instruction at %%p\\n\", jitter_ip);\n");
+  EMIT("    goto * jitter_ip;\n");
+  EMIT("# else\n");
+  EMIT("#   error \"unknown dispatch\"\n");
+  EMIT("# endif // if ... dispatch\n");
 
   EMIT("#ifdef JITTER_REPLICATE\n");
-  EMIT(" jitter_dispatch_label: __attribute__ ((cold))\n");
+  EMIT("  /* FIXME: comment: this is the fake dispatch routine. */\n");
+  EMIT("  asm volatile (\"\" : : : \"memory\");\n");
+  EMIT(" jitter_dispatch_label: __attribute__ ((hot))\n");
+  EMIT("  asm volatile (\"\\njitter_dispatch_label_asm:\\n\" : : : \"memory\");\n");
+  EMIT("  JITTER_PRETEND_TO_UPDATE_IP_;\n");
   FOR_LIST(i, comma, vm->specialized_instructions)
     {
+      EMIT("  JITTER_PRETEND_TO_UPDATE_IP_;\n");
       const struct jitterc_specialized_instruction* sins
         = ((const struct jitterc_specialized_instruction*)
            gl_list_get_at (vm->specialized_instructions, i));
       EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL_OF(%s));\n",
            sins->mangled_name);
+      /*
+      EMIT("  JITTER_PRETEND_TO_UPDATE_IP_;\n");
       EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(%s));\n",
            sins->mangled_name);
+      */
     }
   //EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(a_label);\n");
+  EMIT("  JITTER_PRETEND_TO_UPDATE_IP_;\n");
   EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_exit_vm_label);\n");
+  EMIT("  JITTER_PRETEND_TO_UPDATE_IP_;\n");
   EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_possibly_restore_registers_and_return_label);\n");
+  EMIT("  goto jitter_dispatch_label;\n");
   EMIT("#endif // #ifdef JITTER_REPLICATE\n\n");
 
-  EMIT("  /* Actually jump (for real, not just lying in assembly constraints)\n");
-  EMIT("     to the next program point; this is only reachable for the first\n");
-  EMIT("     program point. */\n");
-  EMIT("  JITTER_BRANCH(jitter_next_program_point);\n");
-  EMIT("\n");
-  EMIT("\n");
+  /* EMIT("#ifdef JITTER_REPLICATE\n"); */
+  /* EMIT("  /\* This is actually unreachable, but I use GCC inline assembly with\n"); */
+  /* EMIT("     constraints declaring to jump here just to force the compiler to\n"); */
+  /* EMIT("     allocate registers at the end of each VM instruction in a compatible\n"); */
+  /* EMIT("     way with the beginning of any other.  This code could, in theory,\n"); */
+  /* EMIT("     jump to any label within this function -- in practice it would\n"); */
+  /* EMIT("     crash horribly if ever reached, but that is not a problem. *\/\n"); */
+  /* EMIT(" jitter_jump_anywhere_label: __attribute__ ((cold, unused));\n"); */
+  /* EMIT("  jitter_next_program_point = && jitter_dispatch_label;\n"); */
+  /* EMIT("  asm (JITTER_ASM_COMMENT_UNIQUE(\"Pretend to alter next_program_point\"\n"); */
+  /* EMIT("                                 \" at %%[next_program_point] based on\"\n"); */
+  /* EMIT("                                 \" jitter_state_runtime at %%[runtime]\"\n"); */
+  /* EMIT("                                 \" and * jitter_original_state %%[jitter_original_state].\")\n"); */
+  /* EMIT("       : [next_program_point] \"+m\" (jitter_next_program_point) // m\n"); */
+  /* /\* About the constraints on [runtime], GCC 8 20170430 snapshot, */
+  /*    tested on the JitterLisp VM: */
+  /*    - "X": */
+  /*       aarch64: invalid 'asm': invalid expression as operand */
+  /*       alpha:   ok */
+  /*       sh:      ok */
+  /*    - "ro", "rom", "romg", "roX": */
+  /*       aarch64: ok */
+  /*       alpha:   cannot reload integer constant operand in 'asm' */
+  /*       sh:      cannot reload integer constant operand in 'asm' */
+  /*    Any constraint works on the other architectures I'm testing. */
 
-  EMIT("#ifdef JITTER_REPLICATE\n");
-  EMIT("  /* This is actually unreachable, but I use GCC inline assembly with\n");
-  EMIT("     constraints declaring to jump here just to force the compiler to\n");
-  EMIT("     allocate registers at the end of each VM instruction in a compatible\n");
-  EMIT("     way with the beginning of any other.  This code could, in theory,\n");
-  EMIT("     jump to any label within this function -- in practice it would\n");
-  EMIT("     crash horribly if ever reached, but that is not a problem. */\n");
-  EMIT(" jitter_jump_anywhere_label: __attribute__ ((cold, unused));\n");
-  EMIT("  jitter_next_program_point = && jitter_dispatch_label;\n");
-  EMIT("  asm (JITTER_ASM_COMMENT_UNIQUE(\"Pretend to alter next_program_point\"\n");
-  EMIT("                                 \" at %%[next_program_point] based on\"\n");
-  EMIT("                                 \" jitter_state_runtime at %%[runtime]\"\n");
-  EMIT("                                 \" and * jitter_original_state %%[jitter_original_state].\")\n");
-  EMIT("       : [next_program_point] \"+m\" (jitter_next_program_point) // m\n");
-  /* About the constraints on [runtime], GCC 8 20170430 snapshot,
-     tested on the JitterLisp VM:
-     - "X":
-        aarch64: invalid 'asm': invalid expression as operand
-        alpha:   ok
-        sh:      ok
-     - "ro", "rom", "romg", "roX":
-        aarch64: ok
-        alpha:   cannot reload integer constant operand in 'asm'
-        sh:      cannot reload integer constant operand in 'asm'
-     Any constraint works on the other architectures I'm testing.
-
-     This is ugly.  I consider SH to be important, and Aarch64 is popular.
-     Alpha is lower-priority, but I like to support it as well.  This will
-     need a conditional.  The "X" constraint is more reasonable, so I will
-     single out aarch64. */
-  EMIT("       : [runtime] \"X\" (jitter_state_runtime) // \"X\"\n");
-  EMIT("         , [jitter_original_state] \"m\" (* jitter_original_state) // m\n");
-  EMIT("      );\n");
-  EMIT("  goto * jitter_next_program_point;\n");
-  EMIT("#endif // #ifdef JITTER_REPLICATE\n");
-  EMIT("\n");
+  /*    This is ugly.  I consider SH to be important, and Aarch64 is popular. */
+  /*    Alpha is lower-priority, but I like to support it as well.  This will */
+  /*    need a conditional.  The "X" constraint is more reasonable, so I will */
+  /*    single out aarch64. *\/ */
+  /* EMIT("       : [runtime] \"X\" (jitter_state_runtime) // \"X\"\n"); */
+  /* EMIT("         , [jitter_original_state] \"m\" (* jitter_original_state) // m\n"); */
+  /* EMIT("      );\n"); */
+  /* EMIT("  goto * jitter_next_program_point;\n"); */
+  /* EMIT("#endif // #ifdef JITTER_REPLICATE\n"); */
+  /* EMIT("\n"); */
 
   /* Generate the switch dispatcher, which expands to nothing unless
      switch-dispatching is enabled. */
@@ -2708,84 +2757,37 @@ jitterc_emit_interpreter_main_function
      manually synchronized with jitterc-vm.c in case I add, remove or change
      any special specialized instruction. */
 
-  /* !INVALID special specialized instruction.  This is never generated in
-     actual code, but it being the first in order may be useful to catch
-     errors. */
-  EMIT("  /* Special specialized instructions. */\n");
-  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, cold)\n",
-       "!INVALID", jitterc_mangle ("!INVALID"));
-  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY 0\n");
-  EMIT("  jitter_fatal (\"reached the INVALID specialized instruction\");\n");
-  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, 0)\n",
-       "!INVALID", jitterc_mangle ("!INVALID"));
-  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
-  EMIT("\n");
-
-  /* !BEGINBASICBLOCK special specialized instruction.  This is used with the
-     minimal threading dispatching mode, and serves to advance the instruction
-     pointer past the thread pointer opening a basic block.  !BEGINBASICBLOCK
-     exists under no-threading as well and is used internally at specialization
-     time, but yields no code. */
-  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, hot)\n",
-       "!BEGINBASICBLOCK", jitterc_mangle ("!BEGINBASICBLOCK"));
-  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY 0 // special case\n");
-  EMIT("#ifdef JITTER_DISPATCH_MINIMAL_THREADING\n");
-  EMIT("    JITTER_SET_IP (jitter_ip + 1);\n");
-  EMIT("#endif // #ifdef JITTER_DISPATCH_MINIMAL_THREADING\n");
-  EMIT("/* The 0 right below is a special case: the instruction actually has\n");
-  EMIT("   one residual argument, but [FIXME: explain]. */\n");
-  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, 0)\n",
-       "!BEGINBASICBLOCK", jitterc_mangle ("!BEGINBASICBLOCK"));
-  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
-  EMIT("\n");
-
-  /* !EXITVM special specialized instruction. */
-  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, cold)\n",
-       "!EXITVM", jitterc_mangle ("!EXITVM"));
-  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY 0\n");
-  EMIT("    JITTER_COMMENT_IN_ASM(\"!EXITVM special specialized instruction\");\n");
-  EMIT("    JITTER_EXIT();\n");
-  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, 0)\n",
-       "!EXITVM", jitterc_mangle ("!EXITVM"));
-  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
-  EMIT("  /* End of the special specialized instructions. */\n\n");
-  EMIT("\n");
-
-  /* First unreachable special specialized instruction. */
-  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, cold)\n",
-       "!UNREACHABLE0", jitterc_mangle ("!UNREACHABLE0"));
-  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY 0\n");
-  EMIT("  /* This special specialized instruction is never actually used,\n");
-  EMIT("     but contains code which the compiler needs to consider to be\n");
-  EMIT("     reachable, in order to prevent some undesired\n");
-  EMIT("     transformations. */\n");
-  EMIT("  /* Not currently used. */\n");
-  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, 0)\n",
-       "!UNREACHABLE0", jitterc_mangle ("!UNREACHABLE0"));
-  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
-  EMIT("\n");
-
-  /* Second unreachable special specialized instruction. */
-  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, cold)\n",
-       "!UNREACHABLE1", jitterc_mangle ("!UNREACHABLE1"));
-  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY 0\n");
-  EMIT("  /* See the comment about !UNREACHABLE0 . */\n");
-  EMIT("  JITTER_EXIT();\n");
-  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, 0)\n",
-       "!UNREACHABLE1", jitterc_mangle ("!UNREACHABLE1"));
-  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
-  EMIT("\n");
-
-  /* Third unreachable special specialized instruction. */
-  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, cold)\n",
-       "!UNREACHABLE2", jitterc_mangle ("!UNREACHABLE2"));
-  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY 0\n");
-  EMIT("  /* See the comment about !UNREACHABLE0 . */\n");
-  EMIT("  JITTER_EXIT();\n");
-  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, 0)\n",
-       "!UNREACHABLE2", jitterc_mangle ("!UNREACHABLE2"));
-  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
-  EMIT("\n");
+  jitterc_emit_interpreter_special_specialized_instruction
+     (f, vm, "!INVALID",
+      jitter_specialized_instruction_opcode_INVALID,
+      "cold", 0,
+      "jitter_fatal (\"reached the !INVALID instruction\");");
+  jitterc_emit_interpreter_special_specialized_instruction
+     (f, vm, "!BEGINBASICBLOCK",
+      jitter_specialized_instruction_opcode_BEGINBASICBLOCK,
+      "hot", /* This zero is a special case.  FIXME: explain. */0,
+      "#ifdef JITTER_DISPATCH_MINIMAL_THREADING\n"
+      "  JITTER_SET_IP (jitter_ip + 1);\n"
+      "#endif // #ifdef JITTER_DISPATCH_MINIMAL_THREADING\n");
+  jitterc_emit_interpreter_special_specialized_instruction
+     (f, vm, "!EXITVM",
+      jitter_specialized_instruction_opcode_EXITVM,
+      "cold", 0, "JITTER_EXIT();");
+  jitterc_emit_interpreter_special_specialized_instruction
+     (f, vm, "!UNREACHABLE0",
+      jitter_specialized_instruction_opcode_UNREACHABLE0,
+      "cold", 0,
+      "jitter_fatal (\"reached the !UNREACHABLE0 instruction\");");
+  jitterc_emit_interpreter_special_specialized_instruction
+     (f, vm, "!UNREACHABLE1",
+      jitter_specialized_instruction_opcode_UNREACHABLE1,
+      "cold", 0,
+      "jitter_fatal (\"reached the !UNREACHABLE0 instruction\");");
+  jitterc_emit_interpreter_special_specialized_instruction
+     (f, vm, "!UNREACHABLE2",
+      jitter_specialized_instruction_opcode_UNREACHABLE2,
+      "cold", 0,
+      "jitter_fatal (\"reached the !UNREACHABLE0 instruction\");");
 
   /* Generate code for the ordinary specialized instructions as specified in
      user code. */
@@ -2850,9 +2852,10 @@ jitterc_emit_patch_in_footer (FILE *f, const struct jitterc_vm *vm)
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("  /* Close the patch-in global definition for this interpreter.  This defines a\n");
   EMIT("     new global in the patch-in subsection, holding the descriptor number.\n");
-  EMIT("     This is a global asm statement.  See the comment before the\n");
-  EMIT("     JITTER_PATCH_IN_HEADER call above. */\n");
+  EMIT("     This is a global asm statement.  Same for defects.  See the comment before\n");
+  EMIT("      the JITTER_PATCH_IN_HEADER use above. */\n");
   EMIT("  JITTER_PATCH_IN_FOOTER(vmprefix);\n");
+  EMIT("  JITTER_DEFECT_FOOTER(vmprefix);\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
 }
 
@@ -2991,7 +2994,8 @@ jitterc_emit_interpreter (const struct jitterc_vm *vm)
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("# include <jitter/jitter-fast-branch.h>\n");
   EMIT("\n");
-  EMIT("  JITTER_PATCH_IN_DESCRIPTOR_DECLARATIONS(vmprefix)\n");
+  EMIT("  JITTER_DEFECT_DESCRIPTOR_DECLARATIONS_(vmprefix);\n");
+  EMIT("  JITTER_PATCH_IN_DESCRIPTOR_DECLARATIONS_(vmprefix);\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
 
   EMIT("/* Always include fast-branch definitions, which use patch-ins where possible\n");
@@ -3035,7 +3039,7 @@ jitterc_emit_interpreter (const struct jitterc_vm *vm)
 
 
 
-/* String replacement in templates and generated files.
+/* File copying utility.
  * ************************************************************************** */
 
 static void

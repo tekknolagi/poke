@@ -21,6 +21,7 @@
 
 #include <jitter/jitter-patch-in.h>
 
+
 /* Do nothing if not using fast branches.
  * ************************************************************************** */
 

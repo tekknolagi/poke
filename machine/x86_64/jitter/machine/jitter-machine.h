@@ -38,7 +38,7 @@
 /* If this macro is defined then implement branch-and-link differently, without
    using callq and retq: instead use %rip-relative address to compute the link
    address with a leaq instruction, load the return address into the scratch
-   register, and do a regular jump.
+   register, here used like a link register, and do a regular jump.
    This ended up being slower than the obvious solution on the machines I
    tested but is useful to keep as an example, possibly to be adapted to
    other architectures */
@@ -136,7 +136,8 @@
   do                                                                            \
     {                                                                           \
       /* In AT&T syntax operand1 comes before operand0: this is not a mistake. */ \
-      asm goto (asm_instruction_name " %[jitter_operand1], %[jitter_operand0]\n\t" \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                    \
+                asm_instruction_name " %[jitter_operand1], %[jitter_operand0]\n\t" \
                 JITTER_ASM_PATCH_IN_PLACEHOLDER(                                \
                    JITTER_PATCH_IN_SIZE_FAST_BRANCH_CONDITIONAL /*size_in_bytes*/, \
                    case /*case*/,                                               \
@@ -148,7 +149,7 @@
                   [jitter_operand1] constraints1 (operand1),                    \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
                 : "cc" /* clobbers */                                           \
-                : jitter_jump_anywhere_label /* goto labels */);                \
+                : jitter_dispatch_label /* goto labels */);                \
     }                                                                           \
   while (false)
 
@@ -257,6 +258,10 @@
 
 #ifdef JITTER_BRANCH_AND_LINK_NO_CALL
 
+/* In this configuration I don't use the hardware stack to hold return
+   addresses; instead I will use simple jumps to transfer control, and
+   the scratch register as a link register. */
+
 /* Procedure prolog, the version not relying on callq / retq . */
 #define _JITTER_PROCEDURE_PROLOG(link_lvalue)                           \
   do                                                                    \
@@ -273,12 +278,12 @@
 #define JITTER_RETURN(link_rvalue)                                    \
   do                                                                  \
     {                                                                 \
-      asm goto ("jmpq *%[the_link_rvalue]\n\t"                        \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                          \
+                "jmpq *%[the_link_rvalue]\n\t"                        \
                 : /* outputs. */                                      \
-                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,              \
-                  [the_link_rvalue] "rm" (link_rvalue) /* inputs. */  \
+                : [the_link_rvalue] "rm" (link_rvalue) /* inputs. */  \
                 : /* clobbers. */                                     \
-                : jitter_jump_anywhere_label /* gotolabels. */);      \
+                : jitter_dispatch_label /* gotolabels. */);      \
       /* The rest of the VM instruction is unreachable. */            \
       __builtin_unreachable ();                                       \
     }                                                                 \
@@ -288,15 +293,15 @@
 #define _JITTER_BRANCH_AND_LINK(callee_rvalue)                               \
   do                                                                         \
     {                                                                        \
-      asm goto ("leaq jitter_return_address_%=(%%rip), %"                    \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                 \
+                "leaq jitter_return_address_%=(%%rip), %"                    \
                    JITTER_STRINGIFY(JITTER_SCRATCH_REGISTER) "\n\t"          \
                 "jmpq *%[the_callee_rvalue]\n"                               \
                 "jitter_return_address_%=:\n"                                \
                 : /* outputs. */                                             \
-                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                     \
-                  [the_callee_rvalue] "rm" (callee_rvalue) /* inputs. */     \
+                : [the_callee_rvalue] "rm" (callee_rvalue) /* inputs. */     \
                 : /* clobbers. */                                            \
-                : jitter_jump_anywhere_label /* gotolabels. */);             \
+                : jitter_dispatch_label /* gotolabels. */);             \
       /* Skip the rest of the specialized instruction, for compatibility */  \
       /* with more limited dispatches. */                                    \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                            \
@@ -308,7 +313,8 @@
 #define _JITTER_BRANCH_AND_LINK_FAST(target_index)                              \
   do                                                                            \
     {                                                                           \
-      asm goto ("leaq jitter_return_address_%=(%%rip), %"                       \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                    \
+                "leaq jitter_return_address_%=(%%rip), %"                       \
                    JITTER_STRINGIFY(JITTER_SCRATCH_REGISTER) "\n\t"             \
                 JITTER_ASM_PATCH_IN_PLACEHOLDER(                                \
                    JITTER_PATCH_IN_SIZE_FAST_BRANCH_UNCONDITIONAL /*size_in_bytes*/, \
@@ -320,10 +326,34 @@
                 : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                        \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
                 : /* clobbers. */                                               \
-                : jitter_jump_anywhere_label /* gotolabels. */);                \
+                : jitter_dispatch_label /* gotolabels. */);                \
       /* Skip the rest of the specialized instruction, for compatibility */     \
       /* with more limited dispatches. */                                       \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                               \
+    }                                                                           \
+  while (false)
+
+/* Branch-and-link-with, the version not relying on callq / retq -- or in this
+   case, not relying on the hardware stack to hold the return address. */
+#define JITTER_BRANCH_AND_LINK_WITH(_jitter_callee_rvalue, _jitter_new_link)    \
+  do                                                                            \
+    {                                                                           \
+      const void *jitter_callee_rvalue = (_jitter_callee_rvalue);               \
+      const void *jitter_new_link = (_jitter_new_link);                         \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                    \
+                JITTER_ASM_COMMENT_UNIQUE("Branch-and-link-with, pretending "   \
+                                          "to go to %l[jitter_dispatch_label]") \
+                "movq %[jitter_new_link], %"                                    \
+                   JITTER_STRINGIFY(JITTER_SCRATCH_REGISTER) "\n\t"             \
+                "jmpq *%[jitter_target]\n"                                      \
+                : /* outputs */                                                 \
+                : [jitter_new_link] "g" (jitter_new_link),                      \
+                  [jitter_target] "g" (jitter_callee_rvalue) /* inputs */       \
+                : /* clobbers */                                                \
+                : jitter_dispatch_label /* goto labels */);                     \
+      /* This is a tail call: the next statement within this VM instruction is  \
+         not reachable. */                                                      \
+      __builtin_unreachable ();                                                 \
     }                                                                           \
   while (false)
 #endif // #ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN
@@ -367,33 +397,59 @@
 #define JITTER_RETURN(link_rvalue)                                    \
   do                                                                  \
     {                                                                 \
-      asm goto ("pushq %[the_link_rvalue]\n\t"                        \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                          \
+                "pushq %[the_link_rvalue]\n\t"                        \
                 "retq"                                                \
                 : /* outputs. */                                      \
-                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,              \
-                  [the_link_rvalue] "rm" (link_rvalue) /* inputs. */  \
+                : [the_link_rvalue] "g" (link_rvalue) /* inputs. */   \
                 : /* clobbers. */                                     \
-                : jitter_jump_anywhere_label /* gotolabels. */);      \
+                : jitter_dispatch_label /* gotolabels. */);           \
       /* The rest of the VM instruction is unreachable. */            \
       __builtin_unreachable ();                                       \
     }                                                                 \
   while (false)
+
+/* /\* Branch-and-link, the version relying on callq / retq . *\/ */
+/* #define _JITTER_BRANCH_AND_LINK(callee_rvalue)                              \ */
+/*   do                                                                        \ */
+/*     {                                                                       \ */
+/*       const void * restrict jitter_call_indirect_target = (callee_rvalue);  \ */
+/*       asm goto (JITTER_ASM_DEFECT_DESCRIPTOR "# Do a real call, pretending to go to\n\t"                 \ */
+/*                 "# %l[jitter_dispatch_label]\n\t"                      \ */
+/*                 "callq *%[target]\n"                                        \ */
+/*                 : /\* outputs *\/                                             \ */
+/*                 : [target] "rm" (jitter_call_indirect_target) /\* inputs *\/  \ */
+/*                 : /\* clobbers *\/                                            \ */
+/*                 : jitter_dispatch_label /\* goto labels *\/);            \ */
+/*       /\* Make the rest of the VM instruction unreachable. *\/                \ */
+/*       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                           \ */
+/*     }                                                                       \ */
+/*   while (false) */
 
 /* Branch-and-link, the version relying on callq / retq . */
 #define _JITTER_BRANCH_AND_LINK(callee_rvalue)                              \
   do                                                                        \
     {                                                                       \
       const void * restrict jitter_call_indirect_target = (callee_rvalue);  \
-      asm goto ("# Do a real call, pretending to go to\n\t"                 \
-                "# %l[jitter_jump_anywhere_label]\n\t"                      \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                \
+                "# Do a real call, pretending to go to\n\t"                 \
+                "# %l[jitter_dispatch_label]\n\t"                      \
                 "callq *%[target]\n"                                        \
+                /* \
+"#.ifgt (%l[" JITTER_STRINGIFY(JITTER_SPECIALIZED_INSTRUCTION_END_LABEL) "] - .Lfoo)\n\t"\
+"jmp %l[" JITTER_STRINGIFY(JITTER_SPECIALIZED_INSTRUCTION_END_LABEL) "]\n"\
+"#.endif\n" \
+".Lfoo%=:\n"\ */ \
                 : /* outputs */                                             \
-                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                    \
-                  [target] "rm" (jitter_call_indirect_target) /* inputs */  \
+                : [target] "rm" (jitter_call_indirect_target) /* inputs */  \
+, "X"(jitter_ip)\
+/*, "X"(jitter_state_runtime)*/\
                 : /* clobbers */                                            \
-                : jitter_jump_anywhere_label /* goto labels */);            \
-      /* Make the rest of the VM instruction unreachable. */                \
-      JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                           \
+                : jitter_dispatch_label/*, \
+ JITTER_SPECIALIZED_INSTRUCTION_END_LABEL*/ /* goto labels */\
+                    );            \
+      /*__builtin_unreachable (); */\
+      JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END; \
     }                                                                       \
   while (false)
 
@@ -402,7 +458,8 @@
 #define _JITTER_BRANCH_AND_LINK_FAST(target_index)                              \
   do                                                                            \
     {                                                                           \
-      asm goto (JITTER_ASM_PATCH_IN_PLACEHOLDER(                                \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                    \
+                JITTER_ASM_PATCH_IN_PLACEHOLDER(                                \
                    JITTER_PATCH_IN_SIZE_FAST_BRANCH_BRANCH_AND_LINK /*size_in_bytes*/, \
                    JITTER_PATCH_IN_CASE_FAST_BRANCH_BRANCH_AND_LINK /*case*/,   \
                    target_index,                                                \
@@ -411,12 +468,36 @@
                 : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                        \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
                 : /* clobbers */                                                \
-                : jitter_jump_anywhere_label /* goto labels */);                \
+                : jitter_dispatch_label /* goto labels */);                \
       /* Make the rest of the VM instruction unreachable. */                    \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                               \
     }                                                                           \
   while (false)
 #endif // #ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN
+
+/* Branch-and-link-with, the version relying on callq / retq -- in this case,
+   relying on the hardware stack to hold the return address. */
+#define JITTER_BRANCH_AND_LINK_WITH(_jitter_callee_rvalue, _jitter_new_link)    \
+  do                                                                            \
+    {                                                                           \
+      const void *jitter_callee_rvalue = (_jitter_callee_rvalue);               \
+      const void *jitter_new_link = (_jitter_new_link);                         \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                    \
+                JITTER_ASM_COMMENT_UNIQUE("Branch-and-link-with, pretending "   \
+                                          "to go to %l[jitter_dispatch_label]") \
+                "pushq %[jitter_new_link]\n\t"                                  \
+                "jmpq *%[jitter_target]\n"                                      \
+                : /* outputs */                                                 \
+                : [jitter_new_link] "g" (jitter_new_link),                      \
+                  [jitter_target] "r" (jitter_callee_rvalue) /* inputs */       \
+                : /* clobbers */                                                \
+                : jitter_dispatch_label /* goto labels */);                     \
+      /* This is a tail call: the next statement within this VM instruction is  \
+         not reachable. */                                                      \
+      __builtin_unreachable ();                                                 \
+    }                                                                           \
+  while (false)
+
 
 #endif // #ifdef JITTER_BRANCH_AND_LINK_NO_CALL
 

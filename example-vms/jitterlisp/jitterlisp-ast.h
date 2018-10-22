@@ -59,14 +59,15 @@ enum jitterlisp_ast_case
        actual. */
     jitterlisp_ast_case_primitive,
 
-    /* Procedure call.  At least one sub, the operand as an AST, then one AST
-       per actual. */
+    /* Procedure call.  At least one sub, the operator as an AST, then one AST
+       per actual operand. */
     jitterlisp_ast_case_call,
 
     /* Procedure abstraction.  Exactly two subs, one list of symbols for the
-       formals and one AST for the body.  This is different from other cases,
-       but allows the list of formals to be reused as a shared read-only datum,
-       making closure initialization faster. */
+       formals and one AST for the body.  This AST shape having a list as a sub
+       is different from the other cases, but allows the list of formals to be
+       reused as a shared read-only datum, making closure initialization
+       faster. */
     jitterlisp_ast_case_lambda,
 
     /* One-binding let.  Exactly three subs: one symbol for the variable, one

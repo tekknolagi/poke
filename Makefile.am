@@ -225,11 +225,15 @@ generated-c-files: $(BUILT_SOURCES)
 # not rely on Gnulib.
 noinst_LTLIBRARIES += lib/libjitterutility--convenience.la
 lib_libjitterutility__convenience_la_SOURCES = \
+  jitter/jitter-bitwise.h \
   jitter/jitter-cpp.h \
   jitter/jitter-fatal.h jitter/jitter-fatal.c \
   jitter/jitter-malloc.h jitter/jitter-malloc.c \
   jitter/jitter-dynamic-buffer.h jitter/jitter-dynamic-buffer.c \
   jitter/jitter-hash.h jitter/jitter-hash.c jitter/jitter-hash-random-table.c \
+  jitter/jitter-heap.h jitter/jitter-heap.c \
+  jitter/jitter-heap-debug.h jitter/jitter-heap-debug.c \
+  jitter/jitter-list.h jitter/jitter-list.c \
   jitter/jitter-parse-int.h jitter/jitter-parse-int.c \
   jitter/jitter-print-binary.h jitter/jitter-print-binary.c \
   jitter/jitter-readline.h jitter/jitter-readline.c \
@@ -239,15 +243,28 @@ lib_libjitterutility__convenience_la_SOURCES = \
 # Jitter-generated code in VMs, so they belong in the jitterinclude directory
 # along with the rest of the runtime library.
 jitterinclude_HEADERS += \
+  jitter/jitter-bitwise.h \
   jitter/jitter-cpp.h \
   jitter/jitter-fatal.h \
   jitter/jitter-malloc.h \
   jitter/jitter-dynamic-buffer.h \
   jitter/jitter-hash.h \
+  jitter/jitter-heap.h \
+  jitter/jitter-heap-debug.h \
+  jitter/jitter-list.h \
   jitter/jitter-parse-int.h \
   jitter/jitter-print-binary.h \
   jitter/jitter-readline.h \
   jitter/jitter-string.h
+
+# Unit tests for libjitterutility.
+if JITTER_ENABLE_TEST_SUITE
+  check_PROGRAMS += tests/unit/heap-test
+tests_unit_heap_test_SOURCES = tests/unit/heap-test.c
+tests_unit_heap_test_LDADD = \
+  lib/libjitterutility--convenience.la \
+  $(LDADD_FOR_GNULIB)
+endif # if JITTER_ENABLE_TEST_SUITE
 
 
 # jitterc frontend.
@@ -425,7 +442,9 @@ SOURCES_FOR_LIBJITTER = \
   jitter/jitter-vm.c jitter/jitter-vm.h \
   jitter/jitter-machine-common.S jitter/jitter-machine-common.h \
   jitter/jitter-patch.c jitter/jitter-patch.h \
+  jitter/jitter-sections.c jitter/jitter-sections.h \
   jitter/jitter-patch-in.c jitter/jitter-patch-in.h \
+  jitter/jitter-defect.c jitter/jitter-defect.h \
   jitter/jitter-stack.c jitter/jitter-stack.h
 
 # The libjitter headers meant for public use (and all the headers they include
@@ -436,6 +455,7 @@ SOURCES_FOR_LIBJITTER = \
 jitterinclude_HEADERS += \
   jitter/jitter.h \
   jitter/jitter-config.h \
+  jitter/jitter-defect.h \
   jitter/jitter-dispatch.h \
   jitter/jitter-fast-branch.h \
   jitter/jitter-instruction.h \
@@ -448,6 +468,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-patch-in.h \
   jitter/jitter-parser.h \
   jitter/jitter-scanner.h \
+  jitter/jitter-sections.h \
   jitter/jitter-tagging.h \
   jitter/jitter-stack.h \
   jitter/jitter-vm.h

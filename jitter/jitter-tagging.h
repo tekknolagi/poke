@@ -458,14 +458,41 @@ jitter_tagged_object;
 
 /* Assumung that _jitter_word evaluates to a stage-tagged object with
    the given stage-tag value and size to a header-tagged object, expand to an
-   r-value evaluating to the object header tag. */
-#define JITTER_GET_HEADER_TAG(_jitter_word,                    \
-                              _jitter_stage_tag,               \
-                              _jitter_stage_tag_bit_no)        \
+   l-value evaluating to the object header tag. */
+#define JITTER_HEADER_TAG(_jitter_word,                        \
+                          _jitter_stage_tag,                   \
+                          _jitter_stage_tag_bit_no)            \
   (* ((jitter_uint *)                                          \
       (JITTER_UNBOX_TO_CHAR_STAR(_jitter_word,                 \
                                  _jitter_stage_tag,            \
                                  _jitter_stage_tag_bit_no))))
+
+/* Assumung that _jitter_word evaluates to a stage-tagged object with
+   the given stage-tag value and size to a header-tagged object, expand to an
+   r-value evaluating to the object header tag. */
+#define JITTER_GET_HEADER_TAG(_jitter_word,              \
+                              _jitter_stage_tag,         \
+                              _jitter_stage_tag_bit_no)  \
+  JITTER_HEADER_TAG(_jitter_word,                        \
+                    _jitter_stage_tag,                   \
+                    _jitter_stage_tag_bit_no)
+
+/* Assumung that _jitter_word evaluates to a stage-tagged object with the given
+   stage-tag value and size to a header-tagged object, expand to a statement
+   setting the object header tag to the given value.  This is useful for
+   initializing a just-allocated object. */
+#define JITTER_SET_HEADER_TAG(_jitter_word,              \
+                              _jitter_stage_tag,         \
+                              _jitter_stage_tag_bit_no,  \
+                              _jitter_header_tag)        \
+  do                                                     \
+    {                                                    \
+      JITTER_HEADER_TAG(_jitter_word,                    \
+                        _jitter_stage_tag,               \
+                        _jitter_stage_tag_bit_no)        \
+        = (_jitter_header_tag);                          \
+    }                                                    \
+  while (false)
 
 /* Assuming that the given word evaluates to a stage-tagged object expand
    to an r-value evaluating to a boolean, non-false iff the header tag has
@@ -547,5 +574,20 @@ jitter_tagged_object;
      - a macro either initializing the header tag of one such structure if
        a header tag exists, or doing nothing otherwise.
  */
+
+
+
+
+/* Scratch.
+ * ************************************************************************** */
+
+#define JITTER_TAGGING_SHAPE_UNBOXED_SHIFTED          0
+#define JITTER_TAGGING_SHAPE_UNBOXED_UNSHIFTED        1
+#define JITTER_TAGGING_SHAPE_BOXED_HEADER_TAGGED      2
+#define JITTER_TAGGING_SHAPE_BOXED_NON_HEADER_TAGGED  3
+
+#define JITTER_
+
+
 
 #endif // #ifndef JITTER_TAGGING_H_

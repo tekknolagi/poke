@@ -285,14 +285,20 @@ jitterlisp_add_litter_block (size_t block_size_in_bytes)
   bool is_this_block_the_first = jitterlisp_litter_heap_size == 0;
   jitterlisp_litter_heap_size += block_size_in_bytes;
 
-#define JITTERLIST_TO_MB(x) ((x) / 1024.0 / 1024.0)
+#define JITTERLIST_TO_MIB(x) ((x) / 1024.0 / 1024.0)
   /* Log, unless disabled, if the block is not the first (the first block
      allocation is uninteresting). */
   if (jitterlisp_settings.verbose_litter && ! is_this_block_the_first)
-    fprintf (stderr, "New %.1fMB litter block.  The heap is now %.1fMB.\n",
-             JITTERLIST_TO_MB(block_size_in_bytes),
-             JITTERLIST_TO_MB(jitterlisp_litter_heap_size));
-#undef JITTERLIST_TO_MB
+    {
+      /* Flush whatever still needs to be written on stdout before writing
+         this slightly annoying message. */
+      fflush (stdout);
+      /* Write a very compact mesasge to stderr, and flush. */
+      fprintf (stderr, "[Litter%luMiB]",
+               (unsigned long) JITTERLIST_TO_MIB(jitterlisp_litter_heap_size));
+      fflush (stderr);
+    }
+#undef JITTERLIST_TO_MIB
 }
 
 static void

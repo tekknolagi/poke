@@ -137,6 +137,16 @@
 /* Macros to let GCC see variables as changed.
  * ************************************************************************** */
 
+// FIXME: use in the definitions below.
+#define JITTER_MARK_AS_ASM_OUTPUT_(_jitter_constraint, _jitter_lvalue)  \
+  asm (JITTER_ASM_COMMENT_UNIQUE("Pretend to set "                      \
+                                 JITTER_STRINGIFY(_jitter_lvalue)       \
+                                 " with a "                             \
+                                 _jitter_constraint                     \
+                                 " constraint in "                      \
+                                 "%[the_jitter_lvalue]")                \
+       : [the_jitter_lvalue] _jitter_constraint (_jitter_lvalue))
+
 // FIXME: comment
 #define JITTER_MARK_RVALUE_AS_READ_BY_ASSEMBLY(variable)                   \
   asm volatile (JITTER_ASM_COMMENT_UNIQUE("Pretend to read the register or memory variable " \
@@ -154,7 +164,7 @@
   asm volatile (JITTER_ASM_COMMENT_UNIQUE("Pretend to read and write the register or memory variable " \
                                    JITTER_STRINGIFY(variable) " in "          \
                                    "%[_variable]")                            \
-                : [_variable] "+X" (variable))
+                : [_variable] "+g" (variable))
 
 #define JITTER_MARK_REGISTER_AS_DEFINED_BY_ASSEMBLY(variable)                     \
   asm volatile (JITTER_ASM_COMMENT_UNIQUE("Pretend to write the register variable " \
@@ -184,23 +194,52 @@
 
 
 
+/* Fallback defect descriptors.
+ * ************************************************************************** */
+
+/* If defect descriptors are not supported, provide a dummy compatibility macro
+   expanding to an empty string.
+   FIXME: use defect descriptors, when possible, with minimal threading. */
+#ifndef JITTER_ASM_DEFECT_DESCRIPTOR
+# define JITTER_ASM_DEFECT_DESCRIPTOR ""
+#endif // #ifndef JITTER_ASM_DEFECT_DESCRIPTOR
+
+
+
 /* Macros to let GCC see jumps to indeterminate locations.
  * ************************************************************************** */
 
 // FIXME: comment.
-#define JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(_jitter_label)                 \
-  asm goto (JITTER_ASM_COMMENT_UNIQUE("Pretend to possibly jump to "       \
-                                      JITTER_STRINGIFY(_jitter_label)      \
-                                      " at %l["                            \
-                                      JITTER_STRINGIFY(_jitter_label)      \
-                                      "] based on "                        \
-                                      " jitter_next_program_point"         \
-                                      " at %[jitter_next_program_point]")  \
-            : /* outputs */                                                \
-            : [jitter_next_program_point] "m" (jitter_next_program_point)  \
-              /* inputs */                                                 \
-            : /* clobbers */                                               \
+#ifdef JITTER_DISPATCH_NO_THREADING
+# define JITTER_IP_INPUT_CONSTRAINT "g"
+#else
+# define JITTER_IP_INPUT_CONSTRAINT "r"
+#endif
+
+// FIXME: comment.
+// FIXME: remove.  Fake-jumping to an arbitrary label different from
+// jitter_dispatch_label doesn't work well with defect descriptors.
+#define JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(_jitter_label)                  \
+  asm goto (JITTER_ASM_COMMENT_UNIQUE("Pretend to possibly jump to "        \
+                                      JITTER_STRINGIFY(_jitter_label)       \
+                                      " at %l["                             \
+                                      JITTER_STRINGIFY(_jitter_label)       \
+                                      "] based on "                         \
+                                      " jitter_ip"                          \
+                                      " at %[jitter_ip]")                   \
+            : /* outputs */                                                 \
+            : [jitter_ip] JITTER_IP_INPUT_CONSTRAINT (jitter_ip)  \
+              /* inputs */                                                  \
+            : /* clobbers */                                                \
             : /* jump destinations */ _jitter_label)
+
+#define JITTER_PRETEND_TO_UPDATE_IP_                          \
+  JITTER_MARK_AS_ASM_OUTPUT_("+" JITTER_IP_INPUT_CONSTRAINT,  \
+                             jitter_ip)
+
+#define JITTER_PRETEND_TO_JUMP_TO_(_jitter_label)      \
+  JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(_jitter_label);  \
+  __builtin_unreachable ()
 
 /* Expand to zero assembly instructions, but with inline asm constraints
    affecting GCC's program representation as if the generated code could either
@@ -210,8 +249,15 @@
 #define JITTER_PRETEND_TO_POSSIBLY_JUMP_ANYWHERE            \
   do                                                        \
     {                                                       \
-      JITTER_COMPUTED_GOTO(&& jitter_jump_anywhere_label);  \
-    }                                                       \
+      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                \
+                JITTER_ASM_COMMENT_UNIQUE( \
+                   "# Pretending to possibly jump to " \
+                   "%l[jitter_dispatch_label] thru %[jitter_ip]") \
+                : \
+                : [jitter_ip] "X" (jitter_ip) \
+                : \
+                : jitter_dispatch_label); \
+    }                                                                  \
   while (false)
 
 /* Expand to zero assembly instructions, but with inline asm constraints and
@@ -363,7 +409,11 @@
   JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL_OF(mangled_name):             \
     __attribute__ ((hotness_attribute));                                   \
 JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
-                      ": begin");
+                      ": begin"); \
+/* NEW*/\
+ /*JITTER_PRETEND_TO_UPDATE_IP_;*/\
+ /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name))*/;
+
 #endif // defined(JITTER_DISPATCH_SWITCH)
 
 /* How many words are used to encode the current specialized instruction, given
@@ -411,34 +461,39 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
 #if   defined(JITTER_DISPATCH_SWITCH)
 # define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
     JITTER_SKIP_RESIDUALS;                                              \
-    JITTER_BRANCH_TO_IP();                                              \
-    JITTER_COMMENT_IN_ASM_UNIQUE("Specialized instruction "             \
-                                 JITTER_STRINGIFY(name)                 \
-                                 ": after jumping back to switch");
+    JITTER_BRANCH_TO_IP();
 #elif defined(JITTER_DISPATCH_DIRECT_THREADING)
 # define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
       JITTER_SKIP_RESIDUALS;                                            \
       JITTER_BRANCH_TO_IP();                                            \
-      JITTER_COMMENT_IN_ASM("Specialized instruction "                  \
-                            JITTER_STRINGIFY(name) ": end");            \
-} \
-    JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):          \
-      __builtin_unreachable ();
+    }                                                                   \
+   JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):           \
+     __builtin_unreachable ();
 #elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
 # define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
       JITTER_SKIP_RESIDUALS;                                            \
-    JITTER_COMMENT_IN_ASM("Specialized instruction "                    \
-                          JITTER_STRINGIFY(name) ": end");              \
-} \
-    JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):          \
-      JITTER_PRETEND_TO_JUMP_ANYWHERE;
+    } \
+    /*asm volatile ("nopl (0xaa)");*/ \
+    /*JITTER_PRETEND_TO_UPDATE_IP_;*/ \
+    JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label); \
+    /*asm volatile ("nopl (0xbb)");*/ \
+    /*asm volatile ("nop");*/\
+   JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):          \
+   /*asm volatile ("nop");*/\
+   /*asm volatile ("nopl (0xcc)");*/ \
+    JITTER_PRETEND_TO_UPDATE_IP_; \
+    JITTER_PRETEND_TO_JUMP_TO_(jitter_dispatch_label);
 #elif defined(JITTER_DISPATCH_NO_THREADING)
 # define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
-    JITTER_COMMENT_IN_ASM("Specialized instruction "                    \
-                          JITTER_STRINGIFY(name) ": end");              \
-} \
-    JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):          \
-      JITTER_PRETEND_TO_JUMP_ANYWHERE;
+    } \
+    /*asm volatile ("addi $0, $0, 1");*/\
+    /*JITTER_PRETEND_TO_UPDATE_IP_;*/ \
+    JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label); \
+    /*asm volatile ("addi $0, $0, 2");*/\
+   JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):          \
+    /*asm volatile ("addi $0, $0, 3");*/\
+    JITTER_PRETEND_TO_UPDATE_IP_; \
+    JITTER_PRETEND_TO_JUMP_TO_(jitter_dispatch_label);
 #else
 # error "unknown dispatching model"
 #endif // #if   defined(JITTER_DISPATCH_DIRECT_THREADING)
@@ -549,12 +604,13 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
     do                                                                         \
       {                                                                        \
         const void *_jitter_the_target = (const void*) (target);               \
-        asm goto (JITTER_ASM_COMMENT_UNIQUE("goto* in assembly to "            \
+        asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                 \
+                  JITTER_ASM_COMMENT_UNIQUE("goto* in assembly to "            \
                                             JITTER_STRINGIFY(target) " "       \
                                             "at %[_jitter_the_target], "       \
-                                            "and not actually going to "       \
-                                            "jitter_jump_anywhere_label at "   \
-                                            "%l[jitter_jump_anywhere_label]")  \
+                                            "not actually going to "           \
+                                            "jitter_dispatch_label at "        \
+                                            "%l[jitter_dispatch_label]")       \
                   JITTER_ASM_COMPUTED_GOTO_TEMPLATE                            \
                   : /* outputs */                                              \
                   : [_jitter_the_target]                                       \
@@ -564,7 +620,7 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
                     /* inputs */                                               \
                   : JITTER_ASM_COMPUTED_GOTO_CLOBBERS /* clobbers */           \
 /*, "memory" */                                            \
-                  : jitter_jump_anywhere_label /* gotolabels */);              \
+                  : jitter_dispatch_label /* gotolabels */);              \
         __builtin_unreachable();                                               \
       }                                                                        \
     while (false)
@@ -593,19 +649,6 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
 /* VM branching.
  * ************************************************************************** */
 
-/* Expand to a statement jumping back to the dispatching switch.  This only
-   makes sense for switch dispatching, and is not defiend for any other
-   dispatching model. */
-#ifdef JITTER_DISPATCH_SWITCH
-# define JITTER_JUMP_TO_SWITCH                 \
-    do                                         \
-      {                                        \
-        goto jitter_dispatching_switch_label;  \
-      }                                        \
-    while (false)
-
-#endif // #ifdef JITTER_DISPATCH_SWITCH
-
 /* Set the VM instruction pointer.  This is only defined for dispatching
    models where an instruction pointer exists. */
 #if      defined(JITTER_DISPATCH_SWITCH)             \
@@ -620,13 +663,13 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
 #endif // #if      defined(JITTER_DISPATCH_SWITCH) || ...
 
 /* Jump to the current VM instruction pointer.  This is only defined for
-   dispatching models where an instruction pointer exists.*/
+   dispatching models where an instruction pointer is actually used.*/
 #if      defined(JITTER_DISPATCH_SWITCH)
-# define JITTER_BRANCH_TO_IP()  \
-    do                          \
-      {                         \
-        JITTER_JUMP_TO_SWITCH;  \
-      }                         \
+# define JITTER_BRANCH_TO_IP()                 \
+    do                                         \
+      {                                        \
+        goto jitter_dispatching_switch_label;  \
+      }                                        \
     while (false)
 #elif    defined(JITTER_DISPATCH_DIRECT_THREADING)   \
       || defined(JITTER_DISPATCH_MINIMAL_THREADING)
@@ -728,6 +771,35 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
 #else
 # error "unknown dispatching model"
 #endif
+
+/* Define the branch-and-link-with operation, in a way similar to
+   _JITTER_BRANCH_AND_LINK just above.  In this case, however, the macro is not
+   conditionally defined: a branch-and-link-with doesn't count as a call (since
+   it can't return), and therefore the operation is available in any VM
+   instruction, even non-callers.  This is why the macro name doesn't begin with
+   an underscore. */
+#if    defined(JITTER_DISPATCH_SWITCH)                    \
+    || defined(JITTER_DISPATCH_DIRECT_THREADING)          \
+    || defined(JITTER_DISPATCH_MINIMAL_THREADING)         \
+    || (defined(JITTER_DISPATCH_NO_THREADING)             \
+        && ! defined(JITTER_MACHINE_SUPPORTS_PROCEDURE))
+# define JITTER_BRANCH_AND_LINK_WITH(_jitter_target_rvalue,      \
+                                     _jitter_new_link)           \
+    do                                                           \
+      {                                                          \
+        jitter_state_runtime._jitter_link = (_jitter_new_link);  \
+        JITTER_BRANCH(_jitter_target_rvalue);                    \
+      }                                                          \
+    while (false)
+#endif
+
+/* Sanity check, useful for writing new ports. */
+#if (defined(JITTER_DISPATCH_NO_THREADING)          \
+     && defined(JITTER_MACHINE_SUPPORTS_PROCEDURE)  \
+     && ! defined(JITTER_BRANCH_AND_LINK_WITH))
+# error "The machine claims to support procedures but lacks a definition"
+# error "for JITTER_BRANCH_AND_LINK_WITH .  Can't use no-threading."
+#endif // #if ... sanity check.
 
 /* An internal definition used for JITTER_RETURN . */
 # define _JITTER_RETURN_COMMON(link_rvalue)  \
