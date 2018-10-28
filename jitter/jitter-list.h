@@ -58,7 +58,7 @@
    - each item is allowed to be included in multiple independent linked lists,
      by containing multiple fields of type struct jitter_list_links;
    - each item being linked to a list by one of the macros here is not allowed
-     to be already contained in the list;
+     to be already contained in the same list;
    - each item being removed from a list by one of the macros here must be
      contained in the list before the macro expansion is executed;
    - an item being unlinked from a list may be left with invalid "previous"
@@ -67,8 +67,8 @@
      remaining in the list;
    - each item being linked or unlinked from a list, passed via pointer,
      is never NULL;
-   - memory allocation is *not* handled here: unlinking an object does not
-     free its memory. */
+   - memory allocation is *not* handled here: unlinking an item does not
+     automatically release its memory. */
 
 
 /* A struct defining doubly linked list pointers within a list elementx.  This
@@ -110,39 +110,40 @@ struct jitter_list_header
    - the list is never empty either before or after the macro calls, and that
    - the first and last items in the list are special elements, not
      changed by the macros.
-   In practice every "always-nonempty" has always at least two elements, which
-   can't change.
-   The "always-nonempty" assumptions allows for much more efficient list
+   In practice every "always-nonempty" list has always at least two elements
+   the first and the last, which can't change.
+   The "always-nonempty" assumption allows for much more efficient list
    updates using straight-line code, without any conditionals.
 
-   Macros whose name end in _POSSIBLY_AWNE macros are for internal use only,
-   and their first argument may be evaluated multiple times. */
+   Macros whose name end in _POSSIBLY_AWNE macros are for internal use only.
+   Their first argument is always a constant boolean expression, and their
+   second argument may be evaluated multiple times. */
 
 /* Expand to a sequence of local variable declarations for links and headers, to
    be used in other macros here.  The expansion is meant as part of a larger
    block, and not protected with do..while (false). */
 #define JITTER_LIST_LOCALS_(item_struct_name, item_field_name, header_p,  \
                             item_p)                                       \
-  struct item_struct_name * const _item __attribute__ ((unused))                 \
+  struct item_struct_name * const _item __attribute__ ((unused))          \
     = (item_p);                                                           \
-  struct item_struct_name * const _old_previous __attribute__ ((unused))         \
+  struct item_struct_name * const _old_previous __attribute__ ((unused))  \
     = _item->item_field_name.previous;                                    \
-  struct item_struct_name * const _old_next __attribute__ ((unused))             \
+  struct item_struct_name * const _old_next __attribute__ ((unused))      \
     = _item->item_field_name.next;                                        \
-  struct jitter_list_header * const _header __attribute__ ((unused))             \
+  struct jitter_list_header * const _header __attribute__ ((unused))      \
     = (header_p);                                                         \
-  struct item_struct_name * const _old_first __attribute__ ((unused))            \
+  struct item_struct_name * const _old_first __attribute__ ((unused))     \
     = _header->first;                                                     \
-  struct item_struct_name * const _old_last __attribute__ ((unused))             \
+  struct item_struct_name * const _old_last __attribute__ ((unused))      \
     = _header->last;
 
-#define JITTER_LIST_INITIALIZE_HEADER(header_p)         \
-  do                                                    \
-    {                                                   \
+#define JITTER_LIST_INITIALIZE_HEADER(header_p)                \
+  do                                                           \
+    {                                                          \
       struct jitter_list_header * const _header = (header_p);  \
-      _header->first = NULL;                            \
-      _header->last = NULL;                             \
-    }                                                   \
+      _header->first = NULL;                                   \
+      _header->last = NULL;                                    \
+    }                                                          \
   while (false)
 
 // Assume that the pointed item does not belong to the list already.
