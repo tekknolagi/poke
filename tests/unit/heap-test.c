@@ -140,14 +140,17 @@ make_block (size_t size_in_bytes)
   //printf ("Make block: getting %liB\n", (long) size_in_bytes);
   //res = aligned_alloc (size_in_bytes, size_in_bytes);
   //res = aligned_alloc (size_in_bytes, size_in_bytes);
+  size_in_bytes = JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO (size_in_bytes,
+                                                        block_length);
   res = mmap (NULL,
-                    size_in_bytes,
-                    PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANONYMOUS,
-                    -1,
-                    0);
-  if ((((jitter_uint) res) & (jitter_uint) (size_in_bytes - 1)) != 0)
-    jitter_fatal ("aligned allocation got an unaligned result");
+              size_in_bytes,
+              PROT_READ | PROT_WRITE,
+              MAP_PRIVATE | MAP_ANONYMOUS,
+              -1,
+              0);
+  if ((((jitter_uint) res) & (jitter_uint) (block_length - 1)) != 0)
+    jitter_fatal ("aligned allocation (size %liB) got an unaligned result",
+                  (long) size_in_bytes);
   //printf ("Made a block at %p\n", res);
   return res;
 }
@@ -163,9 +166,9 @@ void
 test_heap (void)
 {
   block_length = sysconf (_SC_PAGE_SIZE);
-#define OBJECT_NO 100 //1024
-#define OPERATION_NO (1000 * 1000)
-#define MAX_SIZE 512
+#define OBJECT_NO 10 //1024
+#define OPERATION_NO (1000 * 1000 * 100)
+#define MAX_SIZE 4000 //4000 //5000// 512 //2048 //512
   //void **pointers __attribute__ ((unused)) = malloc (sizeof (int) * OBJECT_NO);//jitter_xmalloc (sizeof (int) * OBJECT_NO);
   void * pointers [OBJECT_NO];
   printf ("pointers is at %p\n", pointers);
@@ -175,11 +178,28 @@ test_heap (void)
   for (i = 0; i < OBJECT_NO; i ++)
     pointers [i] = NULL;
 
+#if 0
+#define jitter_heap_allocate(heap, size) \
+  malloc (size)
+#define jitter_heap_free(heap, pointer) \
+  free (pointer)
+#define jitter_heap_reallocate(heap, pointer, size) \
+  realloc (pointer, size)
+#elif 0
+#define jitter_heap_allocate(heap, size) \
+  (void*)((jitter_uint) 1)
+#define jitter_heap_free(heap, pointer) \
+  NULL
+#define jitter_heap_reallocate(heap, pointer, size) \
+  (void*)((jitter_uint) 1)
+#endif
+
   struct jitter_heap h;
   jitter_heap_initialize (& h, make_block, destroy_block,
                           block_length);
   for (i = 0; i < OPERATION_NO; i ++)
     {
+      //printf ("operation %i\n", i);
       int operation = rand () % 3;
       int index = rand () % OBJECT_NO;
       size_t size

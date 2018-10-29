@@ -44,6 +44,14 @@
    This has nothing to do with the tree data structure imposing ordering
    constraints, also called "heap". */
 
+// FIXME: a few words about policies (first-fit in a LIFO-ordered non-segregated
+// free list [hole list here], immediate coalescing), single blocks and heaps.
+// Wilson's survey citing his own work [p. 68, left column seems to strongly
+// favor FIFO over LIFO.  Wilson's arguments seem very reasonable; I am only
+// worried about stronger cache effects on current machines, 25 years after
+// his publication.
+// I can experiment quite easily with FIFO, or conditionalize.]
+
 
 
 
@@ -82,7 +90,9 @@
    aliged to JITTER_HEAP_ALIGNMENT bytes.  Since every thing header stores a
    pointer to the previous thing (in address order) within the same block and
    its payload size, it is always possible to navigate from one thing to its
-   neighbors in both directions; this is useful for hole coalescing. */
+   neighbors in both directions; this is useful for hole coalescing.
+   This struct is used for things allocated on blocks, and for big objects as
+   well. */
 struct jitter_heap_thing
 {
   /* The first field should have pointer type, so that we can guarantee that if
@@ -96,7 +106,8 @@ struct jitter_heap_thing
      its untagged value can be extracted by masking off the two least
      significant bits or by subtracting a known tag; no shifting is required.
      After untagging this pointer points to the header for the thing immediately
-     to the left of the current thing, or is NULL for a left terminator. */
+     to the left of the current thing, or is NULL for a left terminator.
+     This is NULL, apart from the tag, for big objects. */
   struct jitter_heap_thing *thing_on_the_left;
 
   /* The payload size, including the anonymous union below and possibly
@@ -109,13 +120,12 @@ struct jitter_heap_thing
   alignas (JITTER_HEAP_ALIGNMENT)
   union
   {
-    /* Doubly-linked-list pointers to the previous and next hole.  This is only
-       used for holes. */
+    /* Doubly-linked-list pointers to the previous and next hole in the block.
+       This is only used for holes. */
     struct jitter_list_links hole_links;
 
     /* The beginning of the payload, which can actually extend further than the
-       size declared here.  The payload beginning address is only used for
-       objects. */
+       size declared here. */
     char payload [sizeof (struct jitter_list_links)];
 
     /* /\* This unused field should force the anonymous union to be aligned in a */
@@ -146,18 +156,19 @@ struct jitter_heap_thing
    evaluting to the same pointer or the next possible smaller value respecting
    JITTER_HEAP_ALIGNMENT. */
 #define JITTER_HEAP_ALIGN_LEFT(p)                                    \
-  ((void*)                                                           \
+  ((void *)                                                          \
    JITTER_PREVIOUS_MULTIPLE_OF_POWER_OF_TWO((jitter_uint) (p),       \
                                             JITTER_HEAP_ALIGNMENT))
 
 /* Like JITTER_HEAP_ALIGN_LEFT, but evaluate to the same pointer or the next
    possible *larger* value. */
 #define JITTER_HEAP_ALIGN_RIGHT(p)                               \
-  ((void*)                                                       \
+  ((void *)                                                      \
    JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO((jitter_uint) (p),       \
                                         JITTER_HEAP_ALIGNMENT))
 
-/* A the two-bit tag associated to the pointer field in object headers. */
+/* Every used configuration of the tag associated to the pointer field in object
+   headers.  The tag is JITTER_HEAP_THING_TAG_BIT_NO bits wide. */
 enum jitter_heap_thing_tag
   {
     /* The header is for a hole. */
@@ -168,10 +179,14 @@ enum jitter_heap_thing_tag
 
     /* The header is for a block terminator, without distinction between left and
        right. */
-    jitter_heap_thing_tag_terminator = 2
+    jitter_heap_thing_tag_terminator = 2,
+
+    /* The header for a big object.  Big objects don't live in blocks, but are
+       allocated each in its own buffer, controlled by heaps.  See below. */
+    jitter_heap_thing_tag_big        = 3
   };
 
-/* How many bits are reserved for a tag within a tagged poointer.  Right now,
+/* How many bits are reserved for a tag within a tagged pointer.  Right now,
    with objects aligned to 8 bytes on every architectures, I could already
    afford 3 tag bits for free, even if 2 suffice.  By simply enforcing a wider
    alignment I could make even more tag bits available. */
@@ -179,7 +194,7 @@ enum jitter_heap_thing_tag
   2
 
 /* A bitmask having 1 bits where the tag is in a pointer, 0 elsewhere. */
-#define JITTER_HEAP_THING_TAG_BIT_MASK  \
+#define JITTER_HEAP_THING_TAG_BIT_MASK                       \
   ((jitter_uint) ((1 << JITTER_HEAP_THING_TAG_BIT_NO) - 1))
 
 /* A bitmask having 0 bits where the tag is in a pointer, 1 elsewhere. */
@@ -190,7 +205,7 @@ enum jitter_heap_thing_tag
    expression evaluating to the same pointer with the given tag.  The expansion
    may evaluate p multiple times. */
 #define JITTER_HEAP_TAG_POINTER(p, tag)            \
-  ((struct jitter_heap_thing *)             \
+  ((struct jitter_heap_thing *)                    \
    (((jitter_uint) (p)) | ((jitter_uint) (tag))))
 
 /* Given an expression evaluating to a tagged pointer and an expression
@@ -219,8 +234,8 @@ enum jitter_heap_thing_tag
    evaluating to the same untagged pointer.  The expansion may evaluate the
    macro arguments multiple times.
    This is usually less efficient than JITTER_HEAP_UNTAG_POINTER_KNOWN_TAG. */
-#define JITTER_HEAP_UNTAG_POINTER(p)           \
-  ((struct jitter_heap_thing *)                \
+#define JITTER_HEAP_UNTAG_POINTER(p)                            \
+  ((struct jitter_heap_thing *)                                 \
    (((jitter_uint) (p)) & JITTER_HEAP_THING_NON_TAG_BIT_MASK))
 
 /* Given an expression evaluating to a tagged pointer expand to an expression
@@ -233,7 +248,7 @@ enum jitter_heap_thing_tag
 /* Expand to an expression evaluating to the tag of the thing pointed to by the
    result of the given expression, which should evaluate to an object of type
    struct jitter_heap_thing * . */
-#define JITTER_HEAP_GET_TAG(thing)  \
+#define JITTER_HEAP_GET_TAG(thing)                        \
   (JITTER_HEAP_POINTER_TAG ((thing)->thing_on_the_left))
 
 /* Expand to an expression evaluating to the payload of the result of the given
@@ -376,6 +391,113 @@ jitter_heap_free_from_block (struct jitter_heap_block *p,
 
 
 
+/* Big objects.
+ * ************************************************************************** */
+
+/* Big objects do not live on heap blocks: they are allocated individually, on
+   demand, with the primitives supplies by the user in a heap header and
+   released immediately as soon as the user frees.  This, when the primitive
+   relies on mmap, will let the memory be immediately returned to the operating
+   system. */
+
+/* Every big object has a header just like heap things living in blocks, for
+   format compatibility.  In order to be able to distinguish big and non-big
+   objects at run time big objects have a distinct tag (see the definition of
+   enum jitter_heap_thing_tag above).
+
+   Every big object in a heap belongs to a doubly linked list, distinct from the
+   list of objects in a block and from the list of blocks.  Since I don't want
+   to add two fields in the header of *every* object, wasting space on non-big
+   objects as well, big objects have a "big pre-header", which is allocated in
+   memory just before the ordinary object header, at a fixed negative offset. */
+
+/* The pre-header for big objects, also containing the object header, structured
+   like the header of non-big objects, which in its turn includes the beginning
+   of the object payload.
+   The pre-header is aligned to JITTER_HEAP_ALIGNMENT bytes, and so are its
+   internal header and the payload within the header. */
+struct jitter_heap_big
+{
+  /* Doubly-linked list pointers to the previous and next big objects in
+     the same heap. */
+  struct jitter_list_links big_links;
+
+  /* The ordinary thing header, containing a jitter_heap_thing_tag_big tag
+     and NULL as the thing_on_the_left pointer. */
+  alignas (JITTER_HEAP_ALIGNMENT)
+  struct jitter_heap_thing thing;
+
+  /* There must be nothing else after the header: the header actually includes
+     the beginning of the payload, which must not be interrupted by other fields
+     before the rest of the payload. */
+};
+
+/* The thing_on_the_left field value for every big object, which is to say a
+   NULL pointer tagged with the jitter_heap_thing_tag_big tag. */
+#define JITTER_HEAP_BIG_THING_ON_THE_LEFT        \
+  ((struct jitter_heap_thing *)                  \
+   (((jitter_uint) NULL)                         \
+    | (jitter_uint) jitter_heap_thing_tag_big))
+
+/* Given an expression evaluating to an initial pointer to an object payload,
+   expand to an expression evaluating to non-false iff the object is big.
+   Implementation note: this is faster than using JITTER_HEAP_GET_TAG: I can
+   avoid the masking operation by relying on the fact that the thing_on_the_left
+   tagged pointer is always NULL for big objects. */
+#define JITTER_HEAP_IS_PAYLOAD_BIG(payload)                    \
+  ((JITTER_HEAP_PAYLOAD_TO_THING(payload)->thing_on_the_left)  \
+   == JITTER_HEAP_BIG_THING_ON_THE_LEFT)
+
+/* The overhead of a big pre-header in bytes, or in other words the offset from
+   the beginning of the big pre-haeder to the beginning of the thing header.
+   The big pre-header overhead doesn't include the thing header size. */
+#define JITTER_HEAP_BIG_PRE_HEADER_OVERHEAD   \
+  (offsetof (struct jitter_heap_big, thing))
+
+/* The total overhead of big pre-header plus thing header for a big object, or
+   in other words the offset from the beginning of the big pre-haeder to the
+   beginning of the payload within the thing within the big pre-header. */
+#define JITTER_HEAP_BIG_TOTAL_OVERHEAD  \
+  (JITTER_HEAP_BIG_PRE_HEADER_OVERHEAD  \
+   + JITTER_HEAP_HEADER_OVERHEAD)
+
+/* Given an expression evaluating to an initial pointer to an big object
+   payload, expand to an expression evaluating to a pointer to the object
+   big pre-header. */
+#define JITTER_HEAP_PAYLOAD_TO_BIG(payload)                  \
+  ((struct jitter_heap_big *)                                \
+   (((char *) (payload)) - JITTER_HEAP_BIG_TOTAL_OVERHEAD))
+
+/* Given an expression evaluating to an initial pointer to an big object
+   payload, expand to an expression evaluating to a pointer to the object
+   big pre-header. */
+#define JITTER_HEAP_BIG_TO_PAYLOAD(bigp)                           \
+  ((void *) (((char *) (bigp)) + JITTER_HEAP_BIG_TOTAL_OVERHEAD))
+
+/* A forward-declaration. */
+struct jitter_heap;
+
+/* Allocate a fresh big object of the given user payload size from the pointed
+   heap.  Return an initial pointer to its payload. */
+void *
+jitter_heap_allocate_big (struct jitter_heap *h,
+                          size_t user_payload_size_in_bytes)
+  __attribute__ ((nonnull (1), returns_nonnull));
+
+/* Given a heap pointer and an initial pointer to the payload of a big object
+   belonging to it, free the big object.  This doesn't check that the payload
+   actually belongs to a suitable object, but should be slightly faster than
+   the general freeing function. */
+void
+jitter_heap_free_big (struct jitter_heap *h, void *big_payload)
+  __attribute__ ((nonnull (1)));
+
+/* Reallocation is not supported for big objects.  For the time being I will
+   assume that it's a non-critical operation in this case. */
+
+
+
+
 /* Heaps.
  * ************************************************************************** */
 
@@ -396,6 +518,8 @@ jitter_heap_free_from_block (struct jitter_heap_block *p,
 /* Here come some types for functions to be supplied by the user, defining a
    block "kind". */
 
+// FIXME: rename types, removing _block and adding _primitive
+
 /* A function allocating fresh memory for a block, taking a size in bytes and
    returning a fresh block of at least the required size, or NULL on allocation
    failure. */
@@ -410,10 +534,10 @@ typedef void (* jitter_heap_destroy_block_function) (void *allocated_memory,
 // FIXME: comment.
 struct jitter_heap_descriptor
 {
-  /* A function allocating a fresh block. */
+  /* A function allocating a fresh block or big object. */
   jitter_heap_make_block_function make;
 
-  /* A function destroying an existing block. */
+  /* A function destroying an existing block or big object. */
   jitter_heap_destroy_block_function destroy;
 
   /* The block size in bytes, which must be the same as the block alignment.
@@ -424,6 +548,11 @@ struct jitter_heap_descriptor
   /* The block bit mask, having 1 bits for the bits identifying a block and
      0 bits for the bits which are part of an offset within the block. */
   jitter_uint block_bit_mask;
+
+  /* The size in bytes of the smallest payload large enough to belong to a big
+     object. */
+  size_t block_size_smallest_big_payload_in_bytes;
+
 };
 
 // FIXME: comment.
@@ -439,8 +568,14 @@ struct jitter_heap
      since this doesn't use terminator elements and the first and last elements
      of the list can change. */
   // FIXME: make this always-nonempty, by adding two dummy (unaligned) blocks as
-  // elements within this struct.
+  // elements within this struct.  In this case the terminators don't need to
+  // be in a specific order by address, differently from thing terminators within
+  // a block.
   struct jitter_list_header block_list;
+
+  /* The list of all the big objects in this heap. */
+  // FIXME: make this always-nonempty as well.
+  struct jitter_list_header big_list;
 
   /* A pointer to the current block, from which we are allocating by default.
      This is never NULL, and is always equal to the first element of the list;

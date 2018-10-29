@@ -505,6 +505,59 @@ jitter_heap_reallocate_from_block (struct jitter_heap_block *b,
 
 
 
+/* Big objects.
+ * ************************************************************************** */
+
+// FIXME: shall I make at least the allocation and free function non-static,
+// so that experienced user can call them directly and avoid a conditional?
+
+void *
+jitter_heap_allocate_big (struct jitter_heap *h,
+                          size_t user_payload_size_in_bytes)
+{
+  /* Compute the size in bytes correctly aligned, and also including the
+     pre-header and header. */
+  size_t payload_size_in_bytes
+    = ((jitter_uint)
+       JITTER_HEAP_ALIGN_RIGHT ((jitter_uint) user_payload_size_in_bytes));
+  size_t total_size_in_bytes
+    = JITTER_HEAP_BIG_TOTAL_OVERHEAD + payload_size_in_bytes;
+
+  /* Use the primitive allocation function to make it. */
+  struct jitter_heap_big *b = h->descriptor.make (total_size_in_bytes);
+  if (b == NULL)
+    jitter_fatal ("could not allocate big object");
+
+  /* Initialize the big pre-header, which means linking it to the big-object
+     list. */
+  JITTER_LIST_LINK_FIRST (jitter_heap_big, big_links, & (h->big_list), b);
+
+  /* Initialize the ordinary thing header. */
+  b->thing.thing_on_the_left = JITTER_HEAP_BIG_THING_ON_THE_LEFT;
+  b->thing.payload_size_in_bytes = payload_size_in_bytes;
+
+  return JITTER_HEAP_BIG_TO_PAYLOAD (b);
+}
+
+void
+jitter_heap_free_big (struct jitter_heap *h, void *big_payload)
+{
+  /* Obtain a pointer to the big pre-header. */
+  struct jitter_heap_big *b = JITTER_HEAP_PAYLOAD_TO_BIG (big_payload);
+
+  /* Unlink the big object from the big object list in the heap. */
+  JITTER_LIST_UNLINK (jitter_heap_big, big_links, & (h->big_list), b);
+
+  /* Immediately release storage with the primitive function. */
+  size_t payload_size_in_bytes = b->thing.payload_size_in_bytes;
+  size_t total_size_in_bytes
+    = JITTER_HEAP_BIG_TOTAL_OVERHEAD + payload_size_in_bytes;
+  h->descriptor.destroy (b, total_size_in_bytes);
+}
+
+
+
+
 /* Heap initialization and finalization.
  * ************************************************************************** */
 
@@ -516,6 +569,7 @@ jitter_heap_almost_initialize (struct jitter_heap *h,
 {
   h->descriptor = * d;
   JITTER_LIST_INITIALIZE_HEADER (& (h->block_list));
+  JITTER_LIST_INITIALIZE_HEADER (& (h->big_list));
   h->default_block = NULL;
 }
 
@@ -581,6 +635,15 @@ jitter_heap_initialize (struct jitter_heap *h,
   d.block_size_and_alignment_in_bytes = block_size_and_alignment_in_bytes;
   d.block_bit_mask
     = ~ (((jitter_uint) block_size_and_alignment_in_bytes) - 1);
+  // FIXME: this is somewhat arbitrary, and might theoretically be too small for
+  // very small block sizes.  This is certainly not a very tight threshold even
+  // when it's correct.
+  d.block_size_smallest_big_payload_in_bytes
+    = (block_size_and_alignment_in_bytes
+       - sizeof (struct jitter_heap))
+    //* 3 / 4
+    * 9 / 10
+    ;
 
   /* Validate the block size.  This operation is infrequent enough to warrant a
      check. */
@@ -616,8 +679,8 @@ jitter_heap_finalize (struct jitter_heap *h)
 /* Object allocation, deallocation and reallocation from a given heap.
  * ************************************************************************** */
 
-/* Given a heap pointer and an initial pointer to some object belonging to the heap,
-   return the page containing the object. */
+/* Given a heap pointer and an initial pointer to some object belonging to the
+   heap, return the page containing the object. */
 static struct jitter_heap_block *
 jitter_heap_get_block (struct jitter_heap *h, void *p)
 {
@@ -626,11 +689,20 @@ jitter_heap_get_block (struct jitter_heap *h, void *p)
 }
 
 void *
-jitter_heap_allocate (struct jitter_heap *h, size_t size_in_bytes)
+jitter_heap_allocate (struct jitter_heap *h,
+                      size_t user_payload_size_in_bytes)
 {
+  /* Check if we should make a big object.  If so, do it and ignore the rest. */
+  size_t min_big_payload_size
+    = h->descriptor.block_size_smallest_big_payload_in_bytes;
+  if (__builtin_expect (user_payload_size_in_bytes >= min_big_payload_size,
+                        false))
+    return jitter_heap_allocate_big (h, user_payload_size_in_bytes);
+
   /* First try to allocate from the default page. */
   struct jitter_heap_block *initial_block = h->default_block;
-  void *res = jitter_heap_allocate_from_block (initial_block, size_in_bytes);
+  void *res = jitter_heap_allocate_from_block (initial_block,
+                                               user_payload_size_in_bytes);
   if (res != NULL)
     return res;
 
@@ -642,7 +714,7 @@ jitter_heap_allocate (struct jitter_heap *h, size_t size_in_bytes)
   while (b != NULL)
     {
       /* Since we failed with the default block, try again with b. */
-      res = jitter_heap_allocate_from_block (b, size_in_bytes);
+      res = jitter_heap_allocate_from_block (b, user_payload_size_in_bytes);
       if (res != NULL)
         {
           /* Allocation from b succeeded.  Make b the default block for the
@@ -656,7 +728,7 @@ jitter_heap_allocate (struct jitter_heap *h, size_t size_in_bytes)
   /* If we arrived here allocation failed from every block in the heap.  We have
      to make a new one.  If allocation failed from there as well, we fail. */
   struct jitter_heap_block *new_block = jitter_heap_add_fresh_block (h);
-  res = jitter_heap_allocate_from_block (new_block, size_in_bytes);
+  res = jitter_heap_allocate_from_block (new_block, user_payload_size_in_bytes);
   if (res == NULL)
     jitter_fatal ("could not allocate from heap");
   return res;
@@ -664,16 +736,39 @@ jitter_heap_allocate (struct jitter_heap *h, size_t size_in_bytes)
 
 void *
 jitter_heap_reallocate (struct jitter_heap *h, void *old_payload,
-                        size_t new_size_in_bytes)
+                        size_t new_payload_size_in_bytes)
 {
   /* Surprisingly, the logic here is quite different from jitter_heap_allocate .
      Efficient reallocation is only possible within a block; if that fails,
      fall back to a trivial solution: allocate a fresh block, copy, free. */
 
+  /* Compute how many bytes we need to copy.  If this ends up being unused, the
+     compiler should be able to trivially optimize it away. */
+  struct jitter_heap_thing *t = JITTER_HEAP_PAYLOAD_TO_THING(old_payload);
+  size_t old_payload_size_in_bytes = t->payload_size_in_bytes;
+  size_t size_to_copy_in_bytes = old_payload_size_in_bytes;
+  if (new_payload_size_in_bytes < size_to_copy_in_bytes)
+    size_to_copy_in_bytes = new_payload_size_in_bytes;
+
+  /* If the original block is free, there is nothing very clever I do
+     at this point. */
+  if (__builtin_expect (JITTER_HEAP_IS_PAYLOAD_BIG (old_payload),
+                        false))
+    {
+      /* The old object was big.  Make a new object, big or small as it needs to
+         be, copy the old payload into it, and finally free the old object,
+         which was certainly big. */
+      void *res = jitter_heap_allocate (h, new_payload_size_in_bytes);
+      memcpy (res, old_payload, size_to_copy_in_bytes);
+      jitter_heap_free_big (h, old_payload);
+      return res;
+    }
+
   /* Try the fast path. */
   struct jitter_heap_block *b = jitter_heap_get_block (h, old_payload);
   void *res
-    = jitter_heap_reallocate_from_block (b, old_payload, new_size_in_bytes);
+    = jitter_heap_reallocate_from_block (b, old_payload,
+                                         new_payload_size_in_bytes);
   if (res != NULL)
     {
       /* The block we used for reallocation had some space available.  Use it
@@ -683,10 +778,8 @@ jitter_heap_reallocate (struct jitter_heap *h, void *old_payload,
     }
 
   /* The fast path failed. */
-  struct jitter_heap_thing *t = JITTER_HEAP_PAYLOAD_TO_THING(old_payload);
-  size_t old_payload_size_in_bytes = t->payload_size_in_bytes;
-  res = jitter_heap_allocate (h, new_size_in_bytes);
-  memcpy (res, old_payload, old_payload_size_in_bytes);
+  res = jitter_heap_allocate (h, new_payload_size_in_bytes);
+  memcpy (res, old_payload, size_to_copy_in_bytes);
   jitter_heap_free_from_block (b, old_payload);
   return res;
 }
@@ -694,6 +787,16 @@ jitter_heap_reallocate (struct jitter_heap *h, void *old_payload,
 void
 jitter_heap_free (struct jitter_heap *h, void *object_payload)
 {
+  /* If the object is big, free it as a big object and forget about the rest. */
+  if (__builtin_expect (JITTER_HEAP_IS_PAYLOAD_BIG (object_payload),
+                        false))
+    {
+      jitter_heap_free_big (h, object_payload);
+      return;
+    }
+
+  /* The object is not big, so it belongs to a block.  Get its block, and free
+     it from there. */
   struct jitter_heap_block *b = jitter_heap_get_block (h, object_payload);
   jitter_heap_free_from_block (b, object_payload);
 
