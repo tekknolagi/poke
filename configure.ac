@@ -71,6 +71,18 @@ AC_DEFINE_UNQUOTED([JITTER_PACKAGE_BUGREPORT], ["$PACKAGE_BUGREPORT"],
 # Indeed, we rely on a C compiler.
 AC_PROG_CC
 
+# This package contains libraries.  When enabling LTO with static libraries (for
+# which setting CFLAGS/LDFLAGS is enough) we need to use the specialized library
+# tools which come with GCC.  Autoconf doesn't check for them by default, but
+# it's easy to do.  If the specialized tools aren't available we fall back on the
+# traditional ones.
+#
+# I noticed that moving the check for RANLIB to this early point prevents the
+# default (HOSTTRIPLET-ranlib) from being chosen despite the order of the tools
+# chosen here.  Some default might come from gl_EARLY.
+AC_CHECK_TOOLS([RANLIB], [gcc-ranlib ranlib])
+AC_CHECK_TOOLS([AR], [gcc-ar ar])
+
 # Run the early part of the Gnulib initialization.  This is recommended
 # right after AC_PROG_CC .
 gl_EARLY
@@ -164,14 +176,6 @@ fi
 # mkdir -p is convenient.  It is currently used in the makefile and in
 # vm/generate-instructions.in .
 AC_PROG_MKDIR_P
-
-# This package contains libraries.  When enabling LTO with static libraries (for
-# which setting CFLAGS/LDFLAGS is enough) we need to use the specialized library
-# tools which come with GCC.  Autoconf doesn't check for them by default, but
-# it's easy to do.  If the specialized tools aren't available we fall back on the
-# traditional ones.
-AC_CHECK_TOOLS([RANLIB], [gcc-ranlib ranlib])
-AC_CHECK_TOOLS([AR], [gcc-ar ar])
 
 # We call objdump at runtime when disassembling.  Even not having it installed
 # is not fatal, and the problem is easy to fix anyway after compiling Jitter.
