@@ -148,9 +148,15 @@ make_block (size_t size_in_bytes)
   res = mmap (NULL,
               size_in_bytes,
               PROT_READ | PROT_WRITE,
-              MAP_PRIVATE | MAP_ANONYMOUS,
+              MAP_PRIVATE | MAP_ANONYMOUS
+#ifdef HUGE
+              | MAP_HUGETLB
+#endif // #ifdef HUGE
+              ,
               -1,
               0);
+  if (res == MAP_FAILED)
+    jitter_fatal ("mmap failed");
   mmap_calls ++;
   if ((((jitter_uint) res) & (jitter_uint) (block_length - 1)) != 0)
     jitter_fatal ("aligned allocation (size %liB) got an unaligned result",
@@ -170,8 +176,13 @@ destroy_block (void *block, size_t size_in_bytes)
 void
 test_heap (void)
 {
-  block_length = sysconf (_SC_PAGE_SIZE);
-/* #define OBJECT_NO 10 //1024 */
+  block_length
+#ifdef HUGE
+    = 2 * 1024 * 1024L;
+#else
+    = sysconf (_SC_PAGE_SIZE);
+#endif
+  /* #define OBJECT_NO 10 //1024 */
 /* #define OPERATION_NO (1000 * 1000 * 100) */
 /* #define MAX_SIZE 3800 //3850 //4000 //5000// 512 //2048 //512 */
 #define OBJECT_NO 1000 //1024
