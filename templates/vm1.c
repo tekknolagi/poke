@@ -36,6 +36,7 @@
 #include <jitter/jitter-dispatch.h>
 #include <jitter/jitter-hash.h>
 #include <jitter/jitter-instruction.h>
+#include <jitter/jitter-mmap.h>
 #include <jitter/jitter-program.h>
 #include <jitter/jitter-rewrite.h>
 #include <jitter/jitter-parser.h>
@@ -239,6 +240,11 @@ vmprefix_initialize (void)
   if (! JITTER_DISPATCH_DEPENDENT_GLOBAL_NAME)
     jitter_fatal ("impossible to reach: the thing should fail at link time");
 
+#ifdef JITTER_REPLICATE
+  /* Initialize the executable-memory subsystem. */
+  jitter_initialize_executable ();
+#endif // #ifdef JITTER_REPLICATE
+
   /* Perform some sanity checks which only need to be run once. */
   vmprefix_check_specialized_instruction_opcode_once ();
 
@@ -357,6 +363,11 @@ vmprefix_finalize (void)
      contains no dynamically-allocated fields. */
   /* Threads need no finalization. */
   jitter_finalize_meta_instructions (& vmprefix_meta_instruction_hash);
+
+#ifdef JITTER_REPLICATE
+  /* Finalize the executable-memory subsystem. */
+  jitter_finalize_executable ();
+#endif // #ifdef JITTER_REPLICATE
 }
 
 

@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include <jitter/jitter.h>
+#include <jitter/jitter-mmap.h>
 #include <jitter/jitter-program.h>
 #include <jitter/jitter-vm.h>
 #include <jitter/jitter-rewrite.h>
@@ -33,12 +34,6 @@
 #include <jitter/jitter-fatal.h>
 
 #include "config.h" // this is the non-Gnulib file.
-#ifdef HAVE_MMAP
-  #include <sys/mman.h> /* for munmap */
-#else
-  #define munmap(whatever1, whatever22) do {} while (false)
-#endif // ifdef HAVE_MMAP
-
 
 static void
 jitter_initialize_program (struct jitter_program *p)
@@ -90,8 +85,10 @@ jitter_finalize_program (struct jitter_program *p)
 
   jitter_dynamic_buffer_finalize (& p->specialized_program);
   jitter_dynamic_buffer_finalize (& p->replicated_blocks);
+#ifdef JITTER_REPLICATE  
   if (p->native_code != 0)
-    munmap (p->native_code, p->native_code_size);
+    jitter_executable_deallocate (p->native_code);
+#endif // #ifdef JITTER_REPLICATE  
   jitter_dynamic_buffer_finalize (& p->specialized_label_indices);
 }
 

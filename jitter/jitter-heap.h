@@ -22,10 +22,8 @@
 #ifndef JITTER_HEAP_H_
 #define JITTER_HEAP_H_
 
-//#include <stdlib.h> // FIXME: remove
 #include <stdalign.h>  /* For alignas. */
 #include <stddef.h>    /* For offsetof. */
-//#include <stdbool.h> // FIXME: remove
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-bitwise.h>
@@ -307,7 +305,7 @@ struct jitter_heap_block
   size_t allocated_space_size_in_bytes;
 
   /* Links to the previous and next block within a heap. */
-  struct jitter_list_links links;
+  struct jitter_list_links block_links;
 
   /* Having the left terminator directly accessible as a field is convenient to
      walk thru the hole list, without dereferencing hole_list->first and then skipping
@@ -478,7 +476,9 @@ struct jitter_heap_big
 struct jitter_heap;
 
 /* Allocate a fresh big object of the given user payload size from the pointed
-   heap.  Return an initial pointer to its payload. */
+   heap.  Return an initial pointer to its payload.
+   This function is slightly more efficient than general heap allocation, and
+   can be used when the user is sure that the required object will be big. */
 void *
 jitter_heap_allocate_big (struct jitter_heap *h,
                           size_t user_payload_size_in_bytes)
@@ -509,36 +509,47 @@ jitter_heap_free_big (struct jitter_heap *h, void *big_payload)
    block, to find the block with a quick bitwise masking operation.
 
    A heap is a convenient abstraction to allocate, deallocate and reallocate
-   objects from blocks which are automatically made and destroyed as needed.  Of
-   course operations within an existing block are assumed to be more efficient
-   than operations altering the number of blocks, which usually require
-   syscalls.  Heap operations will attempt to reuse existing blocks as far as
-   possible. */
+   objects from blocks which are automatically made and destroyed as needed; if
+   an allocated object is too big to fit in a blog, heap allocation and
+   reallocation functions will automatically make a big object instead.
+
+   Of course operations within an existing block are assumed to be more
+   efficient than operations altering the number of blocks, which usually
+   require syscalls.  Heap operations will attempt to reuse existing blocks as
+   far as possible. */
 
 /* Here come some types for functions to be supplied by the user, defining a
    block "kind". */
 
-// FIXME: rename types, removing _block and adding _primitive
-
 /* A function allocating fresh memory for a block, taking a size in bytes and
    returning a fresh block of at least the required size, or NULL on allocation
    failure. */
-typedef void * (* jitter_heap_make_block_function) (size_t size_in_bytes);
+// FIXME: document the alignment requirement, which is strict.  Or even better
+// (actually much better) generalize with a new descriptor field specifying the
+// guaranteed alignment.
+// FIXME: add another function like this for allocating possibly with less
+// strict alignment requirements.
+typedef void * (* jitter_heap_primitive_allocate_function)
+   (size_t size_in_bytes);
 
-/* A function destroying an existing block, taking the block as returned by
-   the appropriate jitter_heap_make_block_function function and the allocated
-   size as it was passed at making time. */
-typedef void (* jitter_heap_destroy_block_function) (void *allocated_memory,
-                                                     size_t size_in_bytes);
+/* A function destroying an existing block, taking the block as returned by the
+   appropriate jitter_heap_primitive_allocate_function function and the
+   allocated size as it was passed at making time. */
+typedef void (* jitter_heap_primitive_free_function)
+   (void *allocated_memory, size_t size_in_bytes);
 
-// FIXME: comment.
+/* A descriptor for heap objects, specifying its allocation primitives.  The
+   same descriptor might be used for multiple heaps, but it's relatively
+   inconvenient for the user to specify it; therefore structures of this type
+   are automatically filled by jitter_heap_initialize , and are effectively
+   invisible to the user. */
 struct jitter_heap_descriptor
 {
   /* A function allocating a fresh block or big object. */
-  jitter_heap_make_block_function make;
+  jitter_heap_primitive_allocate_function make;
 
   /* A function destroying an existing block or big object. */
-  jitter_heap_destroy_block_function destroy;
+  jitter_heap_primitive_free_function destroy;
 
   /* The block size in bytes, which must be the same as the block alignment.
      This requirement must be satisfied by the provided make and destroy
@@ -552,10 +563,10 @@ struct jitter_heap_descriptor
   /* The size in bytes of the smallest payload large enough to belong to a big
      object. */
   size_t block_size_smallest_big_payload_in_bytes;
-
 };
 
-// FIXME: comment.
+/* A data structure encoding a heap.  The user will initialize a structure
+   of this type and use it for allocating and freeing. */
 struct jitter_heap
 {
   /* A descriptor for this heap.  This small struct is copied rather than
@@ -567,14 +578,14 @@ struct jitter_heap
      the list cannot be considered "always-nonempty" as per jitter-list.h ,
      since this doesn't use terminator elements and the first and last elements
      of the list can change. */
-  // FIXME: make this always-nonempty, by adding two dummy (unaligned) blocks as
-  // elements within this struct.  In this case the terminators don't need to
-  // be in a specific order by address, differently from thing terminators within
-  // a block.
+  // FIXME: possibly make this always-nonempty, by adding two dummy (unaligned)
+  // blocks as elements within this struct.  In this case the terminators don't
+  // need to be in a specific order by address, differently from thing
+  // terminators within a block.  Is this critical enough?  Maybe not.
   struct jitter_list_header block_list;
 
   /* The list of all the big objects in this heap. */
-  // FIXME: make this always-nonempty as well.
+  // FIXME: possibly make this always-nonempty as well.
   struct jitter_list_header big_list;
 
   /* A pointer to the current block, from which we are allocating by default.
@@ -588,18 +599,10 @@ struct jitter_heap
    suitable descriptor, stored in the heap, is initialized automatically. */
 void
 jitter_heap_initialize (struct jitter_heap *h,
-                        jitter_heap_make_block_function make,
-                        jitter_heap_destroy_block_function destroy,
+                        jitter_heap_primitive_allocate_function make,
+                        jitter_heap_primitive_free_function destroy,
                         size_t block_size_and_alignment_in_bytes)
   __attribute__ ((nonnull (1, 2, 3)));
-
-/* Initialize the pointed heap to use the pointed descriptor.
-   FIXME: shall I remove this?
- */
-void
-jitter_heap_initialize_from_descriptor (struct jitter_heap *h,
-                                        const struct jitter_heap_descriptor *d)
-  __attribute__ ((nonnull (1, 2)));
 
 /* Finalize the pointed heap, destroying every block it contains. */
 void
@@ -613,8 +616,13 @@ jitter_heap_finalize (struct jitter_heap *h)
  * ************************************************************************** */
 
 /* These function are similar to their _from_block counterparts, but take a heap
-   pointer instead of a block pointer.  Allocation and reallocation never return
-   NULL: failure is fatal. */
+   pointer instead of a block pointer.
+
+   These are the main user functions for working with allocation, reallocation
+   and freeing of objects.  The returned payloads may be big objects: the user
+   sees no difference.
+
+   Allocation and reallocation never return NULL: failure is fatal. */
 
 /* Given a heap, return a pointer to a freshly allocated object within the
    heap having at least the given payload size (or higher, to satisfy alignment

@@ -433,6 +433,7 @@ SOURCES_FOR_LIBJITTER = \
   jitter/jitter-rewrite.c jitter/jitter-rewrite.h \
   jitter/jitter-specialize.c jitter/jitter-specialize.h \
   jitter/jitter-replicate.c jitter/jitter-replicate.h \
+  jitter/jitter-mmap.c jitter/jitter-mmap.h \
   jitter/jitter-disassemble.c jitter/jitter-disassemble.h \
   jitter/jitter-fast-branch.c jitter/jitter-fast-branch.h \
   jitter/jitter-interpreter-private.h \
@@ -460,6 +461,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-fast-branch.h \
   jitter/jitter-instruction.h \
   jitter/jitter-machine-common.h \
+  jitter/jitter-mmap.h \
   jitter/jitter-program.h \
   jitter/jitter-rewrite.h \
   jitter/jitter-specialize.h \
