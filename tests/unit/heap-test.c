@@ -133,6 +133,9 @@ test_block (void)
 static size_t
 block_length;
 
+static unsigned long mmap_calls = 0;
+static unsigned long munmap_calls = 0;
+
 static void *
 make_block (size_t size_in_bytes)
 {
@@ -148,6 +151,7 @@ make_block (size_t size_in_bytes)
               MAP_PRIVATE | MAP_ANONYMOUS,
               -1,
               0);
+  mmap_calls ++;
   if ((((jitter_uint) res) & (jitter_uint) (block_length - 1)) != 0)
     jitter_fatal ("aligned allocation (size %liB) got an unaligned result",
                   (long) size_in_bytes);
@@ -160,15 +164,19 @@ destroy_block (void *block, size_t size_in_bytes)
 {
   //free (block);
   munmap (block, size_in_bytes);
+  munmap_calls ++;
 }
 
 void
 test_heap (void)
 {
   block_length = sysconf (_SC_PAGE_SIZE);
-#define OBJECT_NO 10 //1024
+/* #define OBJECT_NO 10 //1024 */
+/* #define OPERATION_NO (1000 * 1000 * 100) */
+/* #define MAX_SIZE 3800 //3850 //4000 //5000// 512 //2048 //512 */
+#define OBJECT_NO 1000 //1024
 #define OPERATION_NO (1000 * 1000 * 100)
-#define MAX_SIZE 4000 //4000 //5000// 512 //2048 //512
+#define MAX_SIZE 100 //3850 //4000 //5000// 512 //2048 //512
   //void **pointers __attribute__ ((unused)) = malloc (sizeof (int) * OBJECT_NO);//jitter_xmalloc (sizeof (int) * OBJECT_NO);
   void * pointers [OBJECT_NO];
   printf ("pointers is at %p\n", pointers);
@@ -239,6 +247,7 @@ main (void)
 {
   //test_block ();
   test_heap ();
-  printf ("Still alive at the end.\n");
+  printf ("Still alive at the end.  mmap calls: %lu, mmunmap calls: %lu\n",
+          mmap_calls, munmap_calls);
   return EXIT_SUCCESS;
 }

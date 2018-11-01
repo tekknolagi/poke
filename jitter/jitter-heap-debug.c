@@ -197,7 +197,7 @@ jitter_heap_debug_heap (struct jitter_heap *h)
   while (b != NULL)
     {
       jitter_heap_debug_block (b);
-      b = b->links.next;
+      b = b->block_links.next;
       first_to_last_size ++;
     }
 
@@ -207,7 +207,7 @@ jitter_heap_debug_heap (struct jitter_heap *h)
   b = h->block_list.last;
   while (b != NULL)
     {
-      b = b->links.previous;
+      b = b->block_links.previous;
       last_to_first_size ++;
     }
   if (first_to_last_size != last_to_first_size)

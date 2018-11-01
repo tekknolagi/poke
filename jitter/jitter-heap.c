@@ -20,10 +20,51 @@
 
 
 #include <string.h> /* for memmove. */
-
+#include <limits.h> /* for LONG_MAX. */
 #include "jitter-heap.h"
 #include <jitter/jitter-fatal.h>
 
+
+/* Feature macros.
+ * ************************************************************************** */
+
+/* I might want to make this settable by configure if the future, if I notice
+   that different values work better on different machines. */
+#define JITTER_HEAP_FIT_FIRST
+//#define JITTER_HEAP_FIT_BEST
+#define JITTER_HEAP_HOLE_LIST_LIFO
+//#define JITTER_HEAP_HOLE_LIST_FIFO
+
+
+
+
+/* Feature macro validation.
+ * ************************************************************************** */
+
+/* Check that exactly one fitting strategy has been enabled. */
+#if    defined (JITTER_HEAP_FIT_FIRST)  \
+    && defined (JITTER_HEAP_FIT_BEST)
+# error "hole fitting strategy both FIRST and BEST"
+#elif (! defined (JITTER_HEAP_FIT_FIRST))     \
+      && (! defined (JITTER_HEAP_FIT_BEST))
+# error "hole fitting strategy undefined"
+#else
+  /* Do nothing: everything is fine. */
+#endif
+
+/* Check that exactly one hole ordering has been enabled. */
+#if    defined (JITTER_HEAP_HOLE_LIST_LIFO)  \
+    && defined (JITTER_HEAP_HOLE_LIST_FIFO)
+# error "hole list ordering both FIFO and LIFO"
+#elif (! defined (JITTER_HEAP_HOLE_LIST_LIFO))     \
+      && (! defined (JITTER_HEAP_HOLE_LIST_FIFO))
+# error "hole list ordering undefined"
+#else
+  /* Do nothing: everything is fine. */
+#endif
+
+
+
 
 /* Heap utility.
  * ************************************************************************** */
@@ -154,25 +195,83 @@ jitter_heap_initialize_block (void *allocated_space,
 /* Object allocation, deallocation and reallocation from a given block.
  * ************************************************************************** */
 
-/* Look for the first hole in the pointed block large enough to fit an object
-   with the given payload size.  Return a pointer to the hole header if one
-   exists, or NULL otherwise. */
+/* Look for a hole in the pointed block large enough to fit an object with the
+   given payload size.  Return a pointer to the hole header if one exists, or
+   NULL otherwise. */
 static struct jitter_heap_thing*
-jitter_heap_first_fit (struct jitter_heap_block *p,
-                       size_t size_in_bytes)
+jitter_heap_fit (struct jitter_heap_block *b,
+                 size_t size_in_bytes)
 {
-  struct jitter_heap_thing *candidate = p->left_terminator.hole_links.next;
-  while (JITTER_HEAP_GET_TAG (candidate) != jitter_heap_thing_tag_terminator)
-    {
-      if (candidate->payload_size_in_bytes >= size_in_bytes)
-        return candidate;
+  /* In either case we have to walk the list starting from the first hole. */
+  struct jitter_heap_thing *h = b->left_terminator.hole_links.next;
 
-      candidate = candidate->hole_links.next;
+  /* Find the candidate according to the fitting strategy and return it.  Don't
+     return within the conditional code if no candidate was found. */
+#if defined (JITTER_HEAP_FIT_FIRST)
+  /* First-fit search: return the first hole which is large enough. */
+  while (JITTER_HEAP_GET_TAG (h) != jitter_heap_thing_tag_terminator)
+    {
+      if (h->payload_size_in_bytes >= size_in_bytes)
+        return h;
+
+      h = h->hole_links.next;
     }
+#elif defined (JITTER_HEAP_FIT_BEST)
+  /* Best-fit search: return the smallest hole which is large enough. */
+  struct jitter_heap_thing *best = NULL;
+  signed long wasted_bytes_best = LONG_MAX;
+  while (JITTER_HEAP_GET_TAG (h) != jitter_heap_thing_tag_terminator)
+    {
+      signed long wasted_bytes
+        = (long) h->payload_size_in_bytes - (long) size_in_bytes;
+      if (wasted_bytes == 0)
+        return h;
+      else if (wasted_bytes > 0
+               && wasted_bytes < wasted_bytes_best)
+        {
+          best = h;
+          wasted_bytes_best = wasted_bytes;
+        }
+
+      h = h->hole_links.next;
+    }
+  if (best != NULL)
+    return best;
+#else
+  /* This should never happen. */
+# error "unknown fitting strategy"
+#endif
 
   /* We've looked thru every hole in this block without finding any which was
      large enough. */
   return NULL;
+}
+
+/* Given a pointer to a block and to a hole header from the block which
+   is not currently in the hole list, link it correctly to the list.
+   Rationale: always using this function to link a hole makes it easy to
+   experiment with different hole list orderings. */
+static void
+jitter_link_hole (struct jitter_heap_block *b,
+                  struct jitter_heap_thing *hole)
+{
+#if defined (JITTER_HEAP_HOLE_LIST_LIFO)
+  /* This implements a LIFO hole list: the most recent hole becomes the first in
+     the list. */
+  JITTER_LIST_LINK_AFTER_NONEMPTY (jitter_heap_thing, hole_links,
+                                   & b->hole_list,
+                                   & b->left_terminator,
+                                   hole);
+#elif defined (JITTER_HEAP_HOLE_LIST_FIFO)
+  /* This implements a FIFO hole list: the most recent hole becomes the last in
+     the list. */
+  JITTER_LIST_LINK_BEFORE_NONEMPTY (jitter_heap_thing, hole_links,
+                                   & b->hole_list,
+                                   b->hole_list.last,
+                                   hole);
+#else
+# error "No hole ordering defined"
+#endif
 }
 
 void *
@@ -185,7 +284,7 @@ jitter_heap_allocate_from_block (struct jitter_heap_block *p,
 
   /* Look for a hole.  If none large enough exists return NULL, and we're done. */
   struct jitter_heap_thing *hole
-    = jitter_heap_first_fit (p, object_payload_size_in_bytes);
+    = jitter_heap_fit (p, object_payload_size_in_bytes);
   if (hole == NULL)
     return NULL;
 
@@ -198,11 +297,12 @@ jitter_heap_allocate_from_block (struct jitter_heap_block *p,
   long smaller_hole_payload_size_in_bytes = (hole_payload_size_in_bytes
                                              - object_payload_size_in_bytes
                                              - JITTER_HEAP_HEADER_OVERHEAD);
-  if (smaller_hole_payload_size_in_bytes >= (long) JITTER_HEAP_MINIMUM_PAYLOAD_SIZE)
+  if (smaller_hole_payload_size_in_bytes
+      >= (long) JITTER_HEAP_MINIMUM_PAYLOAD_SIZE)
     {
       /* The old hole is large enough to split. */
 
-      /* It is more efficient to leave a hole on the left, so that we don't need
+      /* It is more efficient to leave a hole on the left so that I don't need
          to touch the hole list, instead only changing the payload size of the
          current hole.  The new object thing will fill the rightmost part of the
          old hole payload. */
@@ -212,7 +312,7 @@ jitter_heap_allocate_from_block (struct jitter_heap_block *p,
                                        + JITTER_HEAP_HEADER_OVERHEAD
                                        + smaller_hole_payload_size_in_bytes));
       object->thing_on_the_left
-        = JITTER_HEAP_TAG_POINTER(hole, jitter_heap_thing_tag_object);
+        = JITTER_HEAP_TAG_POINTER (hole, jitter_heap_thing_tag_object);
       object->payload_size_in_bytes = object_payload_size_in_bytes;
       struct jitter_heap_thing *object_on_the_right =
         ((struct jitter_heap_thing *) (((char *) object)
@@ -308,12 +408,10 @@ jitter_heap_free_from_block (struct jitter_heap_block *b,
   after_new_hole->thing_on_the_left
     = JITTER_HEAP_TAG_POINTER (new_hole, after_new_hole_tag);
 
-  /* Link the new hole as the new first hole, right after the left
-     terminator. */
-  JITTER_LIST_LINK_AFTER_NONEMPTY (jitter_heap_thing, hole_links,
-                                   & (b->hole_list),
-                                   & b->left_terminator,
-                                   new_hole);
+  /* Link the hole, currently the only non-terminator thing on the block.  In
+     this case this thing will always go between the two terminators, with any
+     hole ordering implemented by jitter_link_hole . */
+  jitter_link_hole (b, new_hole);
 }
 
 /* The trivial version of reallocation: make a new thing, copy from the old
@@ -430,10 +528,7 @@ jitter_heap_shrink_object (struct jitter_heap_block *b,
     = new_hole_thing_size_in_bytes - JITTER_HEAP_HEADER_OVERHEAD;
   new_hole->thing_on_the_left
     = JITTER_HEAP_TAG_POINTER (object, jitter_heap_thing_tag_hole);
-  JITTER_LIST_LINK_AFTER_NONEMPTY (jitter_heap_thing, hole_links,
-                                   & (b->hole_list),
-                                   & b->left_terminator,
-                                   new_hole);
+  jitter_link_hole (b, new_hole);
 
   /* The thing which was on the right of the old object is now on the right
      of the new hole. */
@@ -508,9 +603,6 @@ jitter_heap_reallocate_from_block (struct jitter_heap_block *b,
 /* Big objects.
  * ************************************************************************** */
 
-// FIXME: shall I make at least the allocation and free function non-static,
-// so that experienced user can call them directly and avoid a conditional?
-
 void *
 jitter_heap_allocate_big (struct jitter_heap *h,
                           size_t user_payload_size_in_bytes)
@@ -518,8 +610,7 @@ jitter_heap_allocate_big (struct jitter_heap *h,
   /* Compute the size in bytes correctly aligned, and also including the
      pre-header and header. */
   size_t payload_size_in_bytes
-    = ((jitter_uint)
-       JITTER_HEAP_ALIGN_RIGHT ((jitter_uint) user_payload_size_in_bytes));
+    = jitter_heap_payload_size_rounded_up (user_payload_size_in_bytes);
   size_t total_size_in_bytes
     = JITTER_HEAP_BIG_TOTAL_OVERHEAD + payload_size_in_bytes;
 
@@ -530,7 +621,7 @@ jitter_heap_allocate_big (struct jitter_heap *h,
 
   /* Initialize the big pre-header, which means linking it to the big-object
      list. */
-  JITTER_LIST_LINK_FIRST (jitter_heap_big, big_links, & (h->big_list), b);
+  JITTER_LIST_LINK_FIRST (jitter_heap_big, big_links, & h->big_list, b);
 
   /* Initialize the ordinary thing header. */
   b->thing.thing_on_the_left = JITTER_HEAP_BIG_THING_ON_THE_LEFT;
@@ -561,8 +652,10 @@ jitter_heap_free_big (struct jitter_heap *h, void *big_payload)
 /* Heap initialization and finalization.
  * ************************************************************************** */
 
-/* Initialize the pointed heap, except that the first block is set to NULL and
-   the block list is set to empty. */
+/* Initialize the pointed heap, except that the first block is set to NULL,
+   the block list is set to empty, and
+   h->descriptor.block_size_smallest_big_payload_in_bytes will be left
+   uninitialized. */
 static void
 jitter_heap_almost_initialize (struct jitter_heap *h,
                                const struct jitter_heap_descriptor *d)
@@ -590,7 +683,7 @@ jitter_heap_add_fresh_block (struct jitter_heap *h)
 
   /* Add it to the list and set it as the default.  We can't use
      jitter_heap_set_default_block here, as b doesn't belong to the list. */
-  JITTER_LIST_LINK_FIRST (jitter_heap_block, links, & (h->block_list), res);
+  JITTER_LIST_LINK_FIRST (jitter_heap_block, block_links, & h->block_list, res);
   h->default_block = res;
 
   return res;
@@ -604,28 +697,41 @@ jitter_heap_set_default_block (struct jitter_heap *h,
 {
   /* Unlink the block from its previous position on the list, whatever it was,
      and make it the first item instead. */
-  JITTER_LIST_UNLINK (jitter_heap_block, links, & (h->block_list), b);
-  JITTER_LIST_LINK_FIRST (jitter_heap_block, links, & (h->block_list), b);
+  JITTER_LIST_UNLINK (jitter_heap_block, block_links, & h->block_list, b);
+  JITTER_LIST_LINK_FIRST (jitter_heap_block, block_links, & h->block_list, b);
 
   /* Set the default field. */
   h->default_block = b;
 }
 
-void
+/* Initialize the pointed heap from the pointed descriptor, ignoring the
+   block_size_smallest_big_payload_in_bytes field of the pointed descriptor,
+   which will be computed here instead. */
+static void
 jitter_heap_initialize_from_descriptor (struct jitter_heap *h,
                                         const struct jitter_heap_descriptor *d)
 {
-  /* Almost-initialize the heap: only the first block is missing. */
+  /* Almost-initialize the heap: only the first block and
+     h->descriptor.block_size_smallest_big_payload_in_bytes will be missing. */
   jitter_heap_almost_initialize (h, d);
 
   /* Add the first block. */
-  jitter_heap_add_fresh_block (h);
+  struct jitter_heap_block *first_block = jitter_heap_add_fresh_block (h);
+
+  /* Initialize block_size_smallest_big_payload_in_bytes within the heap
+     descriptor: it's easy to do it now that we have a fresh empty block, as the
+     minimum size of an object payload not fitting in the block will be its hole
+     payload size plus one byte. */
+  const struct jitter_heap_thing *first_block_hole
+    = first_block->left_terminator.hole_links.next;
+  h->descriptor.block_size_smallest_big_payload_in_bytes
+    = first_block_hole->payload_size_in_bytes + 1;
 }
 
 void
 jitter_heap_initialize (struct jitter_heap *h,
-                        jitter_heap_make_block_function make,
-                        jitter_heap_destroy_block_function destroy,
+                        jitter_heap_primitive_allocate_function make,
+                        jitter_heap_primitive_free_function destroy,
                         size_t block_size_and_alignment_in_bytes)
 {
   /* Make a descriptor here, as an automatic variable.  It will be copied. */
@@ -635,15 +741,9 @@ jitter_heap_initialize (struct jitter_heap *h,
   d.block_size_and_alignment_in_bytes = block_size_and_alignment_in_bytes;
   d.block_bit_mask
     = ~ (((jitter_uint) block_size_and_alignment_in_bytes) - 1);
-  // FIXME: this is somewhat arbitrary, and might theoretically be too small for
-  // very small block sizes.  This is certainly not a very tight threshold even
-  // when it's correct.
-  d.block_size_smallest_big_payload_in_bytes
-    = (block_size_and_alignment_in_bytes
-       - sizeof (struct jitter_heap))
-    //* 3 / 4
-    * 9 / 10
-    ;
+  /* It is convenient to initialize d.block_size_smallest_big_payload_in_bytes
+     later, as the size of the initial hole plus one byte.  This will be the
+     tightest possible threshold. */
 
   /* Validate the block size.  This operation is infrequent enough to warrant a
      check. */
@@ -657,14 +757,14 @@ jitter_heap_initialize (struct jitter_heap *h,
 void
 jitter_heap_finalize (struct jitter_heap *h)
 {
-  jitter_heap_destroy_block_function destroy = h->descriptor.destroy;
+  jitter_heap_primitive_free_function destroy = h->descriptor.destroy;
   size_t block_size = h->descriptor.block_size_and_alignment_in_bytes;
 
   /* Destroy every block in the list. */
   struct jitter_heap_block *b = h->block_list.first;
   while (b != NULL)
     {
-      struct jitter_heap_block *next = b->links.next;
+      struct jitter_heap_block *next = b->block_links.next;
       destroy (b, block_size);
       b = next;
     }
@@ -680,7 +780,7 @@ jitter_heap_finalize (struct jitter_heap *h)
  * ************************************************************************** */
 
 /* Given a heap pointer and an initial pointer to some object belonging to the
-   heap, return the page containing the object. */
+   heap, return the block containing the object. */
 static struct jitter_heap_block *
 jitter_heap_get_block (struct jitter_heap *h, void *p)
 {
@@ -699,18 +799,18 @@ jitter_heap_allocate (struct jitter_heap *h,
                         false))
     return jitter_heap_allocate_big (h, user_payload_size_in_bytes);
 
-  /* First try to allocate from the default page. */
+  /* First try to allocate from the default block. */
   struct jitter_heap_block *initial_block = h->default_block;
   void *res = jitter_heap_allocate_from_block (initial_block,
                                                user_payload_size_in_bytes);
-  if (res != NULL)
+  if (__builtin_expect (res != NULL, true))
     return res;
 
   /* If we arrived here the default block doesn't have enough space.  Try every
      other block in the list.  Here I can rely on b being the first element of
      the list: every other block will follow it, and no other list element will
      be equal to it. */
-  struct jitter_heap_block *b = initial_block->links.next;
+  struct jitter_heap_block *b = initial_block->block_links.next;
   while (b != NULL)
     {
       /* Since we failed with the default block, try again with b. */
@@ -722,7 +822,7 @@ jitter_heap_allocate (struct jitter_heap *h,
           jitter_heap_set_default_block (h, b);
           return res;
         }
-      b = b->links.next;
+      b = b->block_links.next;
     }
 
   /* If we arrived here allocation failed from every block in the heap.  We have
