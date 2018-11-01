@@ -22,10 +22,8 @@
 #ifndef JITTER_HEAP_H_
 #define JITTER_HEAP_H_
 
-//#include <stdlib.h> // FIXME: remove
 #include <stdalign.h>  /* For alignas. */
 #include <stddef.h>    /* For offsetof. */
-//#include <stdbool.h> // FIXME: remove
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-bitwise.h>
