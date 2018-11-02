@@ -524,12 +524,17 @@ jitter_heap_free_big (struct jitter_heap *h, void *big_payload)
 /* A function allocating fresh memory for a block, taking a size in bytes and
    returning a fresh block of at least the required size, or NULL on allocation
    failure. */
+// FIXME: document the alignment requirement, which is strict.  Or even better
+// (actually much better) generalize with a new descriptor field specifying the
+// guaranteed alignment.
+// FIXME: add another function like this for allocating possibly with less
+// strict alignment requirements.
 typedef void * (* jitter_heap_primitive_allocate_function)
    (size_t size_in_bytes);
 
-/* A function destroying an existing block, taking the block as returned by
-   the appropriate jitter_heap_primitive_allocate_function function and the allocated
-   size as it was passed at making time. */
+/* A function destroying an existing block, taking the block as returned by the
+   appropriate jitter_heap_primitive_allocate_function function and the
+   allocated size as it was passed at making time. */
 typedef void (* jitter_heap_primitive_free_function)
    (void *allocated_memory, size_t size_in_bytes);
 
