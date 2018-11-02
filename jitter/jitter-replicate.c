@@ -1,6 +1,6 @@
 /* Jitter: replication functionality.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -36,10 +36,10 @@
 #include <stdio.h>
 #include <unistd.h> // for sysconf: FIXME: move, conditionalize, avoid.
 #include <assert.h>
-#include <sys/mman.h> /* for mmap */
 #include <string.h> /* for memcpy */
 
 #include <jitter/jitter-malloc.h>
+#include <jitter/jitter-mmap.h>
 #include <jitter/jitter-fatal.h>
 
 #include <jitter/jitter-specialize.h>
@@ -101,7 +101,8 @@ struct jitter_backpatch
 /* Return the given address aligned to the given alignment, skipping up to
    alignment bytes minus one *forward*.  If the required alignment is one or
    zero then the result is the given address, unchanged. */
-static char *
+__attribute__ ((unused))
+ static char *
 jitter_align_branch_target (char *address, size_t alignment)
 {
   char *res = address;
@@ -115,9 +116,6 @@ jitter_align_branch_target (char *address, size_t alignment)
   return res;
 }
 
-/* Callee code alignment, in bytes. */
-#define JITTER_CALLEE_ALIGNMENT 64 // FIXME: define elsewhere, possibly in configure
-
 /* FIXME: the internal implementation of this needs to be cleaned up. */
 void
 jitter_replicate_program (struct jitter_program *p)
@@ -125,27 +123,16 @@ jitter_replicate_program (struct jitter_program *p)
   if (p->stage != jitter_program_stage_specialized)
     jitter_fatal ("replicating non-specialized program");
 
-  // FIXME: don't leak space!
-#define fprintf(...) /* nothing */
+//#define fprintf(...) /* nothing */
   /* Compute a safe upper bound on the code size. */
-  size_t page_size = sysconf (_SC_PAGESIZE); // FIXME: move to init, conditionalize
   const int specialized_instruction_no
     = jitter_dynamic_buffer_size (& p->replicated_blocks)
       / sizeof (struct jitter_replicated_block);
   // FIXME: this is probably safe in most practical cases, but not correct nor efficient.
   // FIXME: implement an integer division rounding up in the utility library.
-  size_t code_length
-    = ((specialized_instruction_no * (400 + JITTER_CALLEE_ALIGNMENT - 1)) / page_size + 1) * page_size;
+  size_t code_length = specialized_instruction_no * 400;
 
-  char *code = mmap (NULL,//(void*) (jitter_uint) page_size,//NULL,
-                     code_length,
-                     PROT_READ | PROT_WRITE | PROT_EXEC, // FIXME: check for W^E
-                     MAP_PRIVATE | MAP_ANONYMOUS,
-                     0, 0);
-  if (code == MAP_FAILED)
-    jitter_fatal ("could not mmap space for replicated code");
-  fprintf (stderr, "page size is %lu (0x%lx) bytes\n",
-           (unsigned long) page_size, (unsigned long) page_size);
+  char *code = jitter_executable_allocate (code_length);
   fprintf (stderr, "native code is in [%p, %p)\n",
            code, code + code_length);
 //#define fprintf(...) /* nothing */
@@ -196,7 +183,7 @@ jitter_replicate_program (struct jitter_program *p)
         = p->vm->specialized_instruction_relocatables [opcode];
       bool caller __attribute__ ((unused))
         = p->vm->specialized_instruction_callers [opcode];
-      bool is_beginbasicblock_before_callee
+      bool is_beginbasicblock_before_callee __attribute__ ((unused))
         = (   (opcode == jitter_specialized_instruction_opcode_BEGINBASICBLOCK)
            && p->vm->specialized_instruction_callees
                  [(replicated_block + 1)->specialized_opcode]);
@@ -204,15 +191,24 @@ jitter_replicate_program (struct jitter_program *p)
       size_t residual_arity
         = p->vm->specialized_instruction_residual_arities [opcode];
 
-      /* If this is the beginning of a callee basic block, align it: since
-         callees can only be reached thru branch-and-link we can be sure that
-         the skipped bytes will never be executed.
+      /* FIXME: this is currently disabled.  The problem is that when I
+         allocated code memory simply with mmap, I got a very wide alignment for
+         free; so if the very first VM instruction was procedure-prolog, this
+         conditional didn't fire.  That turned out to be important, as the first
+         native instructions (associated to the beginning) are not initialized:
+         In practice I obtained, automatically, that the native code block
+         started with the first instruction.
+         Switching from mmap to jitter-mmap, whose alignment guarantees are
+         weaker, broke this assumption. */
+      /* /\* If this is the beginning of a callee basic block, align it: since */
+      /*    callees can only be reached thru branch-and-link we can be sure that */
+      /*    the skipped bytes will never be executed. */
 
-         FIXME: it would be nice to do the same for other branch targets as long
-         as we can prove that they are not also reachable by fallthru
-         control. */
-      if (is_beginbasicblock_before_callee)
-        free_code = jitter_align_branch_target (free_code, JITTER_CALLEE_ALIGNMENT);
+      /*    FIXME: it would be nice to do the same for other branch targets as long */
+      /*    as we can prove that they are not also reachable by fallthru */
+      /*    control. *\/ */
+      /* if (is_beginbasicblock_before_callee) */
+      /*   free_code = jitter_align_branch_target (free_code, JITTER_CALLEE_ALIGNMENT); */
 
       /* Keep a pointer to the native code we are about to generate, coming next
          in the space we allocated for code, in the appropriate replicated
