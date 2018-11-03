@@ -40,6 +40,11 @@
    If excutable memory allocation is desired from multiple threads at the same time,
    the user is supposed to synchronize with a mutex. */
 
+/* Portability note: all of this currently relies on mmap, unconditionally.
+   Inferior systems without mmap, such as windows, will not be able to use this
+   functionality at all.  But it won't be needed unless using advanced dispatching
+   techniques, which aren't supported on inferior systems anyway. */
+
 
 
 

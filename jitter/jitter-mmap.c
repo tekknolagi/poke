@@ -19,6 +19,12 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+/* Everything below expands to nothing where replication is disabled.  This is
+   enough not to use mmap where it doesn't exist. */
+#include <jitter/jitter-dispatch.h>
+#ifdef JITTER_REPLICATE
+
+
 #include <unistd.h>   /* For sysconf . */
 #include <sys/mman.h> /* For mmap and munmap . */
 
@@ -126,3 +132,7 @@ jitter_executable_deallocate (void *buffer)
 {
   jitter_heap_free (& jitter_executable_heap, buffer);
 }
+
+
+/* End of the conditionally-enabled part, and end of the source file as well. */
+#endif // #ifdef JITTER_REPLICATE
