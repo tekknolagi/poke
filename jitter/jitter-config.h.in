@@ -42,6 +42,9 @@
 
 #undef JITTER_HAS_ASSEMBLY
 
+/* Optional system functionality. */
+#undef HAVE_MAP_ANONYMOUS
+
 /* Optional libraries. */
 #undef JITTER_HAS_GNU_READLINE
 
