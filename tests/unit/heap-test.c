@@ -18,6 +18,10 @@
    You should have received a copy of the GNU General Public License
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
+/* Expand to nothing if we don't have mmap. */
+#include <jitter/jitter-config.h>
+#ifdef HAVE_MAP_ANONYMOUS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -262,3 +266,15 @@ main (void)
           mmap_calls, munmap_calls);
   return EXIT_SUCCESS;
 }
+
+#else // we don't have HAVE_MAP_ANONYMOUS defined.
+#include <stdio.h>
+
+int
+main (void)
+{
+  printf ("This configuration has no mmap.  Nothing to test\n");
+  return 0;
+}
+
+#endif // #ifdef HAVE_MAP_ANONYMOUS
