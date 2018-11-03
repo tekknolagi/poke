@@ -123,7 +123,7 @@ jitter_replicate_program (struct jitter_program *p)
   if (p->stage != jitter_program_stage_specialized)
     jitter_fatal ("replicating non-specialized program");
 
-//#define fprintf(...) /* nothing */
+#define fprintf(...) /* nothing */
   /* Compute a safe upper bound on the code size. */
   const int specialized_instruction_no
     = jitter_dynamic_buffer_size (& p->replicated_blocks)
