@@ -129,6 +129,8 @@ struct jitter_vm
 #ifdef JITTER_HAVE_PATCH_IN
   const struct jitter_patch_in_descriptor *patch_in_descriptors;
   size_t patch_in_descriptor_no;
+  /* A patch-in table as defined in jitter/jitter-patch-in.h . */
+  struct patch_in_table_entry *patch_in_table;
 #endif // #ifdef JITTER_HAVE_PATCH_IN
 
   const bool *specialized_instruction_relocatables;
