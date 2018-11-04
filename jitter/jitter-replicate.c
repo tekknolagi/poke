@@ -465,35 +465,6 @@ jitter_replicate_program (struct jitter_program *p)
               }
             }
 
-          asm ("" : : "X" (immediate));
-          /*
-          // FIXME: this is obviously slow and wrong.  I should use an
-          // associative data structure instead of scanning the descriptor
-          // array.
-          const struct jitter_patch_in_descriptor *pid;
-          size_t jitter_patch_in_descriptor_no = p->vm->patch_in_descriptor_no;
-          int pi;
-          for (pi = 0, pid = p->vm->patch_in_descriptors;
-               pi < jitter_patch_in_descriptor_no;
-               pi ++, pid ++)
-            if (   pid->specialized_instruction_opcode == opcode
-                && pid->residual_index == jout_fast_label)
-              {
-                printf ("  Found a patch-in descriptor for it at %p\n", pid);
-                jitter_dump_patch_in_descriptor_with_prefix (stdout, "    ", pid);
-
-                struct jitter_backpatch bp;
-                bp.patch_in_descriptor = pid;
-                bp.native_code = free_code + pid->offset;
-                bp.residual_index = j;
-                bp.thread = immediate;
-                bp.routine = jitter_routine_for_patch_in (pid);
-
-                jitter_dynamic_buffer_push (& backpatches, & bp,
-                                            sizeof (struct jitter_backpatch));
-              }
-          */
-
           /* We have processed one fast label.  Advance the output counter. */
           jout_fast_label ++;
         }
