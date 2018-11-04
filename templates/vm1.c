@@ -302,15 +302,20 @@ vmprefix_initialize (void)
         JITTER_PATCH_IN_DESCRIPTORS_NAME(vmprefix);
       const size_t patch_in_descriptor_size
         = sizeof (struct jitter_patch_in_descriptor);
-      the_vmprefix_vm.patch_in_descriptor_no =
-        (JITTER_PATCH_IN_DESCRIPTORS_SIZE_IN_BYTES_NAME(vmprefix)
-         / patch_in_descriptor_size);
+      the_vmprefix_vm.patch_in_descriptor_no
+        = (JITTER_PATCH_IN_DESCRIPTORS_SIZE_IN_BYTES_NAME(vmprefix)
+           / patch_in_descriptor_size);
       /* Cheap sanity check: if the size in bytes is not a multiple of
          the element size, we're doing something very wrong. */
       if (JITTER_PATCH_IN_DESCRIPTORS_SIZE_IN_BYTES_NAME(vmprefix)
           % patch_in_descriptor_size != 0)
         jitter_fatal ("patch-in descriptors total size not a multiple "
                       "of the element size");
+      /* Initialize the patch-in table for this VM. */
+      the_vmprefix_vm.patch_in_table
+        = jitter_make_patch_in_table (the_vmprefix_vm.patch_in_descriptors,
+                                      the_vmprefix_vm.patch_in_descriptor_no,
+                                      VMPREFIX_SPECIALIZED_INSTRUCTION_NO);
 #else
       the_vmprefix_vm.specialized_instruction_fast_label_bitmasks = NULL;
 #endif // #ifdef JITTER_HAVE_PATCH_IN
@@ -363,6 +368,12 @@ vmprefix_finalize (void)
      contains no dynamically-allocated fields. */
   /* Threads need no finalization. */
   jitter_finalize_meta_instructions (& vmprefix_meta_instruction_hash);
+
+#ifdef JITTER_HAVE_PATCH_IN
+  /* Destroy the patch-in table for this VM. */
+  jitter_destroy_patch_in_table (the_vmprefix_vm.patch_in_table,
+                                 VMPREFIX_SPECIALIZED_INSTRUCTION_NO);
+#endif // #ifdef JITTER_HAVE_PATCH_IN
 
 #ifdef JITTER_REPLICATE
   /* Finalize the executable-memory subsystem. */
