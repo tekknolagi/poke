@@ -1,6 +1,6 @@
 /* Jitter: dynamic buffer data structure.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -43,13 +43,21 @@
  * ************************************************************************** */
 
 void
+jitter_dynamic_buffer_initialize_with_allocated_size
+   (struct jitter_dynamic_buffer *da, size_t initial_allocated_size)
+{
+  /* Allocate a region with the given initial size, keeping track of how much
+     memory is available and how much is already used. */
+  da->allocated_size = initial_allocated_size;
+  da->used_size = 0;
+  da->region = jitter_xmalloc (initial_allocated_size);
+}
+
+void
 jitter_dynamic_buffer_initialize (struct jitter_dynamic_buffer *da)
 {
-  /* Allocate a region with the default initial size, keeping track of how much
-     memory is available and how much is already used. */
-  da->allocated_size = INITIAL_ALLOCATED_SIZE;
-  da->used_size = 0;
-  da->region = jitter_xmalloc (INITIAL_ALLOCATED_SIZE);
+  jitter_dynamic_buffer_initialize_with_allocated_size
+    (da, INITIAL_ALLOCATED_SIZE);
 }
 
 void
@@ -77,11 +85,13 @@ jitter_dynamic_buffer_reserve (struct jitter_dynamic_buffer *db,
 
   /* Reserve space, which possibly entails reallocating the region.  This
      potentially changes the region pointer, which is why we can compute the
-     result only after this. */
+     result only after this.
+     Doubling *and adding one* is reasonable, as it lets us start with a zero
+     size as well, without needing any more conditionals. */
   db->used_size += chars_to_reserve;
   if (db->used_size > db->allocated_size)
     db->region = jitter_xrealloc (db->region,
-                                  db->allocated_size = db->used_size * 2);
+                                  db->allocated_size = db->used_size * 2 + 1);
 
   /* Now we know where the reserved space begins: it comes offset chars after
      the region, as it is now. */
