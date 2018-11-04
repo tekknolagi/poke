@@ -438,6 +438,35 @@ jitter_replicate_program (struct jitter_program *p)
                    (long) j, (long) residual_arity, (long) jout_fast_label);
           fprintf (stderr, "  Its value is %p\n", immediate.pointer);
 
+          /* Look for any appropriate patch-in descriptors referring this label.
+             I cannot really rely on the order or the number of patch-ins here,
+             so I will scan every patch-in for this specialized instruction.  In
+             any sensible case they will not be more than a few. */
+          const struct patch_in_table_entry *pite
+            = p->vm->patch_in_table + opcode;
+          int pi;
+          for (pi = 0; pi < pite->descriptor_no; pi ++)
+            {
+              const struct jitter_patch_in_descriptor *pid
+                = pite->descriptors [pi];
+              if (pid->residual_index == jout_fast_label)
+                {
+                  fprintf (stderr, "  Found a patch-in descriptor for it at %p\n", pid);
+                  //jitter_dump_patch_in_descriptor_with_prefix (stdout, "    ", pid);
+
+                  struct jitter_backpatch bp;
+                  bp.patch_in_descriptor = pid;
+                  bp.native_code = free_code + pid->offset;
+                  bp.residual_index = j;
+                  bp.thread = immediate;
+                  bp.routine = jitter_routine_for_patch_in (pid);
+                  jitter_dynamic_buffer_push (& backpatches, & bp,
+                                              sizeof (struct jitter_backpatch));
+              }
+            }
+
+          asm ("" : : "X" (immediate));
+          /*
           // FIXME: this is obviously slow and wrong.  I should use an
           // associative data structure instead of scanning the descriptor
           // array.
@@ -450,8 +479,8 @@ jitter_replicate_program (struct jitter_program *p)
             if (   pid->specialized_instruction_opcode == opcode
                 && pid->residual_index == jout_fast_label)
               {
-                fprintf (stderr, "  Found a patch-in descriptor for it at %p\n", pid);
-                //jitter_dump_patch_in_descriptor_with_prefix (stdout, "    ", pid);
+                printf ("  Found a patch-in descriptor for it at %p\n", pid);
+                jitter_dump_patch_in_descriptor_with_prefix (stdout, "    ", pid);
 
                 struct jitter_backpatch bp;
                 bp.patch_in_descriptor = pid;
@@ -463,6 +492,7 @@ jitter_replicate_program (struct jitter_program *p)
                 jitter_dynamic_buffer_push (& backpatches, & bp,
                                             sizeof (struct jitter_backpatch));
               }
+          */
 
           /* We have processed one fast label.  Advance the output counter. */
           jout_fast_label ++;
