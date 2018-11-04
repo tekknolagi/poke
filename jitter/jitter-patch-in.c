@@ -86,6 +86,10 @@ jitter_make_patch_in_table (const struct jitter_patch_in_descriptor *descs,
         = (db->used_size / sizeof (const struct jitter_patch_in_descriptor *));
       if (entry->descriptor_no == 0)
         {
+          /* Don't bother extracting an array of no elements, to be copied.  We
+             can save a little memory by releasing the useless empty dynamic
+             buffer immediately, and using a NULL pointer in the result
+             instead. */
           entry->descriptors = NULL;
           jitter_dynamic_buffer_finalize (db);
         }
