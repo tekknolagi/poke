@@ -40,6 +40,82 @@
 #include <stdbool.h>
 
 #include <jitter/jitter.h>
+#include <jitter/jitter-malloc.h>
+
+
+
+
+/* Patch-in efficient data structures.
+ * ************************************************************************** */
+
+struct patch_in_table_entry *
+jitter_make_patch_in_table (const struct jitter_patch_in_descriptor *descs,
+                            size_t desc_no,
+                            size_t specialized_instruction_no)
+{
+  /* Make an empty array of empty dynamic buffers. */
+  struct jitter_dynamic_buffer *dbs
+    = jitter_xmalloc (sizeof (struct jitter_dynamic_buffer)
+                      * specialized_instruction_no);
+  int i;
+  for (i = 0; i < specialized_instruction_no; i ++)
+    jitter_dynamic_buffer_initialize_with_allocated_size (dbs + i, 0);
+
+  /* Scan the unordered descriptors, adding a pointer to each element in the
+     appropriate place. */
+  for (i = 0; i < desc_no; i ++)
+    {
+      const struct jitter_patch_in_descriptor *desc = descs + i;
+      int opcode = desc->specialized_instruction_opcode;
+      jitter_dynamic_buffer_push
+         (dbs + opcode,
+          & desc,
+          sizeof (const struct jitter_patch_in_descriptor *));
+    }
+
+  /* Now build the result from the dynamic buffers, destroying them in the
+     process. */
+  struct patch_in_table_entry *res
+    = jitter_xmalloc (sizeof (struct patch_in_table_entry)
+                      * specialized_instruction_no);
+  for (i = 0; i < specialized_instruction_no; i ++)
+    {
+      struct jitter_dynamic_buffer *db = dbs + i;
+      struct patch_in_table_entry *entry = res + i;
+      entry->descriptor_no
+        = (db->used_size / sizeof (const struct jitter_patch_in_descriptor *));
+      if (entry->descriptor_no == 0)
+        {
+          entry->descriptors = NULL;
+          jitter_dynamic_buffer_finalize (db);
+        }
+      else
+        /* Here I reuse the malloc-allocated memory for the dynamic buffer in
+           the result, and don't need to finalize the dynamic buffer. */
+        entry->descriptors = jitter_dynamic_buffer_extract_trimmed (db);
+    }
+  free (dbs);
+
+  /* We have built the result data structure. */
+  return res;
+}
+
+void
+jitter_destroy_patch_in_table (struct patch_in_table_entry *table,
+                               size_t specialized_instruction_no)
+{
+  int i;
+  for (i = 0; i < specialized_instruction_no; i ++)
+    {
+      /* When there are no entries I use NULL pointers instead of a
+         malloc-allocated array; therefore I have to call free only for
+         specialized instructions having at least one patch-in descriptor. */
+      struct patch_in_table_entry *entry = table + i;
+      if (entry->descriptor_no != 0)
+        free (entry->descriptors);
+    }
+  free (table);
+}
 
 
 
