@@ -1,6 +1,6 @@
 /* Jitter: dynamic buffer data structure header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2018 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -72,7 +72,14 @@ struct jitter_dynamic_buffer
  * ************************************************************************** */
 
 /* Initialize the pointed structure to a dynamic buffer containing zero used
-   bytes. */
+   bytes.  Use a the given value for the initial allocated size. */
+void
+jitter_dynamic_buffer_initialize_with_allocated_size
+   (struct jitter_dynamic_buffer *da, size_t initial_allocated_size)
+  __attribute__ ((nonnull (1)));
+
+/* Initialize the pointed structure to a dynamic buffer containing zero used
+   bytes.  Use a reasonable default value for the initial allocated size. */
 void
 jitter_dynamic_buffer_initialize (struct jitter_dynamic_buffer *db)
   __attribute__ ((nonnull (1)));
