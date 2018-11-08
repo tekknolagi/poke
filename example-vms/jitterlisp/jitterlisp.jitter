@@ -1260,6 +1260,51 @@ instruction primitive-primordial-times (?f)
   end
 end
 
+instruction primitive-primordial-divided (?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
+#ifndef JITTERLISP_UNSAFE
+    JITTER_BRANCH_FAST_IF_EQUAL(JITTER_TOP_MAINSTACK(),
+                                JITTERLISP_FIXNUM_ENCODE (0),
+                                JITTER_ARGF0);
+#endif // #ifndef JITTERLISP_UNSAFE
+    JITTERLISP_DIVIDED_UNSAFE_(JITTER_TOP_MAINSTACK(),
+                               JITTER_UNDER_TOP_MAINSTACK(),
+                               JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-quotient (?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
+#ifndef JITTERLISP_UNSAFE
+    JITTER_BRANCH_FAST_IF_EQUAL(JITTER_TOP_MAINSTACK(),
+                                JITTERLISP_FIXNUM_ENCODE (0),
+                                JITTER_ARGF0);
+#endif // #ifndef JITTERLISP_UNSAFE
+    JITTERLISP_QUOTIENT_UNSAFE_(JITTER_TOP_MAINSTACK(),
+                                JITTER_UNDER_TOP_MAINSTACK(),
+                                JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
+instruction primitive-remainder (?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
+#ifndef JITTERLISP_UNSAFE
+    JITTER_BRANCH_FAST_IF_EQUAL(JITTER_TOP_MAINSTACK(),
+                                JITTERLISP_FIXNUM_ENCODE (0),
+                                JITTER_ARGF0);
+#endif // #ifndef JITTERLISP_UNSAFE
+    JITTERLISP_REMAINDER_UNSAFE_(JITTER_TOP_MAINSTACK(),
+                                 JITTER_UNDER_TOP_MAINSTACK(),
+                                 JITTER_TOP_MAINSTACK());
+    JITTER_NIP_MAINSTACK();
+  end
+end
+
 instruction primitive-primordial-divided-unsafe (?f)
   code
     /* The second argument has already been validated if we are using this. */

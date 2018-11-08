@@ -728,6 +728,10 @@ jitterc_make_specialized_instruction_internal (struct jitterc_vm *vm,
   res->instruction = (struct jitterc_instruction*) ui;
   res->specialized_arguments = jitterc_clone_list (specialized_args_copy);
 
+  /* No replacement by default: replacements will be added in a later pass as
+     needed, and linked here replacing this field. */
+  res->replacement = NULL;
+
   /* By default the specialized instruction hotness is the same as the
      unspecialized hotness.  However if a meta-instruction is declared hot its
      specializations involving residual non-label arguments are low-priority,
@@ -759,7 +763,7 @@ jitterc_make_specialized_instruction_internal (struct jitterc_vm *vm,
   /* Add the new specialized instruction to the VM. */
   gl_list_add_last (vm->specialized_instructions, res);
 
-  /* Update the maximal residual arity. */
+  /* Compute the residual arity of this instruction. */
   size_t specialized_argument_no = gl_list_size (res->specialized_arguments);
   size_t residual_arity = 0;
   for (i = 0; i < specialized_argument_no; i ++)
@@ -924,6 +928,79 @@ jitterc_fill_name_to_instruction (struct jitterc_vm * vm)
     }
 }
 
+
+
+
+/* Replacement generation.
+ * ************************************************************************** */
+
+/* Generate a replacement specialized instruction in the pointed VM for the
+   pointed potentially defective specialized instruction.  Update the pointed
+   specialized instruction, linking the replacement from it. */
+static void
+jitterc_generate_replacement_for (struct jitterc_vm *vm,
+                                  struct jitterc_specialized_instruction *sins)
+{
+  /* FIXME: do it.
+
+     Possibly use jitterc_make_specialized_instruction, after generating an
+     adapted list of specialized arguments and possibly updating the C body.
+   */
+}
+
+/* Generate replacement specialized instructions where needed, updating the
+   pointed VM.  This needs non-replacements specialized instructions to already
+   be available, so should be called late in the specialization process. */
+static void
+jitterc_generate_replacements (struct jitterc_vm *vm)
+{
+  /* Count how many specialized instructions there are now, before starting.  We
+     will scan this number of specialized instructions starting from the
+     beginning; the replacement specialized instructions to be added will be at
+     the end, and will not be scanned by the same loop. */
+  const size_t non_defective_sins_no = gl_list_size (vm->specialized_instructions);
+  fprintf (stderr, "Non-defective specialized instructions are %i\n", (int) non_defective_sins_no);
+
+  /* For every specialized instruction... */
+  int i;
+  int potentially_defective_no = 0;
+  for (i = 0; i < non_defective_sins_no; i ++)
+    {
+      /* Get a pointer to the specialized instruction. */
+      struct jitterc_specialized_instruction *sins
+        = ((struct jitterc_specialized_instruction *)
+           gl_list_get_at (vm->specialized_instructions, i));
+
+      /* Check its arguments.  The specialized instruction is potentially
+         defective iff it has at least one fast-label residual argument. */
+      bool potentially_defective = false;
+      int j;
+      for (j = 0; j < gl_list_size (sins->specialized_arguments); j ++)
+        {
+          const struct jitterc_specialized_argument *sarg
+            = ((const struct jitterc_specialized_argument*)
+               gl_list_get_at (sins->specialized_arguments, j));
+          if (sarg->kind == jitterc_instruction_argument_kind_fast_label)
+            {
+              potentially_defective = true;
+              potentially_defective_no ++;
+              break;
+            }
+        }
+      if (potentially_defective)
+        jitterc_generate_replacement_for (vm, sins);
+      fprintf (stderr, "%i. %s at %p with %i arguments. P.d.: %s\n", i,
+               sins->name, sins, j,
+               potentially_defective ? "yes" : "no");
+    }
+
+  const size_t total_sins_no = gl_list_size (vm->specialized_instructions);
+  fprintf (stderr, "Potentially defective specialized instructions are %i.\n", potentially_defective_no);
+  fprintf (stderr, "Generated %i replacements.\n", (int) (total_sins_no - non_defective_sins_no));
+}
+
+
+
 
 /* Data structure analysis.
  * ************************************************************************** */
@@ -1191,4 +1268,9 @@ jitterc_specialize (struct jitterc_vm *vm,
 
   /* We are done with the list used for visiting. */
   gl_list_free (specialized_arguments);
+
+  /* Generate replacements for potentially defective instructions.  This will
+     use (non-replacement) specialized instructions to generate more specialized
+     instructions. */
+  jitterc_generate_replacements (vm);
 }

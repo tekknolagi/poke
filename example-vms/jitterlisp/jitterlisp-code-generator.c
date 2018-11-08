@@ -211,8 +211,12 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
   const char *name = pri->name;
   jitter_uint in_arity = pri->in_arity;
 
+  /* These are good defaults for most primitives. */
   bool is_cons_setter = false;
   bool can_fail = true;
+
+  /* Generate specific code, depending on the primitive.  Change is_cons_setter
+     and can_fail in case the default doesn't apply. */
   if (! strcmp (name, "null?"))
     {
       can_fail = false;
@@ -281,6 +285,13 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
     jitterlispvm_append_instruction_name (p, "primitive-primordial-minus");
   else if (! strcmp (name, "primordial-*"))
     jitterlispvm_append_instruction_name (p, "primitive-primordial-times");
+  else if (! strcmp (name, "quotient"))
+    jitterlispvm_append_instruction_name (p, "primitive-quotient");
+  else if (! strcmp (name, "primordial-/"))
+    jitterlispvm_append_instruction_name (p, "primitive-primordial-divided");
+  else if (! strcmp (name, "remainder"))
+    jitterlispvm_append_instruction_name (p, "primitive-remainder");
+
   else if (! strcmp (name, "primordial-/-unsafe"))
     jitterlispvm_append_instruction_name (p, "primitive-primordial-divided-unsafe");
   else if (! strcmp (name, "eq?"))

@@ -231,6 +231,33 @@ vmprefix_validate_threads_once (void)
 }
 #endif // #ifndef JITTER_DISPATCH_SWITCH
 
+#ifdef JITTER_HAVE_PATCH_IN
+/* The actual defect table.  We only need it when patch-ins are in use. */
+jitter_uint
+vmprefix_defect_table [VMPREFIX_SPECIALIZED_INSTRUCTION_NO];
+#endif // #ifdef JITTER_HAVE_PATCH_IN
+
+/* Fill the defect table.  Since the array in question is a global with a fixed
+   size, this needs to be done only once. */
+static void
+vmprefix_fill_defect_table_once (void)
+{
+  /* Do nothing if we don't have patch-ins. */
+#ifdef JITTER_HAVE_PATCH_IN
+  static bool already_filled = false;
+  if (already_filled)
+    return;
+  jitter_fill_defect_table (vmprefix_defect_table,
+                            VMPREFIX_SPECIALIZED_INSTRUCTION_NO,
+                            vmprefix_worst_case_defect_table,
+                            JITTER_DEFECT_DESCRIPTORS_NAME (vmprefix),
+                            (JITTER_DEFECT_DESCRIPTORS_SIZE_IN_BYTES_NAME
+                               (vmprefix)
+                             / sizeof (struct jitter_defect_descriptor)));
+  already_filled = true;
+#endif // #ifdef JITTER_HAVE_PATCH_IN
+}
+
 void
 vmprefix_initialize (void)
 {
@@ -247,6 +274,9 @@ vmprefix_initialize (void)
 
   /* Perform some sanity checks which only need to be run once. */
   vmprefix_check_specialized_instruction_opcode_once ();
+
+  /* Initialize the defect table. */
+  vmprefix_fill_defect_table_once ();
 
   /* We have to initialize threads before vmprefix_threads , since the struct
      needs threads. */

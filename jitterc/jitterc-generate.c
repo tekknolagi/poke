@@ -660,6 +660,35 @@ jitterc_emit_specialized_instruction_callees
   jitterc_emit_specialized_instruction_callers_or_callees (vm, false);
 }
 
+/* Emit the worst-case defect table for the pointed VM. */
+static void
+jitterc_emit_worst_case_defect_table (const struct jitterc_vm *vm)
+{
+  FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
+  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
+  EMIT("/* Worst-case defect table. */\n");
+  EMIT("const jitter_uint\n");
+  EMIT("vmprefix_worst_case_defect_table [] =\n");
+  EMIT("  {\n");
+  int i; char *comma;
+  FOR_LIST(i, comma, vm->specialized_instructions)
+    {
+      const struct jitterc_specialized_instruction* sins
+        = ((const struct jitterc_specialized_instruction*)
+           gl_list_get_at (vm->specialized_instructions, i));
+      if (sins->replacement == NULL)
+        EMIT("    vmprefix_specialized_instruction_opcode_%s%s /* NOT potentially defective. */\n",
+             sins->mangled_name, comma);
+      else
+        EMIT("    vmprefix_specialized_instruction_opcode_%s%s /* POTENTIALLY DEFECTIVE. */\n",
+             sins->replacement->mangled_name, comma);
+    }
+  EMIT("  };\n");
+  EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n");
+  EMIT("\n\n");
+  jitterc_fclose (f);
+}
+
 
 
 
@@ -1161,7 +1190,13 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
        jitterc_mangle ("!INVALID"));
   EMIT("    jitter_fatal (\"specialization failed\");\n");
   EMIT("\n");
+  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
+  EMIT("  /* Replace the opcode with its non-defective counterpart. */\n");
+  EMIT("  opcode = vmprefix_defect_table [opcode];\n");
+  EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n");
+  EMIT("\n");
   EMIT("  jitter_add_specialized_instruction_opcode (p, opcode);\n");
+  EMIT("\n");
   EMIT("\n");
   EMIT("  /* FIXME: in the old shell-based generator I grouped specialized instructions by\n");
   EMIT("     their \"residual parameter map\", yielding a switch with a lot of different\n");
@@ -2552,7 +2587,7 @@ jitterc_emit_interpreter_main_function
   EMIT("         the end code with the non-initialization case. */\n");
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("      //JITTER_DUMP_PATCH_IN_DESCRIPTORS(vmprefix);\n");
-  EMIT("      JITTER_DUMP_DEFECT_DESCRIPTORS(vmprefix, VMPREFIX);\n");
+  EMIT("      JITTER_DUMP_DEFECT_TABLE(vmprefix, VMPREFIX);\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("      goto jitter_possibly_restore_registers_and_return_label;\n");
   EMIT("    }\n");
@@ -3313,6 +3348,7 @@ jitterc_generate (struct jitterc_vm *vm,
   jitterc_emit_specialized_instruction_relocatables (vm);
   jitterc_emit_specialized_instruction_callers (vm);
   jitterc_emit_specialized_instruction_callees (vm);
+  jitterc_emit_worst_case_defect_table (vm);
   jitterc_emit_rewriter (vm);
   jitterc_emit_specializer (vm);
   jitterc_emit_state (vm);

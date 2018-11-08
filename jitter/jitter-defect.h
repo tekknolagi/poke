@@ -140,39 +140,66 @@ struct jitter_defect_descriptor
 
 
 
+/* Defect efficient data structures.
+ * ************************************************************************** */
+
+/* Compiling code with defect descriptors yields an object file containing all
+   the required information, but the subsection hack leaves the data ordered in
+   a very inconvenient and inefficient way.  This functionality generates a
+   "defect table", which is a C array which can be indexed by a specialized
+   instruction opcode, whose elements are each the opcode of the replacement
+   specialized instruction; this opcode will be the same as the index if the
+   instruction is not defective.
+
+   The "worst-case defect table" is a defect table mapping each specialized
+   opcode for an instruction which can possibly be defective to its replacement.
+   The worst-case defect table is a global constant for each VM.
+
+   The idea is, of course, to make searching for a replacement instruction a
+   fast O(1) operation which can be executed unconditionally on any specialized
+   instruction, be it defective or not. */
+
+/* Given an initial pointer to the defect descriptor array, the number of
+   defects descriptors, a pointer to the worst-case defect table and the number
+   of specialized instructions, initialize the pointed defect table.  The defect
+   table is a global, already existing for any given VM, which only needs to be
+   initialized once even if a VM subsystem is finalized and re-initialized
+   multiple times. */
+void
+jitter_fill_defect_table (jitter_uint *defect_table,
+                          size_t specialized_instruction_no,
+                          const jitter_uint *worst_case_defect_table,
+                          const struct jitter_defect_descriptor *descs,
+                          size_t desc_no)
+  __attribute__ ((nonnull (1, 3, 4)));
+
+
+
+
 /* Defect debugging.
  * ************************************************************************** */
 
-/* Dump the given defect descriptor array, having the given size in
-   elements, in human-readable form to the pointed stream. */
+/* Dump the pointed defect table to the given stream. */
 void
-jitter_dump_defect_descriptors
-   (FILE *f,
-    const char * const specialized_instruction_names [],
-    size_t specialized_instruction_no, 
-    const struct jitter_defect_descriptor defects [],
-    size_t defect_no)
+jitter_dump_defect_table (FILE *f,
+                          const jitter_uint *defect_table,
+                          size_t specialized_instruction_no,
+                          const char * const specialized_instruction_names [])
   __attribute__ ((nonnull (1, 2, 4)));
 
 /* A convenience macro to call jitter_dump_defect_descriptors with the correct
    parameters. */
-#define JITTER_DUMP_DEFECT_DESCRIPTORS(_jitter_vm_the_prefix,     \
-                                       _jitter_vm_THE_PREFIX)     \
-  do                                                              \
-    {                                                             \
-      size_t defect_no                                            \
-        = (JITTER_DEFECT_DESCRIPTORS_SIZE_IN_BYTES_NAME(          \
-              _jitter_vm_the_prefix)                              \
-           / sizeof (struct jitter_defect_descriptor));           \
-      jitter_dump_defect_descriptors                              \
-         (stderr,                                                 \
-          JITTER_CONCATENATE_TWO(_jitter_vm_the_prefix, \
-                                 _specialized_instruction_names), \
-          JITTER_CONCATENATE_TWO(_jitter_vm_THE_PREFIX, \
-                                 _SPECIALIZED_INSTRUCTION_NO), \
-          JITTER_DEFECT_DESCRIPTORS_NAME(_jitter_vm_the_prefix),  \
-          defect_no);                                             \
-    }                                                               \
+#define JITTER_DUMP_DEFECT_TABLE(_jitter_vm_the_prefix, _jitter_vm_THE_PREFIX)  \
+  do                                                                            \
+    {                                                                           \
+      jitter_dump_defect_table                                                  \
+         (stderr,                                                               \
+          JITTER_CONCATENATE_TWO(_jitter_vm_the_prefix, _defect_table),         \
+          JITTER_CONCATENATE_TWO(_jitter_vm_THE_PREFIX,                         \
+                                 _SPECIALIZED_INSTRUCTION_NO),                  \
+          JITTER_CONCATENATE_TWO(_jitter_vm_the_prefix,                         \
+                                 _specialized_instruction_names));              \
+    }                                                                           \
   while (false)
 
 

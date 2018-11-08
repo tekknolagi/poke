@@ -100,6 +100,11 @@ jitterc_mangle (const char *original)
              instruction; therefore we need an encoding for it. */
           JITTERC_ADD_STRING("_e");
           break;
+        case '*':
+          /* Again the asterisk is not allowed in user identifiers, but occurs
+             (as a prefix) in replacement specialized instruction names. */
+          JITTERC_ADD_STRING("_A");
+          break;
         case '-':
           JITTERC_ADD_STRING("_m");
           break;
