@@ -106,7 +106,7 @@ jitter_dump_defect_table (FILE *f,
         }
     }
   if (defect_count > 0)
-    fprintf (f, "There are %i defective instructions.\n", defect_count);
+    fprintf (f, "There are %i defective specialized instructions.\n", defect_count);
 }
 
 
