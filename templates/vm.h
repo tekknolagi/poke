@@ -563,6 +563,24 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
 
 
 
+/* Defect tables.
+ * ************************************************************************** */
+
+/* It is harmless to declare these unconditionally, even if they only used when
+   patch-ins are available.  See jitter/jitter-defect.h .*/
+
+/* The worst-case defect table.  This is a global constant array, having one
+   element per specialized instruction. */
+extern const jitter_uint
+vmprefix_worst_case_defect_table [];
+
+/* The actual defect table, to be filled at initialization time. */
+extern jitter_uint
+vmprefix_defect_table [];
+
+
+
+
 /* Instruction rewriter.
  * ************************************************************************** */
 
