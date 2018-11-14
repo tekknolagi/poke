@@ -677,10 +677,10 @@ jitterc_emit_worst_case_defect_table (const struct jitterc_vm *vm)
         = ((const struct jitterc_specialized_instruction*)
            gl_list_get_at (vm->specialized_instructions, i));
       if (sins->replacement == NULL)
-        EMIT("    jitterlispvm_specialized_instruction_opcode_%s%s /* NOT potentially defective. */\n",
+        EMIT("    vmprefix_specialized_instruction_opcode_%s%s /* NOT potentially defective. */\n",
              sins->mangled_name, comma);
       else
-        EMIT("    jitterlispvm_specialized_instruction_opcode_%s%s /* POTENTIALLY DEFECTIVE. */\n",
+        EMIT("    vmprefix_specialized_instruction_opcode_%s%s /* POTENTIALLY DEFECTIVE. */\n",
              sins->replacement->mangled_name, comma);
     }
   EMIT("  };\n");
