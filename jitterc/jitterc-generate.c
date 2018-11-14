@@ -665,7 +665,6 @@ static void
 jitterc_emit_worst_case_defect_table (const struct jitterc_vm *vm)
 {
   FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
-  // FIXME: this is currently a stub, having each specialized instruction replacement be the specialized instruction itself.
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("/* Worst-case defect table. */\n");
   EMIT("const jitter_uint\n");
@@ -674,12 +673,15 @@ jitterc_emit_worst_case_defect_table (const struct jitterc_vm *vm)
   int i; char *comma;
   FOR_LIST(i, comma, vm->specialized_instructions)
     {
-      const struct jitterc_specialized_instruction* sins __attribute__ ((unused)) // FIXME: use and remove.
+      const struct jitterc_specialized_instruction* sins
         = ((const struct jitterc_specialized_instruction*)
            gl_list_get_at (vm->specialized_instructions, i));
-      int replacement_index = i; // stub
-      EMIT("    vmprefix_specialized_instruction_opcode__eINVALID%s // FIXME: this is a stub: %i\n",
-           comma, replacement_index);
+      if (sins->replacement == NULL)
+        EMIT("    jitterlispvm_specialized_instruction_opcode_%s%s /* NOT potentially defective. */\n",
+             sins->mangled_name, comma);
+      else
+        EMIT("    jitterlispvm_specialized_instruction_opcode_%s%s /* POTENTIALLY DEFECTIVE. */\n",
+             sins->replacement->mangled_name, comma);
     }
   EMIT("  };\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n");

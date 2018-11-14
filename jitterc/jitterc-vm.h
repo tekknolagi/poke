@@ -566,6 +566,10 @@ struct jitterc_specialized_instruction
 
   /* A list of struct jitterc_specialized_argument pointers. */
   gl_list_t specialized_arguments;
+
+  /* A pointer to a replacement specialized instruction, in case this
+     specialized instruction is potentially defective.  NULL otherwise. */
+  struct jitterc_specialized_instruction *replacement;
 };
 
 /* Return a pointer to a freshly-allocated struct jitterc_instruction . */
