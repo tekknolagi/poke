@@ -35,6 +35,9 @@
 #ifdef JITTER_HAVE_PATCH_IN
 
 
+#include <jitter/jitter-vm.h>
+
+
 
 
 /* Defect efficient data structures.
@@ -42,11 +45,13 @@
 
 void
 jitter_fill_defect_table (jitter_uint *defect_table,
-                          size_t specialized_instruction_no,
+                          const struct jitter_vm *vm,
                           const jitter_uint *worst_case_defect_table,
                           const struct jitter_defect_descriptor *descs,
                           size_t desc_no)
 {
+  size_t specialized_instruction_no = vm->specialized_instruction_no;
+
   /* Temporarily use the defect table we are filling to store booleans: false
      for non-defective instructions, true for defective instructions.  These
      booleans will be replaced with opcodes in the final pass. */
@@ -74,7 +79,15 @@ jitter_fill_defect_table (jitter_uint *defect_table,
   for (i = 0; i < specialized_instruction_no; i ++)
     if (__builtin_expect (defect_table [i],
                           false))
-      defect_table [i] = worst_case_defect_table [i];
+      {
+        // FIXME: move this warning to some other place.
+        if (worst_case_defect_table [i] == i)
+          fprintf (stderr,
+                   "WARNING: specialized instruction %s (opcode %i) "
+                   "is defective but has no replacement\n",
+                   vm->specialized_instruction_names [i], i);
+        defect_table [i] = worst_case_defect_table [i];
+      }
     else
       defect_table [i] = i;
 }
@@ -88,9 +101,12 @@ jitter_fill_defect_table (jitter_uint *defect_table,
 void
 jitter_dump_defect_table (FILE *f,
                           const jitter_uint *defect_table,
-                          size_t specialized_instruction_no,
-                          const char * const specialized_instruction_names [])
+                          const struct jitter_vm *vm)
 {
+  size_t specialized_instruction_no = vm->specialized_instruction_no;
+  const char * const * specialized_instruction_names
+    = vm->specialized_instruction_names;
+
   int defect_count = 0;
   jitter_uint i;
   for (i = 0; i < specialized_instruction_no; i ++)

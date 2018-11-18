@@ -399,6 +399,10 @@ struct jitterc_specialized_argument
   /* True if the argument is residual, false if the argument is specialized. */
   bool residual;
 
+  /* Non-false iff this specialized argument is a replacement for a fast
+     label, and therefore a non-fast label. */
+  bool replacement;
+
   /* One field of the the following union is used only if the argument is
      specialized; which one depends on the unspecialized argument kind. */
   union

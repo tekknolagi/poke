@@ -970,6 +970,14 @@ instruction branch-if-null (?f)
   end
 end
 
+instruction branch-if-not-null (?f)
+  code
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTERLISP_EMPTY_LIST, JITTER_ARGF0);
+  end
+end
+
 instruction canonicalize-boolean ()
   code
     JITTERLISP_BOOLEAN_CANONICALIZE_(JITTER_TOP_MAINSTACK(),
@@ -1066,6 +1074,31 @@ instruction primitive-set-cdrb-special (?f)
     JITTERLISPVM_CHECK_TYPES_2(CONS, ANYTHING, JITTER_ARGF0);
     jitterlisp_object useless __attribute__ ((unused));
     JITTERLISP_SET_CDRB_(useless,
+                         JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    /* Leave the two operands on the stack. */
+  end
+end
+
+instruction primitive-box ()
+  code
+    JITTERLISP_BOX_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-box-get (?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_1(BOX, JITTER_ARGF0);
+    JITTERLISP_BOX_GET_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+# See the comment above for set-car! and set-cdr! .  The same performance
+# considerations hold for box-set! .
+instruction primitive-box-setb-special (?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_2(BOX, ANYTHING, JITTER_ARGF0);
+    jitterlisp_object useless __attribute__ ((unused));
+    JITTERLISP_BOX_SETB_(useless,
                          JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
     /* Leave the two operands on the stack. */
   end
@@ -1982,6 +2015,28 @@ rule not-branch-if-true rewrite
   primitive-not; branch-if-true $b
 into
   branch-if-false $b
+end
+
+rule nullp-branch-if-true rewrite
+  primitive-nullp; branch-if-true $a
+into
+  branch-if-null $a
+end
+rule nullp-branch-if-false rewrite
+  primitive-nullp; branch-if-false $a
+into
+  branch-if-not-null $a
+end
+
+rule non-nullp-branch-if-true rewrite
+  primitive-non-nullp; branch-if-true $a
+into
+  branch-if-not-null $a
+end
+rule non-nullp-branch-if-false rewrite
+  primitive-non-nullp; branch-if-false $a
+into
+  branch-if-null $a
 end
 
 # # Some save/restore pairs are easy to eliminate.

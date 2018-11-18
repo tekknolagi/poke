@@ -212,10 +212,10 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
   jitter_uint in_arity = pri->in_arity;
 
   /* These are good defaults for most primitives. */
-  bool is_cons_setter = false;
+  bool is_setter = false;
   bool can_fail = true;
 
-  /* Generate specific code, depending on the primitive.  Change is_cons_setter
+  /* Generate specific code, depending on the primitive.  Change is_setter
      and can_fail in case the default doesn't apply. */
   if (! strcmp (name, "null?"))
     {
@@ -328,8 +328,11 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
     jitterlispvm_append_instruction_name (p, "primitive-fixnum-eqp");
   else if (! strcmp (name, "<>"))
     jitterlispvm_append_instruction_name (p, "primitive-fixnum-not-eqp");
+  else if (! strcmp (name, "box-get"))
+    jitterlispvm_append_instruction_name (p, "primitive-box-get");
   else if (! strcmp (name, "boolean-canonicalize")
            || ! strcmp (name, "not")
+           || ! strcmp (name, "box")
            )
     {
       /* These primitives cannot fail and have a regular name. */
@@ -369,11 +372,26 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
          doesn't drop any of the two operands, followed by a nip instruction to
          remove the undertop and a copy-from-literal instruction to set the TOS
          to #<nothing>.  The last two instructions can often be rewritten away. */
-      is_cons_setter = true;
+      is_setter = true;
       if (! strcmp (name, "set-car!"))
         JITTERLISPVM_APPEND_INSTRUCTION (p, primitive_mset_mcarb_mspecial);
       else
         JITTERLISPVM_APPEND_INSTRUCTION (p, primitive_mset_mcdrb_mspecial);
+      jitterlispvm_label error_label = jitterlisp_error_label (p, map);
+      jitterlispvm_append_label_parameter (p, error_label);
+      JITTERLISPVM_APPEND_INSTRUCTION (p, nip);
+      JITTERLISPVM_APPEND_INSTRUCTION (p, copy_mfrom_mliteral);
+      jitterlispvm_append_unsigned_literal_parameter (p, JITTERLISP_NOTHING);
+    }
+  else if (! strcmp (name, "box-set!"))
+    {
+      /* Same rationale as for set-car! and set-cdr! : the result is usually
+         useless and ignored, so I generate a VM instruction performing effects
+         without altering anything on the stack, followed by separate
+         instructions for nipping and replacing the top.  These last two
+         instructions will hopefully be rewritten away. */
+      is_setter = true;
+      JITTERLISPVM_APPEND_INSTRUCTION (p, primitive_mbox_msetb_mspecial);
       jitterlispvm_label error_label = jitterlisp_error_label (p, map);
       jitterlispvm_append_label_parameter (p, error_label);
       JITTERLISPVM_APPEND_INSTRUCTION (p, nip);
@@ -389,11 +407,12 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
       jitterlispvm_append_unsigned_literal_parameter (p, in_arity);
     }
 
-  /* In every case except for the primitives that never fail and set-car! and
-     set-cdr! (compiled into more than one VM instructions) we still need to
-     append the error label as the last argument.  The primitive instruction
-     will jump there used in case some argument type doesn't match.  */
-  if (can_fail && ! is_cons_setter)
+  /* In every case except for the primitives that never fail and set-car! ,
+     set-cdr! or box-set! (compiled into more than one VM instruction) we still
+     need to append the error label as the last argument.  The primitive
+     instruction will jump there used in case some argument type doesn't
+     match.  */
+  if (can_fail && ! is_setter)
     {
       jitterlispvm_label error_label = jitterlisp_error_label (p, map);
       jitterlispvm_append_label_parameter (p, error_label);

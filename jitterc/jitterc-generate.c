@@ -680,7 +680,7 @@ jitterc_emit_worst_case_defect_table (const struct jitterc_vm *vm)
         EMIT("    vmprefix_specialized_instruction_opcode_%s%s /* NOT potentially defective. */\n",
              sins->mangled_name, comma);
       else
-        EMIT("    vmprefix_specialized_instruction_opcode_%s%s /* POTENTIALLY DEFECTIVE. */\n",
+        EMIT("    /*vmprefix_specialized_instruction_opcode__eINVALID*/vmprefix_specialized_instruction_opcode_%s%s /* POTENTIALLY DEFECTIVE. */\n",
              sins->replacement->mangled_name, comma);
     }
   EMIT("  };\n");
@@ -2587,7 +2587,6 @@ jitterc_emit_interpreter_main_function
   EMIT("         the end code with the non-initialization case. */\n");
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("      //JITTER_DUMP_PATCH_IN_DESCRIPTORS(vmprefix);\n");
-  EMIT("      JITTER_DUMP_DEFECT_TABLE(vmprefix, VMPREFIX);\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("      goto jitter_possibly_restore_registers_and_return_label;\n");
   EMIT("    }\n");
