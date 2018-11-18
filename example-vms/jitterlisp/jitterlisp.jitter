@@ -1071,6 +1071,31 @@ instruction primitive-set-cdrb-special (?f)
   end
 end
 
+instruction primitive-box ()
+  code
+    JITTERLISP_BOX_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+instruction primitive-box-get (?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_1(BOX, JITTER_ARGF0);
+    JITTERLISP_BOX_GET_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+  end
+end
+
+# See the comment above for set-car! and set-cdr! .  The same performance
+# considerations hold for box-set! .
+instruction primitive-box-setb-special (?f)
+  code
+    JITTERLISPVM_CHECK_TYPES_2(BOX, ANYTHING, JITTER_ARGF0);
+    jitterlisp_object useless __attribute__ ((unused));
+    JITTERLISP_BOX_SETB_(useless,
+                         JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    /* Leave the two operands on the stack. */
+  end
+end
+
 instruction primitive-eqp ()
   code
     JITTERLISP_EQP_(JITTER_TOP_MAINSTACK(),
