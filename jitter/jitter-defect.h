@@ -159,19 +159,23 @@ struct jitter_defect_descriptor
    fast O(1) operation which can be executed unconditionally on any specialized
    instruction, be it defective or not. */
 
-/* Given an initial pointer to the defect descriptor array, the number of
-   defects descriptors, a pointer to the worst-case defect table and the number
-   of specialized instructions, initialize the pointed defect table.  The defect
-   table is a global, already existing for any given VM, which only needs to be
-   initialized once even if a VM subsystem is finalized and re-initialized
-   multiple times. */
+/* I can just use a forward-declaration here instead of a header inclusion.
+   Anyway this is the struct defined in jitter/jitter-vm.h . */
+struct jitter_vm;
+
+/* Given a pointer to the VM struct, an initial pointer to the defect descriptor
+   array, the number of defects descriptors and a pointer to the worst-case
+   defect table, initialize the pointed defect table.  The defect table is a
+   global, already existing for any given VM, which only needs to be initialized
+   once even if a VM subsystem is finalized and re-initialized multiple
+   times. */
 void
 jitter_fill_defect_table (jitter_uint *defect_table,
-                          size_t specialized_instruction_no,
+                          const struct jitter_vm *vm,
                           const jitter_uint *worst_case_defect_table,
                           const struct jitter_defect_descriptor *descs,
                           size_t desc_no)
-  __attribute__ ((nonnull (1, 3, 4)));
+  __attribute__ ((nonnull (1, 2, 3, 4)));
 
 
 
@@ -183,24 +187,8 @@ jitter_fill_defect_table (jitter_uint *defect_table,
 void
 jitter_dump_defect_table (FILE *f,
                           const jitter_uint *defect_table,
-                          size_t specialized_instruction_no,
-                          const char * const specialized_instruction_names [])
-  __attribute__ ((nonnull (1, 2, 4)));
-
-/* A convenience macro to call jitter_dump_defect_descriptors with the correct
-   parameters. */
-#define JITTER_DUMP_DEFECT_TABLE(_jitter_vm_the_prefix, _jitter_vm_THE_PREFIX)  \
-  do                                                                            \
-    {                                                                           \
-      jitter_dump_defect_table                                                  \
-         (stderr,                                                               \
-          JITTER_CONCATENATE_TWO(_jitter_vm_the_prefix, _defect_table),         \
-          JITTER_CONCATENATE_TWO(_jitter_vm_THE_PREFIX,                         \
-                                 _SPECIALIZED_INSTRUCTION_NO),                  \
-          JITTER_CONCATENATE_TWO(_jitter_vm_the_prefix,                         \
-                                 _specialized_instruction_names));              \
-    }                                                                           \
-  while (false)
+                          const struct jitter_vm *vm)
+  __attribute__ ((nonnull (1, 2, 3)));
 
 
 #endif // JITTER_DEFECT_H_

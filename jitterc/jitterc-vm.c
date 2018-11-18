@@ -941,7 +941,8 @@ static void
 jitterc_generate_replacement_for (struct jitterc_vm *vm,
                                   struct jitterc_specialized_instruction *sins)
 {
-  /* FIXME: do it.
+  sins->replacement = (void*) (jitter_uint) 1;
+  /* FIXME: do it for real.
 
      Possibly use jitterc_make_specialized_instruction, after generating an
      adapted list of specialized arguments and possibly updating the C body.

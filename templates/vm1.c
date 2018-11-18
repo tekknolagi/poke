@@ -237,27 +237,6 @@ jitter_uint
 vmprefix_defect_table [VMPREFIX_SPECIALIZED_INSTRUCTION_NO];
 #endif // #ifdef JITTER_HAVE_PATCH_IN
 
-/* Fill the defect table.  Since the array in question is a global with a fixed
-   size, this needs to be done only once. */
-static void
-vmprefix_fill_defect_table_once (void)
-{
-  /* Do nothing if we don't have patch-ins. */
-#ifdef JITTER_HAVE_PATCH_IN
-  static bool already_filled = false;
-  if (already_filled)
-    return;
-  jitter_fill_defect_table (vmprefix_defect_table,
-                            VMPREFIX_SPECIALIZED_INSTRUCTION_NO,
-                            vmprefix_worst_case_defect_table,
-                            JITTER_DEFECT_DESCRIPTORS_NAME (vmprefix),
-                            (JITTER_DEFECT_DESCRIPTORS_SIZE_IN_BYTES_NAME
-                               (vmprefix)
-                             / sizeof (struct jitter_defect_descriptor)));
-  already_filled = true;
-#endif // #ifdef JITTER_HAVE_PATCH_IN
-}
-
 void
 vmprefix_initialize (void)
 {
@@ -274,9 +253,6 @@ vmprefix_initialize (void)
 
   /* Perform some sanity checks which only need to be run once. */
   vmprefix_check_specialized_instruction_opcode_once ();
-
-  /* Initialize the defect table. */
-  vmprefix_fill_defect_table_once ();
 
   /* We have to initialize threads before vmprefix_threads , since the struct
      needs threads. */
@@ -376,6 +352,18 @@ vmprefix_initialize (void)
       the_vmprefix_vm.specialize_instruction = vmprefix_specialize_instruction;
       the_vmprefix_vm.actually_rewrite = vmprefix_rewrite;
 
+#ifdef JITTER_HAVE_PATCH_IN
+      /* Fill the defect table.  Since the array in question is a global with a
+         fixed size, this needs to be done only once. */
+      jitter_fill_defect_table (vmprefix_defect_table,
+                                & the_vmprefix_vm,
+                                vmprefix_worst_case_defect_table,
+                                JITTER_DEFECT_DESCRIPTORS_NAME (vmprefix),
+                                (JITTER_DEFECT_DESCRIPTORS_SIZE_IN_BYTES_NAME
+                                    (vmprefix)
+                                 / sizeof (struct jitter_defect_descriptor)));
+#endif // #ifdef JITTER_HAVE_PATCH_IN
+
       /* Rewriting is on by default. */
       jitter_vm_enable_optimization_rewriting (& the_vmprefix_vm);
 
@@ -389,6 +377,10 @@ vmprefix_initialize (void)
   jitter_initialize_meta_instructions (& vmprefix_meta_instruction_hash,
                                          vmprefix_meta_instructions,
                                          VMPREFIX_META_INSTRUCTION_NO);
+
+#ifdef JITTER_HAVE_PATCH_IN
+  jitter_dump_defect_table (stderr, vmprefix_defect_table, & the_vmprefix_vm);
+#endif // #ifdef JITTER_HAVE_PATCH_IN
 }
 
 void
