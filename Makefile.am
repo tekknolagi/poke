@@ -1424,13 +1424,6 @@ $(srcdir)/example-vms/jitterlisp/doc/gpl.texi: doc/gpl.texi
 $(srcdir)/example-vms/jitterlisp/doc/fdl.texi: doc/fdl.texi
 	cp "$<" "$@"
 
-# JitterLisp test cases.
-if JITTER_ENABLE_TEST_SUITE
-  TESTS += tests/jitterlisp/jitterlisp.test
-  check_PROGRAMS += $(PROGRAMS_JITTERLISP)
-  tests/jitterlisp/jitterlisp.log: $(check_PROGRAMS)
-  EXTRA_DIST += tests/jitterlisp/test-definitions.scm
-endif # if JITTER_ENABLE_TEST_SUITE
 
 # Brainfuck example VM.
 # ################################################################
@@ -1719,6 +1712,14 @@ else # JITTER_ENABLE_TEST_SUITE is false
   test-suite-disabled:
 	  @echo 'The test suite has been disabled at configure time.'
 	  @exit 1
+endif # if JITTER_ENABLE_TEST_SUITE
+
+# JitterLisp test cases.
+if JITTER_ENABLE_TEST_SUITE
+  TESTS += tests/jitterlisp/jitterlisp.test
+  check_PROGRAMS += $(PROGRAMS_JITTERLISP)
+  tests/jitterlisp/jitterlisp.log: $(check_PROGRAMS)
+  EXTRA_DIST += tests/jitterlisp/test-definitions.scm
 endif # if JITTER_ENABLE_TEST_SUITE
 
 # Tests have to be distributed, but it's not needed to add them to EXTRA_DIST in
