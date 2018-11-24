@@ -680,13 +680,8 @@ jitterc_emit_worst_case_defect_table (const struct jitterc_vm *vm)
         EMIT("    vmprefix_specialized_instruction_opcode_%s%s /* NOT potentially defective. */\n",
              sins->mangled_name, comma);
       else
-        {
-        EMIT("    vmprefix_specialized_instruction_opcode__eINVALID%s /* POTENTIALLY DEFECTIVE. */ // FIXME: replace this stub in jitterc-generate.c\n",
-             comma);
-        /* FIXME: re-enable this correct else branch after implementing replacement in jitterc-vm.c. */
-        /* EMIT("    vmprefix_specialized_instruction_opcode__eINVALID/\*vmprefix_specialized_instruction_opcode_%s*\/%s /\* POTENTIALLY DEFECTIVE. *\/\n", */
-        /*      sins->replacement->mangled_name, comma); */
-        }
+        EMIT("    /*vmprefix_specialized_instruction_opcode__eINVALID*/vmprefix_specialized_instruction_opcode_%s%s /* POTENTIALLY DEFECTIVE. */\n",
+             sins->replacement->mangled_name, comma);
     }
   EMIT("  };\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n");

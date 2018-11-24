@@ -970,6 +970,14 @@ instruction branch-if-null (?f)
   end
 end
 
+instruction branch-if-not-null (?f)
+  code
+    jitterlisp_object top = JITTER_TOP_MAINSTACK();
+    JITTER_DROP_MAINSTACK();
+    JITTER_BRANCH_FAST_IF_NOTEQUAL(top, JITTERLISP_EMPTY_LIST, JITTER_ARGF0);
+  end
+end
+
 instruction canonicalize-boolean ()
   code
     JITTERLISP_BOOLEAN_CANONICALIZE_(JITTER_TOP_MAINSTACK(),
@@ -2007,6 +2015,28 @@ rule not-branch-if-true rewrite
   primitive-not; branch-if-true $b
 into
   branch-if-false $b
+end
+
+rule nullp-branch-if-true rewrite
+  primitive-nullp; branch-if-true $a
+into
+  branch-if-null $a
+end
+rule nullp-branch-if-false rewrite
+  primitive-nullp; branch-if-false $a
+into
+  branch-if-not-null $a
+end
+
+rule non-nullp-branch-if-true rewrite
+  primitive-non-nullp; branch-if-true $a
+into
+  branch-if-not-null $a
+end
+rule non-nullp-branch-if-false rewrite
+  primitive-non-nullp; branch-if-false $a
+into
+  branch-if-null $a
 end
 
 # # Some save/restore pairs are easy to eliminate.

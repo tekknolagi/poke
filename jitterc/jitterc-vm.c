@@ -607,6 +607,24 @@ jitterc_make_specialized_instruction_argument_common
   assert (unspecialized->kind & needed_kind);
   res->kind = needed_kind;
 
+  /* This will be a non-replacement by default.  Replacement specialized
+     argments are initialized by first cloning an argument and then updating
+     some fields, including this, in the clone. */
+  res->replacement = false;
+
+  return res;
+}
+
+/* Return a pointer to a freshly allocated clone of the pointed specialized
+   argument.  The new struct itself will be new, but may point to data shared
+   with the old specialized argument. */
+static struct jitterc_specialized_argument*
+jitterc_clone_specialized_instruction_argument_common
+   (const struct jitterc_specialized_argument *sarg)
+{
+  struct jitterc_specialized_argument *res
+    = xmalloc (sizeof (struct jitterc_specialized_argument));
+  memcpy (res, sarg, sizeof (struct jitterc_specialized_argument));
   return res;
 }
 
@@ -941,12 +959,48 @@ static void
 jitterc_generate_replacement_for (struct jitterc_vm *vm,
                                   struct jitterc_specialized_instruction *sins)
 {
-  sins->replacement = (void*) (jitter_uint) 1;
-  /* FIXME: do it for real.
+  /* Make an updated specialized argument list, where each fast label is
+     replaced by an ordinary label.  The updated list may share elements with
+     the original list. */
+  gl_list_t new_specialized_arguments
+    = jitterc_clone_list (sins->specialized_arguments);
+  int i;
+  for (i = 0; i < gl_list_size (new_specialized_arguments); i ++)
+    {
+      const struct jitterc_specialized_argument *old_sarg
+        = ((const struct jitterc_specialized_argument*)
+           gl_list_get_at (new_specialized_arguments, i));
+      if (old_sarg->kind == jitterc_instruction_argument_kind_fast_label)
+        {
+          struct jitterc_specialized_argument *new_sarg
+            = jitterc_clone_specialized_instruction_argument_common (old_sarg);
+          new_sarg->replacement = true;
+          new_sarg->residual = true;
+          new_sarg->kind = jitterc_instruction_argument_kind_label;
+          //gl_list_set_at (new_specialized_arguments, i, new_sarg); // FIXME: this is the right thing.  Reenable!
+          gl_list_set_at (new_specialized_arguments, i, old_sarg); // FIXME: obviously wrong.
+        }
+    }
 
-     Possibly use jitterc_make_specialized_instruction, after generating an
-     adapted list of specialized arguments and possibly updating the C body.
-   */
+  /* Make a new specialized instruction. */
+  struct jitterc_specialized_instruction *new_sins
+    = jitterc_make_ordinary_specialized_instruction
+    (vm, sins->instruction, new_specialized_arguments);
+
+  /* Update the specialized instruction name, to make it easy to recognize
+     visually as a replacement. */
+  char *original_name = sins->name;
+  size_t original_name_length = strlen (original_name);
+  size_t new_name_length = original_name_length + 1;
+  char *new_name = xmalloc (new_name_length + 1);
+  new_name [0] = '*';
+  strcpy (new_name + 1, original_name);
+  new_sins->name = new_name;
+  new_sins->mangled_name = jitterc_mangle (new_name);
+
+  /* Link the new specialized instruction from the potentially defective
+     specialized instruction it replaces. */
+  sins->replacement = (void*) (jitter_uint) new_sins;
 }
 
 /* Generate replacement specialized instructions where needed, updating the
