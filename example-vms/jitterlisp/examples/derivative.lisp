@@ -1,6 +1,6 @@
 ;;; JitterLisp (almost -*- Scheme -*- for Emacs): symbolic derivatives.
 
-;;; Copyright (C) 2017 Luca Saiu
+;;; Copyright (C) 2017, 2018 Luca Saiu
 ;;; Written by Luca Saiu
 
 ;;; This file is part of the JitterLisp language implementation, distributed as
@@ -53,9 +53,8 @@
           ((eq? rator '/)
            (normalize-arity-/ normalized-rands))
           ((eq? rator '**)
-           (if (= (length rands) 2)
-               `(,rator ,(car normalized-rands)
-                        ,(cadr normalized-rands))
+           (if (>= (length rands) 2)
+               (normalize-arity-** normalized-rands)
                (error `(invalid ** arity: ,@rands))))
           ((eq? rator 'exp)
            (if (= (length rands) 1)
@@ -113,6 +112,14 @@
            `(,rator ,(car normalized-rands)
                     ,(normalize-arity `(,opposite ,@(cdr normalized-rands))))))))
 
+;; FIXME: generalize to generic right-associative operators?
+(define (normalize-arity-** normalized-rands)
+  (let ((length (length normalized-rands)))
+    (if (null? (cddr normalized-rands))
+        `(** ,@normalized-rands)
+        `(** ,(car normalized-rands)
+             ,(normalize-arity-** (cdr normalized-rands))))))
+
 
 
 
@@ -169,6 +176,14 @@
         ((eq? (car exp) 'ln)
          `(/ ,(derivative-recursive (cadr exp) x)
              ,(cadr exp)))
+        ((eq? (car exp) '**)
+         (let* ((f (cadr exp))
+                (g (caddr exp))
+                (df/dx (derivative-recursive f x))
+                (dg/dx (derivative-recursive g x)))
+           `(* (** ,f ,g)
+               (+ (* ,df/dx (/ ,g ,f))
+                  (* ,dg/dx (ln ,f))))))
         (#t
          (error 'unimplemented))))
 
