@@ -20,7 +20,17 @@
 ;;; along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-(define (fact n)
+;; FIXME: comment for myself:
+;;        2018-12-09: by replacing define with define-constant , which would be
+;;        sensible, the recursive call compiles to call-compiled/n1/retR instead
+;;        of call/n1/retR .  Currently call/n1/retR is much more sensitive than
+;;        call-compiled/n1/retR : for example on PowerPC only the first is defective.
+;;
+;;        Unrelated:
+;;        For performance's sake, I should recommend in the documentation that
+;;        type and safety checks be separated from computation into separate VM
+;;        instructions, so that rewrites can optimize the checks away.
+(define-constant (fact n)
   (if (zero? n)
       1
       (* n (fact (1- n)))))
