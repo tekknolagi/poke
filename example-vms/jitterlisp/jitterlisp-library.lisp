@@ -2537,6 +2537,22 @@
 
 
 
+;;;; Macro-level iteration.
+;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Expand to an expression evaluating the given operator applied to each of the
+;;; given operands, in sequence.  The expression is meant to have side effects,
+;;; for example by applying definition forms; its final result is #<nothing>.
+(define-macro (map-syntactically operator . operands)
+  (if (null? operands)
+      '(begin)
+      `(begin
+         (,operator ,(car operands))
+         (map-syntactically ,operator ,@(cdr operands)))))
+
+
+
+
 ;;;; Variadic operator procedures.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -5883,8 +5899,10 @@
 
 ;;; A convenient procedure to call when one closure is being compiled in
 ;;; isolation.
-(define-constant (interpreted-closure-compile! c)
+(define-constant (interpreted-closure-compile!-procedure c)
   (interpreted-closure-compile!-knowing c () ()))
+(define-macro (interpreted-closure-compile! . closures)
+  `(map-syntactically interpreted-closure-compile!-procedure ,@closures))
 
 
 
@@ -5928,21 +5946,27 @@
          (error `(cannot compile ,thing)))))
 
 ;;; Compile the given closure if needed.  Return nothing.
-(define-constant (compile! thing)
+(define-constant (compile!-procedure thing)
   (compile!-if-needed-then-call thing (lambda (unused))))
+(define-macro (compile! . things)
+  `(map-syntactically compile!-procedure ,@things))
 
 ;; FIXME: generalize the procedures above to compiling a list or set of closures
 ;; all at the same time.  This will make inter-calls more efficient.
 
 ;;; Print a native-code disassembly of the given closure, compiling it first if
 ;;; needed.  Return nothing.
-(define-constant (disassemble thing)
+(define-constant (disassemble-procedure thing)
   (compile!-if-needed-then-call thing compiled-closure-disassemble))
+(define-macro (disassemble . things)
+  `(map-syntactically disassemble-procedure ,@things))
 
 ;;; Print VM code for the given closure, compiling it first if needed.  Return
 ;;; nothing.
-(define-constant (disassemble-vm thing)
+(define-constant (disassemble-vm-procedure thing)
   (compile!-if-needed-then-call thing compiled-closure-print))
+(define-macro (disassemble-vm . things)
+  `(map-syntactically disassemble-vm-procedure ,@things))
 
 
 
