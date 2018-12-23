@@ -531,6 +531,9 @@ jitter_replicate_program (struct jitter_program *p)
   jitter_dynamic_buffer_finalize (& backpatches);
 #endif // #ifdef JITTER_DISPATCH_NO_THREADING
 
+  /* Release unneeded memory at the end of the object. */
+  jitter_executable_shrink_in_place (code, written_bytes);
+
   fprintf (stderr, "The written code is %li bytes (of %li estimated bytes: %.2f%%)\n",
            (long)written_bytes, (long)code_length,
            written_bytes / (double)code_length * 100.0);

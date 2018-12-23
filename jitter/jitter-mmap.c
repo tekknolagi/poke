@@ -115,18 +115,19 @@ jitter_finalize_executable (void)
 /* Executable memory allocation: allocation and release.
  * ************************************************************************** */
 
-/* Return a memory buffer of executable and writable memory, of the given
-   size. */
 void *
 jitter_executable_allocate (size_t size_in_bytes)
 {
-  //return jitter_heap_allocate (& jitter_executable_heap, size_in_bytes);
-  void *res = jitter_heap_allocate (& jitter_executable_heap, size_in_bytes);
-  return res;
+  return jitter_heap_allocate (& jitter_executable_heap, size_in_bytes);
 }
 
-/* Release the pointed buffer of executable memory returned by a previous call
-   to jitter_mmap_allocate_executable . */
+void
+jitter_executable_shrink_in_place (void *object, size_t new_size_in_bytes)
+{
+  jitter_heap_shrink_in_place (& jitter_executable_heap, object,
+                               new_size_in_bytes);
+}
+
 void
 jitter_executable_deallocate (void *buffer)
 {

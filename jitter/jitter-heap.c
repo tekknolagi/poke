@@ -483,9 +483,9 @@ jitter_heap_merge_object_with_hole_on_its_right
    The new object payload size must already respect the constraints on minimum
    size and alignment. */
 static void
-jitter_heap_shrink_object (struct jitter_heap_block *b,
-                           struct jitter_heap_thing *object,
-                           size_t new_object_payload_size_in_bytes)
+jitter_heap_shrink_object_in_block (struct jitter_heap_block *b,
+                                    struct jitter_heap_thing *object,
+                                    size_t new_object_payload_size_in_bytes)
 {
   /* If the thing on the right of the object thing is a hole, remove the hole
      by having the object expand into it.  Otherwise just keep the information
@@ -559,7 +559,8 @@ jitter_heap_reallocate_from_block (struct jitter_heap_block *b,
          have to allocate or free new things, or copy data around. */
 
       /* Shrink the object, making a hole if possible. */
-      jitter_heap_shrink_object (b, old_object, new_payload_size_in_bytes);
+      jitter_heap_shrink_object_in_block (b, old_object,
+                                          new_payload_size_in_bytes);
 
       /* Return the old payload: the pointer has not changed and we haven't
          moved the data, but we have created a new hole. */
@@ -592,7 +593,8 @@ jitter_heap_reallocate_from_block (struct jitter_heap_block *b,
          shrinks the new larger object when possible. */
       jitter_heap_merge_object_with_hole_on_its_right (b, old_object,
                                                        thing_on_the_right);
-      jitter_heap_shrink_object (b, old_object, new_payload_size_in_bytes);
+      jitter_heap_shrink_object_in_block (b, old_object,
+                                          new_payload_size_in_bytes);
       return old_payload;
     }
 }
@@ -834,6 +836,29 @@ jitter_heap_allocate (struct jitter_heap *h,
   return res;
 }
 
+void
+jitter_heap_shrink_in_place (struct jitter_heap *h, void *payload,
+                             size_t new_payload_size_in_bytes)
+{
+  /* Do nothing if the object is big.
+     FIXME: given an unmapping primitive I can at least free some pages even in
+     this case. */
+  if (__builtin_expect (JITTER_HEAP_IS_PAYLOAD_BIG (payload),
+                        false))
+    return;
+
+  /* If we arrived here then the object is not big, and belongs to a block.  We
+     can shrink the object in place, unless carving a hole would go below the
+     minimum hole size.
+     Notice that I am *not* checking that the new size does not exceed the
+     current size. */
+  new_payload_size_in_bytes
+    = jitter_heap_payload_size_rounded_up (new_payload_size_in_bytes);
+  struct jitter_heap_block *b = jitter_heap_get_block (h, payload);
+  struct jitter_heap_thing *object = JITTER_HEAP_PAYLOAD_TO_THING (payload);
+  jitter_heap_shrink_object_in_block (b, object, new_payload_size_in_bytes);
+}
+
 void *
 jitter_heap_reallocate (struct jitter_heap *h, void *old_payload,
                         size_t new_payload_size_in_bytes)
@@ -850,8 +875,9 @@ jitter_heap_reallocate (struct jitter_heap *h, void *old_payload,
   if (new_payload_size_in_bytes < size_to_copy_in_bytes)
     size_to_copy_in_bytes = new_payload_size_in_bytes;
 
-  /* If the original block is free, there is nothing very clever I do
-     at this point. */
+  /* If the original object is big, there is nothing very clever I do at this
+     point.  Anyway it is possible that even if the old object was big, its
+     reallocated copy will become non-big. */
   if (__builtin_expect (JITTER_HEAP_IS_PAYLOAD_BIG (old_payload),
                         false))
     {

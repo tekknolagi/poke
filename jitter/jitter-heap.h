@@ -441,7 +441,7 @@ struct jitter_heap_big
    expand to an expression evaluating to non-false iff the object is big.
    Implementation note: this is faster than using JITTER_HEAP_GET_TAG: I can
    avoid the masking operation by relying on the fact that the thing_on_the_left
-   tagged pointer is always NULL for big objects. */
+   pointer is always (tagged) NULL for big objects. */
 #define JITTER_HEAP_IS_PAYLOAD_BIG(payload)                    \
   ((JITTER_HEAP_PAYLOAD_TO_THING(payload)->thing_on_the_left)  \
    == JITTER_HEAP_BIG_THING_ON_THE_LEFT)
@@ -634,21 +634,29 @@ jitter_heap_allocate (struct jitter_heap *h, size_t size_in_bytes)
                   alloc_size (2),
                   assume_aligned (JITTER_HEAP_ALIGNMENT)));
 
-/* Given a heap a pointer to an existing object within it, return a pointer to a
-   new object of the given new size having the same content of the pointed
-   existing object up to the given new size, and free the existing object.  Fail
-   fatally if there is not enough space and creating a new block fails.
-   The returned pointer may be the same as old_payload or the new object may
-   otherwise reuse the same space occupied by the old one, but in the general
-   case it is invalid to keep using old_payload after this call returns.
+/* Given a heap pointer and a pointer to an existing object within it, return a
+   pointer to a new object of the given new size having the same content of the
+   pointed existing object up to the given new size, and free the existing
+   object.  Fail fatally if there is not enough space and creating a new block
+   fails.  The returned pointer may be the same as old_payload or the new object
+   may otherwise reuse the same space occupied by the old one, but in the
+   general case it is invalid to keep using old_payload after this call returns.
    The returned pointer is aligned to JITTER_HEAP_ALIGNMENT bytes. */
 void *
 jitter_heap_reallocate (struct jitter_heap *h, void *old_payload,
                         size_t new_size_in_bytes)
-  __attribute__ ((nonnull (1, 2), returns_nonnull,
-                  alloc_size (3),
-                  assume_aligned (JITTER_HEAP_ALIGNMENT),
-                  warn_unused_result));
+  __attribute__ ((nonnull (1, 2), returns_nonnull, alloc_size (3),
+                  assume_aligned (JITTER_HEAP_ALIGNMENT), warn_unused_result));
+
+/* Given a heap pointer and a pointer to an existing object within it, free
+   space after the object by shrinking it to the given new size in bytes, which
+   must not be less than the current object allocated size, rounded up as
+   required by the implementation.  If freeing up space is not possible do
+   nothing, without failing. */
+void
+jitter_heap_shrink_in_place (struct jitter_heap *h, void *payload,
+                             size_t new_size_in_bytes)
+  __attribute__ ((nonnull (1, 2)));
 
 /* Given a heap and an initial pointer to the payload of an object from the
    heap, free the object. */
