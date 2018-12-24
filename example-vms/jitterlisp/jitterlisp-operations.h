@@ -161,9 +161,18 @@
   JITTERLISP_EXP_FF_F_BINARY(%,                                     \
                              _jitterlisp_tagged_fixnum_a,           \
                              _jitterlisp_tagged_fixnum_b)
+/* Again, I can use a faster implementation when the fixnum tag is zero. */
+#if (JITTERLISP_FIXNUM_TAG) == 0
+  /* If the fixnum tag is zero I can do an arithmetic negation on the entire
+     encoded object, including the tag.  Tag bits will remain set to zero in
+     the result. */
+#define JITTERLISP_EXP_F_F_MINUS(_jitterlisp_tagged_fixnum_a)  \
+  (- (_jitterlisp_tagged_fixnum_a))
+#else /* Fallback case: non-zero fixnum tag. */
 #define JITTERLISP_EXP_F_F_MINUS(_jitterlisp_tagged_fixnum_a)  \
   JITTERLISP_EXP_FF_F_MINUS(JITTERLISP_FIXNUM_ENCODE(0),       \
                             _jitterlisp_tagged_fixnum_a)
+#endif // #if (JITTERLISP_FIXNUM_TAG) == 0
 
 
 
