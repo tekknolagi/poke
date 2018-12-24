@@ -6135,6 +6135,46 @@
 (define (qq n)
   (length (flatten (map iota (iota n)))))
 
+(define-constant (make-tree depth)
+  (if (zero? depth)
+      ()
+      (let ((branch (make-tree (- depth 1))))
+        (cons branch branch))))
+
+(define-constant (complexity-non-tail-recursive thing)
+  (if (cons? thing)
+      (+ 1
+         (complexity-non-tail-recursive (car thing))
+         (complexity-non-tail-recursive (cdr thing)))
+      1))
+
+(define-constant (complexity-tail-recursive thing)
+  (complexity-tail-recursive-helper (list thing) 0))
+(define-constant (complexity-tail-recursive-helper worklist acc)
+  (cond ((null? worklist)
+         acc)
+        ((cons? (car worklist))
+         (let ((first (car worklist)))
+           (complexity-tail-recursive-helper (cons (car first)
+                                                   (cons (cdr first)
+                                                         (cdr worklist)))
+                                             (+ acc 1))))
+        (else
+         (complexity-tail-recursive-helper (cdr worklist) (+ acc 1)))))
+
+(define-constant (complexity-iterative thing)
+  (let ((res 0)
+        (worklist (list thing)))
+    (while (not (null? worklist))
+      (let ((first (car worklist)))
+        (set! res (+ res 1))
+        (if (cons? first)
+            (begin
+              (set-car! worklist (cdr first))
+              (set! worklist (cons (car first) worklist)))
+            (set! worklist (cdr worklist)))))
+    res))
+
 
 ;;; I CAN DO BETTER IN THIS CASE:
 ;;; (lambda (f x) (f (begin y x)))
