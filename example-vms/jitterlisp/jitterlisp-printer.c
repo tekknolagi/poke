@@ -556,7 +556,7 @@ jitterlisp_print_recursive (jitterlisp_char_printer_function cp, void *cps,
   /* Print the object according to its type. */
   if (JITTERLISP_IS_FIXNUM(o))
     {
-      jitter_long_long decoded = JITTERLISP_FIXNUM_DECODE(o);
+      jitter_int decoded = JITTERLISP_FIXNUM_DECODE(o);
       jitterlisp_print_decoration (cp, cps, FIXNUMATTR);
       jitterlisp_print_long_long (cp, cps, decoded, true, 10);
       jitterlisp_print_decoration (cp, cps, NOATTR);
