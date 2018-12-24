@@ -151,8 +151,7 @@
 ;;; have a lot of interplay between interpreted and compiled code, which
 ;;; is useful to test.
 (when #t
-(map interpreted-closure-compile!
-     (list 1+ 1- cdr))
+  (interpreted-closure-compile! 1+ 1- cdr)
 )
 
 (when #t
@@ -160,12 +159,8 @@
 ;;; FIXME: this doesn't really compile all the interesting part yet.  I have
 ;;; to be able to compile lambdas in the general case before uncommenting
 ;;; the procedure names below.
-(map (lambda (c)
-       ;;(display `(compiling ,c)) (newline)
-;;(gc)
-       (interpreted-closure-compile! c)
-       )
-     (list append-reversed-iterative append-reversed
+  (interpreted-closure-compile! 
+           append-reversed-iterative append-reversed
            append-procedure ;;append-iterative
            reverse-iterative reverse
            reverse! ;; reverse!-iterative
@@ -179,15 +174,14 @@
            ;;cons
            ;;car
            ))
-;;(display `(ok)) (newline)
-)
 
 
 
 ;;;; Compile everything we defined here.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(dolist (name '(fibo
+(interpreted-closure-compile!
+                fibo
                 euclid euclid-i
                 fact
                 fact-tail-recursive-helper fact-tail-recursive
@@ -200,7 +194,5 @@
                 count2
                 count2-i
                 month->days
-                even?-tail-recursive odd?-tail-recursive))
-;;(display `(compiling ,name)) (newline)
-  (interpreted-closure-compile! (symbol-global name)))
-) ;; close outer when
+                even?-tail-recursive odd?-tail-recursive)
+)
