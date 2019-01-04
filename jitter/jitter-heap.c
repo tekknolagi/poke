@@ -1,6 +1,6 @@
 /* Jitter: memory heap data structure.
 
-   Copyright (C) 2018 Luca Saiu
+   Copyright (C) 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -104,27 +104,35 @@ jitter_heap_payload_size_rounded_up (size_t payload_size_in_bytes)
 /* Heap block initialization.
  * ************************************************************************** */
 
-struct jitter_heap_block*
+/* Use an existing memory buffer of the given size starting from the given
+   pointer for a fresh heap block, and return the block header.
+   The block header, along with all the block content, will be contained within
+   the provided space but will not necessarily be at its very beginning, in
+   order to satisfy alignment constraints. */
+static struct jitter_heap_block*
 jitter_heap_initialize_block (void *allocated_space,
-                              size_t allocated_size_in_bytes)
+                              size_t allocated_size_in_bytes,
+                              const struct jitter_heap_descriptor *d)
 {
   /* The block header will be at the beginning of the allocated space, possibly
-     skipping a few bytes if the allocated space is not correctly aligned. */
+     skipping space if the allocated space is not correctly aligned. */
   struct jitter_heap_block *r
     = ((struct jitter_heap_block *)
-       JITTER_HEAP_ALIGN_RIGHT(allocated_space));
+       (jitter_uint)
+       JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO
+          ((jitter_uint) allocated_space,
+           d->block_size_and_alignment_in_bytes));
 
   /* Compute usable block limits, on both sides. */
   char *past_block_end_unaligned
-    = ((char *) allocated_space) + allocated_size_in_bytes;
+    = ((char *) allocated_space) + d->block_size_and_alignment_in_bytes;
 
   /* A just-initialized block will have exactly three things: one left
      terminator, one hole, and one right terminator.  Compute their header
      addresses, without storing anything into memory yet.  The left terminator
      is at a fixed offset from the block header beginning, so it is stored
      as a struct field within the block. */
-  struct jitter_heap_thing *left_terminator_header
-    = & r->left_terminator;
+  struct jitter_heap_thing *left_terminator_header = & r->left_terminator;
   struct jitter_heap_thing *hole_header
     = ((struct jitter_heap_thing *)
        JITTER_HEAP_ALIGN_RIGHT(left_terminator_header + 1));
@@ -148,7 +156,8 @@ jitter_heap_initialize_block (void *allocated_space,
   /* Fill the left terminator header. */
   left_terminator_header->thing_on_the_left
     = JITTER_HEAP_TAG_POINTER(NULL, jitter_heap_thing_tag_terminator);
-  left_terminator_header->payload_size_in_bytes = JITTER_HEAP_MINIMUM_PAYLOAD_SIZE;
+  left_terminator_header->payload_size_in_bytes
+    = JITTER_HEAP_MINIMUM_PAYLOAD_SIZE;
 
   /* Fill the hole header. */
   hole_header->thing_on_the_left
@@ -188,6 +197,10 @@ jitter_heap_initialize_block (void *allocated_space,
   /* The block is now filled. */
   return r;
 }
+
+/* There is no need for a block finalization facility: once the memory for a
+   block is released, with some external mechanism, resources for every thing
+   contained in the block are also released. */
 
 
 
@@ -668,6 +681,64 @@ jitter_heap_almost_initialize (struct jitter_heap *h,
   h->default_block = NULL;
 }
 
+/* Return a pointer to a fresh heap block allocated using the primitives from
+   the pointer descriptor.  The block will be allocated within a new fresh
+   buffer large enough to contain a block of the required size and alignment, as
+   specified within the descriptor; this function serves to abstract the
+   complexity of aligned allocation and possible unmapping.  Fail fatally on
+   allocation failure. */
+static struct jitter_heap_block*
+jitter_heap_make_block (const struct jitter_heap_descriptor *d)
+{
+  size_t natural_alignment = d->make_natural_alignment_in_bytes;
+  size_t block_size = d->block_size_and_alignment_in_bytes;
+
+  /* If the natural alignment is already enough to guarantee the required block
+     alignment, we don't need to do anything particular: the result of the make
+     primitive will already be enough. */
+  if (natural_alignment >= block_size)
+    {
+      char *res;
+      if ((res = d->make (block_size)) == NULL)
+        jitter_fatal ("could not make block for heap");
+      return jitter_heap_initialize_block (res, block_size, d);
+    }
+
+  /* If I arrived here then the natural alignment is not enough to satisfy our
+     block alignment constraint.  We have to allocate a larger buffer. */
+  size_t allocated_size = block_size * 2 - natural_alignment;
+  char *unaligned_p;
+  if ((unaligned_p = d->make (allocated_size)) == NULL)
+    jitter_fatal ("could not make (wider) block for heap");
+
+  /* If we have a suitable primitive unmap the unaligned part of the buffer, and
+     update res and allocated_size to only keep into account the part which
+     remains mapped; otherwise we are done already, and
+     jitter_heap_initialize_block will take care of skipping any initial
+     unaligned part. */
+  if (d->unmap_part_or_NULL != NULL)
+    {
+      /* In general we may have to unmap two parts of the wider buffer we
+         allocated: one on the left, and another on the right. */
+      char *p
+        = (char*)
+          (jitter_uint)
+          JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO ((jitter_uint) unaligned_p,
+                                                block_size);
+      size_t excess_size_left = p - unaligned_p;
+      size_t excess_size_right
+        = (unaligned_p + allocated_size) - (p + block_size);
+      if (excess_size_left > 0)
+        d->unmap_part_or_NULL (unaligned_p, excess_size_left);
+      if (excess_size_right > 0)
+        d->unmap_part_or_NULL (p + block_size, excess_size_right);
+      unaligned_p = p;
+      allocated_size = block_size;
+    }
+
+  return jitter_heap_initialize_block (unaligned_p, allocated_size, d);
+}
+
 /* Given a heap pointer, add a fresh block to it and return it.  The pointed
    heap must be already initialized, except that it's allowed to have a NULL
    default block; if that is the case, the default block is filled with the
@@ -677,11 +748,7 @@ static struct jitter_heap_block *
 jitter_heap_add_fresh_block (struct jitter_heap *h)
 {
   /* Make a fresh block. */
-  size_t block_size = h->descriptor.block_size_and_alignment_in_bytes;
-  struct jitter_heap_block *res = h->descriptor.make (block_size);
-  if (res == NULL)
-    jitter_fatal ("could not make block for heap");
-  jitter_heap_initialize_block (res, block_size);
+  struct jitter_heap_block *res = jitter_heap_make_block (& h->descriptor);
 
   /* Add it to the list and set it as the default.  We can't use
      jitter_heap_set_default_block here, as b doesn't belong to the list. */
@@ -734,23 +801,43 @@ void
 jitter_heap_initialize (struct jitter_heap *h,
                         jitter_heap_primitive_allocate_function make,
                         jitter_heap_primitive_free_function destroy,
+                        size_t make_natural_alignment_in_bytes,
+                        jitter_heap_primitive_free_function unmap_part_or_NULL,
                         size_t block_size_and_alignment_in_bytes)
 {
   /* Make a descriptor here, as an automatic variable.  It will be copied. */
   struct jitter_heap_descriptor d;
   d.make = make;
   d.destroy = destroy;
-  d.block_size_and_alignment_in_bytes = block_size_and_alignment_in_bytes;
-  d.block_bit_mask
-    = ~ (((jitter_uint) block_size_and_alignment_in_bytes) - 1);
+  d.make_natural_alignment_in_bytes = make_natural_alignment_in_bytes;
+  d.unmap_part_or_NULL = unmap_part_or_NULL;
   /* It is convenient to initialize d.block_size_smallest_big_payload_in_bytes
      later, as the size of the initial hole plus one byte.  This will be the
      tightest possible threshold. */
 
-  /* Validate the block size.  This operation is infrequent enough to warrant a
-     check. */
-  if (! JITTER_IS_A_POWER_OF_TWO (block_size_and_alignment_in_bytes))
-    jitter_fatal ("heap block size not a power of two");
+  /* Validate natural alignment.  This operation is infrequent enough to warrant
+     a check. */
+  if (! JITTER_IS_A_POWER_OF_TWO (make_natural_alignment_in_bytes))
+    jitter_fatal ("make natural alignment not a power of two");
+
+  /* Update block_size_and_alignment_in_bytes in case it's not a power of two or
+     a multiple of the alignment size.  After the value is reasonable, store it
+     in the structure. */
+  if (block_size_and_alignment_in_bytes < make_natural_alignment_in_bytes
+      || block_size_and_alignment_in_bytes % make_natural_alignment_in_bytes != 0
+      || ! JITTER_IS_A_POWER_OF_TWO (block_size_and_alignment_in_bytes))
+    {
+      size_t minimum = block_size_and_alignment_in_bytes;
+      block_size_and_alignment_in_bytes = make_natural_alignment_in_bytes;
+      while (block_size_and_alignment_in_bytes < minimum)
+        block_size_and_alignment_in_bytes *= 2;
+    }
+
+  /* Now block_size_and_alignment_in_bytes has a sensible value.  Store it into
+     the struct, and use it to compute the bitmask. */
+  d.block_size_and_alignment_in_bytes = block_size_and_alignment_in_bytes;
+  d.block_bit_mask
+    = ~ (((jitter_uint) block_size_and_alignment_in_bytes) - 1);
 
   /* Use the descriptor I have just initialized to initialize the heap. */
   jitter_heap_initialize_from_descriptor (h, & d);
@@ -760,14 +847,13 @@ void
 jitter_heap_finalize (struct jitter_heap *h)
 {
   jitter_heap_primitive_free_function destroy = h->descriptor.destroy;
-  size_t block_size = h->descriptor.block_size_and_alignment_in_bytes;
 
   /* Destroy every block in the list. */
   struct jitter_heap_block *b = h->block_list.first;
   while (b != NULL)
     {
       struct jitter_heap_block *next = b->block_links.next;
-      destroy (b, block_size);
+      destroy (b->allocated_space, b->allocated_space_size_in_bytes);
       b = next;
     }
 
