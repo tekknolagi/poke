@@ -1,6 +1,6 @@
 /* Jitter: memory heap data structure header.
 
-   Copyright (C) 2018 Luca Saiu
+   Copyright (C) 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -313,31 +313,12 @@ struct jitter_heap_block
      The right terminator cannot be stored in the same way, as its offset from
      the beginning of the block header depends on the  block size. */
   alignas (JITTER_HEAP_ALIGNMENT)
-  struct jitter_heap_thing left_terminator; // FIXME: initialize correctly!  Use this!
+  struct jitter_heap_thing left_terminator;
 
   /* There must be no other field after the left terminator: other things get
      allocated in the memory buffer holding this data structure right after the
      left terminator.  */
 };
-
-
-
-
-/* Heap block initialization.
- * ************************************************************************** */
-
-/* Use an existing memory buffer of the given size starting from the given
-   pointer for a fresh heap block, and return the block header.
-   The block header, along with all the block content, will be contained within
-   the provided space but will not necessarily be at its very beginning, in
-   order to satisfy alignment constraints. */
-struct jitter_heap_block*
-jitter_heap_initialize_block (void *allocated_space,
-                              size_t allocated_size_in_bytes);
-
-/* There is no need for a block finalization facility: once the memory for a
-   block is released, with some external mechanism, resources for every thing
-   contained in the block are also released. */
 
 
 
@@ -524,11 +505,6 @@ jitter_heap_free_big (struct jitter_heap *h, void *big_payload)
 /* A function allocating fresh memory for a block, taking a size in bytes and
    returning a fresh block of at least the required size, or NULL on allocation
    failure. */
-// FIXME: document the alignment requirement, which is strict.  Or even better
-// (actually much better) generalize with a new descriptor field specifying the
-// guaranteed alignment.
-// FIXME: add another function like this for allocating possibly with less
-// strict alignment requirements.
 typedef void * (* jitter_heap_primitive_allocate_function)
    (size_t size_in_bytes);
 
@@ -548,12 +524,22 @@ struct jitter_heap_descriptor
   /* A function allocating a fresh block or big object. */
   jitter_heap_primitive_allocate_function make;
 
-  /* A function destroying an existing block or big object. */
+  /* A function destroying an entire existing block or big object. */
   jitter_heap_primitive_free_function destroy;
 
-  /* The block size in bytes, which must be the same as the block alignment.
-     This requirement must be satisfied by the provided make and destroy
-     function. */
+  /* The "natural" alignment in bytes which is always and automatically
+     guaranteed by the make allocation primitive, pointed by the field above. */
+  size_t make_natural_alignment_in_bytes;
+
+  /* A function deallocating only a *part* for a block allocated by the make
+     primitive pointed above.  This can be NULL if no suitable primitive for
+     unmapping part of a buffer exists; otherwise the API will be just like an
+     munmap with no result. */
+  jitter_heap_primitive_free_function unmap_part_or_NULL;
+
+  /* The desired block size in bytes.  This constraint is, in general, respected
+     by allocating larger blocks using the make primitive pointed above, and if
+     possible unmapping a part of the buffer. */
   size_t block_size_and_alignment_in_bytes;
 
   /* The block bit mask, having 1 bits for the bits identifying a block and
@@ -596,11 +582,15 @@ struct jitter_heap
 };
 
 /* Initialize the pointed heap to use the pointed descriptor elements.  A
-   suitable descriptor, stored in the heap, is initialized automatically. */
+   suitable descriptor, stored in the heap, is initialized automatically and
+   completed by computing values for the remaining fields from the given
+   values. */
 void
 jitter_heap_initialize (struct jitter_heap *h,
                         jitter_heap_primitive_allocate_function make,
                         jitter_heap_primitive_free_function destroy,
+                        size_t make_natural_alignment_in_bytes,
+                        jitter_heap_primitive_free_function unmap_part_or_NULL,
                         size_t block_size_and_alignment_in_bytes)
   __attribute__ ((nonnull (1, 2, 3)));
 

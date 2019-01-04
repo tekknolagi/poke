@@ -1,6 +1,6 @@
 /* Jitter: mmap abstraction.
 
-   Copyright (C) 2018 Luca Saiu
+   Copyright (C) 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -37,9 +37,14 @@
 /* Executable memory allocation: primitive allocation and deallocation.
  * ************************************************************************** */
 
-/* The block size, as per jitter/jitter-heap.h .  This is an OS page, as used by
-   mmap. */
-size_t
+/* The heap block size, as per jitter/jitter-heap.h .  This is an OS page, as
+   used by mmap. */
+static size_t
+jitter_mmap_page_size;
+
+/* The size of a block; this must still be a power of two, and a multiple of
+   jitter_mmap_page_size. */
+static size_t
 jitter_executable_block_size;
 
 /* These are simple wrappers around mmap and munmap. */
@@ -47,15 +52,12 @@ jitter_executable_block_size;
 /* Allocate a new buffer of the right size and return a pointer to it, or NULL.
    This function is of type jitter_heap_primitive_allocate_function .
 
-   This allocates space for an entire heap block or big object.  Single object
-   allocation will be based on heap functions, and will use space obtained from
-   this function. */
+   This allocates space for (possibly more than) an entire heap block or big
+   object.  Single object allocation will be based on heap functions, and will
+   use space obtained from this function. */
 static void *
 jitter_executable_make_block_primitive (size_t size_in_bytes)
 {
-  size_in_bytes
-    = JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO (size_in_bytes,
-                                            jitter_executable_block_size);
   void *res = mmap (NULL,
                     size_in_bytes,
                     PROT_READ | PROT_WRITE | PROT_EXEC, // FIXME: check for W^E
@@ -69,9 +71,8 @@ jitter_executable_make_block_primitive (size_t size_in_bytes)
 }
 
 /* Destroy the pointed buffer of the given size.  This function is of type
-   jitter_heap_primitive_free_function .
-
-   Again, this releases space for an entire heap block or big object. */
+   jitter_heap_primitive_free_function and is used for destroying entire blocks
+   and also for unmapping the unaliged part of larger blocks. */
 static void
 jitter_executable_destroy_block_primitive (void *allocated_memory,
                                            size_t size_in_bytes)
@@ -92,12 +93,20 @@ jitter_executable_heap;
 void
 jitter_initialize_executable (void)
 {
-  /* Find the block length: a system page size. */
-  jitter_executable_block_size = sysconf (_SC_PAGE_SIZE);
+  /* Find the mmap page size. */
+  jitter_mmap_page_size = sysconf (_SC_PAGE_SIZE);
+
+  /* Find a sensible size of a heap block.  FIXME: this could be made smaller on
+     "small" machines. */
+  jitter_executable_block_size = jitter_mmap_page_size;
+  while (jitter_executable_block_size < (512 * 1024))
+    jitter_executable_block_size *= 2;
 
   /* Initialize the global heap variable. */
   jitter_heap_initialize (& jitter_executable_heap,
                           jitter_executable_make_block_primitive,
+                          jitter_executable_destroy_block_primitive,
+                          jitter_mmap_page_size,
                           jitter_executable_destroy_block_primitive,
                           jitter_executable_block_size);
 }

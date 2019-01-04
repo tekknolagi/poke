@@ -1,6 +1,6 @@
 /* Jitter: heap unity test.
 
-   Copyright (C) 2018 Luca Saiu
+   Copyright (C) 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -75,65 +75,6 @@ test_realloc (struct jitter_heap_block *block, void *old_object,
 #define CHECK_HEAP(heap_pointer)    \
   CHECK_THING (heap, heap_pointer)
 
-void
-test_block (void)
-{
-#define N 1024
-  char *b = jitter_xmalloc (N);
-  struct jitter_heap_block *block __attribute__ ((unused))
-    = jitter_heap_initialize_block (b, N);
-  jitter_heap_debug_block (block);
-//return 0; // FIXME: remove
-  printf ("\n\nAllocating...\n");
-  void *p0 __attribute__ ((unused));
-  void *p1 __attribute__ ((unused));
-  void *p2 __attribute__ ((unused));
-  void *p3 __attribute__ ((unused));
-  void *p4 __attribute__ ((unused));
-  void *p5 __attribute__ ((unused));
-  void *p6 __attribute__ ((unused));
-  void *p7 __attribute__ ((unused));
-  void *p8 __attribute__ ((unused));
-  void *p9 __attribute__ ((unused));
-  /*
-  p0 = test_alloc (block, 24);
-  p1 = test_alloc (block, 32);
-  //p2 = test_realloc (block, p1, 10);
-  p2 = test_alloc (block, 48);
-  p3 = test_alloc (block, 64);
-  p4 = test_alloc (block, 96);
-  p5 = test_alloc (block, 128);
-  p5 = test_realloc (block, p5, 64);
-  p6 = test_alloc (block, 1);
-  */
-  p0 = test_alloc (block, 256);
-  p1 = test_alloc (block, 256);
-  test_free (block, p0);
-  p1 = test_realloc (block, p1, 4);
-  p1 = test_realloc (block, p1, 400);
-  p1 = test_realloc (block, p1, 496);
-  p2 = test_alloc (block, 16);
-  p2 = test_realloc (block, p2, 368);
-  p3 = test_alloc (block, 16);
-  p4 = test_alloc (block, 16);
-  
-  //test_free (block, p2);
-  //test_free (block, p1);
-  //test_free (block, p3);
-  //test_free (block, p0);
-  //test_free (block, p4);
-  //CHECK_BLOCK (block);
-  //p1 = test_alloc (block, 104);
-  //jitter_heap_debug_block (block);
-  //p0 = test (block, 1);
-  //p0 = test (block, 1);
-  //printf ("\n\nAfter allocating...\n");
-  CHECK_BLOCK (block);
-
-  printf ("\nSuccess.\n");
-#undef N
-}
-
 static size_t
 block_length;
 
@@ -191,7 +132,7 @@ test_heap (void)
 /* #define MAX_SIZE 3800 //3850 //4000 //5000// 512 //2048 //512 */
 #define OBJECT_NO 1000 //1024
 #define OPERATION_NO (1000 * 1000 * 100)
-#define MAX_SIZE 100 //3850 //4000 //5000// 512 //2048 //512
+#define MAX_SIZE 1000//100 //3850 //4000 //5000// 512 //2048 //512
   //void **pointers __attribute__ ((unused)) = malloc (sizeof (int) * OBJECT_NO);//jitter_xmalloc (sizeof (int) * OBJECT_NO);
   void * pointers [OBJECT_NO];
   printf ("pointers is at %p\n", pointers);
@@ -219,7 +160,11 @@ test_heap (void)
 
   struct jitter_heap h;
   jitter_heap_initialize (& h, make_block, destroy_block,
-                          block_length);
+                          block_length,
+                          NULL,
+                          //destroy_block,
+                          block_length * 64//1024 * 1024//block_length
+                          );
   for (i = 0; i < OPERATION_NO; i ++)
     {
       //printf ("operation %i\n", i);
@@ -260,7 +205,6 @@ test_heap (void)
 int
 main (void)
 {
-  //test_block ();
   test_heap ();
   printf ("Still alive at the end.  mmap calls: %lu, mmunmap calls: %lu\n",
           mmap_calls, munmap_calls);
