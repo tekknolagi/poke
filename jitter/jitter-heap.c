@@ -699,9 +699,9 @@ jitter_heap_make_block (const struct jitter_heap_descriptor *d)
   if (natural_alignment >= block_size)
     {
       char *res;
-      if ((res = d->make (natural_alignment)) == NULL)
+      if ((res = d->make (block_size)) == NULL)
         jitter_fatal ("could not make block for heap");
-      return jitter_heap_initialize_block (res, natural_alignment, d);
+      return jitter_heap_initialize_block (res, block_size, d);
     }
 
   /* If I arrived here then the natural alignment is not enough to satisfy our
