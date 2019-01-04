@@ -76,7 +76,7 @@ test_realloc (struct jitter_heap_block *block, void *old_object,
   CHECK_THING (heap, heap_pointer)
 
 static size_t
-block_length;
+mmap_page_size;
 
 static unsigned long mmap_calls = 0;
 static unsigned long munmap_calls = 0;
@@ -89,7 +89,7 @@ make_block (size_t size_in_bytes)
   //res = aligned_alloc (size_in_bytes, size_in_bytes);
   //res = aligned_alloc (size_in_bytes, size_in_bytes);
   size_in_bytes = JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO (size_in_bytes,
-                                                        block_length);
+                                                        mmap_page_size);
   res = mmap (NULL,
               size_in_bytes,
               PROT_READ | PROT_WRITE,
@@ -103,7 +103,7 @@ make_block (size_t size_in_bytes)
   if (res == MAP_FAILED)
     jitter_fatal ("mmap failed");
   mmap_calls ++;
-  if ((((jitter_uint) res) & (jitter_uint) (block_length - 1)) != 0)
+  if ((((jitter_uint) res) & (jitter_uint) (mmap_page_size - 1)) != 0)
     jitter_fatal ("aligned allocation (size %liB) got an unaligned result",
                   (long) size_in_bytes);
   //printf ("Made a block at %p\n", res);
@@ -121,7 +121,7 @@ destroy_block (void *block, size_t size_in_bytes)
 void
 test_heap (void)
 {
-  block_length
+  mmap_page_size
 #ifdef HUGE
     = 2 * 1024 * 1024L;
 #else
@@ -160,10 +160,9 @@ test_heap (void)
 
   struct jitter_heap h;
   jitter_heap_initialize (& h, make_block, destroy_block,
-                          block_length,
-                          NULL,
-                          //destroy_block,
-                          block_length * 64//1024 * 1024//block_length
+                          mmap_page_size,
+                          destroy_block,
+                          1024 * 1024 //1024 
                           );
   for (i = 0; i < OPERATION_NO; i ++)
     {

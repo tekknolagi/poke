@@ -584,7 +584,10 @@ struct jitter_heap
 /* Initialize the pointed heap to use the pointed descriptor elements.  A
    suitable descriptor, stored in the heap, is initialized automatically and
    completed by computing values for the remaining fields from the given
-   values. */
+   values.
+   The given value for block_size_and_alignment_in_bytes here is a lower bound:
+   the actual block size will be increased as needed in order for it to be
+   a power of two, and a multiple of make_natural_alignment_in_bytes . */
 void
 jitter_heap_initialize (struct jitter_heap *h,
                         jitter_heap_primitive_allocate_function make,

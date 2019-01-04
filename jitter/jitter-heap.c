@@ -811,19 +811,33 @@ jitter_heap_initialize (struct jitter_heap *h,
   d.destroy = destroy;
   d.make_natural_alignment_in_bytes = make_natural_alignment_in_bytes;
   d.unmap_part_or_NULL = unmap_part_or_NULL;
-  d.block_size_and_alignment_in_bytes = block_size_and_alignment_in_bytes;
-  d.block_bit_mask
-    = ~ (((jitter_uint) block_size_and_alignment_in_bytes) - 1);
   /* It is convenient to initialize d.block_size_smallest_big_payload_in_bytes
      later, as the size of the initial hole plus one byte.  This will be the
      tightest possible threshold. */
 
-  /* Validate block size and natural alignment.  This operation is infrequent
-     enough to warrant a check. */
+  /* Validate natural alignment.  This operation is infrequent enough to warrant
+     a check. */
   if (! JITTER_IS_A_POWER_OF_TWO (make_natural_alignment_in_bytes))
     jitter_fatal ("make natural alignment not a power of two");
-  if (! JITTER_IS_A_POWER_OF_TWO (block_size_and_alignment_in_bytes))
-    jitter_fatal ("heap block size not a power of two");
+
+  /* Update block_size_and_alignment_in_bytes in case it's not a power of two or
+     a multiple of the alignment size.  After the value is reasonable, store it
+     in the structure. */
+  if (block_size_and_alignment_in_bytes < make_natural_alignment_in_bytes
+      || block_size_and_alignment_in_bytes % make_natural_alignment_in_bytes != 0
+      || ! JITTER_IS_A_POWER_OF_TWO (block_size_and_alignment_in_bytes))
+    {
+      size_t minimum = block_size_and_alignment_in_bytes;
+      block_size_and_alignment_in_bytes = make_natural_alignment_in_bytes;
+      while (block_size_and_alignment_in_bytes < minimum)
+        block_size_and_alignment_in_bytes *= 2;
+    }
+
+  /* Now block_size_and_alignment_in_bytes has a sensible value.  Store it into
+     the struct, and use it to compute the bitmask. */
+  d.block_size_and_alignment_in_bytes = block_size_and_alignment_in_bytes;
+  d.block_bit_mask
+    = ~ (((jitter_uint) block_size_and_alignment_in_bytes) - 1);
 
   /* Use the descriptor I have just initialized to initialize the heap. */
   jitter_heap_initialize_from_descriptor (h, & d);
