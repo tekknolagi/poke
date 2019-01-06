@@ -165,7 +165,7 @@
    conditional branch into an unconditional branch. */
 
 /* FIXME: the cmp instruction sign-extends its immediate, if any, to the size of
-   the other operand; since I use the q prefix here the immediate is
+   the other operand; since I use the q suffix here the immediate is
    sign-extended to 64 bits.  I haven't found an explicit statement about this
    in the intel documentation, but I suppose that test zero-extends
    immediates. */
