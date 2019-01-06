@@ -1,6 +1,6 @@
 /* Jitter: section header.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -53,11 +53,12 @@
 
    The descriptor array is defined, of course within its subsection, from a
    "header" in top-level inline assembly, which *must* come before the
-   interpreter function containing patch-in placeholders.  The interpreter
-   function relies on the no_reorder attribute which prevents it from being
-   moved with respect to top-level inline asm.  Similarly, a top-level inline
-   asm "footer" closes the global array definition, and defined a further global
-   storing the array size.
+   "interpreter" code containing patch-in placeholders.  Instead of relying on
+   the no_reorder attribute as I used to do, I now generate header and footer
+   within the same function, relying on the ordering semantics of inline asm
+   statements with dependencies and asm volatile.
+   Similarly, a top-level inline asm "footer" closes the global array
+   definition, and defined a further global storing the array size.
 
    Interestingly no assembly *instructions* are required for this: the generated
    inline assembly contains only data, which is machine-independent.  The

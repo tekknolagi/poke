@@ -1,6 +1,6 @@
 /* Jitter: patch-in header.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -201,18 +201,20 @@ struct jitter_patch_in_descriptor
 #define JITTER_ASM_PATCH_IN_SUBSECTION  \
   "10"
 
-/* Expand to a C top-level inline asm statement containing the patch-in
-   header. */
-#define JITTER_PATCH_IN_HEADER(_jitter_vm_the_prefix)                \
-  asm (JITTER_ASM_OPEN_DEFINITION(JITTER_ASM_PATCH_IN_SUBSECTION,    \
-                                  JITTER_PATCH_IN_DESCRIPTORS_NAME(  \
+/* Expand to an inline asm statement containing the patch-in header.  Here
+   volatility serves to force this statement to be emitted before the other asm
+   volatile statements within the "interpreter" and before the footer, therefore
+   forcing a correct order in the generated assembly file. */
+#define JITTER_PATCH_IN_HEADER(_jitter_vm_the_prefix)                       \
+  asm volatile (JITTER_ASM_OPEN_DEFINITION(JITTER_ASM_PATCH_IN_SUBSECTION,  \
+                                  JITTER_PATCH_IN_DESCRIPTORS_NAME(         \
                                      _jitter_vm_the_prefix)))
 
-/* Expand to a C top-level inline asm statement containing the patch-in
-   footer. */
-#define JITTER_PATCH_IN_FOOTER(_jitter_vm_the_prefix)                 \
-  asm (JITTER_ASM_CLOSE_DEFINITION(JITTER_ASM_PATCH_IN_SUBSECTION,    \
-                                   JITTER_PATCH_IN_DESCRIPTORS_NAME(  \
+/* Expand to an inline asm statement containing the patch-in footer.  See the
+   comment above.*/
+#define JITTER_PATCH_IN_FOOTER(_jitter_vm_the_prefix)                        \
+  asm volatile (JITTER_ASM_CLOSE_DEFINITION(JITTER_ASM_PATCH_IN_SUBSECTION,  \
+                                   JITTER_PATCH_IN_DESCRIPTORS_NAME(         \
                                       _jitter_vm_the_prefix)))
 
 
