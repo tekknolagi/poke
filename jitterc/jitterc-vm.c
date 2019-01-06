@@ -1,6 +1,6 @@
 /* Jitter: VM generation-time data structures.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -746,9 +746,11 @@ jitterc_make_specialized_instruction_internal (struct jitterc_vm *vm,
   res->instruction = (struct jitterc_instruction*) ui;
   res->specialized_arguments = jitterc_clone_list (specialized_args_copy);
 
-  /* No replacement by default: replacements will be added in a later pass as
-     needed, and linked here replacing this field. */
-  res->replacement = NULL;
+  /* By default the instruction is not a replacement of another, and has no
+     replacement: replacements will be added in a later pass as needed, and
+     linked here replacing this field. */
+  res->has_as_replacement = NULL;
+  res->is_replacement_of = NULL;
 
   /* By default the specialized instruction hotness is the same as the
      unspecialized hotness.  However if a meta-instruction is declared hot its
@@ -977,8 +979,8 @@ jitterc_generate_replacement_for (struct jitterc_vm *vm,
           new_sarg->replacement = true;
           new_sarg->residual = true;
           new_sarg->kind = jitterc_instruction_argument_kind_label;
-          //gl_list_set_at (new_specialized_arguments, i, new_sarg); // FIXME: this is the right thing.  Reenable!
-          gl_list_set_at (new_specialized_arguments, i, old_sarg); // FIXME: obviously wrong.
+          gl_list_set_at (new_specialized_arguments, i, new_sarg); // FIXME: this is the right thing.  Reenable!
+          //gl_list_set_at (new_specialized_arguments, i, old_sarg); // FIXME: obviously wrong.
         }
     }
 
@@ -1000,7 +1002,10 @@ jitterc_generate_replacement_for (struct jitterc_vm *vm,
 
   /* Link the new specialized instruction from the potentially defective
      specialized instruction it replaces. */
-  sins->replacement = (void*) (jitter_uint) new_sins;
+  sins->has_as_replacement = new_sins;
+
+  /* Mark the new instruction as a replacement. */
+  new_sins->is_replacement_of = sins;
 }
 
 /* Generate replacement specialized instructions where needed, updating the
@@ -1044,9 +1049,11 @@ jitterc_generate_replacements (struct jitterc_vm *vm)
         }
       if (potentially_defective)
         jitterc_generate_replacement_for (vm, sins);
+      /*
       fprintf (stderr, "%i. %s at %p with %i arguments. P.d.: %s\n", i,
                sins->name, sins, j,
                potentially_defective ? "yes" : "no");
+      */
     }
 
   const size_t total_sins_no = gl_list_size (vm->specialized_instructions);

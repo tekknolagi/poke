@@ -1,6 +1,6 @@
 /* VM library: x86_64 definitions, to be included from both C and assembly.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -130,7 +130,7 @@
 #define JITTER_PATCH_IN_SIZE_FAST_BRANCH_CONDITIONAL     6 /* all cases. */
 #define JITTER_PATCH_IN_SIZE_FAST_BRANCH_BRANCH_AND_LINK 5
 
-#define JITTER_BRANCH_FAST_CONDITIONAL(asm_instruction_name,                    \
+#define _JITTER_BRANCH_FAST_CONDITIONAL(asm_instruction_name,                    \
                                        constraints0, constraints1,              \
                                        case, operand0, operand1, target_index)  \
   do                                                                            \
@@ -169,74 +169,74 @@
    sign-extended to 64 bits.  I haven't found an explicit statement about this
    in the intel documentation, but I suppose that test zero-extends
    immediates. */
-#define JITTER_BRANCH_FAST_CMP(case, type, operand0, operand1, target_index) \
-  JITTER_BRANCH_FAST_CONDITIONAL("cmpq", "rm", "er", case, \
+#define _JITTER_BRANCH_FAST_CMP(case, type, operand0, operand1, target_index) \
+  _JITTER_BRANCH_FAST_CONDITIONAL("cmpq", "rm", "er", case, \
                                  (type)(operand0), (type)(operand1), target_index)
 
 
-#define JITTER_BRANCH_FAST_TEST(case, type, operand0, operand1, target_index) \
-  JITTER_BRANCH_FAST_CONDITIONAL("testq", "rm", "Zr", case, \
+#define _JITTER_BRANCH_FAST_TEST(case, type, operand0, operand1, target_index) \
+  _JITTER_BRANCH_FAST_CONDITIONAL("testq", "rm", "Zr", case, \
                                  (type)(operand0), (type)(operand1), target_index)
 
 // FIXME: comment.
-#define JITTER_BRANCH_FAST_TEST_ONE_OPERAND(case, type, operand0, target_index) \
-  JITTER_BRANCH_FAST_TEST(case, type, operand0, operand0, target_index)
+#define _JITTER_BRANCH_FAST_TEST_ONE_OPERAND(case, type, operand0, target_index) \
+  _JITTER_BRANCH_FAST_TEST(case, type, operand0, operand0, target_index)
 
 
-#define JITTER_BRANCH_FAST_IF_ZERO(operand0, target_index) \
-  JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ZERO, \
+#define _JITTER_BRANCH_FAST_IF_ZERO(operand0, target_index) \
+  _JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ZERO, \
                                       jitter_uint, operand0, target_index)
-#define JITTER_BRANCH_FAST_IF_NONZERO(operand0, target_index) \
-  JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONZERO, \
+#define _JITTER_BRANCH_FAST_IF_NONZERO(operand0, target_index) \
+  _JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONZERO, \
                                       jitter_uint, operand0, target_index)
 
-#define JITTER_BRANCH_FAST_IF_POSITIVE(operand0, target_index) \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_SIGNED, \
+#define _JITTER_BRANCH_FAST_IF_POSITIVE(operand0, target_index) \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_SIGNED, \
                          jitter_int, operand0, 0, target_index)
-#define JITTER_BRANCH_FAST_IF_NONPOSITIVE(operand0, target_index) \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTGREATER_SIGNED, \
+#define _JITTER_BRANCH_FAST_IF_NONPOSITIVE(operand0, target_index) \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTGREATER_SIGNED, \
                          jitter_int, operand0, 0, target_index)
 
-#define JITTER_BRANCH_FAST_IF_NEGATIVE(operand0, target_index) \
-  JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NEGATIVE, \
+#define _JITTER_BRANCH_FAST_IF_NEGATIVE(operand0, target_index) \
+  _JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NEGATIVE, \
                                       jitter_int, operand0, target_index)
-#define JITTER_BRANCH_FAST_IF_NONNEGATIVE(operand0, target_index) \
-  JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONNEGATIVE, \
+#define _JITTER_BRANCH_FAST_IF_NONNEGATIVE(operand0, target_index) \
+  _JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONNEGATIVE, \
                                       jitter_int, operand0, target_index)
 
-#define JITTER_BRANCH_FAST_IF_EQUAL(operand0, operand1, target_index) \
+#define _JITTER_BRANCH_FAST_IF_EQUAL(operand0, operand1, target_index) \
   /* FIXME: nonimmediate? */ \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_EQUAL, \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_EQUAL, \
                          jitter_uint, operand0, operand1, target_index)
-#define JITTER_BRANCH_FAST_IF_NOTEQUAL(operand0, operand1, target_index) \
+#define _JITTER_BRANCH_FAST_IF_NOTEQUAL(operand0, operand1, target_index) \
   /* FIXME: nonimmediate? */ \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTEQUAL, \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTEQUAL, \
                          jitter_uint, operand0, operand1, target_index)
 
-#define JITTER_BRANCH_FAST_IF_LESS_SIGNED(operand0, operand1, target_index) \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_LESS_SIGNED, \
+#define _JITTER_BRANCH_FAST_IF_LESS_SIGNED(operand0, operand1, target_index) \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_LESS_SIGNED, \
                          jitter_int, operand0, operand1, target_index)
-#define JITTER_BRANCH_FAST_IF_LESS_UNSIGNED(operand0, operand1, target_index) \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_LESS_UNSIGNED, \
+#define _JITTER_BRANCH_FAST_IF_LESS_UNSIGNED(operand0, operand1, target_index) \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_LESS_UNSIGNED, \
                          jitter_uint, operand0, operand1, target_index)
-#define JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED(operand0, operand1, target_index) \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTGREATER_SIGNED, \
+#define _JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED(operand0, operand1, target_index) \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTGREATER_SIGNED, \
                          jitter_int, operand0, operand1, target_index)
-#define JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED(operand0, operand1, target_index) \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTGREATER_UNSIGNED, \
+#define _JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED(operand0, operand1, target_index) \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTGREATER_UNSIGNED, \
                          jitter_uint, operand0, operand1, target_index)
 
-#define JITTER_BRANCH_FAST_IF_GREATER_SIGNED(operand0, operand1, target_index) \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_SIGNED, \
+#define _JITTER_BRANCH_FAST_IF_GREATER_SIGNED(operand0, operand1, target_index) \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_SIGNED, \
                          jitter_int, operand0, operand1, target_index)
-#define JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED(operand0, operand1, target_index) \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_UNSIGNED, \
+#define _JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED(operand0, operand1, target_index) \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_UNSIGNED, \
                          jitter_uint, operand0, operand1, target_index)
-#define JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(operand0, operand1, target_index) \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_SIGNED, \
+#define _JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(operand0, operand1, target_index) \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_SIGNED, \
                          jitter_int, operand0, operand1, target_index)
-#define JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED(operand0, operand1, target_index) \
-  JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_UNSIGNED, \
+#define _JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED(operand0, operand1, target_index) \
+  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_UNSIGNED, \
                          jitter_uint, operand0, operand1, target_index)
 #endif // #if defined(JITTER_MACHINE_SUPPORTS_PATCH_IN) && defined(...
 
@@ -290,7 +290,7 @@
   while (false)
 
 /* Branch-and-link, the version not relying on callq / retq . */
-#define _JITTER_BRANCH_AND_LINK(callee_rvalue)                               \
+#define JITTER_BRANCH_AND_LINK_INTERNAL(callee_rvalue)                               \
   do                                                                         \
     {                                                                        \
       asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                 \
@@ -310,7 +310,7 @@
 
 #ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN
 /* Branch-and-link to a fast label, the version not relying on callq / retq . */
-#define _JITTER_BRANCH_AND_LINK_FAST(target_index)                              \
+#define _JITTER_BRANCH_FAST_AND_LINK_INTERNAL(target_index)                              \
   do                                                                            \
     {                                                                           \
       asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                    \
@@ -410,7 +410,7 @@
   while (false)
 
 /* /\* Branch-and-link, the version relying on callq / retq . *\/ */
-/* #define _JITTER_BRANCH_AND_LINK(callee_rvalue)                              \ */
+/* #define JITTER_BRANCH_AND_LINK_INTERNAL(callee_rvalue)                              \ */
 /*   do                                                                        \ */
 /*     {                                                                       \ */
 /*       const void * restrict jitter_call_indirect_target = (callee_rvalue);  \ */
@@ -427,13 +427,13 @@
 /*   while (false) */
 
 /* Branch-and-link, the version relying on callq / retq . */
-#define _JITTER_BRANCH_AND_LINK(callee_rvalue)                              \
+#define JITTER_BRANCH_AND_LINK_INTERNAL(callee_rvalue)                      \
   do                                                                        \
     {                                                                       \
       const void * restrict jitter_call_indirect_target = (callee_rvalue);  \
       asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                \
                 "# Do a real call, pretending to go to\n\t"                 \
-                "# %l[jitter_dispatch_label]\n\t"                      \
+                "# %l[jitter_dispatch_label]\n\t"                           \
                 "callq *%[target]\n"                                        \
                 /* \
 "#.ifgt (%l[" JITTER_STRINGIFY(JITTER_SPECIALIZED_INSTRUCTION_END_LABEL) "] - .Lfoo)\n\t"\
@@ -455,7 +455,7 @@
 
 #ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN
 /* Branch-and-link to a fast label, the version relying on callq / retq . */
-#define _JITTER_BRANCH_AND_LINK_FAST(target_index)                              \
+#define _JITTER_BRANCH_FAST_AND_LINK_INTERNAL(target_index)                              \
   do                                                                            \
     {                                                                           \
       asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                    \

@@ -1,6 +1,6 @@
 /* VM library: SH definitions, to be included from both C and assembly.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -172,7 +172,7 @@
    return address will be in the system register PR , accessible from the
    procedure prolog.  The branch to subroutine far instruction has a delay
    slot. */
-#define _JITTER_BRANCH_AND_LINK(callee_rvalue)                               \
+#define JITTER_BRANCH_AND_LINK_INTERNAL(callee_rvalue)                       \
   do                                                                         \
     {                                                                        \
       const void * const jitter_destination =                                \
@@ -217,7 +217,7 @@
 
 /* The patch-in has a simple two-instruction routine ( bsr and nop ), of which
    the first instruction will be patched.  No other code is necessary. */
-#define _JITTER_BRANCH_AND_LINK_FAST(target_index)                             \
+#define _JITTER_BRANCH_FAST_AND_LINK_INTERNAL(target_index)                    \
   do                                                                           \
     {                                                                          \
       asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                   \

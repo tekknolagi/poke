@@ -1,6 +1,6 @@
 /* Jitter: generator implementation.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -676,12 +676,12 @@ jitterc_emit_worst_case_defect_table (const struct jitterc_vm *vm)
       const struct jitterc_specialized_instruction* sins
         = ((const struct jitterc_specialized_instruction*)
            gl_list_get_at (vm->specialized_instructions, i));
-      if (sins->replacement == NULL)
+      if (sins->has_as_replacement == NULL)
         EMIT("    vmprefix_specialized_instruction_opcode_%s%s /* NOT potentially defective. */\n",
              sins->mangled_name, comma);
       else
         EMIT("    /*vmprefix_specialized_instruction_opcode__eINVALID*/vmprefix_specialized_instruction_opcode_%s%s /* POTENTIALLY DEFECTIVE. */\n",
-             sins->replacement->mangled_name, comma);
+             sins->has_as_replacement->mangled_name, comma);
     }
   EMIT("  };\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n");
@@ -2122,8 +2122,14 @@ jitterc_emit_interpreter_sarg_definition
   EMIT("#   define JITTER_ARGN%i (JITTER_ARG%i.fixnum)\n", index, index);
   EMIT("#   define JITTER_ARGU%i (JITTER_ARG%i.ufixnum)\n", index, index);
   EMIT("#   define JITTER_ARGP%i (JITTER_ARG%i.pointer)\n", index, index);
-  if (! have_fast_labels)
+  if ((have_fast_labels && sarg->replacement) || ! have_fast_labels)
+    {
+      EMIT("#   define JITTER_ARGF%i JITTER_ARGP%i\n", index, index);
+    }
+  /*
+  else if (! have_fast_labels)
     EMIT("#   define JITTER_ARGF%i JITTER_ARGP%i\n", index, index);
+  */
   EMIT("\n");
 }
 
@@ -2236,6 +2242,67 @@ jitterc_emit_specialized_instruction_residual_arity_definition
     }
 }
 
+/* Names for fast-branching macros, without the prefix "JITTER_BRANCH". */
+static const char *
+jitter_fast_branch_macros []
+  = {
+      "",
+      "_IF_ZERO",
+      "_IF_NONZERO",
+      "_IF_POSITIVE",
+      "_IF_NONPOSITIVE",
+      "_IF_NEGATIVE",
+      "_IF_NONNEGATIVE",
+      "_IF_EQUAL",
+      "_IF_NOTEQUAL",
+      "_IF_LESS_SIGNED",
+      "_IF_LESS_UNSIGNED",
+      "_IF_NOTLESS_SIGNED",
+      "_IF_NOTLESS_UNSIGNED",
+      "_IF_GREATER_SIGNED",
+      "_IF_GREATER_UNSIGNED",
+      "_IF_NOTGREATER_SIGNED",
+      "_IF_NOTGREATER_UNSIGNED",
+      /*
+// FIXME: I *think* I only use these internally.
+      "_IF_NEVER_UNARY",
+      "_IF_ALWAYS_UNARY",
+      */
+      /* Here the underscore is intentional: even the name with (one) initial
+         underscore is defined conditionally, only in caller instructions. */
+      "_AND_LINK_INTERNAL"
+    };
+
+/* How many strings jitter_fast_branch_macros has. */
+static const size_t
+jitter_fast_branch_macro_no
+= sizeof (jitter_fast_branch_macros) / sizeof (jitter_fast_branch_macros [0]);
+
+/* Emit macro definitions for fast branching.  These are defined in a different
+   way for replacement and non-replacement specialized instructions. */
+static void
+jitterc_emit_interpreter_fast_branch_definitions
+  (FILE *f, const struct jitterc_vm *vm,
+   const struct jitterc_specialized_instruction* sins)
+{
+  bool is_replacement = (sins->is_replacement_of != NULL);
+
+  if (is_replacement)
+    EMIT("    /* This specialized instruction is a replacement. */\n");
+  else
+    EMIT("    /* This specialized instruction is not a replacement. */\n");
+  int i;
+  for (i = 0; i < jitter_fast_branch_macro_no; i ++)
+    {
+      const char *macro_name = jitter_fast_branch_macros [i];
+      EMIT("#   undef JITTER_BRANCH_FAST%s\n", macro_name);
+      if (is_replacement)
+        EMIT("#   define JITTER_BRANCH_FAST%s JITTER_BRANCH%s\n", macro_name, macro_name);
+      else
+        EMIT("#   define JITTER_BRANCH_FAST%s _JITTER_BRANCH_FAST%s\n", macro_name, macro_name);
+    }
+}
+
 static void
 jitterc_emit_interpreter_ordinary_specialized_instructions
    (FILE *f, const struct jitterc_vm *vm)
@@ -2266,6 +2333,11 @@ jitterc_emit_interpreter_ordinary_specialized_instructions
            ? "hot"
            : "cold");
       EMIT("  {\n");
+
+      /* Emit definitions for fast-branch macros.  The definitions will be
+         different for replacement and non-replacement instructions. */
+      jitterc_emit_interpreter_fast_branch_definitions (f, vm, sins);
+
       if (! is_relocatable)
         {
           EMIT("    /* This specialized instruction is non-relocatable.\n");
@@ -2281,8 +2353,8 @@ jitterc_emit_interpreter_ordinary_specialized_instructions
                (int) (gl_list_size (sins->specialized_arguments) - 1));
           EMIT("       back after the procedure returns.  Branch-and-link\n");
           EMIT("       functionality is enabled for this instruction. */\n");
-          EMIT("#   define JITTER_BRANCH_AND_LINK _JITTER_BRANCH_AND_LINK\n");
-          EMIT("#   define JITTER_BRANCH_AND_LINK_FAST _JITTER_BRANCH_AND_LINK_FAST\n\n");
+          EMIT("#   define JITTER_BRANCH_AND_LINK      JITTER_BRANCH_AND_LINK_INTERNAL\n");
+          EMIT("#   define JITTER_BRANCH_FAST_AND_LINK JITTER_BRANCH_FAST_AND_LINK_INTERNAL\n\n");
         }
 
       /* Define the specialized instruction opcode and name as macros, to be
@@ -2399,7 +2471,7 @@ jitterc_emit_interpreter_ordinary_specialized_instructions
         {
           EMIT("    /* Undefine macros only visible in caller instructions. */\n");
           EMIT("#   undef JITTER_BRANCH_AND_LINK\n");
-          EMIT("#   undef JITTER_BRANCH_AND_LINK_FAST\n\n");
+          EMIT("#   undef JITTER_BRANCH_FAST_AND_LINK\n\n");
         }
 
       /* Undefine argument macros.  Those will be redefined before the next

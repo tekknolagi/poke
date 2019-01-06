@@ -1,6 +1,6 @@
 ;;; JitterLisp (let's say -*- Scheme -*- for the purposes of Emacs) -- library.
 
-;;; Copyright (C) 2017, 2018 Luca Saiu
+;;; Copyright (C) 2017, 2018, 2019 Luca Saiu
 ;;; Written by Luca Saiu
 
 ;;; This file is part of the JitterLisp language implementation, distributed as
@@ -6456,12 +6456,12 @@
 ;; in memory.  The instruction run after the call would have stored the correct
 ;; value if run before.
 ;;
-;; Should JITTER_BRANCH_AND_LINK and JITTER_BRANCH_AND_LINK_FAST end with
+;; Should JITTER_BRANCH_AND_LINK and JITTER_BRANCH_FAST_AND_LINK end with
 ;; __builtin_unreachable to prevent this kind of behavior?  I guess not:
 ;; sometimes I really want a jump instruction to be generated after the
 ;; branch-and-link instruction, to skip the rest of the VM instruction code
 ;; which is not empty.
-;; Should JITTER_BRANCH_AND_LINK and JITTER_BRANCH_AND_LINK_FAST clobber
+;; Should JITTER_BRANCH_AND_LINK and JITTER_BRANCH_FAST_AND_LINK clobber
 ;; memory?  Would that help? [Tested: no it wouldn't]
 ;;
 ;; I have understood the problem now.
