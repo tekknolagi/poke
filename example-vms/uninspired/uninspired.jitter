@@ -1,6 +1,6 @@
 ## An uninspired and unoriginal Jitter VM, useful as an example.
 
-## Copyright (C) 2016, 2017 Luca Saiu
+## Copyright (C) 2016, 2017, 2019 Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -406,7 +406,7 @@ instruction procedurecall (?f)
   caller
   code
     JITTER_PUSH_UNSPECIFIED_STACK();
-    JITTER_BRANCH_AND_LINK_FAST(JITTER_ARGF0);
+    JITTER_BRANCH_FAST_AND_LINK(JITTER_ARGF0);
   end
 end
 

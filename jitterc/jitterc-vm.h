@@ -1,6 +1,6 @@
 /* Jitter: header for VM generation-time data structures.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -573,7 +573,12 @@ struct jitterc_specialized_instruction
 
   /* A pointer to a replacement specialized instruction, in case this
      specialized instruction is potentially defective.  NULL otherwise. */
-  struct jitterc_specialized_instruction *replacement;
+  struct jitterc_specialized_instruction *has_as_replacement;
+
+  /* A pointer to the potentially defective specialized instruction this
+     specialized instruction replaces.  NULL if this specialized instruction
+     is not a replacement. */
+  struct jitterc_specialized_instruction *is_replacement_of;
 };
 
 /* Return a pointer to a freshly-allocated struct jitterc_instruction . */

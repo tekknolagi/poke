@@ -1,6 +1,6 @@
 ;;; jitter-mode.el --- Major mode for editing Jitter VM specifications.
 
-;; Copyright (C) 2017, 2018 Luca Saiu
+;; Copyright (C) 2017, 2018, 2019 Luca Saiu
 ;; Written by Luca Saiu
 
 ;; Maintainer: Luca Saiu
@@ -262,7 +262,7 @@ Right now the mode only provides font-locking support.
       ;; Highlight Jitter statement-like macros in C code.
       ("\\<JITTER_EXIT\\>"
        0 font-lock-builtin-face t)
-      ("\\<JITTER_BRANCH\\(?:_AND_LINK\\(?:_WITH\\)?\\)?\\(?:_FAST\\)?\\>"
+      ("\\<JITTER_BRANCH\\(?:_FAST\\)?\\(?:_AND_LINK\\(?:_WITH\\)?\\)?\\>"
        0 font-lock-builtin-face t)
       ("\\<JITTER_BRANCH_FAST_IF_\\(?:ZERO\\|NONZERO\\|POSITIVE\\|NONPOSITIVE\\|NEGATIVE\\|NONNEGATIVE\\|EQUAL\\|NOTEQUAL\\|LESS_UNSIGNED\\|LESS_SIGNED\\|GREATER_UNSIGNED\\|GREATER_SIGNED\\|NOTLESS_UNSIGNED\\|NOTLESS_SIGNED\\|NOTGREATER_UNSIGNED\\|NOTGREATER_SIGNED\\)\\>"
        0 font-lock-builtin-face t)

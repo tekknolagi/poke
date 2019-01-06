@@ -1,6 +1,6 @@
 /* VM library: MIPS definitions, to be included from both C and assembly.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -143,7 +143,7 @@
                   [jitter_operand] "r" (operand),                           \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */        \
                 : /* clobbers */                                            \
-                : jitter_dispatch_label /* goto labels */);            \
+                : jitter_dispatch_label /* goto labels */);                 \
     }                                                                       \
   while (false)
 
@@ -163,7 +163,7 @@
                   [jitter_operand1] "r" (operand1),                            \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
                 : /* clobbers */                                               \
-                : jitter_dispatch_label /* goto labels */);               \
+                : jitter_dispatch_label /* goto labels */);                    \
     }                                                                          \
   while (false)
 
@@ -182,7 +182,7 @@
                   [jitter_operand1] "r" (operand1),                            \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
                 : /* clobbers */                                               \
-                : jitter_dispatch_label /* goto labels */);               \
+                : jitter_dispatch_label /* goto labels */);                    \
     }                                                                          \
   while (false)
 
@@ -201,7 +201,7 @@
                   [jitter_operand0] "r" (operand0),                            \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
                 : /* clobbers */                                               \
-                : jitter_dispatch_label /* gotolabels */);                \
+                : jitter_dispatch_label /* gotolabels */);                     \
     }                                                                          \
   while (false)
 
@@ -241,30 +241,30 @@
 
 /* Unary conditions.  MIPS can express branches conditional on a comparisons
    with zero in one instruction. */
-#define JITTER_BRANCH_FAST_IF_ZERO(opd, target_index)                   \
-  JITTER_MIPS_BRANCH_FAST_CONDITIONAL_BINARY("beq", jitter_int, opd, 0, \
+#define _JITTER_BRANCH_FAST_IF_ZERO(opd, target_index)                   \
+  JITTER_MIPS_BRANCH_FAST_CONDITIONAL_BINARY("beq", jitter_int, opd, 0,  \
                                              target_index)
-#define JITTER_BRANCH_FAST_IF_NONZERO(opd, target_index)                \
-  JITTER_MIPS_BRANCH_FAST_CONDITIONAL_BINARY("bne", jitter_int, opd, 0, \
+#define _JITTER_BRANCH_FAST_IF_NONZERO(opd, target_index)                \
+  JITTER_MIPS_BRANCH_FAST_CONDITIONAL_BINARY("bne", jitter_int, opd, 0,  \
                                              target_index)
-#define JITTER_BRANCH_FAST_IF_POSITIVE(opd, target_index)               \
+#define _JITTER_BRANCH_FAST_IF_POSITIVE(opd, target_index)               \
   JITTER_MIPS_BRANCH_FAST_CONDITIONAL_UNARY("bgtz", opd, target_index)
-#define JITTER_BRANCH_FAST_IF_NONPOSITIVE(opd, target_index)            \
+#define _JITTER_BRANCH_FAST_IF_NONPOSITIVE(opd, target_index)            \
   JITTER_MIPS_BRANCH_FAST_CONDITIONAL_UNARY("blez", opd, target_index)
-#define JITTER_BRANCH_FAST_IF_NEGATIVE(opd, target_index)               \
+#define _JITTER_BRANCH_FAST_IF_NEGATIVE(opd, target_index)               \
   JITTER_MIPS_BRANCH_FAST_CONDITIONAL_UNARY("bltz", opd, target_index)
-#define JITTER_BRANCH_FAST_IF_NONNEGATIVE(opd, target_index)            \
+#define _JITTER_BRANCH_FAST_IF_NONNEGATIVE(opd, target_index)            \
   JITTER_MIPS_BRANCH_FAST_CONDITIONAL_UNARY("bgez", opd, target_index)
 
 /* Simple binary conditions.  Before the MIPS{32,64}r6 revision MIPS can express
    branches conditional on an "equal" or "different" condition in one
    instruction, but not branches conditional on other binary comparisons, unless
    one of the operands is zero. */
-#define JITTER_BRANCH_FAST_IF_EQUAL(opd0, opd1, target_index)  \
-  JITTER_MIPS_BRANCH_FAST_CONDITIONAL_BINARY("beq", jitter_uint, opd0, opd1, \
+#define _JITTER_BRANCH_FAST_IF_EQUAL(opd0, opd1, target_index)                \
+  JITTER_MIPS_BRANCH_FAST_CONDITIONAL_BINARY("beq", jitter_uint, opd0, opd1,  \
                                              target_index)
-#define JITTER_BRANCH_FAST_IF_NOTEQUAL(opd0, opd1, target_index)  \
-  JITTER_MIPS_BRANCH_FAST_CONDITIONAL_BINARY("bne", jitter_uint, opd0, opd1, \
+#define _JITTER_BRANCH_FAST_IF_NOTEQUAL(opd0, opd1, target_index)             \
+  JITTER_MIPS_BRANCH_FAST_CONDITIONAL_BINARY("bne", jitter_uint, opd0, opd1,  \
                                              target_index)
 
 /* GCC can easily generate an instruction such as slt , slti , stlu or sltiu to
@@ -288,8 +288,8 @@
    when it is not possible to prove that either operand is zero. */
 /* FIXME: there is a xori generated in example-vms/uninspired/examples/fibo.vm .
    The instruction in question is "ble %r0, 0x1, $L16", which uses
-   JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED , itslef defined in terms of
-   JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED .
+   _JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED , itslef defined in terms of
+   _JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED .
    Despite being correct the code is suboptimal: there must be a mishandled
    case here.
    I have to sit down when I'm less tired and think hard about the logic in this
@@ -302,83 +302,83 @@
    known.  Or maybe it isn't possible to do it with just one instruction in
    every case; but I'd be surprised that the MIPS designers didn't include
    sgti/sgtiu instructions then. */
-#define JITTER_BRANCH_FAST_IF_BINARY_GENERAL(infix, type,                  \
-                                             opd0, opd1, target_index,     \
-                                             compute_opposite)             \
-  do                                                                       \
-    {                                                                      \
-      jitter_uint _jitter_condition;                                       \
-      if (compute_opposite)                                                \
-        {                                                                  \
-          _jitter_condition = ! ((type)(opd0) infix (type)(opd1));         \
-          JITTER_BRANCH_FAST_IF_ZERO(_jitter_condition, target_index);     \
-        }                                                                  \
-      else                                                                 \
-        {                                                                  \
-          _jitter_condition = ((type)(opd0) infix (type)(opd1));           \
-          JITTER_BRANCH_FAST_IF_NONZERO(_jitter_condition, target_index);  \
-        }                                                                  \
-    }                                                                      \
+#define _JITTER_BRANCH_FAST_IF_BINARY_GENERAL(infix, type,                  \
+                                              opd0, opd1, target_index,     \
+                                              compute_opposite)             \
+  do                                                                        \
+    {                                                                       \
+      jitter_uint _jitter_condition;                                        \
+      if (compute_opposite)                                                 \
+        {                                                                   \
+          _jitter_condition = ! ((type)(opd0) infix (type)(opd1));          \
+          _JITTER_BRANCH_FAST_IF_ZERO(_jitter_condition, target_index);     \
+        }                                                                   \
+      else                                                                  \
+        {                                                                   \
+          _jitter_condition = ((type)(opd0) infix (type)(opd1));            \
+          _JITTER_BRANCH_FAST_IF_NONZERO(_jitter_condition, target_index);  \
+        }                                                                   \
+    }                                                                       \
   while (false)
 
 /* Check if either opd0 or opd1 is known to be zero; in that case use a
    conditional fast branch on the other, which takes just one instruction.
-   Otherwise use JITTER_BRANCH_FAST_IF_BINARY_GENERAL , which takes two
+   Otherwise use _JITTER_BRANCH_FAST_IF_BINARY_GENERAL , which takes two
    [FIXME: or three?  See the comment about xori] instructions. */
-#define JITTER_BRANCH_FAST_IF_BINARY(infix, type, opd0, opd1, target_index, \
-                                     condition_on_opd1_when_opd0_is_zero,   \
-                                     condition_on_opd0_when_opd1_is_zero,   \
-                                     compute_opposite)                      \
-  do                                                                        \
-    {                                                                       \
-      type _jitter_operand_0 = (type) (opd0);                               \
-      type _jitter_operand_1 = (type) (opd1);                               \
-      if (JITTER_IS_KNOWN_CONSTANT_ZERO(_jitter_operand_0))                 \
-        JITTER_CONCATENATE_TWO(JITTER_BRANCH_FAST,                          \
-                               condition_on_opd1_when_opd0_is_zero)(        \
-            _jitter_operand_1, target_index);                               \
-      else if (JITTER_IS_KNOWN_CONSTANT_ZERO(_jitter_operand_1))            \
-        JITTER_CONCATENATE_TWO(JITTER_BRANCH_FAST,                          \
-                               condition_on_opd0_when_opd1_is_zero)(        \
-            _jitter_operand_0, target_index);                               \
-      else                                                                  \
-        JITTER_BRANCH_FAST_IF_BINARY_GENERAL(infix, type,                   \
-                                             _jitter_operand_0,             \
-                                             _jitter_operand_1,             \
-                                             target_index,                  \
-                                             compute_opposite);             \
-    }                                                                       \
+#define _JITTER_BRANCH_FAST_IF_BINARY(infix, type, opd0, opd1, target_index, \
+                                     condition_on_opd1_when_opd0_is_zero,    \
+                                     condition_on_opd0_when_opd1_is_zero,    \
+                                     compute_opposite)                       \
+  do                                                                         \
+    {                                                                        \
+      type _jitter_operand_0 = (type) (opd0);                                \
+      type _jitter_operand_1 = (type) (opd1);                                \
+      if (JITTER_IS_KNOWN_CONSTANT_ZERO(_jitter_operand_0))                  \
+        JITTER_CONCATENATE_TWO(JITTER_BRANCH_FAST,                           \
+                               condition_on_opd1_when_opd0_is_zero)(         \
+            _jitter_operand_1, target_index);                                \
+      else if (JITTER_IS_KNOWN_CONSTANT_ZERO(_jitter_operand_1))             \
+        JITTER_CONCATENATE_TWO(JITTER_BRANCH_FAST,                           \
+                               condition_on_opd0_when_opd1_is_zero)(         \
+            _jitter_operand_0, target_index);                                \
+      else                                                                   \
+        _JITTER_BRANCH_FAST_IF_BINARY_GENERAL(infix, type,                   \
+                                             _jitter_operand_0,              \
+                                             _jitter_operand_1,              \
+                                             target_index,                   \
+                                             compute_opposite);              \
+    }                                                                        \
   while (false)
 
 /* Fast branches conditional on a binary comparison. */
-#define JITTER_BRANCH_FAST_IF_LESS_SIGNED(opd0, opd1, target_index)      \
-  JITTER_BRANCH_FAST_IF_BINARY(<, jitter_int, opd0, opd1, target_index,  \
-                               _IF_POSITIVE, /* 0 < opd1 */              \
-                               _IF_NEGATIVE  /* opd0 < 0 */,             \
+#define _JITTER_BRANCH_FAST_IF_LESS_SIGNED(opd0, opd1, target_index)      \
+  _JITTER_BRANCH_FAST_IF_BINARY(<, jitter_int, opd0, opd1, target_index,  \
+                               _IF_POSITIVE, /* 0 < opd1 */               \
+                               _IF_NEGATIVE  /* opd0 < 0 */,              \
                                false)
-#define JITTER_BRANCH_FAST_IF_LESS_UNSIGNED(opd0, opd1, target_index)     \
-  JITTER_BRANCH_FAST_IF_BINARY(<, jitter_uint, opd0, opd1, target_index,  \
-                               _IF_NONZERO,    /* 0 <u opd1 */            \
-                               _IF_NEVER_UNARY /* opd0 <u 0 */,           \
+#define _JITTER_BRANCH_FAST_IF_LESS_UNSIGNED(opd0, opd1, target_index)     \
+  _JITTER_BRANCH_FAST_IF_BINARY(<, jitter_uint, opd0, opd1, target_index,  \
+                               _IF_NONZERO,    /* 0 <u opd1 */             \
+                               _IF_NEVER_UNARY /* opd0 <u 0 */,            \
                                false)
-#define JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(opd0, opd1, target_index)    \
-  JITTER_BRANCH_FAST_IF_BINARY(>=, jitter_int, opd0, opd1, target_index,  \
-                               _IF_NONPOSITIVE, /* 0 >= opd1 */           \
-                               _IF_NONNEGATIVE  /* opd0 >= 0 */,          \
+#define _JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(opd0, opd1, target_index)    \
+  _JITTER_BRANCH_FAST_IF_BINARY(>=, jitter_int, opd0, opd1, target_index,  \
+                               _IF_NONPOSITIVE, /* 0 >= opd1 */            \
+                               _IF_NONNEGATIVE  /* opd0 >= 0 */,           \
                                true)
-#define JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED(opd0, opd1, target_index)   \
-  JITTER_BRANCH_FAST_IF_BINARY(>=, jitter_uint, opd0, opd1, target_index,  \
-                               _IF_ZERO,        /* 0 >=u opd1 */           \
-                               _IF_ALWAYS_UNARY /* opd0 >=u 0 */,          \
+#define _JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED(opd0, opd1, target_index)   \
+  _JITTER_BRANCH_FAST_IF_BINARY(>=, jitter_uint, opd0, opd1, target_index,  \
+                               _IF_ZERO,        /* 0 >=u opd1 */            \
+                               _IF_ALWAYS_UNARY /* opd0 >=u 0 */,           \
                                true)
-#define JITTER_BRANCH_FAST_IF_GREATER_SIGNED(opd0, opd1, target_index)  \
-  JITTER_BRANCH_FAST_IF_LESS_SIGNED(opd1, opd0, target_index)
-#define JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED(opd0, opd1, target_index)  \
-  JITTER_BRANCH_FAST_IF_LESS_UNSIGNED(opd1, opd0, target_index)
-#define JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED(opd0, opd1, target_index)  \
-  JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(opd1, opd0, target_index)
-#define JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED(opd0, opd1, target_index)  \
-  JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED(opd1, opd0, target_index)
+#define _JITTER_BRANCH_FAST_IF_GREATER_SIGNED(opd0, opd1, target_index)  \
+  _JITTER_BRANCH_FAST_IF_LESS_SIGNED(opd1, opd0, target_index)
+#define _JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED(opd0, opd1, target_index)  \
+  _JITTER_BRANCH_FAST_IF_LESS_UNSIGNED(opd1, opd0, target_index)
+#define _JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED(opd0, opd1, target_index)  \
+  _JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(opd1, opd0, target_index)
+#define _JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED(opd0, opd1, target_index)  \
+  _JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED(opd1, opd0, target_index)
 
 #endif // #if defined(JITTER_MACHINE_SUPPORTS_PATCH_IN) && defined(JITTER_DISPATCH_NO_THREADING)
 
@@ -438,7 +438,7 @@
                 : /* outputs. */                                               \
                 : [return_addr] "r" (jitter_the_return_address) /* inputs. */  \
                 : /* clobbers. */                                              \
-                : jitter_dispatch_label /* gotolabels. */);               \
+                : jitter_dispatch_label /* gotolabels. */);                    \
       /* The rest of the VM instruction is unreachable. */                     \
       __builtin_unreachable ();                                                \
     }                                                                          \
@@ -446,7 +446,7 @@
 
 /* Easy: perform a jump-and-link via ragister, and the return address will be
    in $31 . */
-#define _JITTER_BRANCH_AND_LINK(callee_rvalue)                                \
+#define JITTER_BRANCH_AND_LINK_INTERNAL(callee_rvalue)                        \
   do                                                                          \
     {                                                                         \
       const void * const jitter_destination =                                 \
@@ -500,7 +500,7 @@
 /* Perform a pseudo-direct jump-and-link, and the return address will be in $31
    .  Of course we need a patch-in for the pseudo-direct jump-and-link, since
    the destination address is encoded in the jumping instruction. */
-#define _JITTER_BRANCH_AND_LINK_FAST(target_index)                             \
+#define _JITTER_BRANCH_FAST_AND_LINK_INTERNAL(target_index)                    \
   do                                                                           \
     {                                                                          \
       asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                   \
