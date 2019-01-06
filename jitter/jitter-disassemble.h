@@ -1,6 +1,6 @@
 /* VM library: native code disassembler.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -23,6 +23,7 @@
 #define JITTER_DISASSEMBLE_H_
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-program.h>
@@ -35,6 +36,15 @@ jitter_disassemble_program (const struct jitter_program *p, bool raw,
                             const char *objdump_name,
                             const char *objdump_options_or_NULL)
   __attribute__ ((nonnull(1)));
+
+/* Like jitter_disassemble_program, but write the output to the pointed stream
+   instead of stdout. */
+void
+jitter_disassemble_program_to (FILE *f,
+                               const struct jitter_program *p, bool raw,
+                               const char *objdump_name,
+                               const char *objdump_options_or_NULL)
+  __attribute__ ((nonnull(1, 2)));
 
 
 #endif // #ifndef JITTER_DISASSEMBLE_H_

@@ -161,19 +161,19 @@ jitterlisp_vm_finalize (void)
 static inline jitterlisp_object
 jitterlisp_jump_to_driver_and_return_result (void)
 {
-  /*
+  /**/
   static bool d = false;
   if (! d)
     {
       d = true;
-      printf ("Driver:\n");
+      fprintf (stderr, "Driver:\n");
       if (jitterlisp_settings.cross_disassembler)
-        jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_CROSS_OBJDUMP, NULL);
+        jitterlispvm_disassemble_program_to (stderr, jitterlisp_driver_vm_program, true, JITTER_CROSS_OBJDUMP, NULL);
       else
-        jitterlispvm_disassemble_program (jitterlisp_driver_vm_program, true, JITTER_OBJDUMP, NULL);
-      printf ("\n");
+        jitterlispvm_disassemble_program_to (stderr, jitterlisp_driver_vm_program, true, JITTER_OBJDUMP, NULL);
+      fprintf (stderr, "\n");
     }
-  */
+  /**/
   /*
 printf ("E: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
 printf ("R: %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());

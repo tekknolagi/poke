@@ -1,6 +1,7 @@
 /* VM library: main header file.
 
    Copyright (C) 2016, 2017, 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -498,6 +499,8 @@ vmprefix_vm_configuration;
   jitter_specialize_program
 #define vmprefix_disassemble_program \
   jitter_disassemble_program
+#define vmprefix_disassemble_program_to \
+  jitter_disassemble_program_to
 #define vmprefix_print_vm_configuration \
   jitter_print_vm_configuration
 
