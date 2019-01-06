@@ -993,10 +993,13 @@ jitterc_generate_replacement_for (struct jitterc_vm *vm,
      visually as a replacement. */
   char *original_name = sins->name;
   size_t original_name_length = strlen (original_name);
-  size_t new_name_length = original_name_length + 1;
-  char *new_name = xmalloc (new_name_length + 1);
-  new_name [0] = '*';
-  strcpy (new_name + 1, original_name);
+  const char *prefix = "*";
+  const char *suffix = "*-no-fast-branches";
+  size_t prefix_length = strlen (prefix);
+  size_t suffix_length = strlen (suffix);
+  size_t new_name_length = prefix_length + original_name_length + suffix_length + 1;
+  char *new_name = xmalloc (new_name_length);
+  sprintf (new_name, "%s%s%s", prefix, original_name, suffix);
   new_sins->name = new_name;
   new_sins->mangled_name = jitterc_mangle (new_name);
 
