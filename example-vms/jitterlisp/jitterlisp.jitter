@@ -1499,7 +1499,7 @@ debug_pointer (-2, & JITTER_UNDER_TOP_MAINSTACK());
     // FIXME ...But this stresses the code better (mips gcc 8, x86_64 gcc 7).
     JITTER_DROP_MAINSTACK();
     jitterlisp_object callee
-      = JITTER_AT_DEPTH_MAINSTACK(in_arity_plus_one - 1); 
+      = JITTER_AT_DEPTH_MAINSTACK(in_arity_plus_one - 1);
 /*asm ("# %[q]" : [q] "+rm" (callee));
   debug_pointer (0, (const void*)callee);*/
     struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
