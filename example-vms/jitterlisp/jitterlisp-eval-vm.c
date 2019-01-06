@@ -233,10 +233,10 @@ printf ("The cc first program point is at %p\n", cc->first_program_point);
     JITTERLISPVM_PUSH_MAINSTACK(jitterlisp_eval_interpreter_ast (rand_asts [i],
                                                                  env));
 
-  /* Push the number of closure operands, unencoded.  The driver programs
-     expects this last operand on the top of the stack, to be able to find
-     the closure below. */
-  JITTERLISPVM_PUSH_MAINSTACK(rand_ast_no);
+  /* Push the number of closure operands plus one, unencoded.  The driver
+     programs expects this last operand on the top of the stack, to be able to
+     find the closure below. */
+  JITTERLISPVM_PUSH_MAINSTACK(rand_ast_no + 1);
   /*
 printf ("Q: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
 printf ("W: %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());

@@ -243,13 +243,23 @@ jitter_stack_finalize_backing (struct jitter_stack_backing *backing)
    the top of the given stack.  Undefined behavior on underflow.  The expression
    this macro expands to is an r-value.
    The distance should be a constant expression for good performance. */
-#define JITTER_STACK_TOS_AT_DEPTH(type, stack_container, name, distance)    \
-  ((distance == 0)                                                          \
-   ? (JITTER_STACK_TOS_TOP(type, stack_container, name))                    \
-   : (JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)  \
-         [- (distance - 1)]))
-#define JITTER_STACK_NTOS_AT_DEPTH(type, stack_container, name, distance)  \
-  (JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)         \
+#define JITTER_STACK_TOS_AT_DEPTH(type, stack_container, name, distance)        \
+  ((distance == 0)                                                              \
+   ? (JITTER_STACK_TOS_TOP(type, stack_container, name))                        \
+   : JITTER_STACK_TOS_AT_NONZERO_DEPTH(type, stack_container, name, distance))
+#define JITTER_STACK_NTOS_AT_DEPTH(type, stack_container, name, distance)    \
+  JITTER_STACK_NTOS_AT_NONZERO_DEPTH(type, stack_container, name, distance)
+
+/* Like JITTER_STACK_TOS_AT_DEPTH and JITTER_STACK_NTOS_AT_DEPTH, but assume
+   that the distance is strictly positive.  This expands to better code when
+   the distance is known to be non-zero but its actual value is not known. */
+#define JITTER_STACK_TOS_AT_NONZERO_DEPTH(type, stack_container, name,   \
+                                          distance)                      \
+  (JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)  \
+     [- (distance - 1)])
+#define JITTER_STACK_NTOS_AT_NONZERO_DEPTH(type, stack_container, name,  \
+                                           distance)                     \
+  (JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)       \
      [- (distance)])
 
 /* Expand to a statement pushing an unspecified object on top of the given
