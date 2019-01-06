@@ -2535,8 +2535,9 @@ jitterc_emit_interpreter_ordinary_specialized_instructions
 static void
 jitterc_emit_patch_in_header (FILE *f, const struct jitterc_vm *vm)
 {
-  /* Generate the patch-in header.  The generated code expands to a toplevel asm
-     statement. */
+  /* Generate the patch-in header.  The generated code expands to an inline asm
+     statement.  It is convenient to keep header and footer within the main
+     "interpreter" function, so as to guarantee that the order is respected. */
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("  /* Generate the single patch-in header for this interpreter as a\n");
   EMIT("     global asm statement.  This expands into a global definition in\n");
@@ -2547,6 +2548,22 @@ jitterc_emit_patch_in_header (FILE *f, const struct jitterc_vm *vm)
   EMIT("  JITTER_PATCH_IN_HEADER(vmprefix);\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
   EMIT("\n");
+}
+
+/* Emit the patch-in footer, after the main interpreter. */
+static void
+jitterc_emit_patch_in_footer (FILE *f, const struct jitterc_vm *vm)
+{
+  /* Generate the patch-in footer.  See the comment in
+     jitterc_emit_patch_in_header . */
+  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
+  EMIT("  /* Close the patch-in global definition for this interpreter.  This defines a\n");
+  EMIT("     new global in the patch-in subsection, holding the descriptor number.\n");
+  EMIT("     This is a global asm statement.  Same for defects.  See the comment before\n");
+  EMIT("      the JITTER_PATCH_IN_HEADER use above. */\n");
+  EMIT("  JITTER_PATCH_IN_FOOTER(vmprefix);\n");
+  EMIT("  JITTER_DEFECT_FOOTER(vmprefix);\n");
+  EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
 }
 
 /* Emit the case for a special specialized instruction in the interpreter. */
@@ -2595,6 +2612,10 @@ jitterc_emit_interpreter_main_function
   EMIT("  union jitter_word jitter_register_buffer [VMPREFIX_REGISTER_BUFFER_ELEMENT_NO];\n");
   EMIT("  vmprefix_save_registers (jitter_register_buffer);\n");
   EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n\n");
+
+  /* Emit the patch-in header.  This must come before the frist patch-in or
+     defect use. */
+  jitterc_emit_patch_in_header (f, vm);
 
   /* The main interpreter function begins with three big static arrays containing
      the labels where every specialized instruction begins and ends, and their sizes
@@ -2930,6 +2951,10 @@ jitterc_emit_interpreter_main_function
   EMIT("  // fprintf (stderr, \"Freeing jitter_slow_registers...\\n\"); fflush (stderr);\n");
   EMIT("  free (jitter_slow_registers);\n\n");
 
+  /* Emit the patch-in footer.  This must come after every patch-in or defect
+     use. */
+  jitterc_emit_patch_in_footer (f, vm);
+
   /* Insert C code from the user.  This is supposed to come in right after
      interpretation ends. */
   EMIT("  /* Finalization C code from the user */\n");
@@ -2950,22 +2975,6 @@ jitterc_emit_interpreter_main_function
   EMIT("\n");
 }
 
-/* Emit the patch-in footer, after the main interpreter. */
-static void
-jitterc_emit_patch_in_footer (FILE *f, const struct jitterc_vm *vm)
-{
-  /* Generate the patch-in footer.  The generated code expands to a toplevel asm
-     statement. */
-  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
-  EMIT("  /* Close the patch-in global definition for this interpreter.  This defines a\n");
-  EMIT("     new global in the patch-in subsection, holding the descriptor number.\n");
-  EMIT("     This is a global asm statement.  Same for defects.  See the comment before\n");
-  EMIT("      the JITTER_PATCH_IN_HEADER use above. */\n");
-  EMIT("  JITTER_PATCH_IN_FOOTER(vmprefix);\n");
-  EMIT("  JITTER_DEFECT_FOOTER(vmprefix);\n");
-  EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
-}
-
 /* FIXME: move to a template.  This might need a forward declarartion for the
    main interpret-or-initialize function, currently relying on complicated
    function attributes; but that will be simplified. */
@@ -2984,11 +2993,7 @@ jitterc_emit_interpreter_wrappers
   EMIT("vmprefix_interpret_or_initialize (bool jitter_initialize,\n");
   EMIT("                                  struct jitter_program const *jitter_program,\n");
   EMIT("                                  struct vmprefix_state * const jitter_original_state)\n");
-  EMIT("__attribute__ ((noclone, noinline, no_reorder,\n");
-  EMIT("                /* This attribute can be useful to enable, conditionally,\n");
-  EMIT("                    on some architectures. */\n");
-  EMIT("                // target(\"fdpic\")\n");
-  EMIT("              ));\n");
+  EMIT("__attribute__ ((noclone, noinline));\n");
   EMIT("\n");
   EMIT("/* Threads or pointers to native code blocks of course don't exist with\n");
   EMIT("   switch-dispatching. */\n");
@@ -3003,24 +3008,15 @@ jitterc_emit_interpreter_wrappers
   EMIT("vmprefix_thread_sizes;\n");
   EMIT("#endif // #ifndef JITTER_DISPATCH_SWITCH\n");
   EMIT("\n");
-  /* FIXME: The no_reorder attribute is mostly an experiment: I'm playing with
-     making the main interpreter function longer than the maximum offset for
-     PC-relative memory access instructions, in order to have some relocation
-     problems cause link errors: because of this the small wrappers around
-     vmprefix_interpret_or_initialize should come *before* it, so that calling
-     it is not a problem.
-     But in the end I probably don't want this: the useful thing to do is making
-     the distance between code and *data* too wide for a PC-relative offset:
-     code-to-code offsets should not be long, even if *some* relative branches
-     are problematic as well---but not all are: for example intra-VM-instruction
-     branches are perfectly okay, and needed. */
-  EMIT("__attribute__ ((no_reorder)) void\n");
+
+  EMIT("void\n");
   EMIT("vmprefix_initialize_threads (void)\n");
   EMIT("{\n");
   EMIT("  vmprefix_interpret_or_initialize (true, NULL, NULL);\n");
   EMIT("}\n");
   EMIT("\n");
-  EMIT("__attribute__ ((no_reorder)) void\n");
+
+  EMIT("void\n");
   EMIT("vmprefix_interpret (struct jitter_program const *p, struct vmprefix_state *s)\n");
   EMIT("{\n");
   EMIT("  vmprefix_make_place_for_slow_registers (s, p->slow_register_per_class_no);\n");
@@ -3131,14 +3127,8 @@ jitterc_emit_interpreter (const struct jitterc_vm *vm)
      which are the actual entry points into this compilation unit. */
   jitterc_emit_interpreter_wrappers (f, vm);
 
-  /* Emit the patch-in header.  This must come before the main function. */
-  jitterc_emit_patch_in_header (f, vm);
-
   /* Emit the main interpreter/initialization function. */
   jitterc_emit_interpreter_main_function (f, vm);
-
-  /* Emit the patch-in footer.  This must come after the main function. */
-  jitterc_emit_patch_in_footer (f, vm);
 
   jitterc_fclose (f);
 }
