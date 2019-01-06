@@ -1,6 +1,6 @@
 /* VM library: native code disassembler.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -44,13 +44,15 @@
 
 /* Almost nothing of what follows is relevant with switch-dispatching. */
 #ifdef JITTER_DISPATCH_SWITCH
+__attribute__ ((noinline, noclone))
 void
-jitter_disassemble_program (const struct jitter_program *p, bool raw,
-                            const char *objdump_name,
-                            const char *objdump_options_or_NULL)
+jitter_disassemble_program_to (FILE *f,
+                               const struct jitter_program *p, bool raw,
+                               const char *objdump_name,
+                               const char *objdump_options_or_NULL)
 {
   /* Just refuse to disassemble under switch dispatching. */
-  printf ("<switch dispatching: refusing to disassemble>\n");
+  fprintf (f, "<switch dispatching: refusing to disassemble>\n");
 }
 
 #else /* not switch-dispatching */
@@ -94,12 +96,12 @@ jitter_temporary_file_pathname (const char *basename_prefix)
 /* Disassemble a range on the given output.  Return 0 on success, nonzero on
    failure. */
 static int
-jitter_disassemble_range_objdump (const void *beginning, size_t size_in_bytes,
+jitter_disassemble_range_objdump (FILE *output,
+                                  const void *beginning, size_t size_in_bytes,
                                   const char *prefix,
                                   bool raw,
                                   const char *objdump_name,
-                                  const char *objdump_options,
-                                  FILE *output)
+                                  const char *objdump_options)
 {
   /* Copy the raw native instruction range from memory to a temporary file. */
   char *temporary_file_name
@@ -208,10 +210,10 @@ jitter_disassemble_range_objdump (const void *beginning, size_t size_in_bytes,
 /* Print a memory dump of the given range.  This is useful as a fallback
    solution when objdump is not usable. */
 static void
-jitter_dump_range (const void *beginning, size_t size_in_bytes,
+jitter_dump_range (FILE *output,
+                   const void *beginning, size_t size_in_bytes,
                    const char *prefix,
-                   size_t bytes_per_row,
-                   FILE *output)
+                   size_t bytes_per_row)
 {
   /* Prepare a format string such as "0x%08x" or "0x%016x" to print addresses,
      with every hexadecimal digit shown and left-padded with zeroes to fit a
@@ -250,11 +252,11 @@ jitter_dump_range (const void *beginning, size_t size_in_bytes,
 }
 
 static void
-jitter_disassemble_range (const void *beginning, size_t size_in_bytes,
+jitter_disassemble_range (FILE *output,
+                          const void *beginning, size_t size_in_bytes,
                           bool raw,
                           const char *objdump_name,
-                          const char *objdump_options,
-                          FILE *output)
+                          const char *objdump_options)
 {
   /* Optimization: do nothing if the range is empty. */
   if (size_in_bytes == 0)
@@ -274,22 +276,22 @@ jitter_disassemble_range (const void *beginning, size_t size_in_bytes,
      done. */
   if (! is_objdump_known_to_fail)
       is_objdump_known_to_fail
-        = jitter_disassemble_range_objdump (beginning, size_in_bytes,
+        = jitter_disassemble_range_objdump (output,
+                                            beginning, size_in_bytes,
                                             "    ",
                                             raw,
                                             objdump_name,
-                                            objdump_options,
-                                            output);
+                                            objdump_options);
 
   /* If objdump fails then we have not printed anything at this point.  Use the
      fallback solution. */
   if (is_objdump_known_to_fail)
     /* The number of bytes per row here is arbitrary, even if 4 is a common
        instruction size; shall I add arguments to control this? */
-    jitter_dump_range (beginning, size_in_bytes,
+    jitter_dump_range (output,
+                       beginning, size_in_bytes,
                        "    ",
-                       4,
-                       output);
+                       4);
 }
 
 /* The opcode parameter represents a VM-specific specialized opcode of type enum
@@ -297,40 +299,43 @@ jitter_disassemble_range (const void *beginning, size_t size_in_bytes,
    Any opcode can be encoded in a sufficiently wide unsigned integer such as
    jitter_uint . */
 static void
-jitter_disassemble_show_specialized_instruction (
-   const struct jitter_program *p,
-   /* enum vmprefix_specialized_instruction_opcode */
-   jitter_uint opcode,
-   const union jitter_word * const first_residual_argument_pointer,
-   size_t residual_argument_no,
-   const char *native_code,
-   size_t native_code_size,
-   bool raw,
-   const char *objdump_name,
-   const char *objdump_options)
+jitter_disassemble_show_specialized_instruction
+   (FILE *f,
+    const struct jitter_program *p,
+    /* enum vmprefix_specialized_instruction_opcode */
+    jitter_uint opcode,
+    const union jitter_word * const first_residual_argument_pointer,
+    size_t residual_argument_no,
+    const char *native_code,
+    size_t native_code_size,
+    bool raw,
+    const char *objdump_name,
+    const char *objdump_options)
 {
-  printf ("%s", p->vm->specialized_instruction_names [opcode]);
+  fprintf (f, "%s", p->vm->specialized_instruction_names [opcode]);
   int i;
   const union jitter_word *residual_argument_pointer
     = first_residual_argument_pointer;
   for (i = 0; i < residual_argument_no; i ++)
-    printf (" 0x%lx%s",
+    fprintf (f, " 0x%lx%s",
             (unsigned long)((residual_argument_pointer ++)->ufixnum),
             i < residual_argument_no - 1 ? "," : "");
-  printf (" (%li bytes):\n", (long)native_code_size);
-  jitter_disassemble_range (native_code, native_code_size, raw, objdump_name,
-                            objdump_options, stdout);
+  fprintf (f, " (%li bytes):\n", (long)native_code_size);
+  jitter_disassemble_range (f, native_code, native_code_size, raw, objdump_name,
+                            objdump_options);
 }
 
+__attribute__ ((noinline, noclone))
 void
-jitter_disassemble_program (const struct jitter_program *p, bool raw,
-                            const char *objdump_name,
-                            const char *objdump_options_or_NULL)
+jitter_disassemble_program_to (FILE *f,
+                               const struct jitter_program *p, bool raw,
+                               const char *objdump_name,
+                               const char *objdump_options_or_NULL)
 {
   /* Refuse to disassemble if threads are overlapping or of negative size. */
   if (! p->vm->threads_validated)
     {
-      printf ("<threads not validated: refusing to disassemble>\n");
+      fprintf (f, "<threads not validated: refusing to disassemble>\n");
       return;
     }
 
@@ -367,7 +372,7 @@ jitter_disassemble_program (const struct jitter_program *p, bool raw,
       size_t residual_argument_no
         = p->vm->specialized_instruction_residual_arities [opcode];
       /*
-      printf ("%s(%li)/%li (size %li): The next code block size is %li\n",
+      fprintf (f, "%s(%li)/%li (size %li): The next code block size is %li\n",
               p->vm->specialized_instruction_names [opcode], (long)opcode,
               (long)residual_argument_no,
               (long) (p->vm->thread_sizes [opcode]),
@@ -375,10 +380,11 @@ jitter_disassemble_program (const struct jitter_program *p, bool raw,
       */
 
       /* Disassemble this VM instruction, and only this, to stdout. */
-      printf ("# ");
-      printf ("%p: ", (void*)next_thread);
+      fprintf (f, "# ");
+      fprintf (f, "%p: ", (void*)next_thread);
       jitter_disassemble_show_specialized_instruction
-         (p,
+         (f,
+          p,
           opcode,
           next_thread,
           residual_argument_no,
@@ -408,10 +414,10 @@ jitter_disassemble_program (const struct jitter_program *p, bool raw,
         = p->vm->specialized_instruction_residual_arities [opcode];
 
       /* Disassemble this VM instruction, and only this, to stdout. */
-      printf ("# ");
-      printf ("%p: ", (void*)next_thread);
+      fprintf (f, "# ");
+      fprintf (f, "%p: ", (void*)next_thread);
       jitter_disassemble_show_specialized_instruction
-         (p,
+         (f, p,
           opcode,
           next_thread,
           residual_argument_no + 1,
@@ -428,5 +434,13 @@ jitter_disassemble_program (const struct jitter_program *p, bool raw,
   return;
 #endif // #ifdef JITTER_REPLICATE
 }
-
 #endif // #ifdef JITTER_DISPATCH_SWITCH
+
+void
+jitter_disassemble_program (const struct jitter_program *p, bool raw,
+                            const char *objdump_name,
+                            const char *objdump_options_or_NULL)
+{
+  jitter_disassemble_program_to (stdout, p, raw, objdump_name,
+                                 objdump_options_or_NULL);
+}

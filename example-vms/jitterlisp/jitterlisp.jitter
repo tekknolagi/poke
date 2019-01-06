@@ -1490,16 +1490,18 @@ debug_pointer (-2, & JITTER_UNDER_TOP_MAINSTACK());
     jitterlisp_object * callee_p
       = (& JITTER_UNDER_TOP_MAINSTACK()) - (in_arity - 1);
       debug_pointer (-1, callee_p); */
-    /*
+//#define STRESS
+#ifndef STRESS
     // FIXME: This is correct, and faster ...
     jitterlisp_object callee
       = JITTER_AT_NONZERO_DEPTH_MAINSTACK(in_arity_plus_one);
     JITTER_DROP_MAINSTACK();
-    */
+#else
     // FIXME ...But this stresses the code better (mips gcc 8, x86_64 gcc 7).
     JITTER_DROP_MAINSTACK();
     jitterlisp_object callee
-      = JITTER_AT_DEPTH_MAINSTACK(in_arity_plus_one - 1); 
+      = JITTER_AT_DEPTH_MAINSTACK(in_arity_plus_one - 1);
+#endif // #ifndef STRESS
 /*asm ("# %[q]" : [q] "+rm" (callee));
   debug_pointer (0, (const void*)callee);*/
     struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
