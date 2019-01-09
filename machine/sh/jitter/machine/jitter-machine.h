@@ -161,7 +161,7 @@
                 : /* outputs. */                                               \
                 : [return_addr] "r" (jitter_the_return_address) /* inputs. */  \
                 : "pr" /* clobbers. */                                         \
-                : jitter_dispatch_label /* gotolabels. */);               \
+                : jitter_dispatch_label /* gotolabels. */);                    \
       /* The rest of the VM instruction is unreachable. */                     \
       __builtin_unreachable ();                                                \
     }                                                                          \

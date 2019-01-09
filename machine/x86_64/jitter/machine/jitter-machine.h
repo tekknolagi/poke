@@ -283,14 +283,14 @@
                 : /* outputs. */                                      \
                 : [the_link_rvalue] "rm" (link_rvalue) /* inputs. */  \
                 : /* clobbers. */                                     \
-                : jitter_dispatch_label /* gotolabels. */);      \
+                : jitter_dispatch_label /* gotolabels. */);           \
       /* The rest of the VM instruction is unreachable. */            \
       __builtin_unreachable ();                                       \
     }                                                                 \
   while (false)
 
 /* Branch-and-link, the version not relying on callq / retq . */
-#define JITTER_BRANCH_AND_LINK_INTERNAL(callee_rvalue)                               \
+#define JITTER_BRANCH_AND_LINK_INTERNAL(callee_rvalue)                       \
   do                                                                         \
     {                                                                        \
       asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                 \
@@ -301,7 +301,7 @@
                 : /* outputs. */                                             \
                 : [the_callee_rvalue] "rm" (callee_rvalue) /* inputs. */     \
                 : /* clobbers. */                                            \
-                : jitter_dispatch_label /* gotolabels. */);             \
+                : jitter_dispatch_label /* gotolabels. */);                  \
       /* Skip the rest of the specialized instruction, for compatibility */  \
       /* with more limited dispatches. */                                    \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                            \
