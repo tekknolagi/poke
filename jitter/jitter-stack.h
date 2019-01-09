@@ -1,6 +1,6 @@
 /* Jitter: Forth-style stacks with optional TOS optimization: header.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -340,6 +340,56 @@ f678c044 39 ef 00 04    addi r15,r15,4
       JITTER_STACK_NTOS_TOP(type, stack_container, name)                  \
         = _jitter_stack_new_element_temp;                                 \
     }                                                                     \
+  while (false)
+
+/* A stack height should be treated like an abstract type, only to be used with
+   JITTER_STACK_*_HEIGHT and JITTER_STACK_*_SET_HEIGHT .  It represents the
+   "height" of a stack, which is to say the distance from its bottom.  Given a
+   stack it is possible to obtain its height---and then to restore the same
+   height on the same (and only the same) stack, which restores its complete
+   state including the top element.
+   Implementation note: the actual saved value is currently a pointer to the
+   undertop element for a TOS-optimized stack, and a pointer to the top element
+   for a non-TOS-optimized stack. */
+typedef void *
+jitter_stack_height;
+
+/* Return the height of the given stack as a jitter_stack_height object.  The
+   result can be used in a JITTER_STACK_*_SET_HEIGHT operation. */
+#define JITTER_STACK_TOS_HEIGHT(type, stack_container, name)                \
+  ((jitter_stack_height)                                                    \
+   (JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)))
+#define JITTER_STACK_NTOS_HEIGHT(type, stack_container, name)        \
+  ((jitter_stack_height)                                             \
+   JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name))
+
+/* Restore the height of a stack to the given value, which must have been saved
+   in advance.  A height should always be used to pop elements, never to push
+   them back if the user wishes to reconstruct the state saved beefore in a
+   consistent and deterministic way. */
+#define JITTER_STACK_TOS_SET_HEIGHT(type, stack_container, name, height)        \
+  do                                                                            \
+    {                                                                           \
+      jitter_stack_height _jitter_new_height = (height);                        \
+      jitter_stack_height _jitter_old_height                                    \
+        = JITTER_STACK_TOS_HEIGHT(type, stack_container, name);                 \
+      if (__builtin_expect (_jitter_old_height != _jitter_new_height,           \
+                            true))                                              \
+        {                                                                       \
+          JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)  \
+            = _jitter_new_height;                                               \
+          JITTER_STACK_TOS_TOP_NAME(type, stack_container, name)                \
+            = JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container,    \
+                                                      name) [1];                \
+        }                                                                       \
+    }                                                                           \
+  while (false)
+#define JITTER_STACK_NTOS_SET_HEIGHT(type, stack_container, name, height)  \
+  do                                                                       \
+    {                                                                      \
+      JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)      \
+        = (height);                                                        \
+    }                                                                      \
   while (false)
 
 
