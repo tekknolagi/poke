@@ -22,12 +22,24 @@
 ## Global configuration.
 #################################################################
 
+early-header-c
+  code
+    struct exception_handler
+    {
+      jitter_uint exception;
+      uninspired_program_point code;
+      jitter_stack_height stack_height;
+    };
+  end
+end
+
 vm
   set prefix "uninspired"
   tos-stack "union jitter_word" "stack"
 #  ntos-stack "union jitter_word" "stack"
 
 #  ntos-stack "union jitter_word" "return"
+  ntos-stack "struct exception_handler" "handlers"
 end
 
 
@@ -77,13 +89,13 @@ early-header-c
   end
 end
 
-register-class r 2 # 1 #2 #3
+register-class r 1 # 1 #2 #3
   code
     union vmprefix_currently_unique_kind_register_t
   end
 end
 
-register-class f 2 # 0 #2
+register-class f 0 # 0 #2
   code
     //float
     //double
@@ -166,6 +178,39 @@ wrapped-globals
   vmprefix_hcf_format_string
 end
 
+
+## Exception-handling instructions.
+#################################################################
+
+instruction push-handler (?n 0 1 2 3 4 5 6 7 8 9 10, ?l)
+  code
+    struct exception_handler h;
+    h.exception = JITTER_ARGU0;
+    h.code = JITTER_ARGP1;
+    h.stack_height = JITTER_HEIGHT_STACK();
+    JITTER_PUSH_HANDLERS(h);
+  end
+end
+
+instruction pop-handler ()
+  code
+    JITTER_DROP_HANDLERS();
+  end
+end
+
+instruction raise (?Rn 0 1 2 3 4 5 6 7 8 9 10)
+  code
+    struct exception_handler h;
+    do
+      {
+        h = JITTER_TOP_HANDLERS();
+        JITTER_DROP_HANDLERS();
+      }
+    while (h.exception != JITTER_ARGN0);
+    JITTER_SET_HEIGHT_STACK(h.stack_height);
+    JITTER_BRANCH(h.code);
+  end
+end
 
 ## (Scratch) f-register instructions.
 #################################################################
