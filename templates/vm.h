@@ -1,6 +1,6 @@
 /* VM library: main header file.
 
-   Copyright (C) 2016, 2017, 2018 Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
    Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
@@ -654,14 +654,14 @@ vmprefix_rewrite (struct jitter_program *p);
   /* In this case the program structure contains a separate pointer to the
      beginning of the executable region for the native program.  Of course
      the first instruction is at the beginning of the region. */
-# define VMPREFIX_PROGRAM_BEGINNING(_jitterlisp_program_pointer)  \
-    ((_jitterlisp_program_pointer)->native_code)
+# define VMPREFIX_PROGRAM_BEGINNING(_vmprefix_program_pointer)  \
+    ((_vmprefix_program_pointer)->native_code)
 #else
   /* With switch dispatching or threading the first program point is a pointer
      to the beginning of the specialized program array. */
-# define VMPREFIX_PROGRAM_BEGINNING(_jitterlisp_program_pointer)   \
+# define VMPREFIX_PROGRAM_BEGINNING(_vmprefix_program_pointer)   \
     ((vmprefix_program_point)                                      \
-     ((_jitterlisp_program_pointer)->specialized_program.region))
+     ((_vmprefix_program_pointer)->specialized_program.region))
 #endif // ifdef JITTER_DISPATCH_NO_THREADING
 
 
