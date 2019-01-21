@@ -1,6 +1,6 @@
 /* JitterLisp: printer.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -123,7 +123,10 @@ void
 jitterlisp_dynamic_buffer_char_printer_function (void *dynamic_buffer, char c)
 {
   struct jitter_dynamic_buffer *db = dynamic_buffer;
-  jitter_dynamic_buffer_push (db, & c, 1);
+  /* FIXME: This plays well with tail calls but is not reentrant. */
+  static char the_c; // FIXME: non-reentrant.
+  the_c = c;
+  jitter_dynamic_buffer_push (db, (const void *) & the_c, 1);
 }
 
 void
