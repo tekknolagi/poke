@@ -1022,7 +1022,8 @@ jitterc_generate_replacements (struct jitterc_vm *vm)
      beginning; the replacement specialized instructions to be added will be at
      the end, and will not be scanned by the same loop. */
   const size_t non_defective_sins_no = gl_list_size (vm->specialized_instructions);
-  fprintf (stderr, "Non-defective specialized instructions are %i\n", (int) non_defective_sins_no);
+  fprintf (stderr, "Specialized instructions are %i, ignoring defects\n",
+           (int) non_defective_sins_no);
 
   /* For every specialized instruction... */
   int i;
