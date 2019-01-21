@@ -1,6 +1,6 @@
 /* JitterLisp: primitives.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -71,7 +71,8 @@ jitterlisp_apply_primitive (jitterlisp_object primitive,
   struct jitterlisp_primitive *p = JITTERLISP_PRIMITIVE_DECODE(primitive);
   const int required_in_arity = p->in_arity;
   int provided_in_arity = 0;
-  jitterlisp_object values [JITTERLISP_PRIMITIVE_MAX_IN_ARITY];
+  /* FIXME: This plays well with tail calls but is not reentrant. */
+  static jitterlisp_object values [JITTERLISP_PRIMITIVE_MAX_IN_ARITY];
   while (! JITTERLISP_IS_EMPTY_LIST (actual_values))
     {
       if (++ provided_in_arity > required_in_arity)

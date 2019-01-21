@@ -1,6 +1,6 @@
 /* JitterLisp: Lisp macros.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -98,7 +98,9 @@ jitterlisp_macroexpand_macro_call (jitterlisp_object macro,
   if (JITTERLISP_IS_PRIMITIVE_MACRO(macro))
     {
       struct jitterlisp_primitive *p = JITTERLISP_PRIMITIVE_MACRO_DECODE(macro);
-      jitterlisp_object primitive_args [2] = {cdr, env};
+      /* FIXME: This plays well with tail calls but is not reentrant. */
+      static jitterlisp_object primitive_args [2];
+      primitive_args [0] = cdr; primitive_args [1] = env;
       return p->function (primitive_args);
     }
   else if (JITTERLISP_IS_NON_PRIMITIVE_MACRO(macro))
