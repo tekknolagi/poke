@@ -152,9 +152,9 @@ jitter_stack_finalize_backing (struct jitter_stack_backing *backing)
    declarations, suitable for automatic variables or struct members. */
 #define JITTER_STACK_TOS_DECLARATION(type, name)                         \
   type JITTER_STACK_TOS_TOP_NAME(type, , name);                          \
-  type * JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, , name)
+  type * restrict JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, , name)
 #define JITTER_STACK_NTOS_DECLARATION(type, name)                        \
-  type * JITTER_STACK_NTOS_TOP_POINTER_NAME(type, , name)
+  type * restrict JITTER_STACK_NTOS_TOP_POINTER_NAME(type, , name)
 
 /* Expand to a statement initializing a stack from a backing. */
 #define JITTER_STACK_TOS_INITIALIZE(type, stack_container, name, backing)   \
@@ -326,7 +326,7 @@ f678c044 39 ef 00 04    addi r15,r15,4
 #define JITTER_STACK_TOS_PUSH(type, stack_container, name, new_element)  \
   do                                                                     \
     {                                                                    \
-      type _jitter_stack_new_element_temp = (new_element);               \
+      const type _jitter_stack_new_element_temp = (new_element);         \
       JITTER_STACK_TOS_PUSH_UNSPECIFIED(type, stack_container, name);    \
       JITTER_STACK_TOS_TOP_NAME(type, stack_container, name)             \
         = _jitter_stack_new_element_temp;                                \
@@ -335,7 +335,7 @@ f678c044 39 ef 00 04    addi r15,r15,4
 #define JITTER_STACK_NTOS_PUSH(type, stack_container, name, new_element)  \
   do                                                                      \
     {                                                                     \
-      type _jitter_stack_new_element_temp = (new_element);                \
+      const type _jitter_stack_new_element_temp = (new_element);          \
       JITTER_STACK_NTOS_PUSH_UNSPECIFIED(type, stack_container, name);    \
       JITTER_STACK_NTOS_TOP(type, stack_container, name)                  \
         = _jitter_stack_new_element_temp;                                 \
@@ -351,16 +351,16 @@ f678c044 39 ef 00 04    addi r15,r15,4
    Implementation note: the actual saved value is currently a pointer to the
    undertop element for a TOS-optimized stack, and a pointer to the top element
    for a non-TOS-optimized stack. */
-typedef void *
+typedef void * restrict
 jitter_stack_height;
 
 /* Return the height of the given stack as a jitter_stack_height object.  The
    result can be used in a JITTER_STACK_*_SET_HEIGHT operation. */
 #define JITTER_STACK_TOS_HEIGHT(type, stack_container, name)                \
-  ((jitter_stack_height)                                                    \
+  ((const jitter_stack_height)                                              \
    (JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)))
 #define JITTER_STACK_NTOS_HEIGHT(type, stack_container, name)        \
-  ((jitter_stack_height)                                             \
+  ((const jitter_stack_height)                                       \
    JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name))
 
 /* Restore the height of a stack to the given value, which must have been saved
@@ -370,8 +370,8 @@ jitter_stack_height;
 #define JITTER_STACK_TOS_SET_HEIGHT(type, stack_container, name, height)        \
   do                                                                            \
     {                                                                           \
-      jitter_stack_height _jitter_new_height = (height);                        \
-      jitter_stack_height _jitter_old_height                                    \
+      const jitter_stack_height _jitter_new_height = (height);                  \
+      const jitter_stack_height _jitter_old_height                              \
         = JITTER_STACK_TOS_HEIGHT(type, stack_container, name);                 \
       if (__builtin_expect (_jitter_old_height != _jitter_new_height,           \
                             true))                                              \
@@ -388,7 +388,7 @@ jitter_stack_height;
   do                                                                       \
     {                                                                      \
       JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)      \
-        = (height);                                                        \
+        = (const jitter_stack_height) (height);                            \
     }                                                                      \
   while (false)
 
@@ -452,7 +452,7 @@ jitter_stack_height;
 #define JITTER_STACK_NTOS_DUP(type, stack_container, name)                     \
   do                                                                           \
     {                                                                          \
-      type _jitter_stack_top_element_copy                                      \
+      const type _jitter_stack_top_element_copy                                \
         = * (JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)); \
       * (++ JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name))   \
         = _jitter_stack_top_element_copy;                                      \
@@ -525,7 +525,7 @@ jitter_stack_height;
 #define JITTER_STACK_TOS_OVER(type, stack_container, name)          \
   do                                                                \
     {                                                               \
-      type _jitter_stack_over_under_top_temp                        \
+      const type _jitter_stack_over_under_top_temp                  \
         = JITTER_STACK_TOS_UNDER_TOP(type, stack_container, name);  \
       JITTER_STACK_TOS_PUSH(type, stack_container, name,            \
                             _jitter_stack_over_under_top_temp);     \
@@ -534,7 +534,7 @@ jitter_stack_height;
 #define JITTER_STACK_NTOS_OVER(type, stack_container, name)                     \
   do                                                                            \
     {                                                                           \
-      type _jitter_stack_old_under_top_element_copy                             \
+      const type _jitter_stack_old_under_top_element_copy                       \
         = JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name) [-1]; \
       * (++ JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name))    \
         = _jitter_stack_old_under_top_element_copy;                             \
@@ -547,7 +547,7 @@ jitter_stack_height;
 #define JITTER_STACK_TOS_SWAP(type, stack_container, name)          \
   do                                                                \
     {                                                               \
-      type _jitter_stack_swap_under_top_temp                        \
+      const type _jitter_stack_swap_under_top_temp                  \
         = JITTER_STACK_TOS_UNDER_TOP(type, stack_container, name);  \
       JITTER_STACK_TOS_UNDER_TOP(type, stack_container, name)       \
         = JITTER_STACK_TOS_TOP(type, stack_container, name);        \
@@ -558,9 +558,9 @@ jitter_stack_height;
 #define JITTER_STACK_NTOS_SWAP(type, stack_container, name)          \
   do                                                                 \
     {                                                                \
-      type _jitter_stack_swap_top_temp                               \
+      const type _jitter_stack_swap_top_temp                         \
         = JITTER_STACK_NTOS_TOP(type, stack_container, name);        \
-      type _jitter_stack_swap_under_top_temp                         \
+      const type _jitter_stack_swap_under_top_temp                   \
         = JITTER_STACK_NTOS_UNDER_TOP(type, stack_container, name);  \
       JITTER_STACK_NTOS_UNDER_TOP(type, stack_container, name)       \
         = _jitter_stack_swap_top_temp;                               \
@@ -581,7 +581,7 @@ jitter_stack_height;
 #define JITTER_STACK_NTOS_NIP(type, stack_container, name)                    \
   do                                                                          \
     {                                                                         \
-      type _jitter_stack_nip_top_temp                                         \
+      const type _jitter_stack_nip_top_temp                                   \
         = JITTER_STACK_NTOS_TOP(type, stack_container, name);                 \
       * (-- JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name))  \
         = _jitter_stack_nip_top_temp;                                         \
