@@ -371,6 +371,11 @@ jitterc_emit_meta_instructions (const struct jitterc_vm *vm)
               kind = "jitter_meta_instruction_parameter_kind_register_or_literal_label";
               includes_register = true;
               break;
+            case   jitterc_instruction_argument_kind_literal
+                 | jitterc_instruction_argument_kind_label:
+              kind = "jitter_meta_instruction_parameter_kind_literal_fixnum_or_literal_label";
+              includes_register = false;
+              break;
             case   jitterc_instruction_argument_kind_register
                  | jitterc_instruction_argument_kind_literal
                  | jitterc_instruction_argument_kind_label:
