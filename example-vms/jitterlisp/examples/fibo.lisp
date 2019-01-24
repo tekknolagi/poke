@@ -1,6 +1,6 @@
 ;;; JitterLisp (almost -*- Scheme -*- for Emacs) Fibonacci example.
 
-;;; Copyright (C) 2017 Luca Saiu
+;;; Copyright (C) 2017, 2019 Luca Saiu
 ;;; Written by Luca Saiu
 
 ;;; This file is part of the JitterLisp language implementation, distributed as
@@ -23,30 +23,19 @@
 ;;;; The Fibonacci sequence, recursive, exponential-time.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-(define (fibo-scheme n)
+(define-constant (fibo n)
   (if (< n 2)
       n
-      (+ (fibo-scheme (- n 2))
-         (fibo-scheme (- n 1)))))
+      (+ (fibo (- n 2))
+         (fibo (- n 1)))))
 
-(define (fibo-jitterlisp n)
-  (if (primitive primitive-< n 2)
-      n
-      (primitive primitive-primordial-+
-                 (fibo-jitterlisp (primitive primitive-primordial-- n 2))
-                 (fibo-jitterlisp (primitive primitive-1- n)))))
-
-(define fibo
-  ;;fibo-jitterlisp
-  fibo-scheme
-  )
 
 
 
-
 ;;;; Main.
 ;;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(compile! fibo)
 
 (display (fibo 39))
 (newline)
