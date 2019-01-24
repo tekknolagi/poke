@@ -1,6 +1,6 @@
 /* Jitter: VM-independent program data structures.
 
-   Copyright (C) 2016, 2017, 2018 Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -287,6 +287,8 @@ jitter_check_paremater_compatibility
       if (   expected_kind
              != jitter_meta_instruction_parameter_kind_literal_fixnum
           && expected_kind
+             != jitter_meta_instruction_parameter_kind_literal_fixnum_or_literal_label
+          && expected_kind
              != jitter_meta_instruction_parameter_kind_register_or_literal_fixnum
           && expected_kind
              != jitter_meta_instruction_parameter_kind_register_or_literal_fixnum_or_literal_label)
@@ -295,6 +297,8 @@ jitter_check_paremater_compatibility
     case jitter_parameter_type_label:
       if (   expected_kind
              != jitter_meta_instruction_parameter_kind_literal_label
+          && expected_kind
+             != jitter_meta_instruction_parameter_kind_literal_fixnum_or_literal_label
           && expected_kind
              != jitter_meta_instruction_parameter_kind_register_or_literal_label
           && expected_kind

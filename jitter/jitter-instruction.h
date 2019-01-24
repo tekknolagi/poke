@@ -1,6 +1,6 @@
 /* Jitter: VM-independent instruction header.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -235,6 +235,11 @@ enum jitter_meta_instruction_parameter_kind
     /* The parameter is a either a literal label or the id of a register
        containing an instruction pointer. */
     jitter_meta_instruction_parameter_kind_register_or_literal_label,
+
+    /* The parameter is one of
+       (a) a literal fixnum;
+       (b) a literal label. */
+    jitter_meta_instruction_parameter_kind_literal_fixnum_or_literal_label,
 
     /* The parameter is one of
        (a) the id of a register containing an instruction pointer;
