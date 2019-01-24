@@ -6175,6 +6175,11 @@
             (set! worklist (cdr worklist)))))
     res))
 
+(define-constant (sign n)
+  (cond ((zero? n) 0)
+        ((< n 0)   -1)
+        (else      1)))
+
 
 ;;; I CAN DO BETTER IN THIS CASE:
 ;;; (lambda (f x) (f (begin y x)))
