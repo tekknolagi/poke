@@ -1,7 +1,7 @@
 \input texinfo.tex @c This is -*- Texinfo -*-.
 
 @c This file is part of the JitterLisp manual, which is part of Jitter.
-@c Copyright (C) 2017, 2018  Luca Saiu
+@c Copyright (C) 2017, 2018, 2019  Luca Saiu
 @c Written by Luca Saiu
 
 @c Permission is granted to copy, distribute and/or modify this
@@ -168,7 +168,7 @@ This is the manual for JitterLisp
 (for Jitter version @value{VERSION},
 last updated on @value{UPDATED}), an efficient Lisp system using a Jittery VM.
 
-Copyright @copyright{} 2018  Luca Saiu.  Written by Luca Saiu.
+Copyright @copyright{} 2018, 2019  Luca Saiu.  Written by Luca Saiu.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -1276,6 +1276,14 @@ littering options.
 @cindex message, litter allocation
 This option suppresses litter-allocation messages.
 
+@cindex @option{--time}, command-line option
+@item --time
+When this option is given the REPL times interactive commands and
+prints a human-readable message specifying the elapsed time in seconds
+after each evaluation.
+Only commands executed by the REPL are timed: this excludes library
+initialization and code from Lisp files specified in the command line.
+
 @cindex @option{--omit-nothing}, command-line option
 @item --omit-nothing
 @cindex @option{--no-colorize}, command-line option
@@ -1286,6 +1294,8 @@ This option suppresses litter-allocation messages.
 @item --no-cross-disassembler
 @cindex @option{--verbose-litter}, command-line option
 @item --verbose-litter
+@cindex @option{--no-time}, command-line option
+@item --no-time
 These are the negative counterparts of the options above, restoring
 the respective default behaviors.
 @end table

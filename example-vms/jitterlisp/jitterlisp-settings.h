@@ -1,6 +1,7 @@
 /* JitterLisp: global settings: header.
 
    Copyright (C) 2017, 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -82,6 +83,9 @@ struct jitterlisp_settings
   /* Non-false iff output s-expressions need to be colorized with terminal
      escape sequences. */
   bool colorize;
+
+  /* Non-false iff interactive REPL commands should be timed. */
+  bool time;
 
   /* Some s-expressions provided from the command line to evaluate, or NULL. */
   char *sexps_string;
