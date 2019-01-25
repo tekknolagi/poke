@@ -193,7 +193,7 @@ static const char *
 jitterlisp_interactive_banner_text =
 "================================================================\n"
 "JitterLisp (from Jitter version " JITTER_PACKAGE_VERSION ")\n"
-"Copyright (C) 2018 Luca Saiu\n"
+"Copyright (C) 2018, 2019 Luca Saiu\n"
 "\n"
 "JitterLisp comes with ABSOLUTELY NO WARRANTY; type (no-warranty)\n"
 "for details.  This program is free software, and you are welcome\n"
