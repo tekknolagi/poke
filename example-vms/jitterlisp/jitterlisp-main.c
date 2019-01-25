@@ -54,6 +54,7 @@ enum jitterlisp_negative_option
     jitterlisp_negative_option_repl,
     jitterlisp_negative_option_no_colorize,
     jitterlisp_negative_option_no_cross_disassembler,
+    jitterlisp_negative_option_no_time,
     jitterlisp_negative_option_optimization_rewriting
   };
 
@@ -68,6 +69,7 @@ enum jitterlisp_long_only_option
     jitterlisp_long_only_option_no_repl,
     jitterlisp_long_only_option_dump_version,
     jitterlisp_long_only_option_cross_disassembler,
+    jitterlisp_long_only_option_time,
     jitterlisp_long_only_option_no_optimization_rewriting
   };
 
@@ -107,6 +109,8 @@ static struct argp_option jitterlisp_option_specification[] =
     " (no effect with this exectuable)"
 #endif // #ifndef JITTERLISP_LITTER
    },
+   {"time", jitterlisp_long_only_option_time, NULL, 0,
+    "Time interactive commands in the REPL, showing elapsed time"},
    /* Interaction negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 31},
    {"omit-nothing", jitterlisp_negative_option_omit_nothing, NULL, 0,
@@ -123,8 +127,9 @@ static struct argp_option jitterlisp_option_specification[] =
 #ifndef JITTERLISP_LITTER
     ", no effect with this exectuable"
 #endif // #ifndef JITTERLISP_LITTER
-    ")"
-   },
+    ")"},
+   {"no-time", jitterlisp_negative_option_no_time, NULL, 0,
+    "Don't time interactive commands (default)"},
 
    /* Debugging options. */
    {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 40},
@@ -224,6 +229,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case jitterlisp_long_only_option_no_verbose_litter:
       sp->verbose_litter = false;
       break;
+    case jitterlisp_long_only_option_time:
+      sp->time = true;
+      break;
 
     /* Interaction negative options. */
     case jitterlisp_negative_option_omit_nothing:
@@ -240,6 +248,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case jitterlisp_negative_option_verbose_litter:
       sp->verbose_litter = true;
+      break;
+    case jitterlisp_negative_option_no_time:
+      sp->time = false;
       break;
 
     /* Debugging options. */

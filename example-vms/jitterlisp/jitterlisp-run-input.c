@@ -1,6 +1,6 @@
 /* JitterLisp: running from files, C strings, REPL.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -24,6 +24,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
 
 #include "jitterlisp.h"
 
@@ -226,8 +228,16 @@ jitterlisp_repl (void)
           jitterlisp_object form = jitterlisp_read (rstate);
           if (JITTERLISP_IS_EOF (form))
             goto out;
-
+          struct timeval time_before;
+          gettimeofday (& time_before, NULL);
           jitterlisp_object result = jitterlisp_eval_globally (form);
+          struct timeval time_after;
+          gettimeofday (& time_after, NULL);
+          double elapsed_time
+            = ((time_after.tv_usec * 1e-6 + time_after.tv_sec)
+               - (time_before.tv_usec * 1e-6 + time_before.tv_sec));
+          if (jitterlisp_settings.time)
+            printf ("[Computed in %.3fs]\n", elapsed_time);
           if (jitterlisp_settings.print_nothing_results
               || ! JITTERLISP_IS_NOTHING (result))
             {

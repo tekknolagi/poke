@@ -1,6 +1,7 @@
 /* JitterLisp: global settings.
 
    Copyright (C) 2017, 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -44,6 +45,7 @@ jitterlisp_settings_set_default (void)
   jitterlisp_settings.cross_disassembler = false;
   jitterlisp_settings.optimization_rewriting = true;
   jitterlisp_settings.colorize = false;
+  jitterlisp_settings.time = false;
   jitterlisp_settings.sexps_string = NULL;
   jitter_dynamic_buffer_initialize
      (& jitterlisp_settings.input_file_path_names);
