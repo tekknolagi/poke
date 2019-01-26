@@ -1,5 +1,6 @@
 ## Process this file with automake to produce Makefile.in .
 # Copyright (C) 2016, 2017, 2018 Luca Saiu
+# Updated in 2019 by Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -1774,6 +1775,7 @@ clean-local:
 	rm -r -f $(EXTRA_PROGRAMS) $(EXTRA_LTLIBRARIES)
 	rm -r -f $(GENERATED_C_FILES_FOR_UNINSPIRED)
 	rm -r -f $(GENERATED_C_FILES_FOR_STRUCTURED)
+	rm -r -f $(GENERATED_C_FILES_FOR_JITTERLISP)
 	rm -f uninspired--*.[si]
 	rm -f tests/*/*.log
 	rm -f tests/*/*.tmp
