@@ -45,7 +45,7 @@ jitterlisp_settings_set_default (void)
   jitterlisp_settings.cross_disassembler = false;
   jitterlisp_settings.optimization_rewriting = true;
   jitterlisp_settings.colorize = false;
-  jitterlisp_settings.time = false;
+  jitterlisp_settings.time = jitterlisp_time_no;
   jitterlisp_settings.sexps_string = NULL;
   jitter_dynamic_buffer_initialize
      (& jitterlisp_settings.input_file_path_names);

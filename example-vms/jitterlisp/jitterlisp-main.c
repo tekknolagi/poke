@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-cpp.h>
@@ -109,8 +110,11 @@ static struct argp_option jitterlisp_option_specification[] =
     " (no effect with this exectuable)"
 #endif // #ifndef JITTERLISP_LITTER
    },
-   {"time", jitterlisp_long_only_option_time, NULL, 0,
-    "Time interactive commands in the REPL, showing elapsed time"},
+   {"time", jitterlisp_long_only_option_time, "TIME", OPTION_ARG_OPTIONAL,
+    "Unless TIME is \"no\" time interactive commands in the REPL, showing "
+    "elapsed time.  TIME can be \"no\", \"verbose\" (also repeat the command "
+    "being timed in the output) or \"yes\".  Not specifying TIME is equivalent "
+    "to \"yes\".  Not giving the option is equivalent to \"no\"."},
    /* Interaction negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 31},
    {"omit-nothing", jitterlisp_negative_option_omit_nothing, NULL, 0,
@@ -129,7 +133,7 @@ static struct argp_option jitterlisp_option_specification[] =
 #endif // #ifndef JITTERLISP_LITTER
     ")"},
    {"no-time", jitterlisp_negative_option_no_time, NULL, 0,
-    "Don't time interactive commands (default)"},
+    "Don't time interactive commands (default); equivalent to --time=no"},
 
    /* Debugging options. */
    {NULL, '\0', NULL, OPTION_DOC, "Debugging options:", 40},
@@ -230,7 +234,15 @@ parse_opt (int key, char *arg, struct argp_state *state)
       sp->verbose_litter = false;
       break;
     case jitterlisp_long_only_option_time:
-      sp->time = true;
+      if (arg == NULL || ! strcmp (arg, "yes"))
+        sp->time = jitterlisp_time_yes;
+      else if (! strcmp (arg, "no"))
+        sp->time = jitterlisp_time_no;
+      else if (! strcmp (arg, "verbose"))
+        sp->time = jitterlisp_time_verbose;
+      else
+        argp_error (state, "the --time option argument was \"%s\" intead of "
+                    "\"yes\", \"no\" or \"verbose\"", arg);
       break;
 
     /* Interaction negative options. */
@@ -250,7 +262,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       sp->verbose_litter = true;
       break;
     case jitterlisp_negative_option_no_time:
-      sp->time = false;
+      sp->time = jitterlisp_time_no;
       break;
 
     /* Debugging options. */

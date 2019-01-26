@@ -1276,13 +1276,27 @@ littering options.
 @cindex message, litter allocation
 This option suppresses litter-allocation messages.
 
-@cindex @option{--time}, command-line option
-@item --time
-When this option is given the REPL times interactive commands and
-prints a human-readable message specifying the elapsed time in seconds
-after each evaluation.
+@cindex @option{--time=@var{time}}, command-line option
+@cindex @samp{no}, option argument for @option{--time=@var{time}}
+@cindex @samp{yes}, option argument for @option{--time=@var{time}}
+@cindex @samp{verbose}, option argument for @option{--time=@var{time}}
+@item --time[=@var{time}]
+When this option is given with @var{time} unspecified or different from
+@samp{no} the REPL times interactive commands and prints a human-readable
+message specifying the elapsed time in seconds after each evaluation.
+Valid values for @var{time} are @samp{no}, @samp{yes} and @samp{verbose}.
+A @var{time} value of @samp{verbose} causes the timed command to be printed
+back along with the time, which is convenient when interactively running
+multiple commands on the same line, to be executed in sequence and timed
+independently.
+
+The default is not printing timings, as with @samp{no}, when the option is
+not given.  Giving the option without specifying @var{time} is equivalent to
+setting @var{time} to @samp{yes}.
+
 Only commands executed by the REPL are timed: this excludes library
-initialization and code from Lisp files specified in the command line.
+initialization, code from Lisp files specified in the command line,
+and arguments from the @option{--eval} option.
 
 @cindex @option{--omit-nothing}, command-line option
 @item --omit-nothing

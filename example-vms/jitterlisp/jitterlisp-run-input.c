@@ -236,8 +236,25 @@ jitterlisp_repl (void)
           double elapsed_time
             = ((time_after.tv_usec * 1e-6 + time_after.tv_sec)
                - (time_before.tv_usec * 1e-6 + time_before.tv_sec));
-          if (jitterlisp_settings.time)
-            printf ("[Computed in %.3fs]\n", elapsed_time);
+          /* Print the elapsed time according to the settings. */
+          switch (jitterlisp_settings.time)
+            {
+            case jitterlisp_time_yes:
+              printf ("[Evaluated in %.3fs]\n", elapsed_time);
+              break;
+            case jitterlisp_time_verbose:
+              printf ("[");
+              jitterlisp_print_to_stream (stdout, form);
+              printf (" evaluated in %.3fs]\n", elapsed_time);
+              break;
+            case jitterlisp_time_no:
+              /* Do nothing. */
+              break;
+            default:
+              jitter_fatal ("invalid jitterlisp_settings.time");
+            }
+          /* Print the result, unless it's #<nothing> and printing #<nothing>
+             results is disabled. */
           if (jitterlisp_settings.print_nothing_results
               || ! JITTERLISP_IS_NOTHING (result))
             {

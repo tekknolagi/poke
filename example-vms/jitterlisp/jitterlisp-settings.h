@@ -1,7 +1,6 @@
 /* JitterLisp: global settings: header.
 
-   Copyright (C) 2017, 2018 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -48,6 +47,21 @@ enum jitterlisp_run_repl
     jitterlisp_run_repl_default = 2,
   };
 
+/* The way to time interactive commands in the REPL. */
+enum jitterlisp_time
+  {
+    /* Do not show command evaluation time. */
+    jitterlisp_time_no = 0,
+
+    /* Show command evaluation time. */
+    jitterlisp_time_yes = 1,
+
+    /* Show command evaluation time, also repeating the command being evaluated
+       in the output.  This is convenient when the user executes multiple
+       commands in the same line. */
+    jitterlisp_time_verbose = 2
+  };
+
 /* Global settings for JitterLisp. */
 struct jitterlisp_settings
 {
@@ -84,8 +98,8 @@ struct jitterlisp_settings
      escape sequences. */
   bool colorize;
 
-  /* Non-false iff interactive REPL commands should be timed. */
-  bool time;
+  /* The way interactive REPL commands should be timed. */
+  enum jitterlisp_time time;
 
   /* Some s-expressions provided from the command line to evaluate, or NULL. */
   char *sexps_string;
