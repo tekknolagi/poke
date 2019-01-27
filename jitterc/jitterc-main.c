@@ -1,6 +1,7 @@
 /* Jitter: driver.
 
    Copyright (C) 2017 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -180,7 +181,7 @@ static struct argp_option jitterc_option_specification[] =
    use weak symbols on reasonable platforms. */
 const char *argp_program_version
   = "jitter (" PACKAGE_NAME ") " PACKAGE_VERSION "\n"
-    "Copyright (C) 2016, 2017 Luca Saiu.\n"
+    "Copyright (C) 2016, 2017, 2019 Luca Saiu.\n"
     "Jitter comes with ABSOLUTELY NO WARRANTY.\n"
     "You may redistribute copies of Jitter under the terms of the GNU General Public\n"
     "License, version 3 or any later version published by the Free Software Foundation.\n"

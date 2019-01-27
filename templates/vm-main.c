@@ -1,6 +1,7 @@
 /* VM default frontend for vmprefix VM.
 
    Copyright (C) 2016, 2017, 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -382,7 +383,7 @@ const char *argp_program_version
   = VMPREFIX_VM_NAME " VM driver (" JITTER_PACKAGE_NAME ") "
     JITTER_PACKAGE_VERSION "\n"
     "(Dispatching model: " JITTER_DISPATCH_NAME_STRING ")\n"
-    "Copyright (C) 2016, 2017 Luca Saiu.\n"
+    "Copyright (C) 2016, 2017, 2019 Luca Saiu.\n"
     "Jitter comes with ABSOLUTELY NO WARRANTY.\n"
     "You may redistribute copies of Jitter under the terms of the\n"
     "GNU General Public License, version 3 or any later version published by\n"
