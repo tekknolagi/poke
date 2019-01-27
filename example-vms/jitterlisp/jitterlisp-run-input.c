@@ -188,25 +188,6 @@ jitterlisp_run_from_input_files (void)
 /* Run s-expressions interactively from a REPL.
  * ************************************************************************** */
 
-/* The text to show before starting the interactive REPL. */
-static const char *
-jitterlisp_interactive_banner_text =
-"================================================================\n"
-"JitterLisp (from Jitter version " JITTER_PACKAGE_VERSION ")\n"
-"Copyright (C) 2018, 2019 Luca Saiu\n"
-"\n"
-"JitterLisp comes with ABSOLUTELY NO WARRANTY; type (no-warranty)\n"
-"for details.  This program is free software, and you are welcome\n"
-"to redistribute it under the GNU General Public License, version\n"
-"3 or later; type (copying) to display the license text.\n"
-"================================================================\n\n";
-
-void
-jitterlisp_interactive_banner (void)
-{
-  printf ("%s", jitterlisp_interactive_banner_text);
-}
-
 void
 jitterlisp_repl (void)
 {
