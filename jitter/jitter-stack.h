@@ -348,6 +348,11 @@ f678c044 39 ef 00 04    addi r15,r15,4
    stack it is possible to obtain its height---and then to restore the same
    height on the same (and only the same) stack, which restores its complete
    state including the top element.
+   It is safe, and supported, to compare two jitter_stack_height objects for
+   equality, in order to check whether one given stack has kept the same height
+   in different program states; this may be useful as a form of defensive
+   programming, perhaps in an assertion.  Heights taken from *distinct* stacks
+   will always compare as different.
    Implementation note: the actual saved value is currently a pointer to the
    undertop element for a TOS-optimized stack, and a pointer to the top element
    for a non-TOS-optimized stack. */
