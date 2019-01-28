@@ -1,6 +1,5 @@
 ## Process this file with automake to produce Makefile.in .
-# Copyright (C) 2016, 2017, 2018 Luca Saiu
-# Updated in 2019 by Luca Saiu
+# Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -1007,6 +1006,14 @@ $(srcdir)/example-vms/structured/structuredvm-vm2.c: example-vms/structured/stru
 EXTRA_DIST += \
   example-vms/structured/examples/count-down.structured \
   example-vms/structured/examples/euclid.structured
+
+# Example VM-assembly programs for the Structured (VM) example, to be
+# distributed.
+EXTRA_DIST += \
+  example-vms/structured/examples/count-down-optimized.structuredvm \
+  example-vms/structured/examples/count-down-unoptimized.structuredvm \
+  example-vms/structured/examples/euclid-optimized.structuredvm \
+  example-vms/structured/examples/euclid-unoptimized.structuredvm
 
 # The jitter.m4 file distributed with the structured example is just taken from
 # Jitter.  We distribute a second copy of it for the structured build system, as
