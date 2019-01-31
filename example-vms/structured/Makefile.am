@@ -1,5 +1,6 @@
 ## Process this file with automake to produce Makefile.in .
 # Copyright (C) 2016, 2017, 2018 Luca Saiu
+# Updated in 2019 by Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of the Jitter structured-language example,
@@ -26,6 +27,7 @@
 bin_PROGRAMS = bin/structured
 bin_structured_SOURCES = \
   structured-syntax.h \
+  structured-syntax.c \
   structured-code-generator.h \
   structured-code-generator.c \
   $(GENERATED_C_FILES_FOR_STRUCTUREDVM) \
@@ -102,7 +104,9 @@ EXTRA_DIST = \
   structured.jitter \
   $(BUILT_SOURCES) \
   structured.l structured.y \
-  examples/count-down.structured
+  examples/count-down.structured \
+  examples/euclid.structured \
+  examples/primes.structured
 
 
 # Cleanup.
