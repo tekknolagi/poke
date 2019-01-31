@@ -811,6 +811,7 @@ STRUCTUREDVM_MAX_NONRESIDUAL_NO = -1
 # Defined a variable for the structured-language example sources.  It will be
 # reused several times.
 SOURCES_FOR_STRUCTURED = \
+  example-vms/structured/structured-syntax.c \
   example-vms/structured/structured-syntax.h \
   example-vms/structured/structured-scanner.c \
   example-vms/structured/structured-scanner.h \
@@ -1005,7 +1006,8 @@ $(srcdir)/example-vms/structured/structuredvm-vm2.c: example-vms/structured/stru
 # Example high-level programs for the Structured example, to be distributed.
 EXTRA_DIST += \
   example-vms/structured/examples/count-down.structured \
-  example-vms/structured/examples/euclid.structured
+  example-vms/structured/examples/euclid.structured \
+  example-vms/structured/examples/primes.structured
 
 # Example VM-assembly programs for the Structured (VM) example, to be
 # distributed.
