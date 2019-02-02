@@ -1,6 +1,6 @@
 /* Jittery structured language example: main.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jitter structured-language example, distributed
@@ -26,11 +26,15 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include <jitter/jitter-fatal.h>
+
 #include "structuredvm-vm.h"
 
 #include "structured-syntax.h"
 #include "structured-parser.h"
 #include "structured-code-generator.h"
+#include "structured-code-generator-stack.h"
+#include "structured-code-generator-register.h"
 
 
 /* Why this source file parses argc and argv directly.
@@ -97,6 +101,10 @@ structured_help (void)
   printf ("      --no-optimization-rewriting  disable optimization rewriting\n");
   printf ("      --optimization-rewriting     enable optimization rewriting (default)\n");
 
+  structured_help_section ("Code generation options");
+  printf ("      --stack                      generate stack-based instructions (default)\n");
+  printf ("      --register                   generate register-based instructions\n");
+
   structured_help_section ("Common GNU-style options");
   printf ("      --help                       give this help list and exit\n");
   printf ("      --version                    print program version and exit\n");
@@ -133,6 +141,16 @@ structured_version (void)
 /* Command-line handling.
  * ************************************************************************** */
 
+/* A specifier for the code generator which is being used. */
+enum structured_code_generator
+  {
+    /* Generate stack-based instructions */
+    structured_code_generator_stack,
+
+    /* Generate register-based instructions */
+    structured_code_generator_register
+  };
+
 /* The state encoded in a user command line. */
 struct structured_command_line
 {
@@ -148,6 +166,9 @@ struct structured_command_line
   /* True iff we should enable optimization rewriting. */
   bool optimization_rewriting;
 
+  /* Which code generator is being used. */
+  enum structured_code_generator code_generator;
+
   /* Pathname of the program source to be loaded. */
   char *program_path;
 };
@@ -161,6 +182,7 @@ structured_initialize_command_line (struct structured_command_line *cl)
   cl->disassemble = false;
   cl->dry_run = false;
   cl->optimization_rewriting = true;
+  cl->code_generator = structured_code_generator_stack;
   cl->program_path = NULL;
 }
 
@@ -210,6 +232,10 @@ structured_parse_command_line (struct structured_command_line *cl,
         cl->optimization_rewriting = true;
       else if (handle_options && ! strcmp (arg, "--no-optimization-rewriting"))
         cl->optimization_rewriting = false;
+      else if (handle_options && ! strcmp (arg, "--stack"))
+        cl->code_generator = structured_code_generator_stack;
+      else if (handle_options && ! strcmp (arg, "--register"))
+        cl->code_generator = structured_code_generator_register;
       else if (handle_options && ! strcmp (arg, "--print"))
         cl->print = true;
       else if (handle_options && ! strcmp (arg, "--dry-run"))
@@ -253,12 +279,25 @@ structured_work (const struct structured_command_line *cl)
     structuredvm_disable_optimization_rewriting ();
 
   /* Translate the AST program into a jittery program. */
-  struct structuredvm_program *vmp = structured_make_vm_program (p);
+  struct structuredvm_program *vmp;
+  switch (cl->code_generator)
+    {
+    case structured_code_generator_stack:
+      vmp = structured_make_vm_program_stack (p);
+      break;
+    case structured_code_generator_register:
+      vmp = structured_make_vm_program_register (p);
+      break;
+    default:
+      jitter_fatal ("unknwon code generator (bug): %i", (int) cl->code_generator);
+    }
 
   /* Specialize the jittery program, so that we can run it. */
   structuredvm_specialize_program (vmp);
 
   /* Print and/or disassemble the program as requested. */
+  // FIXME: remove the first conditional, which is a kludge to avoid printing an empty program with a single extivm instruction, in the current situation where I don't actually generate VM instructions.
+  if (cl->code_generator != structured_code_generator_register)
   if (cl->print)
     structuredvm_print_program (stdout, vmp);
   if (cl->disassemble)

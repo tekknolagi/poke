@@ -819,6 +819,10 @@ SOURCES_FOR_STRUCTURED = \
   example-vms/structured/structured-parser.h \
   example-vms/structured/structured-code-generator.h \
   example-vms/structured/structured-code-generator.c \
+  example-vms/structured/structured-code-generator-stack.h \
+  example-vms/structured/structured-code-generator-stack.c \
+  example-vms/structured/structured-code-generator-register.h \
+  example-vms/structured/structured-code-generator-register.c \
   $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_EXCLUDED) \
   example-vms/structured/structured-main.c
 
@@ -829,6 +833,10 @@ SOURCES_FOR_STRUCTURED = \
 # tarball already contain machine-generated C files.
 example-vms/structured/structured-code-generator.c: $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_EXCLUDED)
 example-vms/structured/structured-code-generator.h: $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_EXCLUDED)
+example-vms/structured/structured-code-generator-stack.c: $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_EXCLUDED)
+example-vms/structured/structured-code-generator-stack.h: $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_EXCLUDED)
+example-vms/structured/structured-code-generator-register.c: $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_EXCLUDED)
+example-vms/structured/structured-code-generator-register.h: $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_EXCLUDED)
 example-vms/structured/structured-main.c: $(GENERATED_C_FILES_FOR_STRUCTURED_MAIN_EXCLUDED)
 
 # Like above, define a variable for the sources of the structured-VM standalone

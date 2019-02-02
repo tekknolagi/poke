@@ -59,8 +59,8 @@ enum structured_expression_case
 
 /* An identifier for a structured-language primitive.  Primitives always work on
    values (one or two), and always produce one result.  In other words a
-   primitive call is always an expression taking other expressions as
-   arguments.  There are no statement-like primitives. */
+   primitive call is always an expression taking other expressions as arguments.
+   There are no statement-like primitives. */
 enum structured_primitive
   {
     structured_primitive_plus,
@@ -235,6 +235,19 @@ struct structured_program
   /* A pointer to the main statement, as a malloc-allocated struct. */
   struct structured_statement *main_statement;
 };
+
+
+
+
+/* Reversing of boolean primitives.
+ * ************************************************************************** */
+
+/* Given the case for a comparison primitive returning a boolean, return the
+   case of the opposite primitive.  For example, the reverse of less is
+   greater_or_equal.
+   Fail if reversing is not defined on the given primitive. */
+enum structured_primitive
+structured_reverse_boolean_primitive (enum structured_primitive p);
 
 
 #endif // #ifndef JITTER_STRUCTURED_SYNTAX_H_
