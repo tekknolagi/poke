@@ -1,7 +1,6 @@
 /* VM library: main header file.
 
    Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
-   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -230,14 +229,14 @@ vmprefix_interpret (struct jitter_program const *p, struct vmprefix_state *s)
 /* Array element access: residuals, transfers, slow registers, more to come.
  * ************************************************************************** */
 
-/* In order to cover a wider range of addresses with simple base+register
+/* In order to cover a wider range of addresses with simple base + register
    addressing the base does not necessarily point to the beginning of the Array;
-   instead the base points to the beginning of the Array plus VMPREFIX_BIAS
+   instead the base points to the beginning of the Array plus JITTER_ARRAY_BIAS
    bytes.
    FIXME: define the bias as a value appropriate to each architecture.  I think
    I should just move the definition to jitter-machine.h and provide a default
-   here, in case the definition is missing for some architectures. */
-#define JITTER_BIAS 0
+   here, in case the definition is missing on some architecture. */
+#define JITTER_ARRAY_BIAS 0
 
 /* Transfer registers are not implemented yet.  For the purpose of computing
    Array offsets I will say they are zero. */
@@ -259,7 +258,7 @@ vmprefix_interpret (struct jitter_program const *p, struct vmprefix_state *s)
 # define VMPREFIX_RESIDUAL_UNBIASED_OFFSET(i)  \
     (sizeof (union vmprefix_any_register) * (i))
 # define VMPREFIX_RESIDUAL_OFFSET(i)  \
-    (VMPREFIX_RESIDUAL_UNBIASED_OFFSET(i) - JITTER_BIAS)
+    (VMPREFIX_RESIDUAL_UNBIASED_OFFSET(i) - JITTER_ARRAY_BIAS)
 #endif // #ifdef JITTER_DISPATCH_NO_THREADING
 
 /* Define a macro holding the first slow register offset in bytes from an
@@ -277,7 +276,7 @@ vmprefix_interpret (struct jitter_program const *p, struct vmprefix_state *s)
 #else
   /* With any dispatching model different from no-threading the Array begins
      with slow registers. */
-# define VMPREFIX_FIRST_SLOW_REGISTER_UNBIASED_OFFSET 0
+# define VMPREFIX_FIRST_SLOW_REGISTER_UNBIASED_OFFSET  0
 #endif // #ifdef JITTER_DISPATCH_NO_THREADING
 
 /* Expand to the offset of the i-th register of class c in bytes from the Array
@@ -294,7 +293,8 @@ vmprefix_interpret (struct jitter_program const *p, struct vmprefix_state *s)
    this order:
      r4, f7, q2, r5, r8, q3, r6, r9, q4, and so on.
    This organization is convenient since changing the number of slow registers
-   doesn't invalidate any offset computed in the past.
+   doesn't invalidate any offset computed in the past: the Array can simply be
+   resized and its base pointer updated, without changing the code accessing it.
 
    This relies on macro such as VMPREFIX_REGISTER_CLASS_NO and
    VMPREFIX_REGISTER_?_FAST_REGISTER_NO and , defined below in machine-generated
@@ -310,7 +310,7 @@ vmprefix_interpret (struct jitter_program const *p, struct vmprefix_state *s)
 /* Expand to the offset of the i-th register of class c in bytes from the base,
    keeping the bias into account. */
 #define VMPREFIX_SLOW_REGISTER_OFFSET(c, i)                              \
-  (VMPREFIX_SLOW_REGISTER_UNBIASED_OFFSET(c, i) - JITTER_BIAS)
+  (VMPREFIX_SLOW_REGISTER_UNBIASED_OFFSET(c, i) - JITTER_ARRAY_BIAS)
 
 /* Expand to the Array size in bytes, assuming the given number of slow
    registers per class.  This is an allocation size, ignoring the bias. */
