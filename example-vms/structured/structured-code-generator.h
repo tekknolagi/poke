@@ -1,4 +1,4 @@
-/* Jittery structured language example: code generator header.
+/* Jittery structured language example: code generator common machinery.
 
    Copyright (C) 2017 Luca Saiu
    Written by Luca Saiu
@@ -26,10 +26,33 @@
 #include "structuredvm-vm.h"
 #include "structured-syntax.h"
 
-/* Make a new VM program which is the translation of the given AST program, and
-   return a pointer to it.  It will be the user's responsibility to free it.  */
-struct structuredvm_program *
-structured_make_vm_program (struct structured_program *p)
-  __attribute__ ((returns_nonnull, nonnull (1)));
+/* Core type definitions.
+ * ************************************************************************** */
+
+typedef unsigned structured_register_index; // FIXME: do I want and need this?
+
+
+
+
+/* Compile-time environment.
+ * ************************************************************************** */
+
+/* The compile-time environment data structure, as an abstract type. */
+struct structured_static_environment;
+
+/* Return a pointer to a fresh static environment. */
+struct structured_static_environment*
+structured_static_environment_make (void);
+
+/* Free resources for the pointed fresh static environment. */
+void
+structured_static_environment_destroy (struct structured_static_environment *e);
+
+/* Return the register-index associated to the given variable in the pointed
+   environment; if no binding for the variable exists, add one. */
+structured_register_index
+structured_static_environment_lookup (struct structured_static_environment *e,
+                                      const structured_variable v);
+
 
 #endif // #ifndef STRUCTURED_CODE_GENERATOR_H_

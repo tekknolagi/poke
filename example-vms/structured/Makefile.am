@@ -30,6 +30,10 @@ bin_structured_SOURCES = \
   structured-syntax.c \
   structured-code-generator.h \
   structured-code-generator.c \
+  structured-code-generator-stack.h \
+  structured-code-generator-stack.c \
+  structured-code-generator-register.h \
+  structured-code-generator-register.c \
   $(GENERATED_C_FILES_FOR_STRUCTUREDVM) \
   structured-main.c
 
