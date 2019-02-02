@@ -1,6 +1,7 @@
 /* VM library: main VM C file template.
 
    Copyright (C) 2016, 2017, 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -480,7 +481,7 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
      Array as it is now. */
   volatile char *res
     = (((volatile char*) s->vmprefix_state_backing.jitter_array)
-       + JITTER_BIAS);
+       + JITTER_ARRAY_BIAS);
   return (volatile union vmprefix_any_register *) res;
 }
 
