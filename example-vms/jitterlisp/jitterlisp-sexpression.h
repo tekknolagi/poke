@@ -1,6 +1,6 @@
 /* JitterLisp: s-expression header.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -141,10 +141,11 @@ typedef jitter_tagged_object jitterlisp_object;
 
 /* Expand to an r-value evaluating to the untagged jitter_int content of the
    given tagged fixnum.  No type check is performed. */
-#define JITTERLISP_FIXNUM_DECODE(_jitterlisp_tagged_fixnum)   \
-  JITTER_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_fixnum,     \
-                               JITTERLISP_FIXNUM_TAG,         \
-                               JITTERLISP_FIXNUM_TAG_BIT_NO)
+#define JITTERLISP_FIXNUM_DECODE(_jitterlisp_tagged_fixnum)    \
+  ((jitter_int)                                                \
+   JITTER_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_fixnum,     \
+                                JITTERLISP_FIXNUM_TAG,         \
+                                JITTERLISP_FIXNUM_TAG_BIT_NO))
 
 
 
