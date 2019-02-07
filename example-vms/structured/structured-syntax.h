@@ -1,6 +1,6 @@
 /* Jittery structured language example: syntax.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jitter structured-language example, distributed
@@ -124,6 +124,7 @@ struct structured_expression
 enum structured_statement_case
   {
     structured_statement_case_skip,
+    structured_statement_case_block,
     structured_statement_case_assignment,
     structured_statement_case_print,
     structured_statement_case_sequence,
@@ -133,6 +134,8 @@ enum structured_statement_case
     structured_statement_case_repeat_until,
   };
 
+
+
 
 /* Structured-language statements.
  * ************************************************************************** */
@@ -150,6 +153,14 @@ struct structured_statement
   union
   {
     /* There are no fields for the skip case. */
+
+    /* Block fields. */
+    struct
+    {
+      /* The variable being declared. */
+      structured_variable block_variable;
+      struct structured_statement *block_body;
+    };
 
     /* Assignmenet fields. */
     struct

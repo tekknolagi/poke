@@ -100,6 +100,7 @@ structured_help (void)
   printf ("      --print                      print VM instructions\n");
   printf ("      --no-optimization-rewriting  disable optimization rewriting\n");
   printf ("      --optimization-rewriting     enable optimization rewriting (default)\n");
+  printf ("      --no-dry-run                 run the program (default)\n");
 
   structured_help_section ("Code generation options");
   printf ("      --stack                      generate stack-based instructions (default)\n");
@@ -240,6 +241,8 @@ structured_parse_command_line (struct structured_command_line *cl,
         cl->print = true;
       else if (handle_options && ! strcmp (arg, "--dry-run"))
         cl->dry_run = true;
+      else if (handle_options && ! strcmp (arg, "--no-dry-run"))
+        cl->dry_run = false;
       else if (handle_options && strlen (arg) > 1 && arg [0] == '-')
         structured_usage ("unrecognized option");
       else if (handle_options && strlen (arg) > 1 && arg [0] != '-')

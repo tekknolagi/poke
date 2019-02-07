@@ -155,6 +155,13 @@ structured_translate_statement (struct structuredvm_program *vmp,
       {
         break;
       }
+    case structured_statement_case_block:
+      {
+        structured_static_environment_bind (env, s->block_variable);
+        structured_translate_statement (vmp, s->block_body, env);
+        structured_static_environment_unbind (env);
+        break;
+      }
     case structured_statement_case_assignment:
       {
         structured_register_index idx
@@ -265,11 +272,11 @@ structured_make_vm_program_stack (struct structured_program *p)
   /* Translate the AST pointed by p into *vmp.  This of course works by
      recursion. */
   structured_translate_program (vmp, p);
-  
-  STRUCTUREDVM_APPEND_INSTRUCTION(vmp, push_mvariable);
-  structuredvm_append_unsigned_literal_parameter (vmp, 0);
-  structuredvm_append_unsigned_literal_parameter (vmp, 1);
-  
+
+  // FIXME: this is a test
+  //STRUCTUREDVM_APPEND_INSTRUCTION(vmp, push_mvariable);
+  //structuredvm_append_unsigned_literal_parameter (vmp, 0);
+  //structuredvm_append_unsigned_literal_parameter (vmp, 1);
 
   /* We're done. */
   return vmp;

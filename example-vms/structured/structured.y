@@ -1,6 +1,6 @@
 /* Jittery structured language example: Bison parser.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jitter structured-language example, distributed
@@ -174,6 +174,7 @@ structured_parse_file (const char *input_file_name);
 
 %token BEGIN_ END
 %token SKIP
+%token VAR
 %token PRINT
 %token SET_TO
 %token SEMICOLON
@@ -252,6 +253,10 @@ one_or_more_statements:
   { $$ = structured_make_statement (structured_statement_case_sequence);
     $$->sequence_statement_0 = $1;
     $$->sequence_statement_1 = $3; }
+| VAR variable SEMICOLON one_or_more_statements
+  { $$ = structured_make_statement (structured_statement_case_block);
+    $$->block_variable = $2;
+    $$->block_body = $4; }
   ;
 
 expression:

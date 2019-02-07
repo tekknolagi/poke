@@ -1,6 +1,7 @@
 // Jittery structured language (-*- Pascal -*- -style) example: down-counter.
 
 // Copyright (C) 2017 Luca Saiu
+// Updated in 2019 by Luca Saiu
 // Written by Luca Saiu
 
 // This file is part of Jitter.
@@ -19,6 +20,7 @@
 // along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
 
 begin
+   var n;
    n := 2000000000;
    repeat
       n := n - 1
