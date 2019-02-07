@@ -580,11 +580,20 @@ structured_translate_statement (struct structuredvm_program *vmp,
       {
         break;
       }
+    case structured_statement_case_block:
+      {
+        structured_static_environment_bind (env, s->block_variable);
+        structured_translate_statement (vmp, s->block_body, env);
+        structured_static_environment_unbind (env);
+        break;
+      }
     case structured_statement_case_assignment:
       {
-        structured_register_index idx = structured_static_environment_lookup (env, s->assignment_variable);
+        structured_register_index idx
+          = structured_static_environment_lookup (env, s->assignment_variable);
         struct structured_location vl = STRUCTURED_LOCATION_REGISTER(idx);
-        structured_translate_expression (vmp, &vl, s->assignment_expression, env);
+        structured_translate_expression (vmp, &vl, s->assignment_expression,
+                                         env);
         break;
       }
     case structured_statement_case_print:

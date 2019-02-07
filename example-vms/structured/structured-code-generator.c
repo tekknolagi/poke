@@ -21,6 +21,7 @@
 
 
 #include <string.h>
+#include <jitter/jitter-fatal.h>
 
 #include "structured-code-generator.h"
 
@@ -28,8 +29,8 @@
 /* Compile-time environment: definitions.
  * ************************************************************************** */
 
-/* Each instance of this structure holds a <variable, register-index> pair. */
-struct structured_variable_register_pair
+/* A binding for a variable, as known at compile time. */
+struct structured_binding
 {
   /* A variable name.  The pointed string is shared with the AST, and doesn't
      need to be freed here. */
@@ -46,13 +47,10 @@ struct structured_variable_register_pair
    to nested scopes. */
 struct structured_static_environment
 {
-  /* A dynamic array of struct structured_variable_register_pair elements. */
-  struct jitter_dynamic_buffer pairs;
-
-  /* Index of the lowest register index to be used next.  Indices are allocated
-     sequentially, so the first variable will be assigned to 0, the second to 1
-     and so on. */
-  structured_register_index next_register_index;
+  /* A dynamic array of struct structured_binding elements.  This
+     is used as a stack, with the top on the right (high indices) at the bottom
+     on the left (low indices). */
+  struct jitter_dynamic_buffer bindings;
 };
 
 
@@ -65,8 +63,7 @@ struct structured_static_environment
 static void
 structured_static_environment_initialize (struct structured_static_environment *e)
 {
-  jitter_dynamic_buffer_initialize (& e->pairs);
-  e->next_register_index = 0;
+  jitter_dynamic_buffer_initialize (& e->bindings);
 }
 
 /* Finalize the pointed static-environment struct, without freeing the struct
@@ -74,7 +71,7 @@ structured_static_environment_initialize (struct structured_static_environment *
 static void
 structured_static_environment_finalize (struct structured_static_environment *e)
 {
-  jitter_dynamic_buffer_finalize (& e->pairs);
+  jitter_dynamic_buffer_finalize (& e->bindings);
 }
 
 struct structured_static_environment*
@@ -96,29 +93,158 @@ structured_static_environment_destroy (struct structured_static_environment *e)
 
 
 
+/* Compile-time environment: binding access utility.
+ * ************************************************************************** */
+
+/* Given a pointer to static environment return an initial pointer to they
+   payload in bindings, which is much more convenient for read access.
+   The returned pointer remains valid until no more bindings are added or
+   removed. */
+static struct structured_binding *
+structured_static_environment_to_bindings (struct structured_static_environment
+                                           *e)
+{
+  return ((struct structured_binding *) e->bindings.region);
+}
+
+/* Given a pointer to a static environment return the number of bindings. */
+static size_t
+structured_static_environment_to_binding_no (const struct
+                                             structured_static_environment *e)
+{
+  return (e->bindings.used_size / sizeof (struct structured_binding));
+}
+
+/* Given a pointer to a static environment return a pointer to the last binding.
+   At least one binding is supposed to exist. */
+static struct structured_binding *
+structured_static_environment_last_binding (struct structured_static_environment
+                                            *e)
+{
+  size_t binding_no = structured_static_environment_to_binding_no (e);
+  if (binding_no < 1)
+    jitter_fatal ("structured_static_environment_last_binding: "
+                  "empty static environment");
+  struct structured_binding *bindings
+    = structured_static_environment_to_bindings (e);
+  return bindings + (binding_no - 1);
+}
+
+/* Add a new binding to the binding buffer in the pointed static environment,
+   and return a pointer to it.  The pointer will remain valid until other
+   bindings are pushed or popped. */
+static struct structured_binding*
+structured_static_environment_push_binding (struct structured_static_environment
+                                            *e)
+{
+  struct jitter_dynamic_buffer *bindings = & e->bindings;
+  return jitter_dynamic_buffer_reserve
+           (bindings, sizeof (struct structured_binding));
+}
+
+/* Remove the last binding from the binding buffer in the pointed static
+   environment. */
+static void
+structured_static_environment_pop_binding (struct structured_static_environment
+                                           *e)
+{
+  jitter_dynamic_buffer_pop (& e->bindings,
+                             sizeof (struct structured_binding));
+}
+
+
+
+
 /* Compile-time environment: accessors.
  * ************************************************************************** */
 
-/* Return the register-index associated to the given variable in the pointed
-   environment; if no binding for the variable exists, add one. */
+structured_register_index
+structured_static_environment_bind (struct structured_static_environment *e,
+                                    const structured_variable v)
+{
+  structured_register_index new_register
+    = structured_static_environment_fresh_register (e);
+  struct structured_binding *new_binding
+    = structured_static_environment_push_binding (e);
+  new_binding->variable = v;
+  new_binding->register_index = new_register;
+  //fprintf (stderr, "+ Binding %s to %i\n", new_binding->variable, new_binding->register_index);
+  return new_register;
+}
+
+void
+structured_static_environment_unbind (struct structured_static_environment *e)
+{
+  struct structured_binding *last_binding __attribute__ ((unused)) = structured_static_environment_last_binding (e);
+  //fprintf (stderr, "- Unbinding %s from %i\n", last_binding->variable, last_binding->register_index);
+  structured_static_environment_pop_binding (e);
+}
+
+bool
+structured_static_environment_has (struct structured_static_environment *e,
+                                   const structured_variable v)
+{
+  size_t binding_no = structured_static_environment_to_binding_no (e);
+  struct structured_binding *bindings
+    = structured_static_environment_to_bindings (e);
+  int i;
+  for (i = binding_no - 1; i >= 0; i --)
+    if (! strcmp (bindings [i].variable, v))
+      return true;
+  return false;
+}
+
 structured_register_index
 structured_static_environment_lookup (struct structured_static_environment *e,
                                       const structured_variable v)
 {
-  struct structured_variable_register_pair *p
-    = ((struct structured_variable_register_pair *)
-       (e->pairs.region
-        + e->pairs.used_size
-        - sizeof (struct structured_variable_register_pair)));
-  while (p >= (struct structured_variable_register_pair *) e->pairs.region)
-    {
-      if (! strcmp (p->variable, v))
-        return p->register_index;
-      p --;
-    }
-  struct structured_variable_register_pair *new_pair
-    = jitter_dynamic_buffer_reserve
-         (& e->pairs, sizeof (struct structured_variable_register_pair));
-  new_pair->variable = v;
-  return new_pair->register_index = e->next_register_index ++;
+  /* Look for the register index associated to v in the binding array, starting
+     from the end: the most recent binding shadows any previous binding. */
+  size_t binding_no = structured_static_environment_to_binding_no (e);
+  struct structured_binding *bindings
+    = structured_static_environment_to_bindings (e);
+  int i;
+  for (i = binding_no - 1; i >= 0; i --)
+    if (! strcmp (bindings [i].variable, v))
+      return bindings [i].register_index;
+
+  /* If we arrived here then v is unbound. */
+  jitter_fatal ("unbound variable %s", v);
+}
+
+structured_register_index
+structured_static_environment_fresh_register (struct
+                                              structured_static_environment *e)
+{
+  /* First pass: look for the highest-index currently used register.  Notice
+     that highest must be signed, as I need to initialize the maximum to -1.
+     See the comment below. */
+  structured_register_index highest = -1;
+  size_t binding_no = structured_static_environment_to_binding_no (e);
+  struct structured_binding *bindings
+    = structured_static_environment_to_bindings (e);
+  int i;
+  for (i = 0; i < binding_no; i ++)
+    if (bindings [i].register_index > highest)
+      highest = bindings [i].register_index;
+
+  /* Second pass: make a boolean array indexed by register indices, saying which
+     register is being used, and fill it.  The result we are looking for will be
+     highest + 1, or smaller; therefore highest + 2 is a safe array size.
+     Notice that if no register is being used at this time then highest will be -1,
+     and array_size will be 1: there's no need for a special case. */
+  size_t array_size = highest + 2;
+  bool *used_registers = jitter_xmalloc (array_size * sizeof (bool));
+  memset (used_registers, 0, array_size * sizeof (bool));
+  for (i = 0; i < binding_no; i ++)
+    used_registers [bindings [i].register_index] = true;
+
+  /* Third pass: look for the smallest unused register using the Boolean array. */
+  for (i = 0; i < array_size; i ++)
+    if (! used_registers [i])
+      {
+        free (used_registers);
+        return i;
+      }
+  jitter_fatal ("boolean array not marking any register as unused: bug");
 }
