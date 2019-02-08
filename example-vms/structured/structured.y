@@ -268,6 +268,11 @@ expression:
     $$->variable = $1; }
 | OPEN_PAREN expression CLOSE_PAREN
   { $$ = $2; }
+| IF expression THEN expression ELSE expression END
+  { $$ = structured_make_expression (structured_expression_case_if_then_else);
+    $$->if_then_else_condition = $2;
+    $$->if_then_else_then_branch = $4;
+    $$->if_then_else_else_branch = $6; }
 | expression PLUS expression
   { $$ = structured_make_binary (structured_primitive_plus, $1, $3); }
 | expression MINUS expression
@@ -293,9 +298,21 @@ expression:
 | expression GREATER_OR_EQUAL expression
   { $$ = structured_make_binary (structured_primitive_greater_or_equal, $1, $3); }
 | expression LOGICAL_AND expression
-  { $$ = structured_make_binary (structured_primitive_logical_and, $1, $3); }
+  { /* Parse "A and B" as "if A then B else false end". */
+    $$ = structured_make_expression (structured_expression_case_if_then_else);
+    $$->if_then_else_condition = $1;
+    $$->if_then_else_then_branch = $3;
+    $$->if_then_else_else_branch
+      = structured_make_expression (structured_expression_case_literal);
+    $$->if_then_else_else_branch->literal = 0; }
 | expression LOGICAL_OR expression
-  { $$ = structured_make_binary (structured_primitive_logical_or, $1, $3); }
+  { /* Parse "A or B" as "if A then true else B end". */
+    $$ = structured_make_expression (structured_expression_case_if_then_else);
+    $$->if_then_else_condition = $1;
+    $$->if_then_else_then_branch
+      = structured_make_expression (structured_expression_case_literal);
+    $$->if_then_else_then_branch->literal = 1;
+    $$->if_then_else_else_branch = $3; }
 | LOGICAL_NOT expression
   { $$ = structured_make_unary (structured_primitive_logical_not, $2); }
   ;

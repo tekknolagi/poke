@@ -98,12 +98,6 @@ structured_translate_primitive (struct structuredvm_program *vmp,
       STRUCTUREDVM_APPEND_INSTRUCTION(vmp, greater); break;
     case structured_primitive_greater_or_equal:
       STRUCTUREDVM_APPEND_INSTRUCTION(vmp, greaterorequal); break;
-    case structured_primitive_logical_and:
-      // FIXME: this is currently strict, differently from Pascal.
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, logicaland); break;
-    case structured_primitive_logical_or:
-      // FIXME: this is currently strict, differently from Pascal.
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, logicalor); break;
     case structured_primitive_logical_not:
       STRUCTUREDVM_APPEND_INSTRUCTION(vmp, logicalnot); break;
     }
@@ -130,6 +124,21 @@ structured_translate_expression (struct structuredvm_program *vmp,
         STRUCTUREDVM_APPEND_REGISTER_PARAMETER(vmp, r, idx);
         break;
       }
+    case structured_expression_case_if_then_else:
+      {
+        structuredvm_label before_else = structuredvm_fresh_label (vmp);
+        structuredvm_label after_else = structuredvm_fresh_label (vmp);
+        structured_translate_expression (vmp, e->if_then_else_condition, env);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
+        structuredvm_append_label_parameter (vmp, before_else);
+        structured_translate_expression (vmp, e->if_then_else_then_branch, env);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, b);
+        structuredvm_append_label_parameter (vmp, after_else);
+        structuredvm_append_label (vmp, before_else);
+        structured_translate_expression (vmp, e->if_then_else_else_branch, env);
+        structuredvm_append_label (vmp, after_else);
+        break;
+      }
     case structured_expression_case_primitive:
       {
         structured_translate_primitive (vmp, e->primitive,
@@ -138,7 +147,7 @@ structured_translate_expression (struct structuredvm_program *vmp,
         break;
       }
     default:
-      jitter_fatal ("invalid expression case");
+      jitter_fatal ("invalid expression case (bug): %i", (int) e->case_);
     }
 }
 
@@ -241,7 +250,7 @@ structured_translate_statement (struct structuredvm_program *vmp,
         break;
       }
     default:
-      jitter_fatal ("invalid statement case");
+      jitter_fatal ("invalid statement case (bug): %i", (int) s->case_);
     }
 }
 
