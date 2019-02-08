@@ -143,8 +143,6 @@ enum structured_statement_case
     structured_statement_case_print,
     structured_statement_case_sequence,
     structured_statement_case_if_then_else,
-    structured_statement_case_if_then,
-    structured_statement_case_while_do,
     structured_statement_case_repeat_until,
   };
 

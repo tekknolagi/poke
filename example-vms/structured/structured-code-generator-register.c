@@ -672,41 +672,6 @@ structured_translate_statement (struct structuredvm_program *vmp,
         structured_emit_label (vmp, after_else);
         break;
       }
-    case structured_statement_case_if_then:
-      {
-        structuredvm_label after_then = structuredvm_fresh_label (vmp);
-        structured_translate_condtitional (vmp, s->if_then_condition,
-                                           after_then,
-                                           false,
-                                           env);
-        structured_translate_statement (vmp, s->if_then_then_branch, env);
-        structured_emit_label (vmp, after_then);
-        break;
-      }
-    case structured_statement_case_while_do:
-      {
-        /* I compile a while..do loop as a do..while loop, with a single
-           conditional branch at the end:
-                 b $before_guard
-              $loop_beginning:
-                 [body]
-              $before_guard:
-                 [guard]
-                 bt $loop_beginning */
-        structuredvm_label loop_beginning = structuredvm_fresh_label (vmp);
-        structuredvm_label before_guard = structuredvm_fresh_label (vmp);
-        structured_emit_opcode (vmp, "b");
-        structured_emit_operand_label (vmp, before_guard);
-        structured_close_instruction (vmp);
-        structured_emit_label (vmp, loop_beginning);
-        structured_translate_statement (vmp, s->while_do_body, env);
-        structured_emit_label (vmp, before_guard);
-        structured_translate_condtitional (vmp, s->while_do_guard,
-                                           loop_beginning,
-                                           true,
-                                           env);
-        break;
-      }
     case structured_statement_case_repeat_until:
       {
         structuredvm_label before_body = structuredvm_fresh_label (vmp);
