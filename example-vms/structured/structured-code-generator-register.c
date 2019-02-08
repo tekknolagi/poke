@@ -50,6 +50,11 @@ enum structured_location_case
        code will be specific, and use one of the other cases. */
     structured_location_case_anywhere,
 
+    /* The object can be anywhere, except that it cannot be a constant.  This is
+       needed to compile branches of conditional epxressions, which must resolve
+       to the same location which cannot be, in general, *the same* constant. */
+    structured_location_case_nonconstant,
+
     /* The object is be on the stack. */
     structured_location_case_stack,
 
@@ -84,17 +89,22 @@ struct structured_location
 
 /* A litreal suitable for initializing a struct structured_location object to be an
    location with an anywhere case. */
-#define STRUCTURED_LOCATION_ANYWHERE  \
+#define STRUCTURED_LOCATION_ANYWHERE     \
   { structured_location_case_anywhere }
+
+/* A litreal suitable for initializing a struct structured_location object to be an
+   location with a non-constant case. */
+#define STRUCTURED_LOCATION_NONCONSTANT     \
+  { structured_location_case_nonconstant }
 
 /* A litreal suitable for initializing a struct structured_location object to be the
    stack. */
-#define STRUCTURED_LOCATION_STACK  \
+#define STRUCTURED_LOCATION_STACK     \
   { structured_location_case_stack }
 
 /* A litreal suitable for initializing a struct structured_location object to be a
    register, with the given index. */
-#define STRUCTURED_LOCATION_REGISTER(index)  \
+#define STRUCTURED_LOCATION_REGISTER(index)                         \
   { structured_location_case_register, .register_index = (index) }
 
 /* I'm actually printing instructions in a textual form to this stream instead
@@ -123,15 +133,15 @@ structured_emit_operand_stack (struct structuredvm_program *vmp, char stack_name
 
 static void
 structured_emit_operand_register (struct structuredvm_program *vmp,
-                           char class_name,
-                           structured_register_index index)
+                                  char class_name,
+                                  structured_register_index index)
 {
   fprintf (structured_stream, "%%%c%i ", class_name, (int) index);
 }
 
 static void
 structured_emit_operand_literal (struct structuredvm_program *vmp,
-                          jitter_int value)
+                                 jitter_int value)
 {
   fprintf (structured_stream, "%" JITTER_PRIi " ", value);
 }
@@ -139,19 +149,22 @@ structured_emit_operand_literal (struct structuredvm_program *vmp,
 __attribute__ ((unused))
 static void
 structured_emit_operand_label (struct structuredvm_program *vmp,
-                        structuredvm_label label)
+                               structuredvm_label label)
 {
   fprintf (structured_stream, "$L%lu ", (unsigned long) label);
 }
 
 static void
 structured_emit_operand (struct structuredvm_program *vmp,
-                  const struct structured_location *l)
+                         const struct structured_location *l)
 {
   switch (l->case_)
     {
     case structured_location_case_anywhere:
       jitter_fatal ("invalid instruction operand: anywhere");
+
+    case structured_location_case_nonconstant:
+      jitter_fatal ("invalid instruction operand: nonconstant");
 
     case structured_location_case_stack:
       structured_emit_operand_stack (vmp, 's');
@@ -184,8 +197,8 @@ structured_close_instruction (struct structuredvm_program *vmp)
    location, updated here if its case is "anywhere". */
 static void
 structured_translate_expression_literal (struct structuredvm_program *vmp,
-                                  struct structured_location *rl,
-                                  jitter_int literal)
+                                         struct structured_location *rl,
+                                         jitter_int literal)
 {
   switch (rl->case_)
     {
@@ -195,9 +208,13 @@ structured_translate_expression_literal (struct structuredvm_program *vmp,
       break;
 
     case structured_location_case_stack:
+    case structured_location_case_nonconstant:
       structured_emit_opcode (vmp, "push");
       structured_emit_operand_literal (vmp, literal);
       structured_close_instruction (vmp);
+      /* In case the requested location was nonconstant, we made it more
+         specific.  Update it so that the caller knows the exact location. */
+      rl->case_ = structured_location_case_stack;
       break;
 
     case structured_location_case_register:
@@ -222,12 +239,13 @@ structured_translate_expression_literal (struct structuredvm_program *vmp,
    "anywhere". */
 static void
 structured_translate_expression_variable (struct structuredvm_program *vmp,
-                                   struct structured_location *rl,
-                                   structured_register_index ri)
+                                          struct structured_location *rl,
+                                          structured_register_index ri)
 {
   switch (rl->case_)
     {
     case structured_location_case_anywhere:
+    case structured_location_case_nonconstant:
       rl->case_ = structured_location_case_register;
       rl->register_index = ri;
       break;
@@ -250,10 +268,10 @@ structured_translate_expression_variable (struct structuredvm_program *vmp,
       break;
 
     case structured_location_case_constant:
-      jitter_fatal ("invalid expression result location: constant");
+      jitter_fatal ("invalid variable expression result location: constant");
 
     default:
-      jitter_fatal ("invalid expression result location: unexpected (bug): %i",
+      jitter_fatal ("invalid variable expression result location: unexpected (bug): %i",
                     (int) rl->case_);
     };
 }
@@ -261,15 +279,15 @@ structured_translate_expression_variable (struct structuredvm_program *vmp,
 /* Forward-declaration. */
 static void
 structured_translate_expression (struct structuredvm_program *vmp,
-                          struct structured_location *rl,
-                          struct structured_expression *e,
-                          struct structured_static_environment *env);
+                                 struct structured_location *rl,
+                                 struct structured_expression *e,
+                                 struct structured_static_environment *env);
 
 
 /* Emit one opcode, without the operands, for the given primitive. */
 static void
 structured_translate_primitive_opcode (struct structuredvm_program *vmp,
-                                enum structured_primitive case_)
+                                       enum structured_primitive case_)
 {
   switch (case_)
     {
@@ -297,12 +315,6 @@ structured_translate_primitive_opcode (struct structuredvm_program *vmp,
       structured_emit_opcode(vmp, "greater"); break;
     case structured_primitive_greater_or_equal:
       structured_emit_opcode(vmp, "greaterorequal"); break;
-    case structured_primitive_logical_and:
-      // FIXME: this is currently strict, differently from Pascal.
-      structured_emit_opcode(vmp, "logicaland"); break;
-    case structured_primitive_logical_or:
-      // FIXME: this is currently strict, differently from Pascal.
-      structured_emit_opcode(vmp, "logicalor"); break;
     case structured_primitive_logical_not:
       structured_emit_opcode(vmp, "logicalnot"); break;
     default:
@@ -316,12 +328,13 @@ structured_translate_primitive_opcode (struct structuredvm_program *vmp,
    The result of the expression will be stored, in emitted code, in the required
    location, updated here if its case is "anywhere". */
 static void
-structured_translate_expression_primitive (struct structuredvm_program *vmp,
-                                    struct structured_location *rl,
-                                    enum structured_primitive case_,
-                                    struct structured_expression *operand_0,
-                                    struct structured_expression *operand_1,
-                                    struct structured_static_environment *env)
+structured_translate_expression_primitive
+   (struct structuredvm_program *vmp,
+    struct structured_location *rl,
+    enum structured_primitive case_,
+    struct structured_expression *operand_0,
+    struct structured_expression *operand_1,
+    struct structured_static_environment *env)
 {
   /* Translate the two operands, or the single operand in case the second is
      NULL (which means that the primitive is unary). */
@@ -346,15 +359,23 @@ structured_translate_expression_primitive (struct structuredvm_program *vmp,
   structured_close_instruction (vmp);
 }
 
+/* Forward-declaration. */
+static void
+structured_translate_condtitional (struct structuredvm_program *vmp,
+                                   struct structured_expression *e,
+                                   structuredvm_label label,
+                                   bool branch_on_true,
+                                   struct structured_static_environment *env);
+
 /* Emit code to translate the pointed expression AST to the pointed Jittery
    program, using the pointed static environment to be looked up and updated.
    The result of the expression will be stored, in emitted code, in the required
    location, updated here if its case is "anywhere". */
 static void
 structured_translate_expression (struct structuredvm_program *vmp,
-                          struct structured_location *rl,
-                          struct structured_expression *e,
-                          struct structured_static_environment *env)
+                                 struct structured_location *rl,
+                                 struct structured_expression *e,
+                                 struct structured_static_environment *env)
 {
   switch (e->case_)
     {
@@ -368,26 +389,47 @@ structured_translate_expression (struct structuredvm_program *vmp,
         structured_translate_expression_variable (vmp, rl, idx);
         break;
       }
+    case structured_expression_case_if_then_else:
+      {
+        /* If * rl is an anywhere location, change it to a different case: here
+           * rl cannot be (in the general case) a constant.  But it can be a
+           variable.  The problem is that if one of the two branches compiled to
+           a constant location then if would only be possible to compile the
+           other branch to the *same* constant location, which will not happen
+           in any non-trivial conditional.  The result must go to *one*
+           non-constant location.  It is not a problem if it goes to a variable
+           or to a temporary. */
+        if (rl->case_ == structured_location_case_anywhere)
+          rl->case_ = structured_location_case_nonconstant;
+
+        structuredvm_label before_else = structuredvm_fresh_label (vmp);
+        structuredvm_label after_else = structuredvm_fresh_label (vmp);
+        structured_translate_condtitional (vmp, e->if_then_else_condition,
+                                           before_else,
+                                           false,
+                                           env);
+        structured_translate_expression (vmp, rl, e->if_then_else_then_branch,
+                                         env);
+        structured_emit_opcode (vmp, "b");
+        structured_emit_operand_label (vmp, after_else);
+        structured_close_instruction (vmp);
+        structured_emit_label (vmp, before_else);
+        structured_translate_expression (vmp, rl, e->if_then_else_else_branch,
+                                         env);
+        structured_emit_label (vmp, after_else);
+        break;
+      }
     case structured_expression_case_primitive:
       {
         structured_translate_expression_primitive (vmp, rl, e->primitive,
-                                            e->primitive_operand_0,
-                                            e->primitive_operand_1,
-                                            env);
+                                                   e->primitive_operand_0,
+                                                   e->primitive_operand_1, env);
         break;
       }
     default:
-      jitter_fatal ("invalid expression case");
+      jitter_fatal ("invalid expression case (bug): %i", (int) e->case_);
     }
 }
-
-/* Forward-declaration. */
-static void
-structured_translate_condtitional (struct structuredvm_program *vmp,
-                            struct structured_expression *e,
-                            structuredvm_label label,
-                            bool branch_on_true,
-                            struct structured_static_environment *env);
 
 /* Given a boolean primitive case, return the name of the VM instruction
    implementing a conditional branch over it.
@@ -421,13 +463,14 @@ structured_boolean_primitive_to_instruction (enum structured_primitive p)
    Generate a branch-on-non-zero if branch_on_true is non-false; generate a
    branch-on-zero if branch_on_true is false. */
 static void
-structured_translate_condtitional_primitive (struct structuredvm_program *vmp,
-                                      enum structured_primitive case_,
-                                      struct structured_expression *operand_0,
-                                      struct structured_expression *operand_1,
-                                      structuredvm_label label,
-                                      bool branch_on_true,
-                                      struct structured_static_environment *env)
+structured_translate_condtitional_primitive
+   (struct structuredvm_program *vmp,
+    enum structured_primitive case_,
+    struct structured_expression *operand_0,
+    struct structured_expression *operand_1,
+    structuredvm_label label,
+    bool branch_on_true,
+    struct structured_static_environment *env)
 {
   switch (case_)
     {
@@ -450,7 +493,8 @@ structured_translate_condtitional_primitive (struct structuredvm_program *vmp,
           actual_case = case_;
         else
           actual_case = structured_reverse_boolean_primitive (case_);
-        const char *opcode = structured_boolean_primitive_to_instruction (actual_case);
+        const char *opcode
+          = structured_boolean_primitive_to_instruction (actual_case);
         structured_emit_opcode (vmp, opcode);
         structured_emit_operand (vmp, & o0l);
         structured_emit_operand (vmp, & o1l);
@@ -458,38 +502,11 @@ structured_translate_condtitional_primitive (struct structuredvm_program *vmp,
         structured_close_instruction (vmp);
         break;
       }
-    /* case structured_primitive_logical_and: */
-    /*   /\* */
-    /*     on [and a b] goto on_true */
-    /*         ==> */
-    /*       (unless a goto after) */
-    /*       (when b goto on_true) */
-    /*     after: */
-
-    /*     FIXME: tentative. */
-    /*     Let on_true be non-NULL. */
-    /*     Translate as: */
-    /*       conditional [operand_0] NULL, $after */
-    /*       conditional [operand_1] $on_true, NULL */
-    /*     $after: */
-
-    /*     Now let on_false be non-NULL. */
-    /*     Translate as: */
-    /*       conditional [operand_0] NULL, $on_false */
-    /*       conditional [operand_1] NULL, $on_false */
-    /*    *\/ */
-    /*   jitter_fatal ("unimplemented: and"); */
-    /*   break; */
-    /* case structured_primitive_logical_or: */
-    /*   jitter_fatal ("unimplemented: or"); */
-    /*   break; */
     case structured_primitive_logical_not:
       /* Translate the not subexpression as an ordinary contitional,
          swapping the on_true and on_false labels. */
-      structured_translate_condtitional (vmp, operand_0,
-                                  label,
-                                  ! branch_on_true,
-                                  env);
+      structured_translate_condtitional (vmp, operand_0, label,
+                                         ! branch_on_true, env);
       break;
     default:
       {
@@ -500,7 +517,7 @@ structured_translate_condtitional_primitive (struct structuredvm_program *vmp,
            branch according to its value. */
         struct structured_location rl = STRUCTURED_LOCATION_ANYWHERE;
         structured_translate_expression_primitive (vmp, & rl, case_, operand_0,
-                                            operand_1, env);
+                                                   operand_1, env);
         if (branch_on_true)
           structured_emit_opcode (vmp, "bnz");
         else
@@ -520,10 +537,10 @@ structured_translate_condtitional_primitive (struct structuredvm_program *vmp,
    When the generated code does not branch, it simply falls thru. */
 static void
 structured_translate_condtitional (struct structuredvm_program *vmp,
-                            struct structured_expression *e,
-                            structuredvm_label label,
-                            bool branch_on_true,
-                            struct structured_static_environment *env)
+                                   struct structured_expression *e,
+                                   structuredvm_label label,
+                                   bool branch_on_true,
+                                   struct structured_static_environment *env)
 {
   switch (e->case_)
     {
@@ -556,9 +573,36 @@ structured_translate_condtitional (struct structuredvm_program *vmp,
     case structured_expression_case_primitive:
       {
         structured_translate_condtitional_primitive (vmp, e->primitive,
-                                              e->primitive_operand_0,
-                                              e->primitive_operand_1,
-                                              label, branch_on_true, env);
+                                                     e->primitive_operand_0,
+                                                     e->primitive_operand_1,
+                                                     label, branch_on_true,
+                                                     env);
+        break;
+      }
+    case structured_expression_case_if_then_else:
+      {
+        /* Translate
+              branch[-unless] (if C then T else E) $L
+           into
+                branch-unless C $E
+                branch[-unless] T $L
+                goto $AFTER
+              $E:
+                branch[-unless] E $L
+              $AFTER: */
+        struct structured_expression *c = e->if_then_else_condition;
+        struct structured_expression *tb = e->if_then_else_then_branch;
+        struct structured_expression *eb = e->if_then_else_else_branch;
+        structuredvm_label before_else = structuredvm_fresh_label (vmp);
+        structuredvm_label after_else = structuredvm_fresh_label (vmp);
+        structured_translate_condtitional (vmp, c, before_else, false, env);
+        structured_translate_condtitional (vmp, tb, label, branch_on_true, env);
+        structured_emit_opcode (vmp, "b");
+        structured_emit_operand_label (vmp, after_else);
+        structured_close_instruction (vmp);
+        structured_emit_label (vmp, before_else);
+        structured_translate_condtitional (vmp, eb, label, branch_on_true, env);
+        structured_emit_label (vmp, after_else);
         break;
       }
     default:
@@ -571,8 +615,8 @@ structured_translate_condtitional (struct structuredvm_program *vmp,
    program, using the pointed static environment to be looked up and updated. */
 static void
 structured_translate_statement (struct structuredvm_program *vmp,
-                         struct structured_statement *s,
-                         struct structured_static_environment *env)
+                                struct structured_statement *s,
+                                struct structured_static_environment *env)
 {
   switch (s->case_)
     {
@@ -617,9 +661,9 @@ structured_translate_statement (struct structuredvm_program *vmp,
         structuredvm_label after_else = structuredvm_fresh_label (vmp);
 
         structured_translate_condtitional (vmp, s->if_then_else_condition,
-                                    before_else,
-                                    false,
-                                    env);
+                                           before_else,
+                                           false,
+                                           env);
         structured_translate_statement (vmp, s->if_then_else_then_branch, env);
         structured_emit_opcode (vmp, "b");
         structured_emit_operand_label (vmp, after_else);
@@ -629,54 +673,19 @@ structured_translate_statement (struct structuredvm_program *vmp,
         structured_emit_label (vmp, after_else);
         break;
       }
-    case structured_statement_case_if_then:
-      {
-        structuredvm_label after_then = structuredvm_fresh_label (vmp);
-        structured_translate_condtitional (vmp, s->if_then_condition,
-                                    after_then,
-                                    false,
-                                    env);
-        structured_translate_statement (vmp, s->if_then_then_branch, env);
-        structured_emit_label (vmp, after_then);
-        break;
-      }
-    case structured_statement_case_while_do:
-      {
-        /* I compile a while..do loop as a do..while loop, with a single
-           conditional branch at the end:
-                 b $before_guard
-              $loop_beginning:
-                 [body]
-              $before_guard:
-                 [guard]
-                 bt $loop_beginning */
-        structuredvm_label loop_beginning = structuredvm_fresh_label (vmp);
-        structuredvm_label before_guard = structuredvm_fresh_label (vmp);
-        structured_emit_opcode (vmp, "b");
-        structured_emit_operand_label (vmp, before_guard);
-        structured_close_instruction (vmp);
-        structured_emit_label (vmp, loop_beginning);
-        structured_translate_statement (vmp, s->while_do_body, env);
-        structured_emit_label (vmp, before_guard);
-        structured_translate_condtitional (vmp, s->while_do_guard,
-                                    loop_beginning,
-                                    true,
-                                    env);
-        break;
-      }
     case structured_statement_case_repeat_until:
       {
         structuredvm_label before_body = structuredvm_fresh_label (vmp);
         structured_emit_label (vmp, before_body);
         structured_translate_statement (vmp, s->repeat_until_body, env);
         structured_translate_condtitional (vmp, s->repeat_until_guard,
-                                    before_body,
-                                    false,
-                                    env);
+                                           before_body,
+                                           false,
+                                           env);
         break;
       }
     default:
-      jitter_fatal ("invalid statement case");
+      jitter_fatal ("invalid statement case (bug): %i", (int) s->case_);
     }
 }
 

@@ -53,7 +53,8 @@ enum structured_expression_case
   {
     structured_expression_case_literal,
     structured_expression_case_variable,
-    structured_expression_case_primitive
+    structured_expression_case_if_then_else,
+    structured_expression_case_primitive,
     //, structured_expression_case_call
   };
 
@@ -75,8 +76,6 @@ enum structured_primitive
     structured_primitive_less_or_equal,
     structured_primitive_greater,
     structured_primitive_greater_or_equal,
-    structured_primitive_logical_and,
-    structured_primitive_logical_or,
     structured_primitive_logical_not
   };
 
@@ -102,6 +101,21 @@ struct structured_expression
 
     /* A variable. */
     structured_variable variable;
+
+    /* If-then-else fields. */
+    struct
+    {
+      /* A pointer to the condition expression, as a malloc-allocated struct. */
+      struct structured_expression *if_then_else_condition;
+
+      /* A pointer to the then-branch expression, as a malloc-allocated
+         struct. */
+      struct structured_expression *if_then_else_then_branch;
+
+      /* A pointer to the else-branch expression, as a malloc-allocated
+         struct. */
+      struct structured_expression *if_then_else_else_branch;
+    };
 
     /* Primitive fields. */
     struct
@@ -129,8 +143,6 @@ enum structured_statement_case
     structured_statement_case_print,
     structured_statement_case_sequence,
     structured_statement_case_if_then_else,
-    structured_statement_case_if_then,
-    structured_statement_case_while_do,
     structured_statement_case_repeat_until,
   };
 
