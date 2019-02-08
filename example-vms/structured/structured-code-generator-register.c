@@ -245,6 +245,7 @@ structured_translate_expression_variable (struct structuredvm_program *vmp,
   switch (rl->case_)
     {
     case structured_location_case_anywhere:
+    case structured_location_case_nonconstant:
       rl->case_ = structured_location_case_register;
       rl->register_index = ri;
       break;
@@ -267,10 +268,10 @@ structured_translate_expression_variable (struct structuredvm_program *vmp,
       break;
 
     case structured_location_case_constant:
-      jitter_fatal ("invalid expression result location: constant");
+      jitter_fatal ("invalid variable expression result location: constant");
 
     default:
-      jitter_fatal ("invalid expression result location: unexpected (bug): %i",
+      jitter_fatal ("invalid variable expression result location: unexpected (bug): %i",
                     (int) rl->case_);
     };
 }
