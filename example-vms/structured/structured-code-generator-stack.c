@@ -119,7 +119,7 @@ structured_translate_expression (struct structuredvm_program *vmp,
     case structured_expression_case_variable:
       {
         structured_register_index idx
-          = structured_static_environment_lookup (env, e->variable);
+          = structured_static_environment_lookup_variable (env, e->variable);
         STRUCTUREDVM_APPEND_INSTRUCTION(vmp, push);
         STRUCTUREDVM_APPEND_REGISTER_PARAMETER(vmp, r, idx);
         break;
@@ -166,15 +166,16 @@ structured_translate_statement (struct structuredvm_program *vmp,
       }
     case structured_statement_case_block:
       {
-        structured_static_environment_bind (env, s->block_variable);
+        structured_static_environment_bind_variable (env, s->block_variable);
         structured_translate_statement (vmp, s->block_body, env);
-        structured_static_environment_unbind (env);
+        structured_static_environment_unbind_variable (env, s->block_variable);
         break;
       }
     case structured_statement_case_assignment:
       {
         structured_register_index idx
-          = structured_static_environment_lookup (env, s->assignment_variable);
+          = structured_static_environment_lookup_variable
+               (env, s->assignment_variable);
         structured_translate_expression (vmp, s->assignment_expression, env);
         STRUCTUREDVM_APPEND_INSTRUCTION(vmp, pop);
         STRUCTUREDVM_APPEND_REGISTER_PARAMETER(vmp, r, idx);
