@@ -30,8 +30,14 @@
  * ************************************************************************** */
 
 /* The type definition for a register index.  It is a very good idea for this to
-   be signed, to make it possible to represent special invalid values as well. */
-typedef int structured_register_index; // FIXME: do I want and need this?
+   be signed, to make it possible to represent special invalid values as
+   well. */
+typedef int
+structured_register_index;
+
+/* A temporary identifier, unique within a structured program. */
+typedef int
+structured_temporary;
 
 
 
@@ -39,7 +45,9 @@ typedef int structured_register_index; // FIXME: do I want and need this?
 /* Compile-time environment: initialization, finalization.
  * ************************************************************************** */
 
-/* The compile-time environment data structure, as an abstract type. */
+/* A static environment structure contains a datum-to-register-index
+   mapping.  This is used as an abstract type, the actual definition
+   being in structured-code-generator.h */
 struct structured_static_environment;
 
 /* Return a pointer to a fresh static environment. */
@@ -61,14 +69,39 @@ structured_static_environment_destroy (struct structured_static_environment *e);
    the new variable.
    The given name may shadow another existing variable. */
 structured_register_index
-structured_static_environment_bind (struct structured_static_environment *e,
-                                    const structured_variable v);
+structured_static_environment_bind_variable
+   (struct structured_static_environment *e,
+    const structured_variable v);
 
-/* Unbind the last variable which was bound and not yet unbound.  This works in
-   a strictly LIFO fashion: only the last recently bound variable can be
-   unbound. */
+/* Unbind the given variable, which must be the most recent one to be bound and
+   not unbound yet, and after which no temporaries must have been bound without
+   being unbound first.
+   Unbinding works in a strictly LIFO fashion: only the last recently bound
+   datum can be unbound, and the v argument is only used to check that this
+   constraint is respected. */
 void
-structured_static_environment_unbind (struct structured_static_environment *e);
+structured_static_environment_unbind_variable
+   (struct structured_static_environment *e,
+    const structured_variable v);
+
+/* Bind a new temporary with the given index in the static environment,
+   associating it to a currently unused register.  Return the register index for
+   the new temporary. */
+structured_register_index
+structured_static_environment_bind_temporary
+   (struct structured_static_environment *e,
+    const structured_temporary t);
+
+/* Unbind the given temporary, which must be the most recent one to be bound and
+   not unbound yet, and after which no variables must have been bound without
+   being unbound first.
+   Unbinding works in a strictly LIFO fashion: only the last recently bound
+   datum can be unbound, and the v argument is only used to check that this
+   constraint is respected.  */
+void
+structured_static_environment_unbind_temporary
+   (struct structured_static_environment *e,
+    structured_temporary t);
 
 /* Return non-false iff the given variable is bound in the pointed
    environment. */
@@ -81,12 +114,19 @@ structured_static_environment_has (struct structured_static_environment *e,
    register from the most recent binding.
    Fail fatally if no binding for the variable exists. */
 structured_register_index
-structured_static_environment_lookup (struct structured_static_environment *e,
-                                      const structured_variable v);
+structured_static_environment_lookup_variable
+   (struct structured_static_environment *e,
+    const structured_variable v);
 
 /* Return a register index which is unused in the pointed environment. */
 structured_register_index
-structured_static_environment_fresh_register (struct
-                                              structured_static_environment *e);
+structured_static_environment_fresh_register
+   (struct structured_static_environment *e);
+
+/* Return a temporary identifier which has never been used before in this
+   environment. */
+structured_temporary
+structured_static_environment_fresh_temporary
+   (struct structured_static_environment *e);
 
 #endif // #ifndef STRUCTURED_CODE_GENERATOR_H_
