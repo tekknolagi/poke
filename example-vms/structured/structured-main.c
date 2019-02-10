@@ -299,8 +299,6 @@ structured_work (const struct structured_command_line *cl)
   structuredvm_specialize_program (vmp);
 
   /* Print and/or disassemble the program as requested. */
-  // FIXME: remove the first conditional, which is a kludge to avoid printing an empty program with a single extivm instruction, in the current situation where I don't actually generate VM instructions.
-  if (cl->code_generator != structured_code_generator_register)
   if (cl->print)
     structuredvm_print_program (stdout, vmp);
   if (cl->disassemble)

@@ -87,7 +87,9 @@ COMMENT              "//".*{NEWLINE}
 "skip"                    { return SKIP; }
 ":="                      { return SET_TO; }
 "print"                   { return PRINT; }
+"input"                   { return INPUT; }
 ";"                       { return SEMICOLON; }
+","                       { return COMMA; }
 "begin"                   { return BEGIN_; }
 "end"                     { return END; }
 "if"                      { return IF; }

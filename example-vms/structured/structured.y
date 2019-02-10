@@ -65,7 +65,7 @@ structured_error (YYLTYPE *locp, struct structured_program *p,
 
 /* Return a pointer to a fresh malloc-allocated expression of the given case.
    No field is initialized but case_. */
-struct structured_expression*
+static struct structured_expression*
 structured_make_expression (enum structured_expression_case case_)
 {
   struct structured_expression *res
@@ -78,7 +78,7 @@ structured_make_expression (enum structured_expression_case case_)
 /* Return a pointer to a fresh malloc-allocated expression of the primitive
    case, with the given binary primitive and operands.  Every field is
    initalized. */
-struct structured_expression*
+static struct structured_expression*
 structured_make_binary (enum structured_primitive primitive,
                         struct structured_expression *operand_0,
                         struct structured_expression *operand_1)
@@ -92,9 +92,17 @@ structured_make_binary (enum structured_primitive primitive,
 }
 
 /* Return a pointer to a fresh malloc-allocated expression of the primitive
+   case, with the given nullary primitive.  Every field is initalized. */
+static struct structured_expression*
+structured_make_nullary (enum structured_primitive primitive)
+{
+  return structured_make_binary (primitive, NULL, NULL);
+}
+
+/* Return a pointer to a fresh malloc-allocated expression of the primitive
    case, with the given unary primitive and operand.  Every field is
    initalized. */
-struct structured_expression*
+static struct structured_expression*
 structured_make_unary (enum structured_primitive primitive,
                        struct structured_expression *operand_0)
 {
@@ -103,7 +111,7 @@ structured_make_unary (enum structured_primitive primitive,
 
 /* Return a pointer to a fresh malloc-allocated statement of the given case.
    No field is initialized but case_. */
-struct structured_statement*
+static struct structured_statement*
 structured_make_statement (enum structured_statement_case case_)
 {
   struct structured_statement *res
@@ -111,6 +119,32 @@ structured_make_statement (enum structured_statement_case case_)
   res->case_ = case_;
 
   return res;
+}
+
+/* If the pointed expressions is non-NULL return a pointer to a fresh
+   malloc-allocated statement containing a sequence setting the given variable
+   to the pointed expression, and then the pointed statement.  If the expression
+   pointer is NULL just return the pointed body without allocating anything
+   more. */
+static struct structured_statement*
+structured_with_optional_initialization (structured_variable v,
+                                         struct structured_expression *e,
+                                         struct structured_statement *body)
+{
+  if (e == NULL)
+    return body;
+  else
+    {
+      struct structured_statement *sequence
+        = structured_make_statement (structured_statement_case_sequence);
+      struct structured_statement *assignment
+        = structured_make_statement (structured_statement_case_assignment);
+      assignment->assignment_variable = v;
+      assignment->assignment_expression = e;
+      sequence->sequence_statement_0 = assignment;
+      sequence->sequence_statement_1 = body;
+      return sequence;
+    }
 }
 
 %}
@@ -176,8 +210,10 @@ structured_parse_file (const char *input_file_name);
 %token SKIP
 %token VAR
 %token PRINT
+%token INPUT
 %token SET_TO
 %token SEMICOLON
+%token COMMA
 %token IF THEN ELSE
 %token WHILE DO
 %token REPEAT UNTIL
@@ -200,6 +236,9 @@ structured_parse_file (const char *input_file_name);
 %type <statement> statement;
 %type <statement> statements;
 %type <statement> one_or_more_statements;
+%type <statement> block;
+%type <statement> block_rest;
+%type <expression> optional_initialization;
 
 %%
 
@@ -267,10 +306,30 @@ one_or_more_statements:
   { $$ = structured_make_statement (structured_statement_case_sequence);
     $$->sequence_statement_0 = $1;
     $$->sequence_statement_1 = $3; }
-| VAR variable SEMICOLON one_or_more_statements
+| VAR block
+  { $$ = $2; }
+  ;
+
+block:
+  variable optional_initialization block_rest
   { $$ = structured_make_statement (structured_statement_case_block);
-    $$->block_variable = $2;
-    $$->block_body = $4; }
+    $$->block_variable = $1;
+    $$->block_body = structured_with_optional_initialization ($1, $2, $3); }
+  ;
+
+block_rest:
+  SEMICOLON one_or_more_statements
+  { $$ = $2; }
+| COMMA block
+  { $$ = $2; }
+  ;
+
+
+optional_initialization :
+  /* nothing*/
+  { $$ = NULL; }
+| EQUAL expression
+  { $$ = $2; }
   ;
 
 expression:
@@ -329,6 +388,8 @@ expression:
     $$->if_then_else_else_branch = $3; }
 | LOGICAL_NOT expression
   { $$ = structured_make_unary (structured_primitive_logical_not, $2); }
+| INPUT
+  { $$ = structured_make_nullary (structured_primitive_input); }
   ;
 
 literal:

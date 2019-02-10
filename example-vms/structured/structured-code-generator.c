@@ -207,7 +207,10 @@ structured_static_environment_bind_variable
     = structured_static_environment_bind (e);
   new_binding->case_ = structured_binding_case_variable;
   new_binding->variable = v;
-  //fprintf (stderr, "+ Binding %s to %i\n", new_binding->variable, new_binding->register_index);
+#ifdef DEBUG
+  fprintf (stderr, "+ Binding %s to %%r%i\n", new_binding->variable,
+           new_binding->register_index);
+#endif // #ifdef DEBUG
   return new_binding->register_index;
 }
 
@@ -220,7 +223,10 @@ structured_static_environment_bind_temporary
     = structured_static_environment_bind (e);
   new_binding->case_ = structured_binding_case_temporary;
   new_binding->temporary = t;
-  //fprintf (stderr, "+ Binding %i to %i\n", (int) new_binding->temporary, new_binding->register_index);
+#ifdef DEBUG
+  fprintf (stderr, "+ Binding temporary %i to %%r%i\n",
+           (int) new_binding->temporary, new_binding->register_index);
+#endif // #ifdef DEBUG
   return new_binding->register_index;
 }
 
@@ -237,7 +243,10 @@ structured_static_environment_unbind_variable
   if (strcmp (v, last_binding->variable))
     jitter_fatal ("bug: unbinding variable %s before unbinding variable %s",
                   v, last_binding->variable);
-  //fprintf (stderr, "- Unbinding variable %s from %%r%i\n", last_binding->variable, (int) last_binding->register_index);
+#ifdef DEBUG
+  fprintf (stderr, "- Unbinding variable %s from %%r%i\n",
+           last_binding->variable, (int) last_binding->register_index);
+#endif // #ifdef DEBUG
   structured_static_environment_pop_binding (e);
 }
 
@@ -254,7 +263,10 @@ structured_static_environment_unbind_temporary
   if (t != last_binding->temporary)
     jitter_fatal ("bug: unbinding temporary %i before unbinding temporary %i",
                   (int) t, (int) last_binding->temporary);
-  //fprintf (stderr, "- Unbinding temporary %i from %%r%i\n", (int) last_binding->temporary, (int) last_binding->register_index);
+#ifdef DEBUG
+  fprintf (stderr, "- Unbinding temporary %i from %%r%i\n",
+           (int) last_binding->temporary, (int) last_binding->register_index);
+#endif // #ifdef DEBUG
   structured_static_environment_pop_binding (e);
 }
 
@@ -284,11 +296,34 @@ structured_static_environment_lookup_variable
     = structured_static_environment_to_bindings (e);
   int i;
   for (i = binding_no - 1; i >= 0; i --)
-    if (! strcmp (bindings [i].variable, v))
+    if (bindings [i].case_ == structured_binding_case_variable
+        && ! strcmp (bindings [i].variable, v))
       return bindings [i].register_index;
 
   /* If we arrived here then v is unbound. */
   jitter_fatal ("unbound variable %s", v);
+}
+
+structured_register_index
+structured_static_environment_lookup_temporary
+   (struct structured_static_environment *e,
+    const structured_temporary t)
+{
+  /* Look for the register index associated to t in the binding array.
+     Differently from the variable case here the order doesn't affect
+     correctness, as temporaries don't shadow each other; however searching from
+     the end should be faster. */
+  size_t binding_no = structured_static_environment_to_binding_no (e);
+  struct structured_binding *bindings
+    = structured_static_environment_to_bindings (e);
+  int i;
+  for (i = binding_no - 1; i >= 0; i --)
+    if (bindings [i].case_ == structured_binding_case_temporary
+        && bindings [i].temporary == t)
+      return bindings [i].register_index;
+
+  /* If we arrived here then t is unbound. */
+  jitter_fatal ("unbound temporary %i", (int) t);
 }
 
 structured_register_index

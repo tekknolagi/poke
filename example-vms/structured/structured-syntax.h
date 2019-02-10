@@ -76,7 +76,9 @@ enum structured_primitive
     structured_primitive_less_or_equal,
     structured_primitive_greater,
     structured_primitive_greater_or_equal,
-    structured_primitive_logical_not
+    structured_primitive_logical_not,
+    structured_primitive_is_nonzero,
+    structured_primitive_input
   };
 
 /* A variable is represented as a pointer to a malloc-allocated C string holding
@@ -262,16 +264,20 @@ struct structured_program
 
 
 
-/* Reversing of boolean primitives.
+/* Boolean primitives.
  * ************************************************************************** */
+
+/* Given the case for a primitive, return non-false iff the primitive is a
+   comparison primitive. */
+bool
+structured_is_comparison_primitive (enum structured_primitive p);
 
 /* Given the case for a comparison primitive returning a boolean, return the
    case of the opposite primitive.  For example, the reverse of less is
    greater_or_equal.
    Fail if reversing is not defined on the given primitive. */
 enum structured_primitive
-structured_reverse_boolean_primitive (enum structured_primitive p);
+structured_reverse_comparison_primitive (enum structured_primitive p);
 
 
 #endif // #ifndef JITTER_STRUCTURED_SYNTAX_H_
-
