@@ -20,8 +20,7 @@
 // along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
 
 begin
-   var n;
-   n := 2000000000;
+   var n = 2000000000;
    repeat
       n := n - 1
    until n = 0
