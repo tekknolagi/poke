@@ -110,7 +110,15 @@ EXTRA_DIST = \
   structured.l structured.y \
   examples/count-down.structured \
   examples/euclid.structured \
-  examples/primes.structured
+  examples/primes.structured \
+  examples/primes.c
+
+
+# Benchmarking examples.
+################################################################
+
+bin_PROGRAMS += bin/primes-in-c
+bin_primes_in_c_SOURCES = examples/primes.c
 
 
 # Cleanup.
