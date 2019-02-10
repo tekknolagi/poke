@@ -20,10 +20,7 @@
 // along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
 
 begin
-   var a;
-   var b;
-   a := 3333333333;
-   b := 1;
+   var a = 3333333333, b = 1;
    while a <> b do
       if a < b then
          b := b - a
