@@ -96,6 +96,9 @@ structured_help (void)
 
   structured_help_section ("Debugging options");
   printf ("      --disassemble                print hardware machine instructions\n");
+  printf ("      --cross-disassemble          use the cross-disassembler rather than\n");
+  printf ("                                   the native disassembler; also enable\n");
+  printf ("                                   disassembly as per --disassemble\n");
   printf ("      --dry-run                    do not actually run the program\n");
   printf ("      --print                      print VM instructions\n");
   printf ("      --no-optimization-rewriting  disable optimization rewriting\n");
@@ -158,6 +161,11 @@ struct structured_command_line
   /* True iff we should print back the VM program. */
   bool print;
 
+  /* True iff we should use the cross-disassembler rather than the native
+     disassembler for the VM program.  If false, use the native
+     disassembler.  */
+  bool cross_disassemble;
+
   /* True iff we should disassemble the VM program. */
   bool disassemble;
 
@@ -180,6 +188,7 @@ static void
 structured_initialize_command_line (struct structured_command_line *cl)
 {
   cl->print = false;
+  cl->cross_disassemble = false;
   cl->disassemble = false;
   cl->dry_run = false;
   cl->optimization_rewriting = true;
@@ -229,6 +238,11 @@ structured_parse_command_line (struct structured_command_line *cl,
         structured_version ();
       else if (handle_options && ! strcmp (arg, "--disassemble"))
         cl->disassemble = true;
+      else if (handle_options && ! strcmp (arg, "--cross-disassemble"))
+        {
+          cl->cross_disassemble = true;
+          cl->disassemble = true;
+        }
       else if (handle_options && ! strcmp (arg, "--optimization-rewriting"))
         cl->optimization_rewriting = true;
       else if (handle_options && ! strcmp (arg, "--no-optimization-rewriting"))
@@ -264,7 +278,7 @@ structured_parse_command_line (struct structured_command_line *cl,
 
 /* Do what the pointed command line data structure says. */
 static void
-structured_work (const struct structured_command_line *cl)
+structured_work (struct structured_command_line *cl)
 {
   /* Parse a structured-language program into an AST. */
   struct structured_program *p;
@@ -301,8 +315,14 @@ structured_work (const struct structured_command_line *cl)
   /* Print and/or disassemble the program as requested. */
   if (cl->print)
     structuredvm_print_program (stdout, vmp);
+  if (cl->cross_disassemble)
+    cl->disassemble = true;
   if (cl->disassemble)
-    structuredvm_disassemble_program (vmp, true, JITTER_CROSS_OBJDUMP, NULL);
+    structuredvm_disassemble_program (vmp, true,
+                                      (cl->cross_disassemble
+                                       ? JITTER_CROSS_OBJDUMP
+                                       : JITTER_OBJDUMP),
+                                      NULL);
 
   /* Run the Jittery program in a temporary state, unless this is a dry run. */
   if (! cl->dry_run)
