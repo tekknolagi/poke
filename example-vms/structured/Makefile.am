@@ -1,6 +1,5 @@
 ## Process this file with automake to produce Makefile.in .
-# Copyright (C) 2016, 2017, 2018 Luca Saiu
-# Updated in 2019 by Luca Saiu
+# Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of the Jitter structured-language example,
@@ -20,10 +19,18 @@
 # along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
 
 
+# General settings.
+################################################################
+
+# We have source files in subdirectories.
+AUTOMAKE_OPTIONS = subdir-objects
+
+
 # What we have to build.
 ################################################################
 
-# We only have one program, the "structured-language" executable.
+# Apart from the examples we only have one program, the "structured-language"
+# executable.
 bin_PROGRAMS = bin/structured
 bin_structured_SOURCES = \
   structured-syntax.h \
@@ -117,8 +124,11 @@ EXTRA_DIST = \
 # Benchmarking examples.
 ################################################################
 
-bin_PROGRAMS += bin/primes-in-c
-bin_primes_in_c_SOURCES = examples/primes.c
+EXTRA_PROGRAMS = examples/primes-in-c
+examples_primes_in_c_SOURCES = examples/primes.c
+
+examples: $(EXTRA_PROGRAMS)
+benchmarks: $(EXTRA_PROGRAMS)
 
 
 # Cleanup.
