@@ -1015,7 +1015,8 @@ $(srcdir)/example-vms/structured/structuredvm-vm2.c: example-vms/structured/stru
 EXTRA_DIST += \
   example-vms/structured/examples/count-down.structured \
   example-vms/structured/examples/euclid.structured \
-  example-vms/structured/examples/primes.structured
+  example-vms/structured/examples/primes.structured \
+  example-vms/structured/examples/primes.c
 
 # Example VM-assembly programs for the Structured (VM) example, to be
 # distributed.
