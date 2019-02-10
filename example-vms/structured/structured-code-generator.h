@@ -118,6 +118,15 @@ structured_static_environment_lookup_variable
    (struct structured_static_environment *e,
     const structured_variable v);
 
+/* Return the register index associated to the given temporary in the pointed
+   environment.  If a variable name has been bound multiple time, return the
+   register from the most recent binding.
+   Fail fatally if no binding for the variable exists. */
+structured_register_index
+structured_static_environment_lookup_temporary
+   (struct structured_static_environment *e,
+    const structured_temporary t);
+
 /* Return a register index which is unused in the pointed environment. */
 structured_register_index
 structured_static_environment_fresh_register

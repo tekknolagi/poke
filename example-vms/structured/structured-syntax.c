@@ -20,6 +20,8 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+#include <stdbool.h>
+
 #include "structured-syntax.h"
 #include <jitter/jitter.h>
 #include <jitter/jitter-fatal.h>
@@ -28,8 +30,27 @@
 /* Reversing of boolean primitives.
  * ************************************************************************** */
 
+bool
+structured_is_comparison_primitive (enum structured_primitive p)
+{
+  switch (p)
+    {
+    case structured_primitive_equal:
+    case structured_primitive_different:
+    case structured_primitive_less:
+    case structured_primitive_less_or_equal:
+    case structured_primitive_greater:
+    case structured_primitive_greater_or_equal:
+    case structured_primitive_logical_not:
+    case structured_primitive_is_nonzero:
+      return true;
+    default:
+      return false;
+    }
+}
+
 enum structured_primitive
-structured_reverse_boolean_primitive (enum structured_primitive p)
+structured_reverse_comparison_primitive (enum structured_primitive p)
 {
   switch (p)
     {
@@ -45,6 +66,10 @@ structured_reverse_boolean_primitive (enum structured_primitive p)
       return structured_primitive_less_or_equal;
     case structured_primitive_greater_or_equal:
       return structured_primitive_less;
+    case structured_primitive_logical_not:
+      return structured_primitive_is_nonzero;
+    case structured_primitive_is_nonzero:
+      return structured_primitive_logical_not;
     default:
       jitter_fatal ("cannot reverse boolean (?) primitive: %i", (int) p);
     }

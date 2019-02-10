@@ -20,14 +20,11 @@
 
 
 begin
-   var n;
-   n := 2;
+   var n = 2;
    // while true do
    while n < 2000000 do
-      var n_is_prime;
-      var candidate_divisor;
-      n_is_prime := true;
-      candidate_divisor := 2;
+      var n_is_prime = true;
+      var candidate_divisor = 2;
       // FIXME: parser bug: "candidate_divisor * candidate_divisor <= n"
       // parses as "candidate_divisor * (candidate_divisor <= n)".
       // The priority of and with respect to <= is also wrong.

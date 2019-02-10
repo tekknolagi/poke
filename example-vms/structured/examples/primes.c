@@ -28,10 +28,8 @@ int main (void)
   long n = 2;
   while (n < 2000000)
     {
-      bool n_is_prime;
-      long candidate_divisor;
-      n_is_prime = true;
-      candidate_divisor = 2;
+      bool n_is_prime = true;
+      long candidate_divisor = 2;
       while (n_is_prime && candidate_divisor * candidate_divisor <= n)
         {
           if (n % candidate_divisor == 0)

@@ -56,12 +56,16 @@ structured_translate_primitive (struct structuredvm_program *vmp,
                                 struct structured_expression *operand_1,
                                 struct structured_static_environment *env)
 {
-  /* Emit code to evaluate the first operand for unary primitives, or code to
-     evaluate the first and then second operand for binary primitives. */
+  /* Emit nothing for nullary primitive, code to evaluate the first operand for
+     unary primitives, or code to evaluate the first and then second operand for
+     binary primitives. */
   switch (case_)
     {
+    case structured_primitive_input:
+      break;
     case structured_primitive_unary_minus:
     case structured_primitive_logical_not:
+    case structured_primitive_is_nonzero:
       structured_translate_expression (vmp, operand_0, env);
       break;
     default: /* The other primitives are binary. */
@@ -75,31 +79,38 @@ structured_translate_primitive (struct structuredvm_program *vmp,
   switch (case_)
     {
     case structured_primitive_plus:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, plus); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, plus_mstack); break;
     case structured_primitive_minus:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, minus); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, minus_mstack); break;
     case structured_primitive_times:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, times); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, times_mstack); break;
     case structured_primitive_divided:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, divided); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, divided_mstack); break;
     case structured_primitive_remainder:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, remainder); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, remainder_mstack); break;
     case structured_primitive_unary_minus:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, uminus); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, uminus_mstack); break;
     case structured_primitive_equal:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, equal); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, equal_mstack); break;
     case structured_primitive_different:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, different); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, different_mstack); break;
     case structured_primitive_less:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, less); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, less_mstack); break;
     case structured_primitive_less_or_equal:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, lessorequal); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, lessorequal_mstack); break;
     case structured_primitive_greater:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, greater); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, greater_mstack); break;
     case structured_primitive_greater_or_equal:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, greaterorequal); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, greaterorequal_mstack); break;
     case structured_primitive_logical_not:
-      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, logicalnot); break;
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, logicalnot_mstack); break;
+    case structured_primitive_is_nonzero:
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, isnonzero_mstack); break;
+    case structured_primitive_input:
+      STRUCTUREDVM_APPEND_INSTRUCTION(vmp, input_mstack); break;
+    default:
+      jitter_fatal ("structured_translate_primitive: unexpected primitive %i",
+                    (int) case_);
     }
 }
 
@@ -112,7 +123,7 @@ structured_translate_expression (struct structuredvm_program *vmp,
     {
     case structured_expression_case_literal:
       {
-        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, push);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, push_mstack);
         structuredvm_append_signed_literal_parameter (vmp, e->literal);
         break;
       }
@@ -120,7 +131,7 @@ structured_translate_expression (struct structuredvm_program *vmp,
       {
         structured_register_index idx
           = structured_static_environment_lookup_variable (env, e->variable);
-        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, push);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, push_mstack);
         STRUCTUREDVM_APPEND_REGISTER_PARAMETER(vmp, r, idx);
         break;
       }
@@ -129,7 +140,7 @@ structured_translate_expression (struct structuredvm_program *vmp,
         structuredvm_label before_else = structuredvm_fresh_label (vmp);
         structuredvm_label after_else = structuredvm_fresh_label (vmp);
         structured_translate_expression (vmp, e->if_then_else_condition, env);
-        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf_mstack);
         structuredvm_append_label_parameter (vmp, before_else);
         structured_translate_expression (vmp, e->if_then_else_then_branch, env);
         STRUCTUREDVM_APPEND_INSTRUCTION(vmp, b);
@@ -177,14 +188,14 @@ structured_translate_statement (struct structuredvm_program *vmp,
           = structured_static_environment_lookup_variable
                (env, s->assignment_variable);
         structured_translate_expression (vmp, s->assignment_expression, env);
-        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, pop);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, pop_mstack);
         STRUCTUREDVM_APPEND_REGISTER_PARAMETER(vmp, r, idx);
         break;
       }
     case structured_statement_case_print:
       {
         structured_translate_expression (vmp, s->print_expression, env);
-        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, print);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, print_mstack);
         break;
       }
     case structured_statement_case_sequence:
@@ -198,7 +209,7 @@ structured_translate_statement (struct structuredvm_program *vmp,
         structuredvm_label before_else = structuredvm_fresh_label (vmp);
         structuredvm_label after_else = structuredvm_fresh_label (vmp);
         structured_translate_expression (vmp, s->if_then_else_condition, env);
-        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf_mstack);
         structuredvm_append_label_parameter (vmp, before_else);
         structured_translate_statement (vmp, s->if_then_else_then_branch, env);
         STRUCTUREDVM_APPEND_INSTRUCTION(vmp, b);
@@ -214,7 +225,7 @@ structured_translate_statement (struct structuredvm_program *vmp,
         structuredvm_append_label (vmp, before_body);
         structured_translate_statement (vmp, s->repeat_until_body, env);
         structured_translate_expression (vmp, s->repeat_until_guard, env);
-        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf);
+        STRUCTUREDVM_APPEND_INSTRUCTION(vmp, bf_mstack);
         structuredvm_append_label_parameter (vmp, before_body);
         break;
       }

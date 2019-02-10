@@ -1,6 +1,6 @@
 ## Jitter specification for a stack VM, used in the structured language example.
 
-## Copyright (C) 2017 Luca Saiu
+## Copyright (C) 2017, 2019 Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -31,7 +31,7 @@ end
 ## Register classes.
 #################################################################
 
-register-class r 2
+register-class r 4 # 4 # 5
   code
     union jitter_word
   end
@@ -43,10 +43,11 @@ end
 
 wrapped-functions
   printf
+  structured_input
 end
 
 wrapped-globals
-  stack_printf_format_string
+  structured_fixnum_format_string
 end
 
 early-c
@@ -56,7 +57,7 @@ early-c
 end
 late-c
   code
-    static const char *stack_printf_format_string = "%" JITTER_PRIi "\n";
+    static const char *structured_fixnum_format_string = "%" JITTER_PRIi "\n";
   end
 end
 
@@ -67,7 +68,7 @@ end
 printer-c
   code
 static void
-my_literal_printer (FILE *out, jitter_uint u)
+structured_literal_printer (FILE *out, jitter_uint u)
 {
   fprintf (out, "%" JITTER_PRIu, u);
 }
@@ -75,28 +76,46 @@ my_literal_printer (FILE *out, jitter_uint u)
 end
 
 
-## Instructions.
+## Utility functions in C.
 #################################################################
 
-instruction nop ()
+late-c
   code
+static jitter_int
+structured_input (void)
+{
+#define STRUCTURED_PROMPT "> "
+  printf (STRUCTURED_PROMPT);
+  jitter_int res;
+  int scanf_result;
+  while ((scanf_result = scanf ("%" JITTER_PRIi, & res)) != 1)
+    {
+      printf ("Invalid input: expecting an integer.\n" STRUCTURED_PROMPT);
+    }
+  return res;
+#undef STRUCTURED_PROMPT
+}
   end
 end
 
-instruction drop ()
+
+## Stack instructions.
+#################################################################
+
+instruction drop-stack ()
   code
     JITTER_DROP_MAINSTACK();
   end
 end
 
-instruction push (?Rnl 0 1 -1 2 my_literal_printer)
+instruction push-stack (?Rnl 0 1 -1 2 structured_literal_printer)
   code
     jitter_int k = JITTER_ARGN0;
     JITTER_PUSH_MAINSTACK(k);
   end
 end
 
-instruction pop (!R)
+instruction pop-stack (!R)
   code
     jitter_int top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
@@ -104,16 +123,23 @@ instruction pop (!R)
   end
 end
 
-instruction print ()
+instruction print-stack ()
   non-relocatable
   code
     jitter_int top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
-    printf (stack_printf_format_string, top);
+    printf (structured_fixnum_format_string, top);
   end
 end
 
-instruction plus ()
+instruction input-stack ()
+  non-relocatable
+  code
+    JITTER_PUSH_MAINSTACK (structured_input ());
+  end
+end
+
+instruction plus-stack ()
   code
 #define F(res, a, b) { res = a + b; }
     JITTER_BINARY_MAINSTACK(F);
@@ -121,13 +147,13 @@ instruction plus ()
   end
 end
 
-instruction uminus ()
+instruction uminus-stack ()
   code
     JITTER_TOP_MAINSTACK() = - JITTER_TOP_MAINSTACK();
   end
 end
 
-instruction minus ()
+instruction minus-stack ()
   code
 #define F(res, a, b) { res = a - b; }
     JITTER_BINARY_MAINSTACK(F);
@@ -135,7 +161,7 @@ instruction minus ()
   end
 end
 
-instruction times ()
+instruction times-stack ()
   code
 #define F(res, a, b) { res = a * b; }
     JITTER_BINARY_MAINSTACK(F);
@@ -143,7 +169,7 @@ instruction times ()
   end
 end
 
-instruction divided ()
+instruction divided-stack ()
   code
 #define F(res, a, b) { res = a / b; }
     JITTER_BINARY_MAINSTACK(F);
@@ -151,7 +177,7 @@ instruction divided ()
   end
 end
 
-instruction remainder ()
+instruction remainder-stack ()
   code
 #define F(res, a, b) { res = a % b; }
     JITTER_BINARY_MAINSTACK(F);
@@ -159,7 +185,7 @@ instruction remainder ()
   end
 end
 
-instruction equal ()
+instruction equal-stack ()
   code
 #define F(res, a, b) { res = (a == b); }
     JITTER_BINARY_MAINSTACK(F);
@@ -167,7 +193,7 @@ instruction equal ()
   end
 end
 
-instruction different ()
+instruction different-stack ()
   code
 #define F(res, a, b) { res = (a != b); }
     JITTER_BINARY_MAINSTACK(F);
@@ -175,7 +201,7 @@ instruction different ()
   end
 end
 
-instruction less ()
+instruction less-stack ()
   code
 #define F(res, a, b) { res = (a < b); }
     JITTER_BINARY_MAINSTACK(F);
@@ -183,7 +209,7 @@ instruction less ()
   end
 end
 
-instruction lessorequal ()
+instruction lessorequal-stack ()
   code
 #define F(res, a, b) { res = (a <= b); }
     JITTER_BINARY_MAINSTACK(F);
@@ -191,7 +217,7 @@ instruction lessorequal ()
   end
 end
 
-instruction greater ()
+instruction greater-stack ()
   code
 #define F(res, a, b) { res = (a > b); }
     JITTER_BINARY_MAINSTACK(F);
@@ -199,7 +225,7 @@ instruction greater ()
   end
 end
 
-instruction greaterorequal ()
+instruction greaterorequal-stack ()
   code
 #define F(res, a, b) { res = (a >= b); }
     JITTER_BINARY_MAINSTACK(F);
@@ -207,7 +233,7 @@ instruction greaterorequal ()
   end
 end
 
-instruction logicaland ()
+instruction logicaland-stack ()
   code
 #define F(res, a, b) { res = (a && b); }
     JITTER_BINARY_MAINSTACK(F);
@@ -215,7 +241,7 @@ instruction logicaland ()
   end
 end
 
-instruction logicalor ()
+instruction logicalor-stack ()
   code
 #define F(res, a, b) { res = (a || b); }
     JITTER_BINARY_MAINSTACK(F);
@@ -223,9 +249,15 @@ instruction logicalor ()
   end
 end
 
-instruction logicalnot ()
+instruction logicalnot-stack ()
   code
     JITTER_TOP_MAINSTACK() = ! JITTER_TOP_MAINSTACK();
+  end
+end
+
+instruction isnonzero-stack ()
+  code
+    JITTER_TOP_MAINSTACK() = JITTER_TOP_MAINSTACK() ? 1 : 0;
   end
 end
 
@@ -235,7 +267,7 @@ instruction b (?f)
   end
 end
 
-instruction bt (?f)
+instruction bt-stack (?f)
   code
     jitter_int top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
@@ -243,7 +275,7 @@ instruction bt (?f)
   end
 end
 
-instruction bf (?f)
+instruction bf-stack (?f)
   code
     jitter_int top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
@@ -252,7 +284,7 @@ instruction bf (?f)
 end
 
 
-## Rewriting.
+## Stack instructions: rewriting.
 #################################################################
 
 # rule
@@ -264,56 +296,56 @@ end
 # #    copy-to-r ?R
 # end
 
-rule not-not--nothing rewrite logicalnot; logicalnot into end
-rule not-bf--bt rewrite logicalnot; bf $a into bt $a end
-rule not-bt--bf rewrite logicalnot; bt $a into bf $a end
-rule less-not--greaterorequal rewrite less; logicalnot into greaterorequal end
-rule lessorequal-not--greater rewrite lessorequal; logicalnot into greater end
-rule greater-not--lessorequal rewrite greater; logicalnot into lessorequal end
-rule greaterorequal-not--less rewrite greaterorequal; logicalnot into less end
-rule pop-push--copytor rewrite pop R $a; push R $a into copy-to-r $a end
-rule push-pop-- rewrite push R $a; pop R $a into end
-rule push-pop--rtor rewrite push R $a; pop R $b into r-to-r $a, $b end
-rule push-pop--setr rewrite push n $a; pop R $b into set-r $a, $b end
-rule push-plus--plusi rewrite push n $a; plus into plusi $a end
-rule push-minus--minusi rewrite push n $a; minus into minusi $a end
-# rule push-plusi--push rewrite push n $a; plusi n $b into push plus($a, $b) end
+rule not-not--nothing rewrite logicalnot-stack; logicalnot-stack into end
+rule not-bf--bt rewrite logicalnot-stack; bf-stack $a into bt-stack $a end
+rule not-bt--bf rewrite logicalnot-stack; bt-stack $a into bf-stack $a end
+rule less-not--greaterorequal rewrite less-stack; logicalnot-stack into greaterorequal-stack end
+rule lessorequal-not--greater rewrite lessorequal-stack; logicalnot-stack into greater-stack end
+rule greater-not--lessorequal rewrite greater-stack; logicalnot-stack into lessorequal-stack end
+rule greaterorequal-not--less rewrite greaterorequal-stack; logicalnot-stack into less-stack end
+rule pop-push--copytor rewrite pop-stack R $a; push-stack R $a into copy-to-r-stack $a end
+rule push-pop-- rewrite push-stack R $a; pop-stack R $a into end
+rule push-pop--rtor rewrite push-stack R $a; pop-stack R $b into r-to-r $a, $b end
+rule push-pop--setr rewrite push-stack n $a; pop-stack R $b into set-r $a, $b end
+rule push-plus--plusi rewrite push-stack n $a; plus-stack into plusi-stack $a end
+rule push-minus--minusi rewrite push-stack n $a; minus-stack into minusi-stack $a end
+# rule push-plusi--push rewrite push-stack n $a; plusi-stack n $b into push-stack plus-stack($a, $b) end
 
-rule push-equal--equali rewrite push n $a; equal into equali $a end
-rule equali-bt--beqi rewrite equali n $a; bt $b into beqi $a, $b end
-rule equali-bf--bneqi rewrite equali n $a; bf $b into bneqi $a, $b end
+rule push-equal--equali rewrite push-stack n $a; equal-stack into equali-stack $a end
+rule equali-bt--beqi rewrite equali-stack n $a; bt-stack $b into beqi-stack $a, $b end
+rule equali-bf--bneqi rewrite equali-stack n $a; bf-stack $b into bneqi-stack $a, $b end
 
-rule push-drop-- rewrite push $a; drop into end
-rule push-push--push-dup rewrite push $a; push $a into push $a; dup end
+rule push-drop-- rewrite push-stack $a; drop-stack into end
+rule push-push--push-dup rewrite push-stack $a; push-stack $a into push-stack $a; dup-stack end
 
-# rule push-bf-- rewrite push N $a; bf $b into when notequal ($a, 0) end
-rule push-bf--b rewrite push 0; bf $a into b $a end
-# rule push-bt--b rewrite push N $a; bt $b into b $b when notequal ($a, 0) end
-rule push-bt-- rewrite push 0; bt $a into end
+# rule push-bf-- rewrite push-stack N $a; bf-stack $b into when notequal ($a, 0) end
+rule push-bf--b rewrite push-stack 0; bf-stack $a into b $a end
+# rule push-bt--b rewrite push-stack N $a; bt-stack $b into b $b when notequal ($a, 0) end
+rule push-bt-- rewrite push-stack 0; bt-stack $a into end
 
-rule plusi-minusi-- rewrite plusi $a; minusi $a into end
-rule minusi-plusi-- rewrite minusi $a; plusi $a into end
-rule plusi-- rewrite plusi 0 into end
-rule minusi-- rewrite minusi 0 into end
+rule plusi-minusi-- rewrite plusi-stack $a; minusi-stack $a into end
+rule minusi-plusi-- rewrite minusi-stack $a; plusi-stack $a into end
+rule plusi-- rewrite plusi-stack 0 into end
+rule minusi-- rewrite minusi-stack 0 into end
 
 # rule equali0-to-not rewrite equali $a into not when is_zero ($a) end
 
 ## Optimized instructions (scratch).
 #################################################################
 
-instruction dup ()
+instruction dup-stack ()
   code
     JITTER_DUP_MAINSTACK();
   end
 end
 
-instruction set-r (?n 0 1 2 -1 my_literal_printer, !R)
+instruction set-r (?n 0 1 2 -1 structured_literal_printer, !R)
   code
     JITTER_ARGN1 = JITTER_ARGN0;
   end
 end
 
-instruction copy-to-r (!R)
+instruction copy-to-r-stack (!R)
   code
     JITTER_ARGN0 = JITTER_TOP_MAINSTACK();
   end
@@ -325,37 +357,37 @@ instruction r-to-r (?R, !R)
   end
 end
 
-instruction plusi (?n -1 1 2 my_literal_printer)
+instruction plusi-stack (?n -1 1 2 structured_literal_printer)
   code
     JITTER_TOP_MAINSTACK() += JITTER_ARGN0;
   end
 end
 
-instruction minusi (?n 1 2 my_literal_printer)
+instruction minusi-stack (?n 1 2 structured_literal_printer)
   code
     JITTER_TOP_MAINSTACK() -= JITTER_ARGN0;
   end
 end
 
-instruction minusr (?R)
+instruction minusr-stack (?R)
   code
     JITTER_TOP_MAINSTACK() -= JITTER_ARGN0;
   end
 end
 
-instruction equali (?n 0 1 2 my_literal_printer)
+instruction equali-stack (?n 0 1 2 structured_literal_printer)
   code
     JITTER_TOP_MAINSTACK() = (JITTER_TOP_MAINSTACK() == JITTER_ARGN0);
   end
 end
 
-instruction differenti (?n 0 1 2 my_literal_printer)
+instruction differenti-stack (?n 0 1 2 structured_literal_printer)
   code
     JITTER_TOP_MAINSTACK() = (JITTER_TOP_MAINSTACK() != JITTER_ARGN0);
   end
 end
 
-instruction beqi (?n -1 0 1 2 my_literal_printer, ?f)
+instruction beqi-stack (?n -1 0 1 2 structured_literal_printer, ?f)
   code
     jitter_int top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
@@ -363,7 +395,7 @@ instruction beqi (?n -1 0 1 2 my_literal_printer, ?f)
   end
 end
 
-instruction bneqi (?n -1 0 1 2 my_literal_printer, ?f)
+instruction bneqi-stack (?n -1 0 1 2 structured_literal_printer, ?f)
   code
     jitter_int top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
@@ -371,7 +403,7 @@ instruction bneqi (?n -1 0 1 2 my_literal_printer, ?f)
   end
 end
 
-instruction beqr (?R, ?f)
+instruction beqr-stack (?R, ?f)
   code
     jitter_int top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
@@ -379,7 +411,7 @@ instruction beqr (?R, ?f)
   end
 end
 
-instruction bneqr (?R, ?f)
+instruction bneqr-stack (?R, ?f)
   code
     jitter_int top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
@@ -387,7 +419,7 @@ instruction bneqr (?R, ?f)
   end
 end
 
-instruction bger (?R, ?f)
+instruction bger-stack (?R, ?f)
   code
     jitter_int top = JITTER_TOP_MAINSTACK();
     JITTER_DROP_MAINSTACK();
@@ -395,21 +427,140 @@ instruction bger (?R, ?f)
   end
 end
 
-instruction pushr-minusr-pop (?R, ?R, !R)
+instruction pushr-minusr-pop-stack (?R, ?R, !R)
   code
     JITTER_ARGN2 = JITTER_ARGN0 - JITTER_ARGN1;
   end
 end
 
-instruction pushr-beqr (?R, ?R, ?f)
+instruction pushr-beqr-stack (?R, ?R, ?f)
   code
     JITTER_BRANCH_FAST_IF_EQUAL(JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
   end
 end
 
-instruction pushr-bger (?R, ?R, ?f)
+instruction pushr-bger-stack (?R, ?R, ?f)
   code
     JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(JITTER_ARGN0, JITTER_ARGN1,
                                          JITTER_ARGF2);
+  end
+end
+
+
+## Register instructions.
+#################################################################
+
+instruction mov (?Rn 0 1 -1 2 structured_literal_printer, !R)
+  code
+    JITTER_ARGN1 = JITTER_ARGN0;
+  end
+end
+
+instruction plus (?Rn structured_literal_printer,
+                  ?Rn 1 2 structured_literal_printer,
+                  !R)
+  code
+    JITTER_ARGN2 = JITTER_ARGN0 + JITTER_ARGN1;
+  end
+end
+
+instruction minus (?Rn structured_literal_printer,
+                   ?Rn 1 2 structured_literal_printer,
+                   !R)
+  code
+    JITTER_ARGN2 = JITTER_ARGN0 - JITTER_ARGN1;
+  end
+end
+
+instruction times (?Rn structured_literal_printer,
+                   ?Rn 2 structured_literal_printer,
+                   !R)
+  code
+    JITTER_ARGN2 = JITTER_ARGN0 * JITTER_ARGN1;
+  end
+end
+
+instruction divided (?Rn structured_literal_printer,
+                     ?Rn 2 structured_literal_printer,
+                     !R)
+  code
+    JITTER_ARGN2 = JITTER_ARGN0 / JITTER_ARGN1;
+  end
+end
+
+instruction remainder (?Rn structured_literal_printer,
+                       ?Rn 2 structured_literal_printer,
+                       !R)
+  code
+    JITTER_ARGN2 = JITTER_ARGN0 % JITTER_ARGN1;
+  end
+end
+
+instruction uminus (?Rn structured_literal_printer,
+                    !R)
+  code
+    JITTER_ARGN1 = - JITTER_ARGN0;
+  end
+end
+
+instruction be (?Rn 0 structured_literal_printer,
+                ?Rn 0 structured_literal_printer,
+                ?f)
+  code
+    JITTER_BRANCH_FAST_IF_EQUAL(JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction bne (?Rn 0 structured_literal_printer,
+                 ?Rn 0 structured_literal_printer,
+                 ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NOTEQUAL(JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction bl (?Rn 0 structured_literal_printer,
+                ?Rn 0 structured_literal_printer,
+                ?f)
+  code
+    JITTER_BRANCH_FAST_IF_LESS_SIGNED(JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction ble (?Rn 0 structured_literal_printer,
+                 ?Rn 0 structured_literal_printer,
+                 ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED(JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction bg (?Rn 0 structured_literal_printer,
+                ?Rn 0 structured_literal_printer,
+                ?f)
+  code
+    JITTER_BRANCH_FAST_IF_GREATER_SIGNED(JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction bge (?Rn 0 structured_literal_printer,
+                 ?Rn 0 structured_literal_printer,
+                 ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction print (?Rn structured_literal_printer)
+  non-relocatable
+  code
+    printf (structured_fixnum_format_string, JITTER_ARGN0);
+  end
+end
+
+instruction input (!R)
+  non-relocatable
+  code
+    JITTER_ARGN0 = structured_input ();
   end
 end
