@@ -33,13 +33,8 @@
 #include "structured-code-generator.h"
 
 
-/* New experimental code generator, using Jitter facilities still to come.
+/* Locations.
  * ************************************************************************** */
-
-/* This prints instructions to the output instead of generating real VM
-   instructions.  I'm using this to convince myself that the new features for
-   Jitter are worth the trouble, and are as easy to use as I think.  I'm
-   optimistic. */
 
 /* The kind of place where a datum is, as known at compile time. */
 enum structured_location_case
