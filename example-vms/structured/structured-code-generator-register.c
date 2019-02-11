@@ -147,7 +147,7 @@ structured_emit_operand (struct structuredvm_program *vmp,
     };
 }
 
-/* Emit code to translate a literal expression with the given literal value.  The
+/* Emit code translating a literal expression with the given literal value.  The
    result of the expression will be stored, in emitted code, in the required
    location, updated here if its case is "anywhere". */
 static void
@@ -189,7 +189,7 @@ structured_translate_expression_literal (struct structuredvm_program *vmp,
     };
 }
 
-/* Emit code to translate a variable expression whose value is held in a
+/* Emit code translating a variable expression whose value is held in a
    register with the given index.  The result of the expression will be stored,
    in emitted code, in the pointed location, updated here if needed to become
    specific when it is structured_location_case_anywhere or
@@ -286,7 +286,7 @@ structured_translate_conditional_primitive
     struct structured_static_environment *env);
 
 
-/* Emit code to translate a primitive expression with the given case and
+/* Emit code translating a primitive expression with the given case and
    operands, using the pointed static environment to be looked up and updated.
    The result of the expression will be stored, in emitted code, in the required
    location, updated here if its case is "anywhere".
@@ -373,7 +373,7 @@ structured_translate_expression_conditional_primitive
   structuredvm_append_label (vmp, after);
 }
 
-/* Emit code to translate the pointed expression AST to the pointed Jittery
+/* Emit code translating the pointed expression AST to the pointed Jittery
    program, using the pointed static environment to be looked up and updated.
    The result of the expression will be stored, in emitted code, in the required
    location, updated here if its case is "anywhere". */
@@ -620,7 +620,7 @@ structured_translate_conditional (struct structuredvm_program *vmp,
     }
 }
 
-/* Emit code to translate the pointed statement AST to the pointed Jittery
+/* Emit code translating the pointed statement AST to the pointed Jittery
    program, using the pointed static environment to be looked up and updated. */
 static void
 structured_translate_statement (struct structuredvm_program *vmp,
