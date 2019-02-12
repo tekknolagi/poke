@@ -1,5 +1,6 @@
 # Jitter testsuite: testsuite -*- sh -*- library, not to be run as a script.
 # Copyright (C) 2017 Luca Saiu
+# Updated in 2019 by Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -357,8 +358,11 @@ jitter_run_uninspired_case_all_dispatches ()
 }
 
 # Same as jitter_run_uninspired_case_all_dispatches , for structured
-# (high-level) programs.
+# (high-level) programs.  Test both code generators.
 jitter_run_structured_case_all_dispatches ()
 {
-    jitter_run_program_case_all_dispatches "structured" "" ".structured" "$@"
+    for code_generator in "--stack" "--register"; do
+        jitter_run_program_case_all_dispatches "structured" "$code_generator" \
+                                               ".structured" "$@"
+    done
 }

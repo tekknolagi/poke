@@ -1,6 +1,7 @@
 #!@SHELL@
 # Jitter testsuite: VM programs.  This is -*- sh -*-, to be preprocessed.
 # Copyright (C) 2017 Luca Saiu
+# Updated in 2019 by Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -24,7 +25,7 @@
 . "@abs_top_builddir@/tests/utility"
 
 # Print a range for test case indices.
-echo 1..16
+echo 1..32
 
 # Test programs doing nothing.
 jitter_run_structured_case_all_dispatches "skip" "" ""
