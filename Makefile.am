@@ -1759,6 +1759,7 @@ EXTRA_DIST += \
   tests/structured/skip.structured \
   tests/structured/conditional.structured \
   tests/structured/euclid.structured \
+  tests/structured/primes.structured \
   tests/uninspired/load-8-bit.vm \
   tests/uninspired/load-16-bit.vm \
   tests/uninspired/load-0xffff.vm \
