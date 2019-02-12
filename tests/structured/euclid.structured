@@ -1,6 +1,7 @@
 // Jittery structured language (-*- Pascal -*- -style) sample: Euclid algorithm.
 
 // Copyright (C) 2017 Luca Saiu
+// Updated in 2019 by Luca Saiu
 // Written by Luca Saiu
 
 // This file is part of Jitter.
@@ -20,8 +21,8 @@
 
 
 begin
-   a := 1409286144;    // 7   *     3   * 2^26
-   b := 6615;          // 7^2 * 5 * 3^3
+   var a = 1409286144;    // 7   *     3   * 2^26
+   var b = 6615;          // 7^2 * 5 * 3^3
    // The result will be: 7   *     3
    while a <> b do
       if a < b then
