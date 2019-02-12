@@ -647,6 +647,30 @@ jitter_jump_targets (const struct jitter_program *p)
 /* Unspecialized program printer.
  * ************************************************************************** */
 
+/* Return the length of the longest instruction name actually used in this
+   program. */
+static size_t
+jitter_maximum_instruction_name_length (const struct jitter_program *p)
+{
+  const int instruction_no = jitter_program_instruction_no (p);
+  const struct jitter_instruction **ins
+    = (const struct jitter_instruction **)
+      jitter_dynamic_buffer_to_const_pointer (& p->instructions);
+
+  /* Iterate on every instruction, and find the maximum length. */
+  size_t res = 0;
+  int i;
+  for (i = 0; i < instruction_no; i ++)
+    {
+      const struct jitter_instruction * in = ins [i];
+      const struct jitter_meta_instruction * mi = in->meta_instruction;
+      size_t instruction_name_length = strlen (mi->name);
+      if (instruction_name_length > res)
+        res = instruction_name_length;
+    }
+  return res;
+}
+
 void
 jitter_print_program_possibly_with_slow_registers_only
    (FILE *out,
@@ -669,8 +693,10 @@ jitter_print_program_possibly_with_slow_registers_only
 
   /* Prepare a printf format string leaving the correct amount of space to align
      the first argument of every instruction to the same column.  The format
-     string describes a single parameter, the instruction name as a string. */
-  size_t max_instruction_name_length = p->vm->max_meta_instruction_name_length;
+     string describes a single conversion specification, the instruction name as
+     a string. */
+  size_t max_instruction_name_length
+    = jitter_maximum_instruction_name_length (p);
   char instruction_format [100];
   sprintf (instruction_format, "        %%-%us ",
            (unsigned) max_instruction_name_length);
