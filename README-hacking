@@ -1,4 +1,5 @@
 Copyright (C) 2017 Luca Saiu
+Updated in 2019 by Luca Saiu
 Written by Luca Saiu
 
 This file is part of Jitter.
@@ -28,7 +29,7 @@ How to compile from a git copy
 
 You need an Internet connection, git, GNU Autoconf, GNU Automake, GNU Libtool,
 GNU Bison, Flex, GNU Texinfo, GNU help2man, plus the usual build tools.  The GNU
-Binutils are needed for disassembly support, and advanced dispatching mode rely
+Binutils are needed for disassembly support, and advanced dispatching modes rely
 on GCC.
 
 Running
