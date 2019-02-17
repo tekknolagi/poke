@@ -739,6 +739,112 @@ jitter_stack_height;
     }                                                                           \
   while (false)
 
+/* Expand to a statement performing a stack change similar in spirit to the roll
+   operation, but rearranging the stack elements the opposite way: the old top
+   becomes the deepest element, and all the elements originally below it are
+   moved up by one position to make place.
+   For example, given that roll (3) turns
+     a b c d e f
+   into
+     a b d e f c
+   , -roll (3) turns
+     a b c d e f
+   into
+     a b f c d e
+   .  This "-roll" is not actually a predefined operation in Forth, but has its
+   place as a sensible variant of roll.
+   This "-roll" is to "roll" like "-rot" is to "rot". */
+#define JITTER_STACK_TOS_MROLL(type, stack_container, name, mroll_depth)        \
+  do                                                                            \
+    {                                                                           \
+      /* Use an unsigned variable to get a warning in case the user passes a    \
+         negative constant by mistake.  Then convert to int, so that we may     \
+         safely compute negative indices from other index operands, as it may   \
+         be needed fo termination conditions. */                                \
+      unsigned jitter_mroll_depthu = (mroll_depth);                             \
+      int jitter_mroll_depth = jitter_mroll_depthu;                             \
+      if (jitter_mroll_depth == 0)                                              \
+        break;                                                                  \
+      /* Slide values up from depth i to i - 1.  Keep the next value to be      \
+         written in the temporary jitter_roll_old , initialized with the top    \
+         out of the loop.  Compared to roll, I iterate in the opposite          \
+         direction, so that here again the old top is the first value to be     \
+         read. */                                                               \
+      type jitter_mroll_old                                                     \
+        = JITTER_STACK_TOS_TOP (type, stack_container, name);                   \
+      int jitter_mroll_depth_i;                                                 \
+      for (jitter_mroll_depth_i = jitter_mroll_depth;                           \
+           jitter_mroll_depth_i > 0; /* Differently from the TOS case this      \
+                                        needs to be a strict > . */             \
+           jitter_mroll_depth_i --)                                             \
+        {                                                                       \
+          /* Before overwriting a value, save it: it will become the next       \
+             jitter_mroll_old .  Then perform the overwrite, and update         \
+             jitter_mroll_old . */                                              \
+          const type jitter_mroll_to_be_overwritten                             \
+            = JITTER_STACK_TOS_AT_NONZERO_DEPTH (type, stack_container, name,   \
+                                                 jitter_mroll_depth_i);         \
+          JITTER_STACK_TOS_SET_AT_NONZERO_DEPTH (type, stack_container, name,   \
+                                                 jitter_mroll_depth_i,          \
+                                                 jitter_mroll_old);             \
+          jitter_mroll_old = (type) jitter_mroll_to_be_overwritten;             \
+        }                                                                       \
+      /* Differently from the non-TOS case, here the final update must be out   \
+         of the loop: this is the only case where _AT_NONZERO_DEPTH macros      \
+         would not work. */                                                     \
+      JITTER_STACK_TOS_TOP (type, stack_container, name) = jitter_mroll_old;    \
+    }                                                                           \
+  while (false)
+#define JITTER_STACK_NTOS_MROLL(type, stack_container, name, mroll_depth)       \
+  do                                                                            \
+    {                                                                           \
+      /* Use an unsigned variable to get a warning in case the user passes a    \
+         negative constant by mistake.  Then convert to int, so that we may     \
+         safely compute negative indices from other index operands, as it may   \
+         be needed fo termination conditions. */                                \
+      unsigned jitter_mroll_depthu = (mroll_depth);                             \
+      int jitter_mroll_depth = jitter_mroll_depthu;                             \
+      /* Do nothing if the deepest element to be affected is at depth zero. */  \
+      if (jitter_mroll_depth == 0)                                              \
+        break;                                                                  \
+      /* Slide values up from depth i to i - 1.  Keep the next value to be      \
+         written in the temporary jitter_roll_old , initialized with the top    \
+         out of the loop.  Compared to roll, I iterate in the opposite          \
+         direction, so that here again the old top is the first value to be     \
+         read. */                                                               \
+      type jitter_mroll_old                                                     \
+        = JITTER_STACK_NTOS_TOP (type, stack_container, name);                  \
+      int jitter_mroll_depth_i;                                                 \
+      for (jitter_mroll_depth_i = jitter_mroll_depth;                           \
+           jitter_mroll_depth_i > 0;  /* Here a guard with >= instead of >, and \
+                                         no statement after the loop, would be  \
+                                         correct, differenrtly from the TOS     \
+                                         case.  But GCC 9 as of early 2019      \
+                                         appears to do a better job at          \
+                                         unrolling this way, without a load not \
+                                         followed by a use of the loaded        \
+                                         value. */                              \
+           jitter_mroll_depth_i --)                                             \
+        {                                                                       \
+          /* Before overwriting a value, save it: it will become the next       \
+             jitter_mroll_old .  Then perform the overwrite, and update         \
+             jitter_mroll_old . */                                              \
+          const type jitter_mroll_to_be_overwritten                             \
+            = JITTER_STACK_NTOS_AT_DEPTH (type, stack_container, name,          \
+                                          jitter_mroll_depth_i);                \
+          JITTER_STACK_NTOS_SET_AT_DEPTH (type, stack_container, name,          \
+                                          jitter_mroll_depth_i,                 \
+                                          jitter_mroll_old);                    \
+          jitter_mroll_old = (type) jitter_mroll_to_be_overwritten;             \
+        }                                                                       \
+      /* Now after the loop jitter_mroll_old has the old value of the deepest   \
+         value.  That goes to the top.                                          \
+         See the comment above: this would not be needed if the loop guard had  \
+         a non-strict comparison. */                                            \
+      JITTER_STACK_NTOS_TOP (type, stack_container, name) = jitter_mroll_old;   \
+    }                                                                           \
+  while (false)
+
 
 
 
