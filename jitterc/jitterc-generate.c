@@ -1365,6 +1365,8 @@ jitterc_emit_stack_operation_definitions (FILE *f, const struct jitterc_vm *vm)
       jitterc_emit_stack_operation_definition (f, stack, "under_top", 0);
       jitterc_emit_stack_operation_definition (f, stack, "at_depth", 1);
       jitterc_emit_stack_operation_definition (f, stack, "at_nonzero_depth", 1);
+      jitterc_emit_stack_operation_definition (f, stack, "set_at_depth", 2);
+      jitterc_emit_stack_operation_definition (f, stack, "set_at_nonzero_depth", 2);
       jitterc_emit_stack_operation_definition (f, stack, "push_unspecified", 0);
       jitterc_emit_stack_operation_definition (f, stack, "push", 1);
 
