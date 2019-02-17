@@ -243,35 +243,35 @@ structured_parse_file (const char *input_file_name);
 %%
 
 program:
-  statement
+  statements
   { p->main_statement = $1; }
   ;
 
 statement:
-  SKIP
+  optional_skip SEMICOLON
   { $$ = structured_make_statement (structured_statement_case_skip); }
-| variable SET_TO expression
+| variable SET_TO expression SEMICOLON
   { $$ = structured_make_statement (structured_statement_case_assignment);
     $$->assignment_variable = $1;
     $$->assignment_expression = $3; }
-| PRINT expression
+| PRINT expression SEMICOLON
   { $$ = structured_make_statement (structured_statement_case_print);
     $$->print_expression = $2; }
-| BEGIN_ statements END
+| begin statements end
   { $$ = $2; }
-| IF expression THEN statements ELSE statements END
+| IF expression THEN statements ELSE statements end
   { $$ = structured_make_statement (structured_statement_case_if_then_else);
     $$->if_then_else_condition = $2;
     $$->if_then_else_then_branch = $4;
     $$->if_then_else_else_branch = $6; }
-| IF expression THEN statements END
+| IF expression THEN statements end
   { /* Parse "if A then B end" as "if A then B else skip end". */
     $$ = structured_make_statement (structured_statement_case_if_then_else);
     $$->if_then_else_condition = $2;
     $$->if_then_else_then_branch = $4;
     $$->if_then_else_else_branch
       = structured_make_statement (structured_statement_case_skip); }
-| WHILE expression DO statements END
+| WHILE expression DO statements end
   { /* Parse "while A do B end" as "if A then repeat B until not A else
        skip". */
     struct structured_statement *r
@@ -286,7 +286,7 @@ statement:
     $$->if_then_else_then_branch = r;
     $$->if_then_else_else_branch
       = structured_make_statement (structured_statement_case_skip); }
-| REPEAT statements UNTIL expression
+| REPEAT statements UNTIL expression SEMICOLON
   { $$ = structured_make_statement (structured_statement_case_repeat_until);
     $$->repeat_until_body = $2;
     $$->repeat_until_guard = $4; }
@@ -302,10 +302,10 @@ statements:
 one_or_more_statements:
   statement
   { $$ = $1; }
-| statement SEMICOLON one_or_more_statements
+| statement one_or_more_statements
   { $$ = structured_make_statement (structured_statement_case_sequence);
     $$->sequence_statement_0 = $1;
-    $$->sequence_statement_1 = $3; }
+    $$->sequence_statement_1 = $2; }
 | VAR block
   { $$ = $2; }
   ;
@@ -324,7 +324,6 @@ block_rest:
   { $$ = $2; }
   ;
 
-
 optional_initialization :
   /* nothing*/
   { $$ = NULL; }
@@ -341,7 +340,7 @@ expression:
     $$->variable = $1; }
 | OPEN_PAREN expression CLOSE_PAREN
   { $$ = $2; }
-| IF expression THEN expression ELSE expression END
+| IF expression THEN expression ELSE expression end
   { $$ = structured_make_expression (structured_expression_case_if_then_else);
     $$->if_then_else_condition = $2;
     $$->if_then_else_then_branch = $4;
@@ -405,6 +404,25 @@ variable:
   VARIABLE
   { $$ = STRUCTURED_TEXT_COPY; }
   ;
+
+optional_skip:
+  /* nothing */
+| SKIP
+  ;
+
+/* No need for optional semicolons after BEGIN_: any semicolons after it will be
+   parsed as skip statements. */
+begin:
+  BEGIN_
+  ;
+
+/* No need for optional semicolons after END: any semicolons after it will be
+   parsed as skip statements, since any context where END may occur accepts a
+   statement sequence, and not just a statement. */
+end:
+  END
+  ;
+
 
 %%
 

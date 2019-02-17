@@ -1,6 +1,7 @@
 // Jittery structured language (-*- Pascal -*- -style) test case: conditional.
 
 // Copyright (C) 2017 Luca Saiu
+// Updated in 2019 by Luca Saiu
 // Written by Luca Saiu
 
 // This file is part of Jitter.
@@ -20,7 +21,7 @@
 
 
 if true then
-   print 42
+   print 42;
 else
-   print 43
+   print 43;
 end

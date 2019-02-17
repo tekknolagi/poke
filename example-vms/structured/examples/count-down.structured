@@ -22,6 +22,6 @@
 begin
    var n = 2000000000;
    repeat
-      n := n - 1
-   until n = 0
+      n := n - 1;
+   until n = 0;
 end

@@ -29,13 +29,13 @@ begin
       // The priority of and with respect to <= is also wrong.
       while n_is_prime and ((candidate_divisor * candidate_divisor) <= n) do
          if (n mod candidate_divisor) = 0 then
-            n_is_prime := false
+            n_is_prime := false;
          end;
-         candidate_divisor := candidate_divisor + 1
+         candidate_divisor := candidate_divisor + 1;
       end;
       if n_is_prime then
-         print n
+         print n;
       end;
-      n := n + 1
-   end
+      n := n + 1;
+   end;
 end
