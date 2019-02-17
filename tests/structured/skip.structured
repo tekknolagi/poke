@@ -1,6 +1,7 @@
 // Jittery structured language (-*- Pascal -*- -style) sample: empty.
 
 // Copyright (C) 2017 Luca Saiu
+// Updated in 2019 by Luca Saiu
 // Written by Luca Saiu
 
 // This file is part of Jitter.
@@ -21,4 +22,4 @@
 
 // A program doing nothing, with a single top-level statement.
 
-skip
+skip;

@@ -23,10 +23,10 @@ begin
    var a = 3333333333, b = 1;
    while a <> b do
       if a < b then
-         b := b - a
+         b := b - a;
       else
-         a := a - b
-      end
+         a := a - b;
+      end;
    end;
-   print a
+   print a;
 end
