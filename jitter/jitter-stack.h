@@ -648,6 +648,83 @@ jitter_stack_height;
 
 
 
+/* Inefficient stack operations.
+ * ************************************************************************** */
+
+/* The stack operations defined in this section may expand to inefficient code
+   and are not recommended for production use, unless the arguments are known
+   small constants.  Anyway they are convenient for testing. */
+
+/* Expand to a statement destructively reversing the order of the topmost n
+   elements of the given stack. */
+#define JITTER_STACK_TOS_REVERSE(type, stack_container, name, element_no)      \
+  do                                                                           \
+    {                                                                          \
+      /* Use an unsigned variable to get a warning in case the user passes a   \
+         negative constant by mistake.  Then convert to int, so that we may    \
+         safely compute negative indices from other index operands, as it may  \
+         be needed fo termination conditions. */                               \
+      unsigned jitter_reverse_element_nou = (element_no);                      \
+      int jitter_reverse_element_no = jitter_reverse_element_nou;              \
+      /* Do nothing unless we have at least two elements to swap.  If we do,   \
+         then of course we have to handle the TOS specially, and swap it with  \
+         the deepest element. */                                               \
+      if (jitter_reverse_element_no < 2)                                       \
+        break;                                                                 \
+      JITTER_SWAP (type,                                                       \
+                   JITTER_STACK_TOS_TOP_NAME(type, stack_container, name),     \
+                   JITTER_STACK_TOS_AT_NONZERO_DEPTH                           \
+                      (type, stack_container, name,                            \
+                       (jitter_reverse_element_no - 1)));                      \
+      /* Every other element to swap will be at a non-zero depth.  Have two    \
+         indices moving towards one another; keep swapping element pairs       \
+         until the two indices meet or cross. */                               \
+      int jitter_reverse_up_depth = 1;                                         \
+      int jitter_reverse_down_depth = jitter_reverse_element_no - 2;           \
+      while (jitter_reverse_down_depth > jitter_reverse_up_depth)              \
+        {                                                                      \
+          JITTER_SWAP (type,                                                   \
+                       JITTER_STACK_TOS_AT_NONZERO_DEPTH                       \
+                          (type, stack_container, name,                        \
+                           jitter_reverse_up_depth),                           \
+                       JITTER_STACK_TOS_AT_NONZERO_DEPTH                       \
+                          (type, stack_container, name,                        \
+                           jitter_reverse_down_depth));                        \
+          jitter_reverse_up_depth ++;                                          \
+          jitter_reverse_down_depth --;                                        \
+        }                                                                      \
+    }                                                                          \
+  while (false)
+#define JITTER_STACK_NTOS_REVERSE(type, stack_container, name, element_no)      \
+  do                                                                            \
+    {                                                                           \
+      /* Use an unsigned variable to get a warning in case the user passes a    \
+         negative constant by mistake.  Then convert to int, so that we may     \
+         safely compute negative indices from other index operands, as it may   \
+         be needed fo termination conditions. */                                \
+      unsigned jitter_reverse_element_nou = (element_no);                       \
+      int jitter_reverse_element_no = jitter_reverse_element_nou;               \
+      /* Have two depth indices moving into opposite directions.  Keep          \
+         swapping elements at the dephts described by the two indices, until    \
+         the indices meet or cross. */                                          \
+      int jitter_reverse_up_depth = 0;                                          \
+      int jitter_reverse_down_depth = jitter_reverse_element_no - 1;            \
+      while (jitter_reverse_down_depth > jitter_reverse_up_depth)               \
+        {                                                                       \
+          JITTER_SWAP (type,                                                    \
+                       JITTER_STACK_NTOS_AT_DEPTH (type, stack_container, name, \
+                                                   jitter_reverse_up_depth),    \
+                       JITTER_STACK_NTOS_AT_DEPTH (type, stack_container, name, \
+                                                   jitter_reverse_down_depth)); \
+          jitter_reverse_up_depth ++;                                           \
+          jitter_reverse_down_depth --;                                         \
+        }                                                                       \
+    }                                                                           \
+  while (false)
+
+
+
+
 /* Generic stack operations with user-specified functions.
  * ************************************************************************** */
 
@@ -719,5 +796,22 @@ jitter_stack_height;
     }                                                                      \
   while (false)
 
+
+
+
+/* Helper macros, not for the user.
+ * ************************************************************************** */
+
+/* Expand to a statement destructively swapping the values of the two given
+   l-values, which must have both the given type.  Either a or b may be
+   evaluated twice. */
+#define JITTER_SWAP(type, a, b)           \
+  do                                      \
+    {                                     \
+      const type _jitter_swap_tmp = (a);  \
+      (a) = (b);                          \
+      (b) = (type) _jitter_swap_tmp;      \
+    }                                     \
+  while (false)
 
 #endif // #ifndef JITTER_STACK_H_
