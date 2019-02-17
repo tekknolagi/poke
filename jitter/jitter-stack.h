@@ -645,6 +645,30 @@ jitter_stack_height;
     }                                                                         \
   while (false)
 
+/* Expand to a statement rearranging the topmost three elements of the stack
+   so that their configuration (top on the right) changes from
+     a b c
+   to
+     b c a
+   .  Undefined behavior on underflow.  This operation is called "rot" in
+   Forth. */
+#define JITTER_STACK_TOS_ROT(type, stack_container, name)  \
+  JITTER_STACK_TOS_ROLL (type, stack_container, name, 2)
+#define JITTER_STACK_NTOS_ROT(type, stack_container, name)  \
+  JITTER_STACK_NTOS_ROLL (type, stack_container, name, 2)
+
+/* Expand to a statement rearranging the topmost three elements of the stack
+   so that their configuration (top on the right) changes from
+     a b c
+   to
+     c a b
+   .  Undefined behavior on underflow.  This operation is called "-rot" in
+   Forth. */
+#define JITTER_STACK_TOS_MROT(type, stack_container, name)  \
+  JITTER_STACK_TOS_MROLL (type, stack_container, name, 2)
+#define JITTER_STACK_NTOS_MROT(type, stack_container, name)  \
+  JITTER_STACK_NTOS_MROLL (type, stack_container, name, 2)
+
 /* Expand to a statement rearranging the topmost roll_depth + 1 elements of
    the given stack so that the element originally at depth roll_depth goes to
    top, and every element originally above it is moved down one position to
