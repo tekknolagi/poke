@@ -18,25 +18,22 @@
 // You should have received a copy of the GNU General Public License
 // along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
 
-
-begin
-   var n = 2;
-   // while true do
-   while n < 2000000 do
-      var n_is_prime = true;
-      var candidate_divisor = 2;
-      // FIXME: parser bug: "candidate_divisor * candidate_divisor <= n"
-      // parses as "candidate_divisor * (candidate_divisor <= n)".
-      // The priority of and with respect to <= is also wrong.
-      while n_is_prime and ((candidate_divisor * candidate_divisor) <= n) do
-         if (n mod candidate_divisor) = 0 then
-            n_is_prime := false;
-         end;
-         candidate_divisor := candidate_divisor + 1;
-      end;
-      if n_is_prime then
-         print n;
-      end;
-      n := n + 1;
-   end;
-end
+var n = 2;
+// while true do
+while n < 2000000 do
+  var n_is_prime = true;
+  var candidate_divisor = 2;
+  // FIXME: parser bug: "candidate_divisor * candidate_divisor <= n"
+  // parses as "candidate_divisor * (candidate_divisor <= n)".
+  // The priority of and with respect to <= is also wrong.
+  while n_is_prime and ((candidate_divisor * candidate_divisor) <= n) do
+    if (n mod candidate_divisor) = 0 then
+      n_is_prime := false;
+    end;
+    candidate_divisor := candidate_divisor + 1;
+  end;
+  if n_is_prime then
+    print n;
+  end;
+  n := n + 1;
+end;
