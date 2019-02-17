@@ -262,6 +262,58 @@ jitter_stack_finalize_backing (struct jitter_stack_backing *backing)
   (JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)       \
      [- (distance)])
 
+/* Expand to a statement updating an element the given stack at the given
+   distance from the top (0 being the top, 1 being the undertop, and so on); the
+   new element will be set to the result of the expansion of the given new element.
+   Undefined behavior on underflow.
+   The distance should be a constant expression for good performance. */
+#define JITTER_STACK_TOS_SET_AT_DEPTH(type, stack_container, name, distance,  \
+                                      new_element)                            \
+  do                                                                          \
+    {                                                                         \
+      /* Keeping the distance in an unsigned variable might give a useful     \
+         warning in some cases where the distance as supplied by the user is  \
+         incorrect.  However the final array index computed based on the      \
+         distance can be negative, so the expression evaluating it must not   \
+         involve unsigned operands. */                                        \
+      const unsigned _jitter_set_at_depth_distance_u = (distance);            \
+      const int _jitter_set_at_depth_distance =                               \
+        _jitter_set_at_depth_distance_u;                                      \
+      if (_jitter_set_at_depth_distance == 0)                                 \
+        JITTER_STACK_TOS_TOP_NAME(type, stack_container, name)                \
+          = (new_element);                                                    \
+      else                                                                    \
+        JITTER_STACK_TOS_SET_AT_NONZERO_DEPTH(type, stack_container, name,    \
+                                              _jitter_set_at_depth_distance,  \
+                                              (new_element));                 \
+    }                                                                         \
+  while (false)
+#define JITTER_STACK_NTOS_SET_AT_DEPTH(type, stack_container, name, distance,  \
+                                       new_element)                            \
+  do                                                                           \
+    {                                                                          \
+      (JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)         \
+          [- (distance)]) = (new_element);                                     \
+    }                                                                          \
+  while (false)
+
+/* Like JITTER_STACK_TOS_SET_AT_DEPTH and JITTER_STACK_NTOS_SET_AT_DEPTH, but
+   assume that the distance is strictly positive.  This expands to better code
+   when the distance is known to be non-zero but its actual value is not
+   known. */
+#define JITTER_STACK_TOS_SET_AT_NONZERO_DEPTH(type, stack_container, name,   \
+                                              distance, new_element)         \
+  do                                                                         \
+    {                                                                        \
+      (JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)  \
+          [1 - (distance)]) = (new_element);                                 \
+    }                                                                        \
+  while (false)
+#define JITTER_STACK_NTOS_SET_AT_NONZERO_DEPTH(type, stack_container, name,  \
+                                               distance, new_element)        \
+  JITTER_STACK_NTOS_SET_AT_DEPTH(type, stack_container, name, distance,      \
+                                 new_element)
+
 /* Expand to a statement pushing an unspecified object on top of the given
    stack.  Undefined behavior on overflow.  There is no result.  This operation
    is more efficient than JITTER_STACK_*_PUSH , and is preferred when the top
