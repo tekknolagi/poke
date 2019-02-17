@@ -645,6 +645,100 @@ jitter_stack_height;
     }                                                                         \
   while (false)
 
+/* Expand to a statement rearranging the topmost roll_depth + 1 elements of
+   the given stack so that the element originally at depth roll_depth goes to
+   top, and every element originally above it is moved down one position to
+   make place.
+   For example, passing roll_depth with a value of 3 turns
+     a b c d e f
+   into
+     a b d e f c
+   .  In Forth the depth argument is taken from the stack.  Here
+     JITTER_STACK_TOS_ROLL(type, stack_container, name, N)
+   behaves like
+     N roll
+   in Forth. 
+   Just like in Forth, roll is a potentially inefficient operation, as it
+   requires O(roll_depth) memory accesses.  In production it should only be
+   used with small and constant values of roll_depth . */
+#define JITTER_STACK_TOS_ROLL(type, stack_container, name, roll_depth)          \
+  do                                                                            \
+    {                                                                           \
+      /* Use an unsigned variable to get a warning in case the user passes a    \
+         negative constant by mistake.  Then convert to int, so that we may     \
+         safely compute negative indices from other index operands, as it may   \
+         be needed fo termination conditions. */                                \
+      unsigned jitter_roll_depthu = (roll_depth);                               \
+      int jitter_roll_depth = jitter_roll_depthu;                               \
+      if (jitter_roll_depth == 0)                                               \
+        break;                                                                  \
+      /* Slide values down from depth i to i + 1.  Keep the next value to be    \
+         written in the temporary jitter_roll_old , initialized with the top    \
+         out of the loop. */                                                    \
+      type jitter_roll_old                                                      \
+        = JITTER_STACK_TOS_TOP (type, stack_container, name);                   \
+      int jitter_roll_depth_i;                                                  \
+      for (jitter_roll_depth_i = 1;                                             \
+           jitter_roll_depth_i <= jitter_roll_depth;                            \
+           jitter_roll_depth_i ++)                                              \
+        {                                                                       \
+          /* Before overwriting a value, save it: it will become the next       \
+             jitter_roll_old .  Then perform the overwrite, and update          \
+             jitter_roll_old .  Here I can afford the faster _AT_NONZERO_DEPTH  \
+             macros, as the only case dealing with the top is handled out of    \
+             the loop. */                                                       \
+          const type jitter_roll_to_be_overwritten                              \
+            = JITTER_STACK_TOS_AT_NONZERO_DEPTH (type, stack_container, name,   \
+                                                 jitter_roll_depth_i);          \
+          JITTER_STACK_TOS_SET_AT_NONZERO_DEPTH(type, stack_container, name,    \
+                                                jitter_roll_depth_i,            \
+                                                jitter_roll_old);               \
+          jitter_roll_old = (type) jitter_roll_to_be_overwritten;               \
+        }                                                                       \
+      /* Now after the loop jitter_roll_old has the old value of the deepest    \
+         value.  That goes to the top. */                                       \
+      JITTER_STACK_TOS_TOP (type, stack_container, name) = jitter_roll_old;     \
+    }                                                                           \
+  while (false)
+#define JITTER_STACK_NTOS_ROLL(type, stack_container, name, roll_depth)         \
+  do                                                                            \
+    {                                                                           \
+      /* Use an unsigned variable to get a warning in case the user passes a    \
+         negative constant by mistake.  Then convert to int, so that we may     \
+         safely compute negative indices from other index operands, as it may   \
+         be needed fo termination conditions. */                                \
+      unsigned jitter_roll_depthu = (roll_depth);                               \
+      int jitter_roll_depth = jitter_roll_depthu;                               \
+      /* Do nothing if the deepest element to be affected is at depth zero. */  \
+      if (jitter_roll_depth == 0)                                               \
+        break;                                                                  \
+      /* Slide values down from depth i to i + 1.  Keep the next value to be    \
+         written in the temporary jitter_roll_old , initialized with the top    \
+         out of the loop. */                                                    \
+      type jitter_roll_old                                                      \
+        = JITTER_STACK_NTOS_TOP (type, stack_container, name);                  \
+      int jitter_roll_depth_i;                                                  \
+      for (jitter_roll_depth_i = 1;                                             \
+           jitter_roll_depth_i <= jitter_roll_depth;                            \
+           jitter_roll_depth_i ++)                                              \
+        {                                                                       \
+          /* Before overwriting a value, save it: it will become the next       \
+             jitter_roll_old .  Then perform the overwrite, and update          \
+             jitter_roll_old . */                                               \
+          const type jitter_roll_to_be_overwritten                              \
+            = JITTER_STACK_NTOS_AT_DEPTH (type, stack_container, name,          \
+                                          jitter_roll_depth_i);                 \
+          JITTER_STACK_NTOS_SET_AT_DEPTH(type, stack_container, name,           \
+                                         jitter_roll_depth_i,                   \
+                                         jitter_roll_old);                      \
+          jitter_roll_old = (type) jitter_roll_to_be_overwritten;               \
+        }                                                                       \
+      /* Now after the loop jitter_roll_old has the old value of the deepest    \
+         value.  That goes to the top. */                                       \
+      JITTER_STACK_NTOS_TOP (type, stack_container, name) = jitter_roll_old;    \
+    }                                                                           \
+  while (false)
+
 
 
 
