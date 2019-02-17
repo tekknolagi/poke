@@ -155,6 +155,12 @@ late-c
 
     static const char * const
     vmprefix_hcf_format_string = "Halting and catching fire\n";
+
+    static const char * const
+    vmprefix_newline_string = "\n";
+
+    static const char * const
+    vmprefix_print_topmost_format_string = "(%i)%" JITTER_PRIi "  ";
   end
 end
 
@@ -176,6 +182,8 @@ wrapped-globals
   vmprefix_printdouble_format_string
   vmprefix_printfixnum_decimal_hex_format_string
   vmprefix_hcf_format_string
+  vmprefix_print_topmost_format_string
+  vmprefix_newline_string
 end
 
 
@@ -950,6 +958,92 @@ instruction bge (?Rn 0 1, ?Rn 0 1, ?f)
     JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
   end
 end
+
+
+## Advanced stack handling, and debugging.
+#################################################################
+
+# Push n integer values to the stack, each value equal to its depth after
+# the instruction completes.
+# This is convenient for testing stack effects, by first setting up a known
+# stack configuration with this instruction and then using print-topmost
+# twice, to print it out before and after a change.
+instruction push-depths (?n 0 1 2 3 4 5 6 7 8 9 10)
+  code
+    /* Make place for JITTER_ARGN0 new elements on the stack. */
+    int i;
+    for (i = 0; i < JITTER_ARGN0; i ++)
+      JITTER_PUSH_UNSPECIFIED_STACK ();
+    /* Set each element at depth i to i . */
+    for (i = 0; i < JITTER_ARGN0; i ++)
+      {
+        union jitter_word w = {.fixnum = i};
+        JITTER_SET_AT_DEPTH_STACK (i, w);
+      }
+  end
+end
+
+# An alternative to push-depth, also for testing.
+# Push n elements to the stack, the deepest one having value 0, the next
+# having value 1, up to the top having value (n - 1) .
+instruction push-increasing (?n 0 1 2 3 4 5 6 7 8 9 10)
+  code
+    /* Make place for JITTER_ARGN0 new elements on the stack. */
+    int i;
+    for (i = 0; i < JITTER_ARGN0; i ++)
+      JITTER_PUSH_UNSPECIFIED_STACK ();
+    /* Fill the new elements. */
+    for (i = 0; i < JITTER_ARGN0; i ++)
+      {
+        union jitter_word w = {.fixnum = JITTER_ARGN0 - i - 1};
+        JITTER_SET_AT_DEPTH_STACK (i, w);
+      }
+  end
+end
+
+# Print the topmost n values in the stack, without dropping them.  For
+# each element print its depth between parentheses, the element, and two
+# spaces.  Add a final newline.
+instruction print-topmost (?n)
+  code
+    int i;
+    for (i = JITTER_ARGN0 - 1; i >= 0; i --)
+      printf (vmprefix_print_topmost_format_string, i,
+              JITTER_AT_DEPTH_STACK (i).fixnum);
+    printf (vmprefix_newline_string);
+  end
+end
+
+instruction reverse (?n 0 1 2 3 4 5 6 7 8 9 10)
+  code
+    JITTER_REVERSE_STACK (JITTER_ARGN0);
+  end
+end
+
+instruction roll (?n 0 1 2 3 4 5 6 7 8 9 10)
+  code
+    JITTER_ROLL_STACK (JITTER_ARGN0);
+  end
+end
+
+instruction mroll (?n 0 1 2 3 4 5 6 7 8 9 10)
+  code
+    JITTER_MROLL_STACK (JITTER_ARGN0);
+  end
+end
+
+instruction rot ()
+  code
+    JITTER_ROT_STACK ();
+  end
+end
+
+instruction mrot ()
+  code
+    JITTER_MROT_STACK ();
+  end
+end
+
 
 
 ## System meta-instructions.
