@@ -1379,6 +1379,8 @@ jitterc_emit_stack_operation_definitions (FILE *f, const struct jitterc_vm *vm)
       jitterc_emit_stack_operation_definition (f, stack, "height", 0);
       jitterc_emit_stack_operation_definition (f, stack, "set_height", 1);
 
+      jitterc_emit_stack_operation_definition (f, stack, "reverse", 1);
+
       jitterc_emit_stack_operation_definition (f, stack, "unary", 1);
       jitterc_emit_stack_operation_definition (f, stack, "binary", 1); // Not a mistake.
     }
