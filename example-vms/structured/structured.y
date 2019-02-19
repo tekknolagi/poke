@@ -238,9 +238,11 @@ structured_parse_file (const char *input_file_name);
 %type <statement> one_or_more_statements;
 %type <statement> block;
 %type <statement> block_rest;
-%type <statement> if;
-%type <statement> if_rest;
+%type <statement> if_statement;
+%type <statement> if_statement_rest;
 %type <expression> optional_initialization;
+%type <expression> if_expression;
+%type <expression> if_expression_rest;
 
 %%
 
@@ -261,7 +263,7 @@ statement:
     $$->print_expression = $2; }
 | begin statements end
   { $$ = $2; }
-| if
+| if_statement
   { $$ = $1; }
 | WHILE expression DO statements end
   { /* Parse "while A do B end" as "if A then repeat B until not A else
@@ -284,19 +286,19 @@ statement:
     $$->repeat_until_guard = $4; }
   ;
 
-if:
-  IF expression THEN statements if_rest
+if_statement:
+  IF expression THEN statements if_statement_rest
   { $$ = structured_make_statement (structured_statement_case_if_then_else);
     $$->if_then_else_condition = $2;
     $$->if_then_else_then_branch = $4;
     $$->if_then_else_else_branch = $5; }
 ;
 
-if_rest:
+if_statement_rest:
   end
   { /* Parse "if A then B end" as "if A then B else skip end". */
     $$ = structured_make_statement (structured_statement_case_skip); }
-| ELIF expression THEN statements if_rest
+| ELIF expression THEN statements if_statement_rest
   { $$ = structured_make_statement (structured_statement_case_if_then_else);
     $$->if_then_else_condition = $2;
     $$->if_then_else_then_branch = $4;
@@ -353,11 +355,8 @@ expression:
     $$->variable = $1; }
 | OPEN_PAREN expression CLOSE_PAREN
   { $$ = $2; }
-| IF expression THEN expression ELSE expression end
-  { $$ = structured_make_expression (structured_expression_case_if_then_else);
-    $$->if_then_else_condition = $2;
-    $$->if_then_else_then_branch = $4;
-    $$->if_then_else_else_branch = $6; }
+| if_expression
+  { $$ = $1; }
 | expression PLUS expression
   { $$ = structured_make_binary (structured_primitive_plus, $1, $3); }
 | expression MINUS expression
@@ -403,6 +402,26 @@ expression:
 | INPUT
   { $$ = structured_make_nullary (structured_primitive_input); }
   ;
+
+if_expression:
+  IF expression THEN expression if_expression_rest
+  { $$ = structured_make_expression (structured_expression_case_if_then_else);
+    $$->if_then_else_condition = $2;
+    $$->if_then_else_then_branch = $4;
+    $$->if_then_else_else_branch = $5; }
+;
+
+if_expression_rest:
+  /* For expressions there is no if..then..end without else; however elif
+     clauses are permitted. */
+  ELIF expression THEN expression if_expression_rest
+  { $$ = structured_make_expression (structured_expression_case_if_then_else);
+    $$->if_then_else_condition = $2;
+    $$->if_then_else_then_branch = $4;
+    $$->if_then_else_else_branch = $5; }
+| ELSE expression END
+  { $$ = $2; }
+;
 
 literal:
   DECIMAL_LITERAL
