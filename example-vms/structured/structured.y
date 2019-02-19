@@ -442,8 +442,8 @@ optional_skip:
 | SKIP
   ;
 
-/* No need for optional semicolons after BEGIN_: any semicolons after it will be
-   parsed as skip statements. */
+/* No need for optional semicolons after BEGIN_: semicolons after it will be
+   parsed as skip statements in any statement sequence opened by BEGIN_. */
 begin:
   BEGIN_
   ;
