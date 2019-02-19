@@ -263,8 +263,8 @@ statement:
     $$->print_expression = $2; }
 | begin statements end
   { $$ = $2; }
-| if_statement
-  { $$ = $1; }
+| IF if_statement
+  { $$ = $2; }
 | WHILE expression DO statements end
   { /* Parse "while A do B end" as "if A then repeat B until not A else
        skip". */
@@ -287,11 +287,11 @@ statement:
   ;
 
 if_statement:
-  IF expression THEN statements if_statement_rest
+  expression THEN statements if_statement_rest
   { $$ = structured_make_statement (structured_statement_case_if_then_else);
-    $$->if_then_else_condition = $2;
-    $$->if_then_else_then_branch = $4;
-    $$->if_then_else_else_branch = $5; }
+    $$->if_then_else_condition = $1;
+    $$->if_then_else_then_branch = $3;
+    $$->if_then_else_else_branch = $4; }
 ;
 
 if_statement_rest:
@@ -321,15 +321,15 @@ one_or_more_statements:
   { $$ = structured_make_statement (structured_statement_case_sequence);
     $$->sequence_statement_0 = $1;
     $$->sequence_statement_1 = $2; }
-| block
-  { $$ = $1; }
+| VAR block
+  { $$ = $2; }
   ;
 
 block:
-  VAR variable optional_initialization block_rest
+  variable optional_initialization block_rest
   { $$ = structured_make_statement (structured_statement_case_block);
-    $$->block_variable = $2;
-    $$->block_body = structured_with_optional_initialization ($2, $3, $4); }
+    $$->block_variable = $1;
+    $$->block_body = structured_with_optional_initialization ($1, $2, $3); }
   ;
 
 block_rest:
@@ -355,8 +355,8 @@ expression:
     $$->variable = $1; }
 | OPEN_PAREN expression CLOSE_PAREN
   { $$ = $2; }
-| if_expression
-  { $$ = $1; }
+| IF if_expression
+  { $$ = $2; }
 | expression PLUS expression
   { $$ = structured_make_binary (structured_primitive_plus, $1, $3); }
 | expression MINUS expression
@@ -404,11 +404,11 @@ expression:
   ;
 
 if_expression:
-  IF expression THEN expression if_expression_rest
+  expression THEN expression if_expression_rest
   { $$ = structured_make_expression (structured_expression_case_if_then_else);
-    $$->if_then_else_condition = $2;
-    $$->if_then_else_then_branch = $4;
-    $$->if_then_else_else_branch = $5; }
+    $$->if_then_else_condition = $1;
+    $$->if_then_else_then_branch = $3;
+    $$->if_then_else_else_branch = $4; }
 ;
 
 if_expression_rest:
