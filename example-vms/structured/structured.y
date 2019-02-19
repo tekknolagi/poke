@@ -214,7 +214,7 @@ structured_parse_file (const char *input_file_name);
 %token SET_TO
 %token SEMICOLON
 %token COMMA
-%token IF THEN ELSE
+%token IF THEN ELSE ELIF
 %token WHILE DO
 %token REPEAT UNTIL
 %token OPEN_PAREN CLOSE_PAREN
@@ -238,6 +238,8 @@ structured_parse_file (const char *input_file_name);
 %type <statement> one_or_more_statements;
 %type <statement> block;
 %type <statement> block_rest;
+%type <statement> if;
+%type <statement> if_rest;
 %type <expression> optional_initialization;
 
 %%
@@ -259,18 +261,8 @@ statement:
     $$->print_expression = $2; }
 | begin statements end
   { $$ = $2; }
-| IF expression THEN statements ELSE statements end
-  { $$ = structured_make_statement (structured_statement_case_if_then_else);
-    $$->if_then_else_condition = $2;
-    $$->if_then_else_then_branch = $4;
-    $$->if_then_else_else_branch = $6; }
-| IF expression THEN statements end
-  { /* Parse "if A then B end" as "if A then B else skip end". */
-    $$ = structured_make_statement (structured_statement_case_if_then_else);
-    $$->if_then_else_condition = $2;
-    $$->if_then_else_then_branch = $4;
-    $$->if_then_else_else_branch
-      = structured_make_statement (structured_statement_case_skip); }
+| if
+  { $$ = $1; }
 | WHILE expression DO statements end
   { /* Parse "while A do B end" as "if A then repeat B until not A else
        skip". */
@@ -292,6 +284,27 @@ statement:
     $$->repeat_until_guard = $4; }
   ;
 
+if:
+  IF expression THEN statements if_rest
+  { $$ = structured_make_statement (structured_statement_case_if_then_else);
+    $$->if_then_else_condition = $2;
+    $$->if_then_else_then_branch = $4;
+    $$->if_then_else_else_branch = $5; }
+;
+
+if_rest:
+  end
+  { /* Parse "if A then B end" as "if A then B else skip end". */
+    $$ = structured_make_statement (structured_statement_case_skip); }
+| ELIF expression THEN statements if_rest
+  { $$ = structured_make_statement (structured_statement_case_if_then_else);
+    $$->if_then_else_condition = $2;
+    $$->if_then_else_then_branch = $4;
+    $$->if_then_else_else_branch = $5; }
+| ELSE statements end
+  { $$ = $2; }
+;
+
 statements:
   /* nothing */
   { $$ = structured_make_statement (structured_statement_case_skip); }
@@ -306,15 +319,15 @@ one_or_more_statements:
   { $$ = structured_make_statement (structured_statement_case_sequence);
     $$->sequence_statement_0 = $1;
     $$->sequence_statement_1 = $2; }
-| VAR block
-  { $$ = $2; }
+| block
+  { $$ = $1; }
   ;
 
 block:
-  variable optional_initialization block_rest
+  VAR variable optional_initialization block_rest
   { $$ = structured_make_statement (structured_statement_case_block);
-    $$->block_variable = $1;
-    $$->block_body = structured_with_optional_initialization ($1, $2, $3); }
+    $$->block_variable = $2;
+    $$->block_body = structured_with_optional_initialization ($2, $3, $4); }
   ;
 
 block_rest:

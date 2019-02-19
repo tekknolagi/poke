@@ -95,6 +95,7 @@ COMMENT              "//".*{NEWLINE}
 "if"                      { return IF; }
 "then"                    { return THEN; }
 "else"                    { return ELSE; }
+"elif"                    { return ELIF; }
 "while"                   { return WHILE; }
 "do"                      { return DO; }
 "repeat"                  { return REPEAT; }
