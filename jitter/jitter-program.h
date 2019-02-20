@@ -1,6 +1,6 @@
 /* Jitter: VM-independent program data structures: header.
 
-   Copyright (C) 2016, 2017, 2018 Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -67,12 +67,29 @@ struct jitter_replicated_block
   size_t native_code_size;
 };
 
+/* Options selectively applied to a jitter program, to be selected by the user.
+   This data structure, like a program data structure, should be considered an
+   opaque abstract type, and the user should only use the functions declared
+   below to set options. */
+struct jitter_program_options
+{
+  /* True if the other options can still be changed.  This is true at
+     initialization, and becomes false as soon as the user appends the first
+     label or instruction. */
+  bool can_change;
+};
+
 /* The internal representation of a program.  This should be considered
    an abstract type, as the internal structure is subject to change. */
 struct jitter_program
 {
   /* The program stage at the present time. */
   enum jitter_program_stage stage;
+
+  /* The options applying to this program.  This field is initialized to default
+     values at program initialization, and should only be updated indirectly
+     thru the functions declared in the "Program options" section below. */
+  struct jitter_program_options options;
 
   /* A dynamic array containing struct jitter_instruction * elements.  This is
      filled by parsing or by initialization with unspecialized instructions.
@@ -190,6 +207,16 @@ jitter_make_program (const struct jitter_vm *vm)
 /* Destroy the pointed program, if any.  Do nothing if p is NULL. */
 void
 jitter_destroy_program (struct jitter_program *p);
+
+
+
+
+/* Program options.
+ * ************************************************************************** */
+
+/* The functions in this section set some user options for an existing program.
+   Such settings are only possible on an "empty" program, before the first
+   instruction or label is appended to it. */
 
 
 
