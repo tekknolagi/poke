@@ -35,11 +35,42 @@
 
 #include "config.h" // this is the non-Gnulib file.
 
+
+/* Program options.
+ * ************************************************************************** */
+
+/* Set the pointed program-option struct to the default state. */
+static void
+jitter_initialize_options (struct jitter_program_options *op)
+{
+  op->can_change = true;
+}
+
+/* Change the options in the given program to make options unchangeable from now
+   on.  This is harmless to call even if the options are already unchangeable.
+   In practice this is called when appending labels and meta-instructions; it is
+   not necessary to call when appending instruction parameters, as those always
+   follow meta-instructions.  Based on the same reasoning, rewriting rules
+   always follow instruction appending, so the low-level API only used for
+   rewriting does not need to use this. */
+static void
+jitter_program_make_options_unchangeable (struct jitter_program *p)
+{
+  p->options.can_change = false;
+}
+
+
+
+
+/* Initialization and finalization
+ * ************************************************************************** */
+
 static void
 jitter_initialize_program (struct jitter_program *p)
 {
   p->stage = jitter_program_stage_unspecialized;
 
+  jitter_initialize_options (& p->options);
   p->expected_parameter_no = 0;
   p->rewritable_instruction_no = 0;
   p->current_instruction = NULL;
@@ -203,6 +234,7 @@ jitter_append_label (struct jitter_program *p, jitter_label label)
   if (p->expected_parameter_no != 0)
     jitter_fatal ("appending label %li with previous instruction "
                   "incomplete", (long) label);
+  jitter_program_make_options_unchangeable (p);
 
   jitter_int instruction_index = jitter_program_instruction_no (p);
   jitter_set_label_instruction_index (p, label, instruction_index);
@@ -475,6 +507,7 @@ jitter_append_meta_instruction (struct jitter_program *p,
   if (p->expected_parameter_no != 0)
     jitter_fatal ("appending instruction %s with previous instruction"
                   " incomplete", mi->name);
+  jitter_program_make_options_unchangeable (p);
 
   /* Make the instruction. */
   struct jitter_instruction *i
