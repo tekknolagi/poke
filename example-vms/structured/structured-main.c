@@ -73,7 +73,8 @@ static void
 structured_usage (char *error_message)
 {
   fprintf (stderr, "%s: %s.\n", structured_program_name, error_message);
-  fprintf (stderr, "Try '%s --help' for more information.\n", structured_program_name);
+  fprintf (stderr, "Try '%s --help' for more information.\n",
+           structured_program_name);
 
   exit (EXIT_FAILURE);
 }
@@ -101,9 +102,14 @@ structured_help (void)
   printf ("                                   disassembly as per --disassemble\n");
   printf ("      --dry-run                    do not actually run the program\n");
   printf ("      --print                      print VM instructions\n");
-  printf ("      --no-optimization-rewriting  disable optimization rewriting\n");
-  printf ("      --optimization-rewriting     enable optimization rewriting (default)\n");
   printf ("      --no-dry-run                 run the program (default)\n");
+
+  structured_help_section ("Benchmarking options");
+  printf ("      --no-optimization-rewriting  disable optimization rewriting\n");
+  printf ("      --slow-only                  disable fast literals and fast registers\n");
+  printf ("      --no-slow-only               enable fast literals and fast registers\n");
+  printf ("                                   (default)\n");
+  printf ("      --optimization-rewriting     enable optimization rewriting (default)\n");
 
   structured_help_section ("Code generation options");
   printf ("      --stack                      generate stack-based instructions (default)\n");
@@ -172,6 +178,11 @@ struct structured_command_line
   /* True iff we should not actually run the VM program. */
   bool dry_run;
 
+  /* True iff we should disable fast literals and fast registers, for
+     benchmarking a worst-case scenario or for comparing with some other
+     implementation. */
+  bool slow_only;
+
   /* True iff we should enable optimization rewriting. */
   bool optimization_rewriting;
 
@@ -192,6 +203,7 @@ structured_initialize_command_line (struct structured_command_line *cl)
   cl->disassemble = false;
   cl->dry_run = false;
   cl->optimization_rewriting = true;
+  cl->slow_only = false;
   cl->code_generator = structured_code_generator_stack;
   cl->program_path = NULL;
 }
@@ -243,6 +255,10 @@ structured_parse_command_line (struct structured_command_line *cl,
           cl->cross_disassemble = true;
           cl->disassemble = true;
         }
+      else if (handle_options && ! strcmp (arg, "--slow-only"))
+        cl->slow_only = true;
+      else if (handle_options && ! strcmp (arg, "--no-slow-only"))
+        cl->slow_only = false;
       else if (handle_options && ! strcmp (arg, "--optimization-rewriting"))
         cl->optimization_rewriting = true;
       else if (handle_options && ! strcmp (arg, "--no-optimization-rewriting"))
@@ -290,20 +306,24 @@ structured_work (struct structured_command_line *cl)
   /* Initialize the structured-VM subsystem. */
   structuredvm_initialize ();
 
-  /* Disable optimization rewriting, if the user asked to do so on the command
-     line. */
-  if (! cl->optimization_rewriting)
+  /* Make an empty Jittery program and set options for it as needed. */
+  struct structuredvm_program *vmp = structuredvm_make_program ();
+  if (cl->slow_only)
+    {
+      structuredvm_set_program_option_slow_literals_only (vmp, true);
+      structuredvm_set_program_option_slow_registers_only (vmp, true);
+    }
+  if (! cl->optimization_rewriting) // FIXME: make this into a VM program option.
     structuredvm_disable_optimization_rewriting ();
 
   /* Translate the AST program into a jittery program. */
-  struct structuredvm_program *vmp;
   switch (cl->code_generator)
     {
     case structured_code_generator_stack:
-      vmp = structured_make_vm_program_stack (p);
+      structured_translate_program_stack (vmp, p);
       break;
     case structured_code_generator_register:
-      vmp = structured_make_vm_program_register (p);
+      structured_translate_program_register (vmp, p);
       break;
     default:
       jitter_fatal ("unknwon code generator (bug): %i", (int) cl->code_generator);

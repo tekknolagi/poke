@@ -491,38 +491,20 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
 /* Program text frontend.
  * ************************************************************************** */
 
-struct jitter_program*
-vmprefix_parse_file_star (FILE *input_file)
+void
+vmprefix_parse_file_star (FILE *input_file, struct jitter_program *p)
 {
-  return jitter_parse_file_star (input_file, vmprefix_vm);
+  jitter_parse_file_star (input_file, p, vmprefix_vm);
 }
 
-struct jitter_program*
-vmprefix_parse_file (const char *input_file_name)
+void
+vmprefix_parse_file (const char *input_file_name, struct jitter_program *p)
 {
-  return jitter_parse_file (input_file_name, vmprefix_vm);
+  jitter_parse_file (input_file_name, p, vmprefix_vm);
 }
 
-struct jitter_program*
-vmprefix_parse_file_star_possibly_with_slow_registers_only (FILE *input_file,
-                                                            bool slow_only)
-{
-  return jitter_parse_file_star_possibly_with_slow_registers_only (input_file,
-                                                                   vmprefix_vm,
-                                                                   slow_only);
-}
-
-struct jitter_program*
-vmprefix_parse_file_possibly_with_slow_registers_only (const char *input_file_name,
-                                                       bool slow_only)
-{
-  return jitter_parse_file_possibly_with_slow_registers_only (input_file_name,
-                                                              vmprefix_vm,
-                                                              slow_only);
-}
 
 
-
 
 /* Evrything following this point is machine-generated.
  * ************************************************************************** */

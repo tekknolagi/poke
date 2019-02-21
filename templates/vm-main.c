@@ -71,7 +71,8 @@ struct vmprefix_main_command_line
 {
   bool debug;
   bool progress_on_stderr;
-  bool print_program, disassemble_program, run_program, slow_registers_only;
+  bool print_program, disassemble_program, run_program;
+  bool slow_literals_only, slow_registers_only;
   bool optimization_rewriting;
   char *input_file;
   char *objdump_name;
@@ -102,15 +103,18 @@ enum vmprefix_vm_negative_option
     vmprefix_vm_negative_option_no_dry_run = -4,
     vmprefix_vm_negative_option_no_print_program = -5,
     vmprefix_vm_negative_option_no_progress_on_stderr = -6,
-    vmprefix_vm_negative_option_no_slow_registers_only = -7,
-    vmprefix_vm_negative_option_optimization_rewriting = -8
+    vmprefix_vm_negative_option_no_slow_literals_only = -7,
+    vmprefix_vm_negative_option_no_slow_registers_only = -8,
+    vmprefix_vm_negative_option_no_slow_only = -9,
+    vmprefix_vm_negative_option_optimization_rewriting = -10
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum vmprefix_vm_negative_option . */
 enum vmprefix_vm_long_only_option
   {
-    vmprefix_vm_long_only_option_dump_jitter_version = -9
+    vmprefix_vm_long_only_option_dump_jitter_version = -109,
+    vmprefix_vm_long_only_option_slow_only = -110
   };
 
 /* Update our option state with the information from a single command-line
@@ -229,10 +233,24 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case vmprefix_vm_negative_option_no_dry_run:
       cl->run_program = true;
       break;
-    case 's':
+    case 'L':
+      cl->slow_literals_only = true;
+      break;
+    case 'R':
       cl->slow_registers_only = true;
       break;
+    case vmprefix_vm_long_only_option_slow_only:
+      cl->slow_literals_only = true;
+      cl->slow_registers_only = true;
+      break;
+    case vmprefix_vm_negative_option_no_slow_literals_only:
+      cl->slow_literals_only = false;
+      break;
     case vmprefix_vm_negative_option_no_slow_registers_only:
+      cl->slow_registers_only = false;
+      break;
+    case vmprefix_vm_negative_option_no_slow_only:
+      cl->slow_literals_only = false;
       cl->slow_registers_only = false;
       break;
     case 'r':
@@ -323,10 +341,17 @@ static struct argp_option vmprefix_main_option_specification[] =
    {"progress-on-stderr", 'e', NULL, 0,
     "Show progress information on stderr instead of stdout"},
    {"debug", 'd', NULL, 0, "Enable debugging" },
-   {"slow-registers-only", 's', NULL, 0,
+   {"slow-literals-only", 'L', NULL, 0,
+    "Use slow literals even where fast literals would be available"
+    " (this is mostly useful to measure the speedup introduced by fast"
+    " literals, or possibly to benchmark a worst-case scenario)"},
+   {"slow-registers-only", 'R', NULL, 0,
     "Use slow registers even when fast registers would be available"
     " (this is mostly useful to measure the speedup introduced by fast"
     " registers, or to benchmark a worst-case scenario)"},
+   {"slow-only", vmprefix_vm_long_only_option_slow_only, NULL, 0,
+    "Equivalent to passing both --slow-literals-only and"
+    " --slow-registers-only"},
    {"dump-jitter-version", vmprefix_vm_long_only_option_dump_jitter_version,
     NULL, 0,
     "Print the Jitter version only, without any surrounding text; this "
@@ -341,8 +366,13 @@ static struct argp_option vmprefix_main_option_specification[] =
     NULL, 0, "Show progress information on stdout (default)"},
    {"no-debug", vmprefix_vm_negative_option_no_debug,
     NULL, 0, "Disable debugging (default)"},
+   {"no-slow-literals-only", vmprefix_vm_negative_option_no_slow_registers_only,
+    NULL, 0, "Use fast literals when possible (default)"},
    {"no-slow-registers-only", vmprefix_vm_negative_option_no_slow_registers_only,
     NULL, 0, "Use fast registers when possible (default)"},
+   {"no-slow-only", vmprefix_vm_negative_option_no_slow_only, NULL, 0,
+    "Equivalent to passing both --no-slow-literals-only and"
+    " --no-slow-registers-only (default)"},
    {"optimization-rewriting", vmprefix_vm_negative_option_optimization_rewriting,
     NULL, 0, "Enable optimization rewriting (default)"},
 
@@ -449,8 +479,20 @@ main (int argc, char **argv)
     fprintf (progress, "Initializing...\n");
   vmprefix_initialize ();
 
-  /* Disable optimization rewriting if the user asked to do so on the command
-     line. */
+  /* Make an empty VM program, and set options as requested by the user. */
+  struct vmprefix_program *p = vmprefix_make_program ();
+  if (cl.debug)
+    fprintf (progress,
+             "Options:\n"
+             "* slow literals only: %s\n"
+             "* slow registers only: %s\n"
+             "* optimization rewriting: %s\n",
+             cl.slow_literals_only ? "yes" : "no",
+             cl.slow_registers_only ? "yes" : "no",
+             cl.optimization_rewriting ? "yes" : "no");
+  vmprefix_set_program_option_slow_literals_only (p, cl.slow_literals_only);
+  vmprefix_set_program_option_slow_registers_only (p, cl.slow_registers_only);
+  // FIXME: make this into a program option.
   if (! cl.optimization_rewriting)
     {
       if (cl.debug)
@@ -460,19 +502,14 @@ main (int argc, char **argv)
 
   /* Print the VM configuration if in debugging mode. */
   if (cl.debug)
-    vmprefix_print_vm_configuration (progress,
-                                     vmprefix_vm_configuration);
+    vmprefix_print_vm_configuration (progress, vmprefix_vm_configuration);
 
-  struct vmprefix_program *p;
   if (cl.debug)
-    fprintf (progress, "Parsing (slow_registers_only: %s)...\n",
-             cl.slow_registers_only ? "yes" : "no");
+    fprintf (progress, "Parsing...\n");
   if (! strcmp (cl.input_file, "-"))
-    p = vmprefix_parse_file_star_possibly_with_slow_registers_only
-           (stdin, cl.slow_registers_only);
+    vmprefix_parse_file_star (stdin, p);
   else
-    p = vmprefix_parse_file_possibly_with_slow_registers_only
-           (cl.input_file, cl.slow_registers_only);
+    vmprefix_parse_file (cl.input_file, p);
   if (cl.debug)
     fprintf (progress, "The requried slow register number is %li per class.\n",
              (long) p->slow_register_per_class_no);
@@ -516,11 +553,6 @@ main (int argc, char **argv)
         fprintf (progress, "Interpreting...\n");
       vmprefix_interpret (p, &s);
 
-      /*
-      printf ("%%r0: %li 0x%lx\n",
-              (long) s.vmprefix_state_runtime.jitter_fast_register_r_0.fixnum,
-              (unsigned long) s.vmprefix_state_runtime.jitter_fast_register_r_0.fixnum);
-      */
       if (cl.debug)
         fprintf (progress, "Finalizing VM state...\n");
       vmprefix_state_finalize (& s);

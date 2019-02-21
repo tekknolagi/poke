@@ -725,16 +725,11 @@ structured_translate_program (struct structuredvm_program *vmp,
 /* Entry point: translate an AST program to a VM program.
  * ************************************************************************** */
 
-struct structuredvm_program *
-structured_make_vm_program_register (struct structured_program *p)
+void
+structured_translate_program_register (struct structuredvm_program *vmp,
+                                       struct structured_program *p)
 {
-  /* Make an empty Jittery program. */
-  struct structuredvm_program *vmp = structuredvm_make_program ();
-
   /* Translate the AST pointed by p into *vmp.  This of course works by
      recursion. */
   structured_translate_program (vmp, p);
-
-  /* We're done. */
-  return vmp;
 }

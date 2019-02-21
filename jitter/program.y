@@ -155,27 +155,19 @@
   void
   jitter_parse_error (void *jitter_scanner) __attribute__ ((noreturn));
 
-  /* Parse a program from a file for the pointed VM.  These functions are
-     VM-independent. */
-  struct jitter_program*
-  jitter_parse_file_star (FILE *input_file, const struct jitter_vm *vm)
-    __attribute__ ((nonnull (1, 2), returns_nonnull));
-  struct jitter_program*
-  jitter_parse_file (const char *input_file_name, const struct jitter_vm *vm)
-    __attribute__ ((nonnull (1, 2), returns_nonnull));
-
-  /* Same as jitter_parse_file_star and jitter_parse_file, but accepting a
-     further boolean parameter to determine whether the parsed program should be
-     automatically modified to only use slow registers. */
-  struct jitter_program*
-  jitter_parse_file_star_possibly_with_slow_registers_only
-    (FILE *input_file, const struct jitter_vm *vm, bool slow_registers_only)
-    __attribute__ ((nonnull (1, 2), returns_nonnull));
-  struct jitter_program*
-  jitter_parse_file_possibly_with_slow_registers_only
-    (const char *input_file_name, const struct jitter_vm *vm,
-     bool slow_registers_only)
-    __attribute__ ((nonnull (1, 2), returns_nonnull));
+  /* Parse a program from a file for the pointed VM, adding code to the pointed
+     VM program.
+     These functions work of course on any VM, but are slightly inconvenient for
+     the user to call directly.  For this reason they are wrapped in the vm1.c
+     template into VM-specific functions not requiring a VM struct pointer. */
+  void
+  jitter_parse_file_star (FILE *input_file, struct jitter_program *p,
+                          const struct jitter_vm *vm)
+    __attribute__ ((nonnull (1, 2, 3)));
+  void
+  jitter_parse_file (const char *input_file_name, struct jitter_program *p,
+                     const struct jitter_vm *vm)
+    __attribute__ ((nonnull (1, 2, 3)));
 }
 
 %union {
@@ -334,36 +326,9 @@ jitter_parse_error (void *jitter_scanner)
   jitter_simple_error (jitter_scanner, "parse error");
 }
 
-struct jitter_program *
-jitter_parse_file_star_possibly_with_slow_registers_only
-   (FILE *input_file, const struct jitter_vm *vm,
-    bool slow_registers_only)
-{
-  yyscan_t scanner;
-  jitter_lex_init (&scanner);
-  jitter_set_in (input_file, scanner);
-
-  struct parser_arg pa;
-  pa.vm = (struct jitter_vm *) vm;
-  pa.program = jitter_make_program (vm);
-  if (slow_registers_only)
-    jitter_set_program_option_residualize_registers (pa.program, true);
-  /* FIXME: if I ever make parsing errors non-fatal, call jitter_lex_destroy before
-     returning, and finalize the program -- which might be incomplete! */
-  if (jitter_parse (& pa, scanner))
-    jitter_error (jitter_get_lloc (scanner),
-                  &pa,
-                  scanner, "parse error");
-  jitter_set_in (NULL, scanner);
-  jitter_lex_destroy (scanner);
-
-  return pa.program;
-}
-
-struct jitter_program *
-jitter_parse_file_possibly_with_slow_registers_only
-   (const char *input_file_name, const struct jitter_vm *vm,
-    bool slow_registers_only)
+void
+jitter_parse_file (const char *input_file_name, struct jitter_program *p,
+                   const struct jitter_vm *vm)
 {
   FILE *f;
   if ((f = fopen (input_file_name, "r")) == NULL)
@@ -374,25 +339,27 @@ jitter_parse_file_possibly_with_slow_registers_only
 
   /* FIXME: if I ever make parse errors non-fatal, I'll need to close the file
      before returning. */
-  struct jitter_program *res
-    = jitter_parse_file_star_possibly_with_slow_registers_only
-         (f, vm, slow_registers_only);
+  jitter_parse_file_star (f, p, vm);
   fclose (f);
-  return res;
 }
 
-struct jitter_program *
-jitter_parse_file_star (FILE *input_file,
+void
+jitter_parse_file_star (FILE *input_file, struct jitter_program *p,
                         const struct jitter_vm *vm)
 {
-  return jitter_parse_file_star_possibly_with_slow_registers_only
-            (input_file, vm, false);
-}
+  yyscan_t scanner;
+  jitter_lex_init (&scanner);
+  jitter_set_in (input_file, scanner);
 
-struct jitter_program *
-jitter_parse_file (const char *input_file_name,
-                   const struct jitter_vm *vm)
-{
-  return jitter_parse_file_possibly_with_slow_registers_only
-            (input_file_name, vm, false);
+  struct parser_arg pa;
+  pa.vm = (struct jitter_vm *) vm;
+  pa.program = p;
+  /* FIXME: if I ever make parsing errors non-fatal, call jitter_lex_destroy before
+     returning, and finalize the program -- which might be incomplete! */
+  if (jitter_parse (& pa, scanner))
+    jitter_error (jitter_get_lloc (scanner),
+                  &pa,
+                  scanner, "parse error");
+  jitter_set_in (NULL, scanner);
+  jitter_lex_destroy (scanner);
 }
