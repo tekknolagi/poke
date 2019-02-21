@@ -326,13 +326,16 @@ vmprefix_interpret (struct jitter_program const *p, struct vmprefix_state *s)
 /* Program text frontend.
  * ************************************************************************** */
 
-/* Parse VM code from the given file, into the pointed VM program.  These are
-   simple wrappers around functions implemented in the Bison file. */
+/* Parse VM code from the given file or string, into the pointed VM program.
+   These are simple wrappers around functions implemented in the Bison file. */
 void
 vmprefix_parse_file_star (FILE *input_file, struct jitter_program *p)
   __attribute__ ((nonnull (1, 2)));
 void
 vmprefix_parse_file (const char *input_file_name, struct jitter_program *p)
+  __attribute__ ((nonnull (1, 2)));
+void
+vmprefix_parse_string (const char *string, struct jitter_program *p)
   __attribute__ ((nonnull (1, 2)));
 
 

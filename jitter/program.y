@@ -155,8 +155,8 @@
   void
   jitter_parse_error (void *jitter_scanner) __attribute__ ((noreturn));
 
-  /* Parse a program from a file for the pointed VM, adding code to the pointed
-     VM program.
+  /* Parse a program for the pointed VM from a file or a string in memory, adding
+     code to the pointed VM program.
      These functions work of course on any VM, but are slightly inconvenient for
      the user to call directly.  For this reason they are wrapped in the vm1.c
      template into VM-specific functions not requiring a VM struct pointer. */
@@ -167,6 +167,10 @@
   void
   jitter_parse_file (const char *input_file_name, struct jitter_program *p,
                      const struct jitter_vm *vm)
+    __attribute__ ((nonnull (1, 2, 3)));
+  void
+  jitter_parse_string (const char *string, struct jitter_program *p,
+                       const struct jitter_vm *vm)
     __attribute__ ((nonnull (1, 2, 3)));
 }
 
@@ -326,6 +330,40 @@ jitter_parse_error (void *jitter_scanner)
   jitter_simple_error (jitter_scanner, "parse error");
 }
 
+/* This is the main parser function doing all the work.  The other parsing
+   functions, meant as part of a more convenient API for the user, all rely on
+   this.
+   The pointed scanner must be already initialized when this is called, and
+   it's the caller's responsibility to finalize it. */
+static void
+jitter_parse_core (yyscan_t scanner, struct jitter_program *p,
+                   const struct jitter_vm *vm)
+{
+  struct parser_arg pa;
+  pa.vm = (struct jitter_vm *) vm;
+  pa.program = p;
+  /* FIXME: if I ever make parsing errors non-fatal, call jitter_lex_destroy before
+     returning, and finalize the program -- which might be incomplete! */
+  if (jitter_parse (& pa, scanner))
+    jitter_error (jitter_get_lloc (scanner),
+                  & pa,
+                  scanner, "parse error");
+}
+
+void
+jitter_parse_file_star (FILE *input_file, struct jitter_program *p,
+                        const struct jitter_vm *vm)
+{
+  yyscan_t scanner;
+  jitter_lex_init (& scanner);
+  jitter_set_in (input_file, scanner);
+
+  jitter_parse_core (scanner, p, vm);
+
+  jitter_set_in (NULL, scanner);
+  jitter_lex_destroy (scanner);
+}
+
 void
 jitter_parse_file (const char *input_file_name, struct jitter_program *p,
                    const struct jitter_vm *vm)
@@ -344,22 +382,12 @@ jitter_parse_file (const char *input_file_name, struct jitter_program *p,
 }
 
 void
-jitter_parse_file_star (FILE *input_file, struct jitter_program *p,
-                        const struct jitter_vm *vm)
+jitter_parse_string (const char *string, struct jitter_program *p,
+                     const struct jitter_vm *vm)
 {
   yyscan_t scanner;
-  jitter_lex_init (&scanner);
-  jitter_set_in (input_file, scanner);
-
-  struct parser_arg pa;
-  pa.vm = (struct jitter_vm *) vm;
-  pa.program = p;
-  /* FIXME: if I ever make parsing errors non-fatal, call jitter_lex_destroy before
-     returning, and finalize the program -- which might be incomplete! */
-  if (jitter_parse (& pa, scanner))
-    jitter_error (jitter_get_lloc (scanner),
-                  &pa,
-                  scanner, "parse error");
-  jitter_set_in (NULL, scanner);
+  jitter_lex_init (& scanner);
+  jitter__scan_string (string, scanner);
+  jitter_parse_core (scanner, p, vm);
   jitter_lex_destroy (scanner);
 }
