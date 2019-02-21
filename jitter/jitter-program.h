@@ -73,10 +73,29 @@ struct jitter_replicated_block
    below to set options. */
 struct jitter_program_options
 {
-  /* True if the other options can still be changed.  This is true at
+  /* Non-false if the other options can still be changed.  This is true at
      initialization, and becomes false as soon as the user appends the first
      label or instruction. */
   bool can_change;
+
+  /* False if specialization is allowed to generate specialized instructions
+     using fast registers, as would be normal in production runs.  If non-false,
+     whenever a register parameter is appended to an instruction, the actual
+     register index to be used is changed to be equal to the given index summed
+     to the number of fast registers in the class.
+     This option is designed for benchmarking, in order to compare with
+     alternative VMs which should behave like a Jittery VM with this option on,
+     up to slow register index shifting (never needed in a Jittery VM). */
+  bool always_residualize_registers;
+
+  /* False is specialization is allowed to generate specialized instructions
+     with non-residual immediate arguments, as would be normal in production
+     runs.  If non-false always residualize literal arguments (except,
+     currently, for fast labels).
+     This option is designed for benchmarking, in order to compare with
+     alternative VMs which should behave like a Jittery VM with this option
+     on, up to fast branches (only available, and faster, in a Jittery VM). */
+  bool always_residualize_literals;
 };
 
 /* The internal representation of a program.  This should be considered
@@ -217,6 +236,25 @@ jitter_destroy_program (struct jitter_program *p);
 /* The functions in this section set some user options for an existing program.
    Such settings are only possible on an "empty" program, before the first
    instruction or label is appended to it. */
+
+/* Set the always_residualize_registers option to the given value in the pointed
+   program.  Fail fatally if the option is no longer settable. */
+void
+jitter_set_program_option_residualize_registers (struct jitter_program *p,
+                                                 bool option);
+
+/* Set the always_residualize_registers option to the given value in the pointed
+   program.  Fail fatally if the option is no longer settable. */
+void
+jitter_set_program_option_residualize_literals (struct jitter_program *p,
+                                                bool option);
+
+/* A convenience function behaving in an equivalent way to a call to
+   jitter_set_program_option_residualize_registers followed by a call to
+   jitter_set_program_option_residualize_literals on the same program with the
+   same option value. */
+void
+jitter_set_program_option_residualize (struct jitter_program *p, bool option);
 
 
 
@@ -390,16 +428,6 @@ jitter_append_parameter_copy (struct jitter_program *p,
    stream. */
 void
 jitter_print_program (FILE *out, const struct jitter_program *p);
-
-/* Like jitter_print_program , but also accept a boolean parameter telling
-   whether the program has been parsed so as to use slow registers only.  By
-   passing true the program is un-modified for printing, so that the register
-   indices appear like in the original VM program. */
-void
-jitter_print_program_possibly_with_slow_registers_only
-   (FILE *out,
-    const struct jitter_program *p,
-    bool slow_registers_only);
 
 
 

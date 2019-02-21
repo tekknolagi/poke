@@ -44,6 +44,8 @@ static void
 jitter_initialize_options (struct jitter_program_options *op)
 {
   op->can_change = true;
+  op->always_residualize_registers = false;
+  op->always_residualize_literals = false;
 }
 
 /* Change the options in the given program to make options unchangeable from now
@@ -57,6 +59,37 @@ static void
 jitter_program_make_options_unchangeable (struct jitter_program *p)
 {
   p->options.can_change = false;
+}
+
+/* Fail fatally if the options in the pointed program are no changeable. */
+static void
+jitter_fail_unless_options_changeable (struct jitter_program *p)
+{
+  if (! p->options.can_change)
+    jitter_fatal ("cannot change options in non-empty program");
+}
+
+void
+jitter_set_program_option_residualize_registers (struct jitter_program *p,
+                                                 bool option)
+{
+  jitter_fail_unless_options_changeable (p);
+  p->options.always_residualize_registers = option;
+}
+
+void
+jitter_set_program_option_residualize_literals (struct jitter_program *p,
+                                                bool option)
+{
+  jitter_fail_unless_options_changeable (p);
+  p->options.always_residualize_literals = option;
+}
+
+void
+jitter_set_program_option_residualize (struct jitter_program *p, bool option)
+{
+  jitter_set_program_option_residualize_registers (p, option);
+  jitter_set_program_option_residualize_literals (p, option);
 }
 
 
@@ -458,6 +491,15 @@ jitter_append_register_parameter
     const struct jitter_register_class *register_class,
     jitter_register_index register_index)
 {
+  /* If we have to always residualize registers, then increment this register
+     index by the number of fast registers in the class.  This way it is
+     guaranteed that the actual register used in execution will be slow.  (When
+     printing out the program the register index will be shown *decremented* by
+     the number of fast registers in the class to compensate for this.) */
+  if (p->options.always_residualize_registers)
+    register_index += register_class->fast_register_no;
+
+  /* Append the register parameter. */
   struct jitter_parameter * const pa
     = jitter_append_uninitialized_paremater
          (p, jitter_parameter_type_register_id, register_class);
@@ -705,11 +747,9 @@ jitter_maximum_instruction_name_length (const struct jitter_program *p)
 }
 
 void
-jitter_print_program_possibly_with_slow_registers_only
-   (FILE *out,
-    const struct jitter_program *p,
-    bool slow_registers_only)
+jitter_print_program (FILE *out, const struct jitter_program *p)
 {
+  const bool slow_registers_only = p->options.always_residualize_registers;
   const int instruction_no = jitter_program_instruction_no (p);
   const struct jitter_instruction **ins
     = (const struct jitter_instruction **)
@@ -799,12 +839,6 @@ jitter_print_program_possibly_with_slow_registers_only
      it. */
   if (p->stage < jitter_program_stage_specialized)
     free (is_target);
-}
-
-void
-jitter_print_program (FILE *out, const struct jitter_program *p)
-{
-  jitter_print_program_possibly_with_slow_registers_only (out, p, false);
 }
 
 
