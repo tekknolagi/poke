@@ -1,7 +1,7 @@
 ## This is an -*- Autoconf -*- file to be processed with autoconf
 ## to obtain a configure script.
 
-## Copyright (C) 2016, 2017, 2018 Luca Saiu
+## Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -814,7 +814,7 @@ AM_CONDITIONAL([JITTER_ENABLE_DISPATCH_SWITCH],
 # Is direct-threading enabled?  If so define a CPP feature macro.  Also define
 # a substitution and an Automake conditional.
 AC_MSG_CHECKING([if direct-threading dispatch is enabled])
-default=$(test "x$GCC" = "xyes" && echo yes)
+default=$(test "x$GCC" = "xyes" && echo yes || echo no)
 AC_ARG_ENABLE([dispatch-direct-threading],
               AS_HELP_STRING([--enable-dispatch-direct-threading],
               [enable direct-threading dispatch: default yes if and
@@ -838,7 +838,9 @@ AM_CONDITIONAL([JITTER_ENABLE_DISPATCH_DIRECT_THREADING],
 # Is minimal-threading enabled?  If so define a CPP macro.  Also define
 # a substitution and an Automake conditional.
 AC_MSG_CHECKING([if minimal-threading dispatch is enabled])
-default=$(test "x$GCC" = "xyes" && echo yes || echo no)
+# FIXME: reenable this when I make defect handling reliable.
+#default=$(test "x$GCC" = "xyes" && echo yes || echo no)
+default=no
 AC_ARG_ENABLE([dispatch-minimal-threading],
               AS_HELP_STRING([--enable-dispatch-minimal-threading],
               [enable minimal threading dispatch: default yes if and
@@ -858,6 +860,12 @@ fi
 AC_MSG_RESULT([$jitter_enable_dispatch_minimal_threading])
 AM_CONDITIONAL([JITTER_ENABLE_DISPATCH_MINIMAL_THREADING],
                [test "x$jitter_enable_dispatch_minimal_threading" = "xyes"])
+# FIXME: remove this warning message when I make defect handling reliable.
+if test "x$jitter_enable_dispatch_minimal_threading" = "xyes"; then
+  AC_MSG_WARN([minimal-threading dispatch is currently unreliable, and should
+  not be used in production until defective instruction replacement is fully
+  implemented])
+fi
 
 # Is no-threading enabled?  If so define a CPP macro.  Also define a
 # substitution and an Automake conditional.
@@ -865,7 +873,9 @@ AC_MSG_CHECKING([if no-threading dispatch is enabled])
 if    test "x$GCC" = "xyes" \
    && test "x$jitter_has_host_assembly" = "xyes" \
    && test "x$jitter_host_os_is_elf" = "xyes"; then
-  default=yes
+  # FIXME: reenable this when I make defect handling reliable.
+  #default=yes
+  default=no
 else
   default=no
 fi
@@ -889,6 +899,12 @@ fi
 AC_MSG_RESULT([$jitter_enable_dispatch_no_threading])
 AM_CONDITIONAL([JITTER_ENABLE_DISPATCH_NO_THREADING],
                [test "x$jitter_enable_dispatch_no_threading" = "xyes"])
+# FIXME: remove this warning message when I make defect handling reliable.
+if test "x$jitter_enable_dispatch_no_threading" = "xyes"; then
+  AC_MSG_WARN([no-threading dispatch is currently unreliable, and should not be
+  used in production until defective instruction     replacement is fully
+  implemented])
+fi
 
 # AC_SUBST the list of all the enabled dispatching models, and the best one;
 # these don't use quotes are are meant for jitter-config and shell scripts, not
