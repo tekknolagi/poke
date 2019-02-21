@@ -71,7 +71,7 @@ jitter_fail_unless_options_changeable (struct jitter_program *p)
 
 void
 jitter_set_program_option_slow_registers_only (struct jitter_program *p,
-                                                 bool option)
+                                               bool option)
 {
   jitter_fail_unless_options_changeable (p);
   p->options.slow_registers_only = option;
@@ -79,7 +79,7 @@ jitter_set_program_option_slow_registers_only (struct jitter_program *p,
 
 void
 jitter_set_program_option_slow_literals_only (struct jitter_program *p,
-                                                bool option)
+                                              bool option)
 {
   jitter_fail_unless_options_changeable (p);
   p->options.slow_literals_only = option;
