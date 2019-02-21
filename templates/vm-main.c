@@ -1,7 +1,6 @@
 /* VM default frontend for vmprefix VM.
 
-   Copyright (C) 2016, 2017, 2018 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -486,8 +485,7 @@ main (int argc, char **argv)
     {
       if (cl.debug)
         fprintf (progress, "Printing back the program...\n");
-      vmprefix_print_program_possibly_with_slow_registers_only
-         (stdout, p, cl.slow_registers_only);
+      vmprefix_print_program (stdout, p);
     }
 
   if (cl.disassemble_program)

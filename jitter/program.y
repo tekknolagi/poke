@@ -143,11 +143,6 @@
     /* The program to be parsed, empty on input. */
     struct jitter_program *program;
 
-    /* Use slow registers only, even when fast registers would be available.  This
-       is not useful in production but can be handy for benchmarking an
-       unfavorable case, or to measure the speedup provided by fast registers. */
-    bool slow_registers_only;
-
     /* VM-dependent data.  Not modified. */
     const struct jitter_vm *vm;
   };
@@ -298,8 +293,6 @@ argument :
                    if (register_class == NULL)
                      jitter_simple_error (jitter_scanner, "invalid register class");
                    int register_id = strtol (text + 2, NULL, 10);
-                   if (parser_arg->slow_registers_only)
-                     register_id += register_class->fast_register_no;
                    jitter_append_register_parameter (parser_arg->program,
                                                      register_class,
                                                      register_id); }
@@ -352,8 +345,9 @@ jitter_parse_file_star_possibly_with_slow_registers_only
 
   struct parser_arg pa;
   pa.vm = (struct jitter_vm *) vm;
-  pa.slow_registers_only = slow_registers_only;
   pa.program = jitter_make_program (vm);
+  if (slow_registers_only)
+    jitter_set_program_option_residualize_registers (pa.program, true);
   /* FIXME: if I ever make parsing errors non-fatal, call jitter_lex_destroy before
      returning, and finalize the program -- which might be incomplete! */
   if (jitter_parse (& pa, scanner))
