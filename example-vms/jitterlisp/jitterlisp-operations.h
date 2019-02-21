@@ -1,6 +1,6 @@
 /* JitterLisp: operations on JitterLisp objects: header.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -113,12 +113,13 @@
 # define JITTERLISP_EXP_FF_F_PLUS_OR_MINUS(_jitterlisp_infix,            \
                                            _jitterlisp_tagged_fixnum_a,  \
                                            _jitterlisp_tagged_fixnum_b)  \
-    JITTER_WITH_TAG_MASKED_ON(                                       \
-       ((_jitterlisp_tagged_fixnum_a)                                    \
-        _jitterlisp_infix                                                \
-        (_jitterlisp_tagged_fixnum_b)),                                  \
-       JITTERLISP_FIXNUM_TAG,                                           \
-       JITTERLISP_FIXNUM_TAG_BIT_NO)
+    /* The infix operation is on unsigned operands, and the result does  \
+       not need to be masked: the tag of the result is automatically     \
+       correct for a sum or subtraction of two operands with low-order   \
+       zeroes. */                                                        \
+    (((jitterlisp_object) (_jitterlisp_tagged_fixnum_a))                 \
+     _jitterlisp_infix                                                   \
+     ((jitterlisp_object) (_jitterlisp_tagged_fixnum_b)))
 #else // fixnum tag non-zero
 # define JITTERLISP_EXP_FF_F_PLUS_OR_MINUS(_jitterlisp_infix,            \
                                            _jitterlisp_tagged_fixnum_a,  \
@@ -134,6 +135,11 @@
        JITTERLISP_FIXNUM_TAG,                                           \
        JITTERLISP_FIXNUM_TAG_BIT_NO)
 #endif // #if fixnum tag is zero
+
+/* FIXME: it is almost certinaly possible to apply the same idea used here for
+   sum and subtraction to multiplication and division as well.  Even with one
+   explicit arithmetic shift introduced by the macro here, the generated code
+   would be better than what I currently get. */
 
 /* Expression oprations on fixnums. */
 #define JITTERLISP_EXP_FF_F_PLUS(_jitterlisp_tagged_fixnum_a,     \
