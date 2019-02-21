@@ -86,7 +86,7 @@ struct jitter_program_options
      This option is designed for benchmarking, in order to compare with
      alternative VMs which should behave like a Jittery VM with this option on,
      up to slow register index shifting (never needed in a Jittery VM). */
-  bool always_residualize_registers;
+  bool slow_registers_only;
 
   /* False is specialization is allowed to generate specialized instructions
      with non-residual immediate arguments, as would be normal in production
@@ -95,7 +95,7 @@ struct jitter_program_options
      This option is designed for benchmarking, in order to compare with
      alternative VMs which should behave like a Jittery VM with this option
      on, up to fast branches (only available, and faster, in a Jittery VM). */
-  bool always_residualize_literals;
+  bool slow_literals_only;
 };
 
 /* The internal representation of a program.  This should be considered
@@ -237,21 +237,21 @@ jitter_destroy_program (struct jitter_program *p);
    Such settings are only possible on an "empty" program, before the first
    instruction or label is appended to it. */
 
-/* Set the always_residualize_registers option to the given value in the pointed
-   program.  Fail fatally if the option is no longer settable. */
+/* Set the slow_registers_only option to the given value in the pointed program.
+   Fail fatally if the option is no longer settable. */
 void
-jitter_set_program_option_residualize_registers (struct jitter_program *p,
-                                                 bool option);
+jitter_set_program_option_slow_registers_only (struct jitter_program *p,
+                                               bool option);
 
-/* Set the always_residualize_registers option to the given value in the pointed
-   program.  Fail fatally if the option is no longer settable. */
+/* Set the slow_registers_only option to the given value in the pointed program.
+   Fail fatally if the option is no longer settable. */
 void
-jitter_set_program_option_residualize_literals (struct jitter_program *p,
-                                                bool option);
+jitter_set_program_option_slow_literals_only (struct jitter_program *p,
+                                              bool option);
 
 /* A convenience function behaving in an equivalent way to a call to
-   jitter_set_program_option_residualize_registers followed by a call to
-   jitter_set_program_option_residualize_literals on the same program with the
+   jitter_set_program_option_slow_registers_only followed by a call to
+   jitter_set_program_option_slow_literals_only on the same program with the
    same option value. */
 void
 jitter_set_program_option_residualize (struct jitter_program *p, bool option);

@@ -44,8 +44,8 @@ static void
 jitter_initialize_options (struct jitter_program_options *op)
 {
   op->can_change = true;
-  op->always_residualize_registers = false;
-  op->always_residualize_literals = false;
+  op->slow_registers_only = false;
+  op->slow_literals_only = false;
 }
 
 /* Change the options in the given program to make options unchangeable from now
@@ -70,26 +70,26 @@ jitter_fail_unless_options_changeable (struct jitter_program *p)
 }
 
 void
-jitter_set_program_option_residualize_registers (struct jitter_program *p,
+jitter_set_program_option_slow_registers_only (struct jitter_program *p,
                                                  bool option)
 {
   jitter_fail_unless_options_changeable (p);
-  p->options.always_residualize_registers = option;
+  p->options.slow_registers_only = option;
 }
 
 void
-jitter_set_program_option_residualize_literals (struct jitter_program *p,
+jitter_set_program_option_slow_literals_only (struct jitter_program *p,
                                                 bool option)
 {
   jitter_fail_unless_options_changeable (p);
-  p->options.always_residualize_literals = option;
+  p->options.slow_literals_only = option;
 }
 
 void
 jitter_set_program_option_residualize (struct jitter_program *p, bool option)
 {
-  jitter_set_program_option_residualize_registers (p, option);
-  jitter_set_program_option_residualize_literals (p, option);
+  jitter_set_program_option_slow_registers_only (p, option);
+  jitter_set_program_option_slow_literals_only (p, option);
 }
 
 
@@ -496,7 +496,7 @@ jitter_append_register_parameter
      guaranteed that the actual register used in execution will be slow.  (When
      printing out the program the register index will be shown *decremented* by
      the number of fast registers in the class to compensate for this.) */
-  if (p->options.always_residualize_registers)
+  if (p->options.slow_registers_only)
     register_index += register_class->fast_register_no;
 
   /* Append the register parameter. */
@@ -749,7 +749,7 @@ jitter_maximum_instruction_name_length (const struct jitter_program *p)
 void
 jitter_print_program (FILE *out, const struct jitter_program *p)
 {
-  const bool slow_registers_only = p->options.always_residualize_registers;
+  const bool slow_registers_only = p->options.slow_registers_only;
   const int instruction_no = jitter_program_instruction_no (p);
   const struct jitter_instruction **ins
     = (const struct jitter_instruction **)

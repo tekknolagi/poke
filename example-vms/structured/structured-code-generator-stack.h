@@ -26,11 +26,11 @@
 #include "structuredvm-vm.h"
 #include "structured-syntax.h"
 
-/* Make a new VM program using stack instructions which is the translation of
-   the given AST program, and return a pointer to it.  It will be the user's
-   responsibility to free it.  */
-struct structuredvm_program *
-structured_make_vm_program_stack (struct structured_program *p)
-  __attribute__ ((returns_nonnull, nonnull (1)));
+/* Fill the pointed empty VM program using stack-based instructions which are
+   the translation of the pointed AST program. */
+void
+structured_translate_program_stack (struct structuredvm_program *vmp,
+                                    struct structured_program *p)
+  __attribute__ ((nonnull (1, 2)));
 
 #endif // #ifndef STRUCTURED_CODE_GENERATOR_STACK_H_

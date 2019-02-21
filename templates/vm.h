@@ -326,23 +326,14 @@ vmprefix_interpret (struct jitter_program const *p, struct vmprefix_state *s)
 /* Program text frontend.
  * ************************************************************************** */
 
-/* Parse from the given file, returning a program or failing fatally in case of
-   error.  These are simple wrappers around functions implemented in the Bison
-   file. */
-struct jitter_program*
-vmprefix_parse_file_star (FILE *input_file)
-  __attribute__ ((nonnull (1), returns_nonnull));
-struct jitter_program*
-vmprefix_parse_file (const char *input_file_name)
-  __attribute__ ((nonnull (1), returns_nonnull));
-struct jitter_program*
-vmprefix_parse_file_star_possibly_with_slow_registers_only (FILE *input_file,
-                                                            bool slow_only)
-  __attribute__ ((nonnull (1), returns_nonnull));
-struct jitter_program*
-vmprefix_parse_file_possibly_with_slow_registers_only (const char *input_file_name,
-                                                       bool slow_only)
-  __attribute__ ((nonnull (1), returns_nonnull));
+/* Parse VM code from the given file, into the pointed VM program.  These are
+   simple wrappers around functions implemented in the Bison file. */
+void
+vmprefix_parse_file_star (FILE *input_file, struct jitter_program *p)
+  __attribute__ ((nonnull (1, 2)));
+void
+vmprefix_parse_file (const char *input_file_name, struct jitter_program *p)
+  __attribute__ ((nonnull (1, 2)));
 
 
 
@@ -503,7 +494,10 @@ vmprefix_vm_configuration;
   jitter_disassemble_program_to
 #define vmprefix_print_vm_configuration \
   jitter_print_vm_configuration
-
+#define vmprefix_set_program_option_slow_literals_only \
+  jitter_set_program_option_slow_literals_only
+#define vmprefix_set_program_option_slow_registers_only \
+  jitter_set_program_option_slow_registers_only
 
 
 
