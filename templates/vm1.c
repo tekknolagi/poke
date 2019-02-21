@@ -1,7 +1,6 @@
 /* VM library: main VM C file template.
 
-   Copyright (C) 2016, 2017, 2018 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -501,6 +500,12 @@ void
 vmprefix_parse_file (const char *input_file_name, struct jitter_program *p)
 {
   jitter_parse_file (input_file_name, p, vmprefix_vm);
+}
+
+void
+vmprefix_parse_string (const char *string, struct jitter_program *p)
+{
+  jitter_parse_string (string, p, vmprefix_vm);
 }
 
 
