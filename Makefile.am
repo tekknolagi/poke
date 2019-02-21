@@ -626,7 +626,7 @@ EXTRA_DIST += \
 # ################################################################
 
 EXTRA_PROGRAMS += example-vms/structured/examples/primes-in-c
-benchmarking-examples: example-vms/structured/examples/primes-in-c
+benchmarking-examples: example-vms/structured/examples/primes-in-c$(EXEEXT)
 example_vms_structured_examples_primes_in_c_SOURCES = \
   example-vms/structured/examples/primes.c
 
