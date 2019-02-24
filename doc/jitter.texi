@@ -1,7 +1,7 @@
 \input texinfo.tex @c This is -*- Texinfo -*-.
 
 @c This file is part of the Jitter manual.
-@c Copyright (C) 2017  Luca Saiu
+@c Copyright (C) 2017, 2019  Luca Saiu
 @c Written by Luca Saiu
 
 @c Permission is granted to copy, distribute and/or modify this
@@ -102,7 +102,7 @@ This is the manual for Jitter
 (version @value{VERSION},
 last updated on @value{UPDATED}), an efficient virtual machine generator.
 
-Copyright @copyright{} 2017  Luca Saiu.  Written by Luca Saiu.
+Copyright @copyright{} 2017, 2019  Luca Saiu.  Written by Luca Saiu.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -507,7 +507,7 @@ compromises on performance.
 A few VMs also provide features unrelated to portability, particularly
 sandboxing or some safety checking of programs at startup.  Ideas such as
 the JVM's ``bytecode verification'', while scientifically interesting,
-are a mismatch for most case uses and should never get in the way of
+are a mismatch for most use cases and should never get in the way of
 running compiled code efficiently.
 
 @cindex coupling (lack thereof)
@@ -545,8 +545,8 @@ bytecode is hardly ever exchanged over the network or generated at run time.
 @cindex JIT
 If Java is one case of incorrect application of VMs its example is
 not the only one, nor the worst.  Soon after web browsers started to
-include good JITs for JavaScript---an accomplishment in itself for
-such a difficult language to execute efficiently---people started to use
+include good JITs for JavaScript---an accomplishment in itself for a
+language so difficult to execute efficiently---people started to use
 JavaScript as a compilation target for @emph{lower}-level languages,
 usually restricting the generated
 code to the JavaScript subset that current web browsers can JIT-compile
@@ -585,11 +585,12 @@ do in 1993.
 @cindex JavaScript
 @cindex overhead
 @cindex multiplication, of overheads
-This is not sarcasm: the technical achievement @emph{is} impressive; the
-route from hand-written C code machine-translated to JavaScript, then after
-the network transfer loaded onto my client, turned into some
-intermediate representation and from there to native machine language
-running in a sandboxed environment, is not trivial by any mean.
+This is not sarcasm: the technical achievement @emph{is} truly
+impressive; the route from hand-written C code machine-translated
+to JavaScript, then after the network transfer loaded onto my client,
+turned into some intermediate representation and from there to native
+machine language running in a sandboxed environment, is not trivial by
+any mean.
 Considering that by stacking abstraction layers one on top of
 another their overheads @emph{multiply}, this result is good;
 and I am sure that there exist problem instances where this composed
@@ -609,7 +610,7 @@ The performance impact is @emph{not} invisible, and the supposed advantage
 questionable at best:
 being able to run page scripts in some other (very similar) language rather
 than JavaScript, or running programs without having an interpreter
-installed---because in 2018 people who install software and just
+installed---because in 2019 people who install software and just
 @emph{compute} on their computers are definitely no longer hip.
 @c ,
 @c @c Saint Steve Jobs will come back to spank you
@@ -1750,7 +1751,7 @@ graphics.  You can always optimize the common (and cheaper) cases of
 multiplying by, dividing and taking the reminder or a power of two
 with rewrites into different, relocatable instructions:
 @math{a@ 2^b} can be rewritten into @samp{a << b},
-@math{a/2^b} into @samp{a >> b}
+@math{a/2^b} into @samp{a >> b} (as long as @math{a} is unsigned)
 and @math{a@ mod@ 2^b} into @samp{a & ((1 << b) - 1)}.  The rewrite
 targets can have one specialized literal.}
 
