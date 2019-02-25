@@ -1029,8 +1029,9 @@ jitterc_emit_specializer_recognizer_prototypes
     const struct jitterc_specialized_instruction_tree* tree)
 {
   EMIT("inline static enum vmprefix_specialized_instruction_opcode\n");
-  EMIT("vmprefix_recognize_specialized_instruction_%s (struct jitter_parameter ** const ps)\n",
+  EMIT("vmprefix_recognize_specialized_instruction_%s (struct jitter_parameter ** const ps,\n",
        tree->prefix_mangled_name);
+  EMIT("                                               bool enable_fast_literals)\n");
   EMIT("  __attribute__ ((pure));\n");
   int i;
   for (i = 0; i < gl_list_size (tree->children); i ++)
@@ -1049,8 +1050,10 @@ jitterc_emit_specializer_recognizers
     const struct jitterc_specialized_instruction_tree* tree)
 {
   EMIT("inline static enum vmprefix_specialized_instruction_opcode\n");
-  EMIT("vmprefix_recognize_specialized_instruction_%s (struct jitter_parameter ** const ps)\n{\n",
+  EMIT("vmprefix_recognize_specialized_instruction_%s (struct jitter_parameter ** const ps,\n",
        tree->prefix_mangled_name);
+  EMIT("                                               bool enable_fast_literals)\n");
+  EMIT("{\n");
   if (gl_list_size (tree->children) == 0)
     {
       EMIT("  /* The prefix is a full specialized instruction.  We're done recognizing it. */\n");
@@ -1080,7 +1083,7 @@ jitterc_emit_specializer_recognizers
           EMIT("(* ps)->type == jitter_parameter_type_literal");
           if (! sarg->residual)
             // FIXME: this will need generatilzation with more literal types.
-            EMIT(" && (* ps)->literal.fixnum == %li",
+            EMIT(" && (* ps)->literal.fixnum == %li && enable_fast_literals",
                  (long) sarg->nonresidual_literal->value.fixnum);
           break;
         case jitterc_instruction_argument_kind_register:
@@ -1100,7 +1103,7 @@ jitterc_emit_specializer_recognizers
           jitter_fatal ("jitterc_emit_specializer_recognizers: unhandled kind");
         }
       EMIT(")\n");
-      EMIT("      && (res = vmprefix_recognize_specialized_instruction_%s (ps + 1)))\n",
+      EMIT("      && (res = vmprefix_recognize_specialized_instruction_%s (ps + 1, enable_fast_literals)))\n",
            child->prefix_mangled_name);
       EMIT("    goto done;\n");
     }
@@ -1165,6 +1168,7 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
   EMIT("vmprefix_recognize_specialized_instruction (struct jitter_program *p,\n");
   EMIT("                                            const struct jitter_instruction *ins)\n");
   EMIT("{\n");
+  EMIT("  bool fl = ! p->options.slow_literals_only;\n");
   EMIT("  const struct jitter_meta_instruction *mi = ins->meta_instruction;\n");
   EMIT("  switch (mi->id)\n");
   EMIT("    {\n");
@@ -1174,7 +1178,7 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
         = ((const struct jitterc_instruction*)
            gl_list_get_at (vm->instructions, i));
       EMIT("    case vmprefix_meta_instruction_id_%s:\n", ins->mangled_name);
-      EMIT("      return vmprefix_recognize_specialized_instruction_%s (ins->parameters);\n",
+      EMIT("      return vmprefix_recognize_specialized_instruction_%s (ins->parameters, fl);\n",
            ins->mangled_name);
     }
   EMIT("    default:\n");
