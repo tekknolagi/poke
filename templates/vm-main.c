@@ -134,6 +134,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       cl->print_program = false;
       cl->disassemble_program = false;
       cl->run_program = true;
+      cl->slow_literals_only = false;
       cl->slow_registers_only = false;
       cl->optimization_rewriting = true;
       cl->input_file = NULL;
@@ -366,7 +367,7 @@ static struct argp_option vmprefix_main_option_specification[] =
     NULL, 0, "Show progress information on stdout (default)"},
    {"no-debug", vmprefix_vm_negative_option_no_debug,
     NULL, 0, "Disable debugging (default)"},
-   {"no-slow-literals-only", vmprefix_vm_negative_option_no_slow_registers_only,
+   {"no-slow-literals-only", vmprefix_vm_negative_option_no_slow_literals_only,
     NULL, 0, "Use fast literals when possible (default)"},
    {"no-slow-registers-only", vmprefix_vm_negative_option_no_slow_registers_only,
     NULL, 0, "Use fast registers when possible (default)"},
