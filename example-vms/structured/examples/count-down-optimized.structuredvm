@@ -19,10 +19,9 @@
 ## along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-        set-r          100000000, %r0
+        set-r           100000000, %r0
 $L2:
-        push           %r0
-        minusi         1
-        copy-to-r      %r0
-        bneqi          0, $L2
-        nop
+        push-stack      %r0
+        minusi-stack    1
+        copy-to-r-stack %r0
+        bneqi-stack     0, $L2
