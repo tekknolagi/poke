@@ -1019,6 +1019,7 @@ $(srcdir)/example-vms/structured/structuredvm-vm2.c: example-vms/structured/stru
 # Example high-level programs for the Structured example, to be distributed.
 EXTRA_DIST += \
   example-vms/structured/examples/count-down.structured \
+  example-vms/structured/examples/count-up-down.structured \
   example-vms/structured/examples/euclid.structured \
   example-vms/structured/examples/primes.structured \
   example-vms/structured/examples/primes.c
