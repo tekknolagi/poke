@@ -1372,7 +1372,7 @@ fast.
 
 At this point it is recommended to build the examples as well, by
 typing @samp{make examples}.  Building examples entails executing
-the @file{bin/jitter} program which has just been generated, which is
+the @file{bin/jitter} program generated earlier, which is
 not possible under cross-compiling (as @file{bin/jitter} in this case
 will match the @emph{host}, rather than the @emph{build}, machine)
 unless an emulator was specified; if using an emulator, this is a good
@@ -1444,11 +1444,11 @@ test case, with color on most configurations---any red text indicates
 a problem.  The test suite output closes with a summary such as:
 @smallexample
 ============================================================================
-Testsuite summary for Jitter 0.0.0.752-6a7a-dirty
+Testsuite summary for Jitter 0.9.0.607-1076-dirty
 ============================================================================
-# TOTAL: 74
-# PASS:  64
-# SKIP:  10
+# TOTAL: 636
+# PASS:  636
+# SKIP:  0
 # XFAIL: 0
 # FAIL:  0
 # XPASS: 0
