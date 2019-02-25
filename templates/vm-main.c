@@ -492,13 +492,8 @@ main (int argc, char **argv)
              cl.optimization_rewriting ? "yes" : "no");
   vmprefix_set_program_option_slow_literals_only (p, cl.slow_literals_only);
   vmprefix_set_program_option_slow_registers_only (p, cl.slow_registers_only);
-  // FIXME: make this into a program option.
-  if (! cl.optimization_rewriting)
-    {
-      if (cl.debug)
-        fprintf (progress, "Disabling optimization rewriting...\n");
-      vmprefix_disable_optimization_rewriting ();
-    }
+  vmprefix_set_program_option_optimization_rewriting
+     (p, cl.optimization_rewriting);
 
   /* Print the VM configuration if in debugging mode. */
   if (cl.debug)

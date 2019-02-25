@@ -350,7 +350,7 @@ vmprefix_initialize (void)
       the_vmprefix_vm.register_class_character_to_register_class
         = vmprefix_register_class_character_to_register_class;
       the_vmprefix_vm.specialize_instruction = vmprefix_specialize_instruction;
-      the_vmprefix_vm.actually_rewrite = vmprefix_rewrite;
+      the_vmprefix_vm.rewrite = vmprefix_rewrite;
 
 #ifdef JITTER_HAVE_PATCH_IN
       /* Fill the defect table.  Since the array in question is a global with a
@@ -363,9 +363,6 @@ vmprefix_initialize (void)
                                     (vmprefix)
                                  / sizeof (struct jitter_defect_descriptor)));
 #endif // #ifdef JITTER_HAVE_PATCH_IN
-
-      /* Rewriting is on by default. */
-      jitter_vm_enable_optimization_rewriting (& the_vmprefix_vm);
 
       vm_struct_initialized = true;
     }
@@ -397,28 +394,6 @@ vmprefix_finalize (void)
   /* Finalize the executable-memory subsystem. */
   jitter_finalize_executable ();
 #endif // #ifdef JITTER_REPLICATE
-}
-
-
-
-
-/* Global VM settings.
- * ************************************************************************** */
-
-/* These are all trivial wrappers doing the obvious thing on the struct
-   jitter_vm object for the VM in question, which the user is not supposed to
-   see. */
-
-void
-vmprefix_enable_optimization_rewriting (void)
-{
-  jitter_vm_enable_optimization_rewriting (& the_vmprefix_vm);
-}
-
-void
-vmprefix_disable_optimization_rewriting (void)
-{
-  jitter_vm_disable_optimization_rewriting (& the_vmprefix_vm);
 }
 
 

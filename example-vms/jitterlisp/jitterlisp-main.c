@@ -333,10 +333,6 @@ main (int argc, char **argv)
                 : jitterlisp_run_repl_yes);
   /* From now on sp->repl can be used as a boolean. */
 
-  /* Disable optimization rewriting, on by default, if the settings say so. */
-  if (! jitterlisp_settings.optimization_rewriting)
-    jitterlispvm_disable_optimization_rewriting ();
-
   /* If running interactively print the banner, as per the GPL. */
   if (sp->repl)
     jitterlisp_interactive_banner ();

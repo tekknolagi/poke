@@ -73,24 +73,6 @@ vmprefix_finalize (void);
 
 
 
-/* Global VM settings.
- * ************************************************************************** */
-
-/* Enable optimization rewriting for the vmprefix VM.  Optimization rewriting is
-   on by default, so this is only useful to call after
-   vmprefix_disable_optimization_rewriting . */
-void
-vmprefix_enable_optimization_rewriting (void);
-
-/* Disable optimization rewriting for the vmprefix VM.  Optimization rewriting is
-   on by default and almost always desired, but this may be useful for debugging
-   or benchmarking. */
-void
-vmprefix_disable_optimization_rewriting (void);
-
-
-
-
 /* State data structure initialization and finalization.
  * ************************************************************************** */
 
@@ -495,6 +477,9 @@ vmprefix_vm_configuration;
   jitter_set_program_option_slow_literals_and_registers_only
 #define vmprefix_set_program_option_add_final_exitvm \
   jitter_set_program_option_add_final_exitvm
+#define vmprefix_set_program_option_optimization_rewriting \
+  jitter_set_program_option_optimization_rewriting
+
 
 
 
