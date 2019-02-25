@@ -47,6 +47,7 @@ jitter_initialize_options (struct jitter_program_options *op)
   op->slow_registers_only = false;
   op->slow_literals_only = false;
   op->add_final_exitvm = true;
+  op->optimization_rewriting = true;
 }
 
 /* Change the options in the given program to make options unchangeable from now
@@ -100,6 +101,14 @@ jitter_set_program_option_add_final_exitvm (struct jitter_program *p,
 {
   jitter_fail_unless_options_changeable (p);
   p->options.add_final_exitvm = option;
+}
+
+void
+jitter_set_program_option_optimization_rewriting (struct jitter_program *p,
+                                                  bool option)
+{
+  jitter_fail_unless_options_changeable (p);
+  p->options.optimization_rewriting = option;
 }
 
 
@@ -313,10 +322,12 @@ jitter_close_current_instruction (struct jitter_program *p)
      previous ones which were candidate already. */
   p->rewritable_instruction_no ++;
 
-  /* Rewrite the last part of the program, using the instruction we have just
-     closed; that instruction, along with some others preceding it, might very
-     well change or disappear after rewriting is done. */
-  p->vm->rewrite (p);
+  /* Unless optimization rewrites were disabled for this program, rewrite the
+     last part of the program, using the instruction we have just closed; that
+     instruction, along with some others preceding it, might very well change or
+     disappear after rewriting is done. */
+  if (p->options.optimization_rewriting)
+    p->vm->rewrite (p);
 }
 
 /* Check that the pointed program's last instruction is incomplete, and that the next

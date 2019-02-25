@@ -103,6 +103,12 @@ struct jitter_program_options
      that the unreachable instruction is actually unreachable.  This is true by
      default. */
   bool add_final_exitvm;
+
+  /* If non-false then enable optimization rewriting.  The option is designed
+     for debugging of rewrite rules and for benchmarking, particularly when
+     comparing a Jittery VM with an alternative not supporting rewriting.
+     This is true by default.*/
+  bool optimization_rewriting;
 };
 
 /* The internal representation of a program.  This should be considered
@@ -268,12 +274,18 @@ jitter_set_program_option_slow_literals_and_registers_only
   __attribute__ ((nonnull (1)));
 
 /* Set the add_final_exitvm option to the given value in the pointed program.
-   Fail fatally if the option is no longer settable */
+   Fail fatally if the option is no longer settable. */
 void
 jitter_set_program_option_add_final_exitvm (struct jitter_program *p,
                                             bool option)
   __attribute__ ((nonnull (1)));
 
+/* Set the optimization_rewriting option to the given value in the pointed
+   program.  Fail fatally if the option is no longer settable. */
+void
+jitter_set_program_option_optimization_rewriting (struct jitter_program *p,
+                                                  bool option)
+  __attribute__ ((nonnull (1)));
 
 
 
