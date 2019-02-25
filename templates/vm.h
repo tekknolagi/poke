@@ -88,16 +88,6 @@ vmprefix_enable_optimization_rewriting (void);
 void
 vmprefix_disable_optimization_rewriting (void);
 
-/* Do not automatically append an "exitvm" instruction at the end of each VM
-   program, adding an "unreachable" instruction instead. */
-void
-vmprefix_disable_final_exitvm (void);
-
-/* Automatically append an "exitvm" instruction at the end of each VM program.
-   This is the default. */
-void
-vmprefix_enable_final_exitvm (void);
-
 
 
 
@@ -501,6 +491,10 @@ vmprefix_vm_configuration;
   jitter_set_program_option_slow_literals_only
 #define vmprefix_set_program_option_slow_registers_only \
   jitter_set_program_option_slow_registers_only
+#define vmprefix_set_program_option_slow_literals_and_registers_only \
+  jitter_set_program_option_slow_literals_and_registers_only
+#define vmprefix_set_program_option_add_final_exitvm \
+  jitter_set_program_option_add_final_exitvm
 
 
 

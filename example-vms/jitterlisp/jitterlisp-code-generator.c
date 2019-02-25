@@ -1,6 +1,7 @@
 /* JitterLisp: Jittery VM code generator.
 
    Copyright (C) 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -591,6 +592,9 @@ jitterlisp_generate_jittery (jitterlisp_object code_as_sexpression)
 {
   struct jitterlispvm_program *res
     = jitterlispvm_make_program ();
+
+  /* Set program options.  We want no final exitvm here. */
+  jitter_set_program_option_add_final_exitvm (res, false);
 
   /* Make the label hash table. */
   struct jitter_hash_table map;

@@ -1,6 +1,7 @@
 /* JitterLisp: interpreter: naïve C version.
 
    Copyright (C) 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -92,11 +93,6 @@ jitterlisp_vm_initialize (void)
   /* Call the Jitter-generated function initializing the VM subsystem. */
   jitterlispvm_initialize ();
 
-  /* JitterLisp VM programs, with the one exception right below in this
-     function, don't end with an exitvm instruction.  This way we save space in
-     the replicated code for each Lisp procedure, and make it nicer to read. */
-  jitterlispvm_disable_final_exitvm ();
-
   /* Initialize the global VM state. */
   jitterlispvm_state_initialize (& jitterlispvm_state);
 
@@ -114,14 +110,13 @@ jitterlisp_vm_initialize (void)
         exitvm
      , of which the second is added implicitly. */
   jitterlisp_driver_vm_program = jitterlispvm_make_program ();
+  /* In the particular case of the driver I can keep the default option
+     generating a final exitvm instruction at the end.  This will not be
+     the same for compiled user code. */
 //JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, debug);
   JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program,
                                   call_mfrom_mc);
 //JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, debug);
-  /* By default we do not add exitvm to VM programs in JitterLisp: the only
-     place where we need to pass back control from VM code to C code is here in
-     the driver. */
-  JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, exitvm);
 //JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, debug);
   jitterlispvm_specialize_program (jitterlisp_driver_vm_program);
 }
