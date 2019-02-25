@@ -105,10 +105,17 @@ structured_help (void)
   printf ("      --no-dry-run                 run the program (default)\n");
 
   structured_help_section ("Benchmarking options");
+  printf ("      --slow-literals-only         disable fast literals\n");
+  printf ("      --slow-registers-only        disable fast registers\n");
+  printf ("      --slow-only                  disable both fast literals and fast\n");
+  printf ("                                   registers, like with --slow-literals-only\n");
+  printf ("                                   and --slow-registers-only\n");
   printf ("      --no-optimization-rewriting  disable optimization rewriting\n");
-  printf ("      --slow-only                  disable fast literals and fast registers\n");
-  printf ("      --no-slow-only               enable fast literals and fast registers\n");
-  printf ("                                   (default)\n");
+  printf ("      --no-slow-literals-only      enable fast literals (default)\n");
+  printf ("      --no-slow-registers-only     enable fast registers (default)\n");
+  printf ("      --no-slow-only               enable both fast literals and fast\n");
+  printf ("                                   registers, like with --no-slow-literals-only\n");
+  printf ("                                   and --no-slow-registers-only (default)\n");
   printf ("      --optimization-rewriting     enable optimization rewriting (default)\n");
 
   structured_help_section ("Code generation options");
@@ -178,10 +185,12 @@ struct structured_command_line
   /* True iff we should not actually run the VM program. */
   bool dry_run;
 
-  /* True iff we should disable fast literals and fast registers, for
-     benchmarking a worst-case scenario or for comparing with some other
-     implementation. */
-  bool slow_only;
+  /* True iff we should disable fast literals, for benchmarking a worst-case
+     scenario or for comparing with some other implementation. */
+  bool slow_literals_only;
+
+  /* Like slow_literals_only, but for fast registers. */
+  bool slow_registers_only;
 
   /* True iff we should enable optimization rewriting. */
   bool optimization_rewriting;
@@ -203,7 +212,8 @@ structured_initialize_command_line (struct structured_command_line *cl)
   cl->disassemble = false;
   cl->dry_run = false;
   cl->optimization_rewriting = true;
-  cl->slow_only = false;
+  cl->slow_literals_only = false;
+  cl->slow_registers_only = false;
   cl->code_generator = structured_code_generator_stack;
   cl->program_path = NULL;
 }
@@ -255,10 +265,24 @@ structured_parse_command_line (struct structured_command_line *cl,
           cl->cross_disassemble = true;
           cl->disassemble = true;
         }
+      else if (handle_options && ! strcmp (arg, "--slow-literals-only"))
+        cl->slow_literals_only = true;
+      else if (handle_options && ! strcmp (arg, "--no-slow-literals-only"))
+        cl->slow_literals_only = false;
+      else if (handle_options && ! strcmp (arg, "--slow-registers-only"))
+        cl->slow_registers_only = true;
+      else if (handle_options && ! strcmp (arg, "--no-slow-registers-only"))
+        cl->slow_registers_only = false;
       else if (handle_options && ! strcmp (arg, "--slow-only"))
-        cl->slow_only = true;
+        {
+          cl->slow_literals_only = true;
+          cl->slow_registers_only = true;
+        }
       else if (handle_options && ! strcmp (arg, "--no-slow-only"))
-        cl->slow_only = false;
+        {
+          cl->slow_literals_only = false;
+          cl->slow_registers_only = false;
+        }
       else if (handle_options && ! strcmp (arg, "--optimization-rewriting"))
         cl->optimization_rewriting = true;
       else if (handle_options && ! strcmp (arg, "--no-optimization-rewriting"))
@@ -308,11 +332,10 @@ structured_work (struct structured_command_line *cl)
 
   /* Make an empty Jittery program and set options for it as needed. */
   struct structuredvm_program *vmp = structuredvm_make_program ();
-  if (cl->slow_only)
-    {
-      structuredvm_set_program_option_slow_literals_only (vmp, true);
-      structuredvm_set_program_option_slow_registers_only (vmp, true);
-    }
+  structuredvm_set_program_option_slow_literals_only (vmp,
+                                                      cl->slow_literals_only);
+  structuredvm_set_program_option_slow_registers_only (vmp,
+                                                       cl->slow_registers_only);
   structuredvm_set_program_option_optimization_rewriting
      (vmp, cl->optimization_rewriting);
 
