@@ -116,6 +116,7 @@ EXTRA_DIST = \
   $(BUILT_SOURCES) \
   structured.l structured.y \
   examples/count-down.structured \
+  examples/count-up-down.structured \
   examples/euclid.structured \
   examples/primes.structured \
   examples/primes.c
