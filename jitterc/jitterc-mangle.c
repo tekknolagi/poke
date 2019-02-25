@@ -1,6 +1,7 @@
 /* Jitter: jitterc identifier mangling.
 
    Copyright (C) 2017, 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -97,7 +98,7 @@ jitterc_mangle (const char *original)
         case '!':
           /* The '!' character is not allowed in user identifiers, but is used
              (in order to make them visually distinct) in special specialized
-             instruction; therefore we need an encoding for it. */
+             instructions; therefore we need an encoding for it. */
           JITTERC_ADD_STRING("_e");
           break;
         case '*':
@@ -112,9 +113,9 @@ jitterc_mangle (const char *original)
           JITTERC_ADD_STRING("_p");
           break;
         case '%':
-          /* The percent sign does not occur in user identifiers, but since does
-             as a register prefix we need to encode in specialized instruction
-             names. */
+          /* The percent sign does not occur in user identifiers, but since it
+             does as a register prefix we need to encode in specialized
+             instruction names. */
           JITTERC_ADD_STRING("_r");
           break;
         case '~':
@@ -134,7 +135,7 @@ jitterc_mangle (const char *original)
         default:
           /* ...Except that it's better to play it safe.  Here I'm using
              Gnulib's c_isalnum function, which only works on ASCII chracters
-             independently  from the locale -- which is what I want. */
+             independently from the locale -- which is what I want. */
           if (! c_isalnum (c))
             jitter_fatal ("mangling: non-alphanumeric character '%c' "
                           "(0x%x) in %s", c, c, original);
