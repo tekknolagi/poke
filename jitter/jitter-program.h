@@ -96,6 +96,13 @@ struct jitter_program_options
      alternative VMs which should behave like a Jittery VM with this option
      on, up to fast branches (only available, and faster, in a Jittery VM). */
   bool slow_literals_only;
+
+  /* If non-false then automatically add a final "exitvm" instruction at the end
+     of each VM program; otherwise add a final "unreachable" instruction
+     instead, which saves memory and makes replicated code smaller, but assumes
+     that the unreachable instruction is actually unreachable.  This is true by
+     default. */
+  bool add_final_exitvm;
 };
 
 /* The internal representation of a program.  This should be considered
@@ -241,20 +248,31 @@ jitter_destroy_program (struct jitter_program *p);
    Fail fatally if the option is no longer settable. */
 void
 jitter_set_program_option_slow_registers_only (struct jitter_program *p,
-                                               bool option);
+                                               bool option)
+  __attribute__ ((nonnull (1)));
 
 /* Set the slow_registers_only option to the given value in the pointed program.
    Fail fatally if the option is no longer settable. */
 void
 jitter_set_program_option_slow_literals_only (struct jitter_program *p,
-                                              bool option);
+                                              bool option)
+  __attribute__ ((nonnull (1)));
 
 /* A convenience function behaving in an equivalent way to a call to
    jitter_set_program_option_slow_registers_only followed by a call to
    jitter_set_program_option_slow_literals_only on the same program with the
    same option value. */
 void
-jitter_set_program_option_residualize (struct jitter_program *p, bool option);
+jitter_set_program_option_slow_literals_and_registers_only
+   (struct jitter_program *p, bool option)
+  __attribute__ ((nonnull (1)));
+
+/* Set the add_final_exitvm option to the given value in the pointed program.
+   Fail fatally if the option is no longer settable */
+void
+jitter_set_program_option_add_final_exitvm (struct jitter_program *p,
+                                            bool option)
+  __attribute__ ((nonnull (1)));
 
 
 

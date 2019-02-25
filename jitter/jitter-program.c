@@ -46,6 +46,7 @@ jitter_initialize_options (struct jitter_program_options *op)
   op->can_change = true;
   op->slow_registers_only = false;
   op->slow_literals_only = false;
+  op->add_final_exitvm = true;
 }
 
 /* Change the options in the given program to make options unchangeable from now
@@ -86,12 +87,20 @@ jitter_set_program_option_slow_literals_only (struct jitter_program *p,
 }
 
 void
-jitter_set_program_option_residualize (struct jitter_program *p, bool option)
+jitter_set_program_option_slow_literals_and_registers_only
+   (struct jitter_program *p, bool option)
 {
   jitter_set_program_option_slow_registers_only (p, option);
   jitter_set_program_option_slow_literals_only (p, option);
 }
 
+void
+jitter_set_program_option_add_final_exitvm (struct jitter_program *p,
+                                            bool option)
+{
+  jitter_fail_unless_options_changeable (p);
+  p->options.add_final_exitvm = option;
+}
 
 
 

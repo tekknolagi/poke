@@ -367,10 +367,6 @@ vmprefix_initialize (void)
       /* Rewriting is on by default. */
       jitter_vm_enable_optimization_rewriting (& the_vmprefix_vm);
 
-      /* By default we implicitly generate an "exitvm" instruction instead of an
-         "unreachable" instruction at the end of each program. */
-      jitter_vm_enable_final_exitvm (& the_vmprefix_vm);
-
       vm_struct_initialized = true;
     }
 
@@ -423,18 +419,6 @@ void
 vmprefix_disable_optimization_rewriting (void)
 {
   jitter_vm_disable_optimization_rewriting (& the_vmprefix_vm);
-}
-
-void
-vmprefix_disable_final_exitvm (void)
-{
-  jitter_vm_disable_final_exitvm (& the_vmprefix_vm);
-}
-
-void
-vmprefix_enable_final_exitvm (void)
-{
-  jitter_vm_enable_final_exitvm (& the_vmprefix_vm);
 }
 
 

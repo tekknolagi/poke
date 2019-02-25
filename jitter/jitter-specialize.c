@@ -1,6 +1,6 @@
 /* VM library: specializer.
 
-   Copyright (C) 2016, 2017, 2018 Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -131,7 +131,7 @@ jitter_add_program_epilog (struct jitter_program *p)
      Having each label, including the ones at the very end of the program when
      they exist, associated to an actual unspecialized instruction makes
      replication easier. */
-  if (p->vm->add_final_exitvm)
+  if (p->options.add_final_exitvm)
     jitter_append_meta_instruction (p, p->vm->exitvm_meta_instruction);
   else
     jitter_append_meta_instruction (p, p->vm->unreachable_meta_instruction);

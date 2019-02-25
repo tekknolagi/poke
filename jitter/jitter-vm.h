@@ -77,19 +77,6 @@ jitter_vm_enable_optimization_rewriting (struct jitter_vm *vm);
 void
 jitter_vm_disable_optimization_rewriting (struct jitter_vm *vm);
 
-/* Do not add an implicit exitvm instruction at the end of every VM program, adding
-   an "unreachable" instruction which does nothing instead; this saves memory and
-   makes replicated code smaller, but assumes that the unreachable instruction is
-   actually unreachable.
-   The default behavior is adding an exitvm instruction. */
-void
-jitter_vm_disable_final_exitvm (struct jitter_vm *vm);
-
-/* Restore the default behavior, canceling the effect of a previous call to
-   jitter_vm_disable_final_exitvm . */
-void
-jitter_vm_enable_final_exitvm (struct jitter_vm *vm);
-
 
 
 
@@ -181,10 +168,6 @@ struct jitter_vm
   /* Rewrite an instruction or do nothing.  See the comment for
      actually_rewrite, above. */
   void (*rewrite) (struct jitter_program *p);
-
-  /* Automatically add a final "exitvm" instruction at the end of each VM
-     program if true; otherwise add a final "unreachable" instruction. */
-  bool add_final_exitvm;
 };
 
 /* A function doing nothing, usable as a value for the rewrite field of struct
