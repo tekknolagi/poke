@@ -313,8 +313,8 @@ structured_work (struct structured_command_line *cl)
       structuredvm_set_program_option_slow_literals_only (vmp, true);
       structuredvm_set_program_option_slow_registers_only (vmp, true);
     }
-  if (! cl->optimization_rewriting) // FIXME: make this into a VM program option.
-    structuredvm_disable_optimization_rewriting ();
+  structuredvm_set_program_option_optimization_rewriting
+     (vmp, cl->optimization_rewriting);
 
   /* Translate the AST program into a jittery program. */
   switch (cl->code_generator)
