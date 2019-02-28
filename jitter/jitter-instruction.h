@@ -123,7 +123,7 @@ struct jitter_parameter
 
     /* The parameter, as an 0-based unspecialized instruction index.  Opaque
        labels are all replaced with unspecialized instruction indices by
-       jitter_resolve_labels_in_unspecialized_program . */
+       jitter_resolve_labels_in_unspecialized_routine . */
     jitter_label_as_index label_as_index;
   };
 };

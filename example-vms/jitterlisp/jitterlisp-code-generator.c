@@ -590,11 +590,11 @@ static struct jitterlispvm_routine *
 jitterlisp_generate_jittery (jitterlisp_object code_as_sexpression)
 {
   struct jitterlispvm_routine *res
-    = jitterlispvm_make_program ();
+    = jitterlispvm_make_routine ();
 
   /* Set program options for user-compiled code. */
-  jitterlispvm_set_program_option_add_final_exitvm (res, false);
-  jitterlispvm_set_program_option_optimization_rewriting
+  jitterlispvm_set_routine_option_add_final_exitvm (res, false);
+  jitterlispvm_set_routine_option_optimization_rewriting
      (res, jitterlisp_settings.optimization_rewriting);
 
   /* Make the label hash table. */
@@ -640,7 +640,7 @@ jitterlisp_compile (struct jitterlisp_closure *c,
 void
 jitterlisp_print_compiled_closure (struct jitterlisp_compiled_closure *cc)
 {
-  jitterlispvm_print_program (stdout, cc->vm_program);
+  jitterlispvm_print_routine (stdout, cc->vm_program);
 }
 
 /* Disassemble native code from the given compiled closure. */
@@ -649,7 +649,7 @@ jitterlisp_disassemble_compiled_closure (struct jitterlisp_compiled_closure *cc)
 {
   struct jitter_routine *p = cc->vm_program;
   if (jitterlisp_settings.cross_disassembler)
-    jitterlispvm_disassemble_program (p, true, JITTER_CROSS_OBJDUMP, NULL);
+    jitterlispvm_disassemble_routine (p, true, JITTER_CROSS_OBJDUMP, NULL);
   else
-    jitterlispvm_disassemble_program (p, true, JITTER_OBJDUMP, NULL);
+    jitterlispvm_disassemble_routine (p, true, JITTER_OBJDUMP, NULL);
 }

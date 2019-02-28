@@ -34,7 +34,6 @@
  * ************************************************************************** */
 
 #include <stdio.h>
-#include <unistd.h> // for sysconf: FIXME: move, conditionalize, avoid.
 #include <assert.h>
 #include <string.h> /* for memcpy */
 

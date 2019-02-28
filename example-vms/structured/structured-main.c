@@ -331,12 +331,12 @@ structured_work (struct structured_command_line *cl)
   structuredvm_initialize ();
 
   /* Make an empty Jittery program and set options for it as needed. */
-  struct structuredvm_routine *vmp = structuredvm_make_program ();
-  structuredvm_set_program_option_slow_literals_only (vmp,
+  struct structuredvm_routine *vmp = structuredvm_make_routine ();
+  structuredvm_set_routine_option_slow_literals_only (vmp,
                                                       cl->slow_literals_only);
-  structuredvm_set_program_option_slow_registers_only (vmp,
+  structuredvm_set_routine_option_slow_registers_only (vmp,
                                                        cl->slow_registers_only);
-  structuredvm_set_program_option_optimization_rewriting
+  structuredvm_set_routine_option_optimization_rewriting
      (vmp, cl->optimization_rewriting);
 
   /* Translate the AST program into a jittery program. */
@@ -357,11 +357,11 @@ structured_work (struct structured_command_line *cl)
 
   /* Print and/or disassemble the program as requested. */
   if (cl->print)
-    structuredvm_print_program (stdout, vmp);
+    structuredvm_print_routine (stdout, vmp);
   if (cl->cross_disassemble)
     cl->disassemble = true;
   if (cl->disassemble)
-    structuredvm_disassemble_program (vmp, true,
+    structuredvm_disassemble_routine (vmp, true,
                                       (cl->cross_disassemble
                                        ? JITTER_CROSS_OBJDUMP
                                        : JITTER_OBJDUMP),
@@ -377,7 +377,7 @@ structured_work (struct structured_command_line *cl)
     }
 
   /* Destroy the Jittery program. */
-  structuredvm_destroy_program (vmp);
+  structuredvm_destroy_routine (vmp);
 
   /* Finalize the structured-VM subsystem. */
   structuredvm_finalize ();
