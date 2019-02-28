@@ -249,7 +249,7 @@ structured_translate_program (struct structuredvm_program *vmp,
 
 
 
-/* Entry point: translate an AST program to a VM program.
+/* Entry point: translate an AST program to a VM routine.
  * ************************************************************************** */
 
 void

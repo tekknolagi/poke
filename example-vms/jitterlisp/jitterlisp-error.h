@@ -34,7 +34,7 @@
    resources in case of errors in interactive use, and letting the user retry.
 
    This exception subsystem has not been designed to handle recoverable errors
-   at the level of VM programs, even if it should be possible to bend it in that
+   at the level of VM routines, even if it should be possible to bend it in that
    direction by nested invocations of VM "programs".  Such a solution, while
    probably not the most efficient, appears easy to implement and might serve as
    an example for other applications.

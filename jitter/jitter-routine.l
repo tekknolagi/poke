@@ -1,6 +1,7 @@
-/* VM-independent program frontend: flex scanner.
+/* VM-independent routine code frontend: flex scanner.
 
    Copyright (C) 2016, 2017 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.

@@ -171,18 +171,18 @@ enum structured_code_generator
 /* The state encoded in a user command line. */
 struct structured_command_line
 {
-  /* True iff we should print back the VM program. */
+  /* True iff we should print back the VM routine. */
   bool print;
 
   /* True iff we should use the cross-disassembler rather than the native
-     disassembler for the VM program.  If false, use the native
+     disassembler for the VM routine.  If false, use the native
      disassembler.  */
   bool cross_disassemble;
 
-  /* True iff we should disassemble the VM program. */
+  /* True iff we should disassemble the VM routine. */
   bool disassemble;
 
-  /* True iff we should not actually run the VM program. */
+  /* True iff we should not actually run the VM routine. */
   bool dry_run;
 
   /* True iff we should disable fast literals, for benchmarking a worst-case

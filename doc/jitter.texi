@@ -237,7 +237,7 @@ into a whole body of code with low---often zero---dispatching and
 branching overhead.
 The generated code includes a simple C API to dynamically emit and
 execute VM code, and a self-contained driver program for running VM
-programs from text files.
+routines from text files.
 
 @cindex dispatch
 @cindex assembly code
@@ -258,7 +258,7 @@ technique is provided, @dfn{@code{switch} dispatching}, requiring nothing
 more than standard C.
 @*
 Configuration parameters are transparent with respect to the VM
-semantics and even the C API: a VM program will always behave in the
+semantics and even the C API: a VM routine will always behave in the
 same way independently from the dispatching technique and other
 configuration parameters, the only observable difference being
 execution speed.
@@ -425,9 +425,9 @@ generator.
 Some ideas definitely belong more in JITs than in threaded
 interpreters, and in fact the most advanced dispatching model
 supported by Jitter requires no threaded code to be processed at run time,
-nor indeed any data structure representing a program other than an array
+nor indeed any data structure representing a routine other than an array
 of native machine instructions in executable memory---``interpreting''
-a program means jumping to its first native instruction, from where
+a routine means jumping to its first native instruction, from where
 execution continues.
 @c FIXME: justify the name here?
 
@@ -754,10 +754,10 @@ decision based on hardware machine features.
 
 @ignore
 Even if the feature would be easy to add, right now Jitter does not
-support any efficient format to save and load VM programs: the user is
-supposed to generate VM programs programmatically, the exact VM
+support any efficient format to save and load VM routines: the user is
+supposed to generate VM routines programmatically, the exact VM
 instruction set being subject to change from version to version.
-Facilities for parsing, printing to text and disassembling VM programs
+Facilities for parsing, printing to text and disassembling VM routines
 @emph{are} provided, but more as debugging aids than to support a VM
 as a ``stable'' target.
 @end ignore
@@ -975,7 +975,7 @@ VM frontend; the C API would get uglier, but maybe not too much.
 The thing can be done in a VM-independent way,
 or possibly in a VM-dependent way yielding a very compact binary
 format.  Another problem, in the future, will be data embedded in
-programs.  Since introducing tagging in every word is out of the
+routines.  Since introducing tagging in every word is out of the
 question, data would be in a state where saving is possible only right
 after initialization.  Again, this may complicate the C API.}
 
@@ -1440,7 +1440,7 @@ dependencies if not already present.
 @cindex initialization
 @cindex finalization
 The test suite works by compiling the Uninspired VM using all the enabled
-dispatching modes and then running small programs on top of it, comparing
+dispatching modes and then running small routines on top of it, comparing
 the program output against expected results.
 The test suite is supported in native configurations, and even on cross
 configurations as long as a working emulator is available to run the
@@ -1511,7 +1511,7 @@ information, please quote the exact line in question, for example
 FAIL: tests/interpreter/interpreter.test 44 - count-down minimal-threading
 @end smallexample
 The test suite subdirectory in the build tree will also contain
-data files potentially useful to analyze the program.  Unless such
+data files potentially useful to analyze the problem.  Unless such
 files are very large please include them in your reports as well.  In the
 case above you may include information about the failed
 @samp{interpreter} test case 44 named @samp{count-down minimal-threading}
@@ -1571,7 +1571,7 @@ design, doesn't emulate L1i invalidation}
 @section Using a VM
 
 @menu
-* Predefined frontend::         Jitter comes with a parser and printer for your programs.
+* Predefined frontend::         Jitter comes with a parser and printer for your routines.
 * Disassembly::                 You can check the generated native code for correctness and efficiency.
 * C API tutorial::              Generating and executing VM code from a C program.
 * Building tutorial::           Convenient ways to compile programs with embedded VMs.
@@ -1687,7 +1687,7 @@ system also makes a considerable effort to support cross-compilation
 in a convenient way including a running a cross-@command{jitter} and
 even the test suite through an emulator, in an effort to test the
 critical part of the software as thoroughly as possible.  Ordinary
-Jittery program will avoid going to such lengths.}
+Jittery programs will avoid going to such lengths.}
 
 @c @@@
 @node Make
@@ -1769,8 +1769,8 @@ to compile}
 
 @fixme{optimize for the common case: for example making division
 non-relocatable will probably not be a problem: the time spent in
-division will hardly ever be significant, in any program.  This is
-probably true for multiplication as well, unless you're doing
+division will hardly ever be significant, in almost any routine.  This
+is probably true for multiplication as well, unless you're doing
 graphics.  You can always optimize the common (and cheaper) cases of
 multiplying by, dividing and taking the reminder or a power of two
 with rewrites into different, relocatable instructions:
@@ -1834,12 +1834,12 @@ The specific macro generates faster code. @fixme{show the two disassemblies}}
 
 
 @menu
-* Performance tips for VM programs:: Generating fast programs for a fast VM.
+* Performance tips for VM routines:: Generating fast routines for a fast VM.
 @end menu
 
 @c @@@@@@@
-@node Performance tips for VM programs
-@subsection Performance tips for VM programs
+@node Performance tips for VM routines
+@subsection Performance tips for VM routines
 
 @fixme{don't waste registers: lower-numbered is better}
 @fixme{VM registers in memory are still better than slow registers.}
@@ -1854,11 +1854,11 @@ The specific macro generates faster code. @fixme{show the two disassemblies}}
 @chapter C API
 
 @menu
-* Initialization::              Setting up a VM before making programs.
+* Initialization::              Setting up a VM before making routines.
 * Finalization::                Cleaning up the global state.
-* VM state::                    Runtime data structures manipulated by programs.
-* VM programs::                 Making and destroying VM programs.
-* Running VM programs::         How to call specialized programs.
+* VM state::                    Runtime data structures manipulated by routines.
+* VM routines::                 Making and destroying VM routines.
+* Running VM routines::         How to call specialized routines.
 * Concurrency::                 Working with multiple threads.
 @end menu
 
@@ -1879,25 +1879,25 @@ The specific macro generates faster code. @fixme{show the two disassemblies}}
 @cindex state, VM
 
 @c @@@@@@@
-@node VM programs
-@section VM programs
-@cindex VM program
-@cindex program, VM
+@node VM routines
+@section VM routines
+@cindex VM routine
+@cindex routine, VM
 
 @menu
-* Program structure::       What VM programs are made of.
-* Adding labels::           How to name VM program points.
-* Adding instructions::     How to add VM instructions to a program.
-* Specialization::          Making a VM program ready for execution.
-* Multiple programs::       Making VM programs jump to one another.
+* Routine structure::       What VM routines are made of.
+* Adding labels::           How to name VM routine points.
+* Adding instructions::     How to add VM instructions to a routine.
+* Specialization::          Making a VM routine ready for execution.
+* Multiple routines::       Making VM routines jump to one another.
 @end menu
 
 @c @@@
-@node Program structure
-@subsection Program structure
-@cindex program, VM, structure
-@cindex structure, VM program
-@cindex VM program, structure
+@node Routine structure
+@subsection Routine structure
+@cindex routine, VM, structure
+@cindex structure, VM routine
+@cindex VM routine, structure
 
 @c @@@
 @node Adding labels
@@ -1916,18 +1916,18 @@ The specific macro generates faster code. @fixme{show the two disassemblies}}
 @cindex specialization
 
 @c @@@
-@node Multiple programs
-@subsection Multiple programs
-@cindex multiple VM programs
-@cindex VM programs, multiple
-@cindex program, VM, multiple
+@node Multiple routines
+@subsection Multiple routines
+@cindex multiple VM routines
+@cindex VM routines, multiple
+@cindex routine, VM, multiple
 
 @c @@@@@@@
-@node Running VM programs
-@section Running VM programs
-@cindex running VM program
-@cindex program, VM, running
-@cindex VM program, running
+@node Running VM routines
+@section Running VM routines
+@cindex running VM routine
+@cindex routine, VM, running
+@cindex VM routine, running
 
 @c @@@@@@@
 @node Concurrency
@@ -1980,7 +1980,7 @@ user code, but it should be easy to avoid that.}
 * Specialization internals::      Making choices at compile time is better than at run time.
 * Patch-ins::                     Patching assembly into copies of compiled C code.
 * Rewriting internals::           How rewriting works.
-* Dispatch models::               How the program jumps from one VM instruction to the next.
+* Dispatch models::               How code jumps from one VM instruction to the next.
 * Architecture-specific notes::   Details on how Jittery VMs work on each supported CPU.
 * Porting::                       Adding support for more CPU architectures.
 @end menu
@@ -2124,7 +2124,7 @@ assembly) would be a solution to this problem.  Of course that is not
 the case: register renaming breaks some dependency chains by mapping
 different uses of the same architectural @emph{register} to different
 micro-architectural registers; but if the ISA is register-starved then
-some data in the program will be kept @emph{in memory} rather than in
+some data in the routine will be kept @emph{in memory} rather than in
 architectural registers---at which point register renaming cannot
 help.  As simple ignorance of one micro-architectural feature this
 mistake would be easy to forgive; but is it ignorance, or x86
@@ -2815,9 +2815,9 @@ the fast version almost always.
 @code{mmap}; a lot of @code{malloc} and @code{free} which are
 difficult to do without, because of rewriting.  But custom heap
 allocators might be a good idea for the future, assuming the common
-use case is destroying a program after it's been specialized, and
+use case is destroying a routine after it's been specialized, and
 keeping only the specialized version; this is currently not possible
-as both program versions are kept in the same data structure, but that
+as both routine versions are kept in the same data structure, but that
 will change.
 
 Even in its current state Jitter's frontend should run much faster

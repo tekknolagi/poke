@@ -32,7 +32,7 @@
 
 #include <jitter/jitter-dispatch.h>
 #include <jitter/jitter-instruction.h>
-#include <jitter/jitter-program.h>
+#include <jitter/jitter-routine.h>
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-disassemble.h>
 #include <jitter/jitter-vm.h>
@@ -47,7 +47,7 @@
 __attribute__ ((noinline, noclone))
 void
 jitter_disassemble_program_to (FILE *f,
-                               const struct jitter_program *p, bool raw,
+                               const struct jitter_routine *p, bool raw,
                                const char *objdump_name,
                                const char *objdump_options_or_NULL)
 {
@@ -301,7 +301,7 @@ jitter_disassemble_range (FILE *output,
 static void
 jitter_disassemble_show_specialized_instruction
    (FILE *f,
-    const struct jitter_program *p,
+    const struct jitter_routine *p,
     /* enum vmprefix_specialized_instruction_opcode */
     jitter_uint opcode,
     const union jitter_word * const first_residual_argument_pointer,
@@ -328,7 +328,7 @@ jitter_disassemble_show_specialized_instruction
 __attribute__ ((noinline, noclone))
 void
 jitter_disassemble_program_to (FILE *f,
-                               const struct jitter_program *p, bool raw,
+                               const struct jitter_routine *p, bool raw,
                                const char *objdump_name,
                                const char *objdump_options_or_NULL)
 {
@@ -355,7 +355,7 @@ jitter_disassemble_program_to (FILE *f,
     objdump_options = objdump_options_or_NULL;
 
 #ifdef JITTER_REPLICATE
-  if (p->stage != jitter_program_stage_replicated)
+  if (p->stage != jitter_routine_stage_replicated)
     jitter_fatal ("disassembling non-replicated program");
 
   for (i = 0; i < specialized_instruction_no; i ++)
@@ -400,7 +400,7 @@ jitter_disassemble_program_to (FILE *f,
       next_thread += residual_argument_no;
     }
 #else
-  if (p->stage != jitter_program_stage_specialized)
+  if (p->stage != jitter_routine_stage_specialized)
     jitter_fatal ("disassembling non-specialized program");
   for (i = 0; i < specialized_instruction_no; i ++)
     {
@@ -437,7 +437,7 @@ jitter_disassemble_program_to (FILE *f,
 #endif // #ifdef JITTER_DISPATCH_SWITCH
 
 void
-jitter_disassemble_program (const struct jitter_program *p, bool raw,
+jitter_disassemble_program (const struct jitter_routine *p, bool raw,
                             const char *objdump_name,
                             const char *objdump_options_or_NULL)
 {

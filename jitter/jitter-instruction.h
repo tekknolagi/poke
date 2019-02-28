@@ -63,11 +63,11 @@ struct jitter_register_class
    convenience, but labels are used in an opaque form and, in particular, are
    stored as opaque within instruction parameters.
 
-   Opaque labels are only valid within a single VM program.  Different programs
+   Opaque labels are only valid within a single VM routine.  Different programs
    may use the same opaque label identifiers, each referring to its own program
    points.
 
-   Labels must be allocated only with the functions provided in jitter-program.h
+   Labels must be allocated only with the functions provided in jitter-routine.h
    , for a specific program. */
 typedef jitter_int jitter_label;
 
@@ -128,9 +128,9 @@ struct jitter_parameter
   };
 };
 
-/* Forward declaration.  The actual definition of struct jitter_program is in
-   jitter-program.h . */
-struct jitter_program;
+/* Forward declaration.  The actual definition of struct jitter_routine is in
+   jitter-routine.h . */
+struct jitter_routine;
 
 /* Return a pointer to a fresh instruction parameter, allocated according to
    the conventions above, with the label_name field set to NULL. */

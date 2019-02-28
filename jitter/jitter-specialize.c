@@ -29,7 +29,7 @@
 #include <jitter/jitter-dispatch.h>
 #include <jitter/jitter.h>
 #include <jitter/jitter-instruction.h>
-#include <jitter/jitter-program.h>
+#include <jitter/jitter-routine.h>
 #include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-replicate.h>
@@ -41,7 +41,7 @@
 
 void
 jitter_add_specialized_instruction_opcode
-   (struct jitter_program *p,
+   (struct jitter_routine *p,
     /* This is actually an enum vmprefix_specialized_instruction_opcode , but
        the type is VM-dependent. */
     jitter_uint specialized_opcode)
@@ -72,7 +72,7 @@ jitter_add_specialized_instruction_opcode
 }
 
 void
-jitter_add_specialized_instruction_literal (struct jitter_program *p,
+jitter_add_specialized_instruction_literal (struct jitter_routine *p,
                                             jitter_uint literal)
 {
   // fprintf (stderr, "Adding specialized instruction literal %i\n", (int)literal);
@@ -82,7 +82,7 @@ jitter_add_specialized_instruction_literal (struct jitter_program *p,
 }
 
 void
-jitter_add_specialized_instruction_label_index (struct jitter_program *p,
+jitter_add_specialized_instruction_label_index (struct jitter_routine *p,
                                                 jitter_label_as_index
                                                 unspecialized_instruction_index)
 {
@@ -98,7 +98,7 @@ jitter_add_specialized_instruction_label_index (struct jitter_program *p,
 }
 
 static void
-jitter_backpatch_labels_in_specialized_program (struct jitter_program *p)
+jitter_backpatch_labels_in_specialized_program (struct jitter_routine *p)
 {
   union jitter_word *specialized_program
     = jitter_dynamic_buffer_to_pointer (& p->specialized_program);
@@ -125,9 +125,9 @@ jitter_backpatch_labels_in_specialized_program (struct jitter_program *p)
 
 /* Add implicit instructions at the end of an unspecialized program. */
 static void
-jitter_add_program_epilog (struct jitter_program *p)
+jitter_add_program_epilog (struct jitter_routine *p)
 {
-  /* Add the final instructions which are supposed to close every VM program.
+  /* Add the final instructions which are supposed to close every VM routine.
      Having each label, including the ones at the very end of the program when
      they exist, associated to an actual unspecialized instruction makes
      replication easier. */
@@ -138,9 +138,9 @@ jitter_add_program_epilog (struct jitter_program *p)
 }
 
 void
-jitter_specialize_program (struct jitter_program *p)
+jitter_specialize_program (struct jitter_routine *p)
 {
-  if (p->stage != jitter_program_stage_unspecialized)
+  if (p->stage != jitter_routine_stage_unspecialized)
     jitter_fatal ("specializing non-unspecialized program");
   if (p->expected_parameter_no != 0)
     jitter_fatal ("specializing program with last instruction incomplete");
@@ -162,7 +162,7 @@ jitter_specialize_program (struct jitter_program *p)
   /* Now that we know how many instructions there are we can allocate
      p->instruction_index_to_specialized_instruction_offset once and for all.
      Its content will still be uninitialized. */
-  const int instruction_no = jitter_program_instruction_no (p);
+  const int instruction_no = jitter_routine_instruction_no (p);
   assert (p->instruction_index_to_specialized_instruction_offset == NULL);
   p->instruction_index_to_specialized_instruction_offset
     = jitter_xmalloc (sizeof (jitter_int) * instruction_no);
@@ -198,7 +198,7 @@ jitter_specialize_program (struct jitter_program *p)
   const struct jitter_instruction **instructions
     = (const struct jitter_instruction **)
       jitter_dynamic_buffer_to_pointer (& p->instructions);
-  int (* const specialize_instruction) (struct jitter_program *p,
+  int (* const specialize_instruction) (struct jitter_routine *p,
                                         const struct jitter_instruction *ins)
     = p->vm->specialize_instruction;
   int instruction_index = 0;
@@ -240,7 +240,7 @@ jitter_specialize_program (struct jitter_program *p)
 
   /* The program is now specialized.  FIXME: shall I free p->jump_targets
      and set it to NULL now? */
-  p->stage = jitter_program_stage_specialized;
+  p->stage = jitter_routine_stage_specialized;
 
 #ifdef JITTER_REPLICATE
   /* If replication is enabled then build the native code; this will change the

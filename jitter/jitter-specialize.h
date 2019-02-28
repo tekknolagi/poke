@@ -24,7 +24,7 @@
 
 // #include <jitter/jitter-dispatch.h> // No.
 #include <jitter/jitter.h>
-#include <jitter/jitter-program.h>
+#include <jitter/jitter-routine.h>
 #include <jitter/jitter-instruction.h>
 
 //#include "vmprefix-frontend.h"
@@ -48,7 +48,7 @@ enum jitter_specialized_instruction_opcode
 
 /* Specialize the given program. */
 void
-jitter_specialize_program (struct jitter_program *p)
+jitter_specialize_program (struct jitter_routine *p)
   __attribute__ ((nonnull (1)));
 
 /* Add an opcode to the specialized program which is being built.  This is an
@@ -58,7 +58,7 @@ jitter_specialize_program (struct jitter_program *p)
    wide unsigned type so that this code is VM-independent. */
 void
 jitter_add_specialized_instruction_opcode
-   (struct jitter_program *p,
+   (struct jitter_routine *p,
     /* This is actually an enum vmprefix_specialized_instruction_opcode , but
        the type is VM-dependent. */
     jitter_uint opcode);
@@ -66,14 +66,14 @@ jitter_add_specialized_instruction_opcode
 /* Add a fixnum literal to the specialized program which is being built.  This
    is an auxiliary function used by vmprefix_specialize_instruction . */
 void
-jitter_add_specialized_instruction_literal (struct jitter_program *p,
+jitter_add_specialized_instruction_literal (struct jitter_routine *p,
                                             jitter_uint literal);
 
 /* Add a label literal (as an instruction index) to the specialized program
    which is being built.  This is an auxiliary function used by
    vmprefix_specialize_instruction . */
 void
-jitter_add_specialized_instruction_label_index (struct jitter_program *p,
+jitter_add_specialized_instruction_label_index (struct jitter_routine *p,
                                                 jitter_label_as_index
                                                 unspecialized_instruction_index);
 

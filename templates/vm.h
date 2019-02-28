@@ -47,7 +47,7 @@
 #include <jitter/jitter-hash.h>
 #include <jitter/jitter-stack.h>
 #include <jitter/jitter-instruction.h>
-#include <jitter/jitter-program.h>
+#include <jitter/jitter-routine.h>
 #include <jitter/jitter-specialize.h> // FIXME: what about only declaring jitter_specialize in another header, and not including this?
 #include <jitter/jitter-disassemble.h>
 #include <jitter/jitter-vm.h>
@@ -59,12 +59,12 @@
  * ************************************************************************** */
 
 /* Initialize the runtime state for the vmprefix VM.  This needs to be called
-   before using VM programs or VM states in any way. */
+   before using VM routines or VM states in any way. */
 void
 vmprefix_initialize (void);
 
 /* Finalize the runtime state, freeing some resources.  After calling this no
-   use of VM programs or states is allowed.  It is possible to re-initialize
+   use of VM routines or states is allowed.  It is possible to re-initialize
    after finalizing; these later re-initializations might be more efficient than
    the first initialization. */
 void
@@ -109,7 +109,7 @@ vmprefix_state_finalize (struct vmprefix_state *state)
  * ************************************************************************** */
 
 /* Return a freshly-allocated empty program for the vmprefix VM. */
-struct jitter_program*
+struct jitter_routine*
 vmprefix_make_program (void)
   __attribute__ ((returns_nonnull));
 
@@ -151,11 +151,11 @@ vmprefix_make_program (void)
    This is slightly less convenient to use than VMPREFIX_APPEND_INSTRUCTION
    but more general, as the instruction id is allowed to be a non-constant C
    expression. */
-#define VMPREFIX_APPEND_INSTRUCTION_ID(_jitter_program_p,          \
+#define VMPREFIX_APPEND_INSTRUCTION_ID(_jitter_routine_p,          \
                                        _jitter_instruction_id)     \
   do                                                               \
     {                                                              \
-      jitter_append_instruction_id ((_jitter_program_p),           \
+      jitter_append_instruction_id ((_jitter_routine_p),           \
                                     vmprefix_meta_instructions,    \
                                     VMPREFIX_META_INSTRUCTION_NO,  \
                                     (_jitter_instruction_id));     \
@@ -192,7 +192,7 @@ vmprefix_make_program (void)
 /* Interpret the given program, which must be already specialized, in the given
    state. */
 void
-vmprefix_interpret (struct jitter_program const *p, struct vmprefix_state *s)
+vmprefix_interpret (struct jitter_routine const *p, struct vmprefix_state *s)
   __attribute__ ((nonnull (1, 2)));
 
 
@@ -298,16 +298,16 @@ vmprefix_interpret (struct jitter_program const *p, struct vmprefix_state *s)
 /* Program text frontend.
  * ************************************************************************** */
 
-/* Parse VM code from the given file or string, into the pointed VM program.
+/* Parse VM code from the given file or string, into the pointed VM routine.
    These are simple wrappers around functions implemented in the Bison file. */
 void
-vmprefix_parse_file_star (FILE *input_file, struct jitter_program *p)
+vmprefix_parse_file_star (FILE *input_file, struct jitter_routine *p)
   __attribute__ ((nonnull (1, 2)));
 void
-vmprefix_parse_file (const char *input_file_name, struct jitter_program *p)
+vmprefix_parse_file (const char *input_file_name, struct jitter_routine *p)
   __attribute__ ((nonnull (1, 2)));
 void
-vmprefix_parse_string (const char *string, struct jitter_program *p)
+vmprefix_parse_string (const char *string, struct jitter_routine *p)
   __attribute__ ((nonnull (1, 2)));
 
 
@@ -424,8 +424,8 @@ vmprefix_vm_configuration;
    were specific to the user VM. */
 
 /* What the user refers to as struct vmprefix_program is actually a struct
-   jitter_program , whose definition is VM-independent. */
-#define vmprefix_program jitter_program
+   jitter_routine , whose definition is VM-independent. */
+#define vmprefix_program jitter_routine
 
 /* Destroy programs (program initialization is actually VM-specific). */
 #define vmprefix_destroy_program jitter_destroy_program
@@ -573,18 +573,18 @@ vmprefix_defect_table [];
    The implementation of this function is machine-generated, but the user can
    add her own code in the rewriter-c block, which ends up near the beginning of
    this function body, right after JITTTER_REWRITE_FUNCTION_PROLOG_ .  The
-   formal argument seen from the body is named jitter_program_p .
+   formal argument seen from the body is named jitter_routine_p .
 
    Rationale: the argument is named differently in the body in order to keep
    the namespace conventions and, more importantly, to encourage the user to
    read this comment.
 
-   The user must *not* append labels to the VM programs during rewriting: that
+   The user must *not* append labels to the VM routines during rewriting: that
    would break it.  The user is responsible for destroying any instruction she
    removes, including their arguments.  The user can assume that
    jitter_rewritable_instruction_no is strictly greater than zero. */
 void
-vmprefix_rewrite (struct jitter_program *p);
+vmprefix_rewrite (struct jitter_routine *p);
 
 
 
@@ -615,13 +615,13 @@ vmprefix_rewrite (struct jitter_program *p);
 #endif // #ifdef JITTER_DISPATCH_NO_THREADING
 
 /* Expand to an expression evaluating to the program point of the first
-   instruction in the pointed vmprefix VM program, as some object which is
+   instruction in the pointed vmprefix VM routine, as some object which is
    correct to pass to JITTER_BRANCH.  The expression type will be
    vmprefix_program_point.
 
    This is useful to execute a program without explicitly calling the
    interpreter function, for example from a VM instruction jumping to the
-   beginning of another VM program.  The expansion of this macro is guaranteed
+   beginning of another VM routine.  The expansion of this macro is guaranteed
    not to contain function calls, and is safe to use from VM instructions
    without C function wrappers.
 
@@ -630,12 +630,12 @@ vmprefix_rewrite (struct jitter_program *p);
   /* In this case the program structure contains a separate pointer to the
      beginning of the executable region for the native program.  Of course
      the first instruction is at the beginning of the region. */
-# define VMPREFIX_PROGRAM_BEGINNING(_vmprefix_program_pointer)  \
+# define VMPREFIX_ROUTINE_BEGINNING(_vmprefix_program_pointer)  \
     ((_vmprefix_program_pointer)->native_code)
 #else
   /* With switch dispatching or threading the first program point is a pointer
      to the beginning of the specialized program array. */
-# define VMPREFIX_PROGRAM_BEGINNING(_vmprefix_program_pointer)   \
+# define VMPREFIX_ROUTINE_BEGINNING(_vmprefix_program_pointer)   \
     ((vmprefix_program_point)                                      \
      ((_vmprefix_program_pointer)->specialized_program.region))
 #endif // ifdef JITTER_DISPATCH_NO_THREADING

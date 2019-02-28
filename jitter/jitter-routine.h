@@ -34,11 +34,11 @@
  * ************************************************************************** */
 
 // FIXME: comment.
-enum jitter_program_stage
+enum jitter_routine_stage
   {
-    jitter_program_stage_unspecialized,
-    jitter_program_stage_specialized,
-    jitter_program_stage_replicated
+    jitter_routine_stage_unspecialized,
+    jitter_routine_stage_specialized,
+    jitter_routine_stage_replicated
   };
 
 /* A descriptor for a replicated block of code. */
@@ -71,7 +71,7 @@ struct jitter_replicated_block
    This data structure, like a program data structure, should be considered an
    opaque abstract type, and the user should only use the functions declared
    below to set options. */
-struct jitter_program_options
+struct jitter_routine_options
 {
   /* Non-false if the other options can still be changed.  This is true at
      initialization, and becomes false as soon as the user appends the first
@@ -98,7 +98,7 @@ struct jitter_program_options
   bool slow_literals_only;
 
   /* If non-false then automatically add a final "exitvm" instruction at the end
-     of each VM program; otherwise add a final "unreachable" instruction
+     of each VM routine; otherwise add a final "unreachable" instruction
      instead, which saves memory and makes replicated code smaller, but assumes
      that the unreachable instruction is actually unreachable.  This is true by
      default. */
@@ -113,15 +113,15 @@ struct jitter_program_options
 
 /* The internal representation of a program.  This should be considered
    an abstract type, as the internal structure is subject to change. */
-struct jitter_program
+struct jitter_routine
 {
   /* The program stage at the present time. */
-  enum jitter_program_stage stage;
+  enum jitter_routine_stage stage;
 
   /* The options applying to this program.  This field is initialized to default
      values at program initialization, and should only be updated indirectly
      thru the functions declared in the "Program options" section below. */
-  struct jitter_program_options options;
+  struct jitter_routine_options options;
 
   /* A dynamic array containing struct jitter_instruction * elements.  This is
      filled by parsing or by initialization with unspecialized instructions.
@@ -228,17 +228,17 @@ struct jitter_program
 /* Return the number of unspecialized instruction in the pointed program
    also counting the one which is currently incomplete, if any. */
 size_t
-jitter_program_instruction_no (const struct jitter_program *p)
+jitter_routine_instruction_no (const struct jitter_routine *p)
   __attribute__ ((pure));
 
 /* Return a freshly-allocated, empty program with an empty vm field. */
-struct jitter_program*
+struct jitter_routine*
 jitter_make_program (const struct jitter_vm *vm)
   __attribute__ ((nonnull (1), returns_nonnull));
 
 /* Destroy the pointed program, if any.  Do nothing if p is NULL. */
 void
-jitter_destroy_program (struct jitter_program *p);
+jitter_destroy_program (struct jitter_routine *p);
 
 
 
@@ -253,14 +253,14 @@ jitter_destroy_program (struct jitter_program *p);
 /* Set the slow_registers_only option to the given value in the pointed program.
    Fail fatally if the option is no longer settable. */
 void
-jitter_set_program_option_slow_registers_only (struct jitter_program *p,
+jitter_set_program_option_slow_registers_only (struct jitter_routine *p,
                                                bool option)
   __attribute__ ((nonnull (1)));
 
 /* Set the slow_registers_only option to the given value in the pointed program.
    Fail fatally if the option is no longer settable. */
 void
-jitter_set_program_option_slow_literals_only (struct jitter_program *p,
+jitter_set_program_option_slow_literals_only (struct jitter_routine *p,
                                               bool option)
   __attribute__ ((nonnull (1)));
 
@@ -270,20 +270,20 @@ jitter_set_program_option_slow_literals_only (struct jitter_program *p,
    same option value. */
 void
 jitter_set_program_option_slow_literals_and_registers_only
-   (struct jitter_program *p, bool option)
+   (struct jitter_routine *p, bool option)
   __attribute__ ((nonnull (1)));
 
 /* Set the add_final_exitvm option to the given value in the pointed program.
    Fail fatally if the option is no longer settable. */
 void
-jitter_set_program_option_add_final_exitvm (struct jitter_program *p,
+jitter_set_program_option_add_final_exitvm (struct jitter_routine *p,
                                             bool option)
   __attribute__ ((nonnull (1)));
 
 /* Set the optimization_rewriting option to the given value in the pointed
    program.  Fail fatally if the option is no longer settable. */
 void
-jitter_set_program_option_optimization_rewriting (struct jitter_program *p,
+jitter_set_program_option_optimization_rewriting (struct jitter_routine *p,
                                                   bool option)
   __attribute__ ((nonnull (1)));
 
@@ -296,7 +296,7 @@ jitter_set_program_option_optimization_rewriting (struct jitter_program *p,
    name.  The caller may later use the label in an instruction argument or
    associate it to a program point. */
 jitter_label
-jitter_fresh_label (struct jitter_program *p)
+jitter_fresh_label (struct jitter_routine *p)
   __attribute__ ((nonnull (1)));
 
 /* Return a label for the pointed program, associated to the given symbolic
@@ -304,7 +304,7 @@ jitter_fresh_label (struct jitter_program *p)
    to an internally-allocated copy of it; if the symbolic name is already
    known, return the label already associated to it. */
 jitter_label
-jitter_symbolic_label (struct jitter_program *p, const char *symbolic_name)
+jitter_symbolic_label (struct jitter_routine *p, const char *symbolic_name)
   __attribute__ ((nonnull (1)));
 
 
@@ -318,7 +318,7 @@ jitter_symbolic_label (struct jitter_program *p, const char *symbolic_name)
    When this function is called the previous instruction, if any, must have been
    completed. */
 void
-jitter_append_label (struct jitter_program *p,
+jitter_append_label (struct jitter_routine *p,
                      jitter_label label)
   __attribute__ ((nonnull (1)));
 
@@ -327,7 +327,7 @@ jitter_append_label (struct jitter_program *p,
    When this function is called the previous instruction, if any, must have been
    completed. */
 jitter_label
-jitter_append_symbolic_label (struct jitter_program *p,
+jitter_append_symbolic_label (struct jitter_routine *p,
                               const char *label_name)
   __attribute__ ((nonnull (1, 2)));
 
@@ -341,7 +341,7 @@ jitter_append_symbolic_label (struct jitter_program *p,
    jitter_append_meta_instruction is faster; see its comment for the recommended
    way to use it. */
 void
-jitter_append_instruction_name (struct jitter_program *p,
+jitter_append_instruction_name (struct jitter_routine *p,
                                 const char *instruction_name);
 
 /* Update the pointed program, beginning a new instruction with the given
@@ -362,7 +362,7 @@ jitter_append_instruction_name (struct jitter_program *p,
    and the string-based API above would require a useless run-time hash
    lookup. */
 void
-jitter_append_instruction_id (struct jitter_program *p,
+jitter_append_instruction_id (struct jitter_routine *p,
                               const struct jitter_meta_instruction * const mis,
                               size_t meta_instruction_no,
                               unsigned unspecialized_opcode);
@@ -377,7 +377,7 @@ jitter_append_instruction_id (struct jitter_program *p,
    efficient than jitter_append_instruction_name, is thru the machine-generated
    macro [VMPREFIX]_APPEND_INSTRUCTION. */
 void
-jitter_append_meta_instruction (struct jitter_program *p,
+jitter_append_meta_instruction (struct jitter_routine *p,
                                 const struct jitter_meta_instruction * const
                                 mi);
 
@@ -389,32 +389,32 @@ jitter_append_meta_instruction (struct jitter_program *p,
    Notice that the macro [VMPREFIX]_APPEND_REGISTER_PARAMETER provides a more
    convenient way of adding a register parameter. */
 void
-jitter_append_literal_parameter (struct jitter_program *p,
+jitter_append_literal_parameter (struct jitter_routine *p,
                                  union jitter_word immediate)
   __attribute__((nonnull (1)));
 void
-jitter_append_signed_literal_parameter (struct jitter_program *p,
+jitter_append_signed_literal_parameter (struct jitter_routine *p,
                                         jitter_int immediate)
   __attribute__((nonnull (1)));
 void
-jitter_append_unsigned_literal_parameter (struct jitter_program *p,
+jitter_append_unsigned_literal_parameter (struct jitter_routine *p,
                                           jitter_uint immediate)
   __attribute__((nonnull (1)));
 void
-jitter_append_pointer_literal_parameter (struct jitter_program *p,
+jitter_append_pointer_literal_parameter (struct jitter_routine *p,
                                          void *immediate)
   __attribute__((nonnull (1)));
 void
-jitter_append_register_parameter (struct jitter_program *p,
+jitter_append_register_parameter (struct jitter_routine *p,
                                   const struct jitter_register_class *c,
                                   jitter_register_index register_index)
   __attribute__((nonnull (1, 2)));
 jitter_label
-jitter_append_symbolic_label_parameter (struct jitter_program *p,
+jitter_append_symbolic_label_parameter (struct jitter_routine *p,
                                         const char *label_name)
   __attribute__((nonnull (1, 2)));
 void
-jitter_append_label_parameter (struct jitter_program *p,
+jitter_append_label_parameter (struct jitter_routine *p,
                                jitter_label label)
   __attribute__((nonnull (1)));
 
@@ -430,7 +430,7 @@ jitter_append_label_parameter (struct jitter_program *p,
    When this function is called the previous instruction, if any, must have been
    completed. */
 void
-jitter_append_instruction (struct jitter_program *p,
+jitter_append_instruction (struct jitter_routine *p,
                            const struct jitter_instruction *ip)
   __attribute__ ((nonnull (1, 2)));
 
@@ -444,7 +444,7 @@ jitter_append_instruction (struct jitter_program *p,
    the same parameter more than once from an instruction to be rewritten into a
    template. */
 void
-jitter_append_parameter_copy (struct jitter_program *p,
+jitter_append_parameter_copy (struct jitter_routine *p,
                               const struct jitter_parameter *pp)
   __attribute__ ((nonnull (1, 2)));
 
@@ -457,7 +457,7 @@ jitter_append_parameter_copy (struct jitter_program *p,
 /* Print a readable representation of the pointed program to the pointed
    stream. */
 void
-jitter_print_program (FILE *out, const struct jitter_program *p);
+jitter_print_program (FILE *out, const struct jitter_routine *p);
 
 
 
@@ -471,12 +471,12 @@ jitter_print_program (FILE *out, const struct jitter_program *p);
    instruction is a jump target.
 
    This is used at specialization time to compute the jump_targets field of a
-   struct jitter_program , but also elsewhere, for printing unspecialized programs
+   struct jitter_routine , but also elsewhere, for printing unspecialized programs
    -- therefore it cannot be a static function.
 
    This function is used internally, and the user does not need to see it. */
 bool*
-jitter_jump_targets (const struct jitter_program *p)
+jitter_jump_targets (const struct jitter_routine *p)
   __attribute__ ((returns_nonnull, nonnull (1)));
 
 
@@ -491,7 +491,7 @@ jitter_jump_targets (const struct jitter_program *p)
    Fail fatally if any referred label is still undefined, or if the program is
    not unspecialized. */
 void
-jitter_resolve_labels_in_unspecialized_program (struct jitter_program *p)
+jitter_resolve_labels_in_unspecialized_program (struct jitter_routine *p)
   __attribute__ ((nonnull (1)));
 
 #endif // #ifndef JITTER_PROGRAM_H_

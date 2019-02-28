@@ -185,7 +185,7 @@ jitterlisp_error_label (struct jitterlispvm_program *p,
 }
 
 /* Return non-false iff the given map has an error label.  If that is not the
-   case then we don't need error handling in the current VM program. */
+   case then we don't need error handling in the current VM routine. */
 static bool
 jitterlisp_has_error_label (const struct jitter_hash_table *map)
 {
@@ -420,7 +420,7 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
 }
 
 /* Add the given pseudo-instruction translated from its Lisp encoding into the
-   pointed Jittery VM program, validating it in the process.  Use the pointed
+   pointed Jittery VM routine, validating it in the process.  Use the pointed
    map associating Lisp labels to Jitter labels. */
 static void
 jitterlisp_translate_instruction (struct jitterlispvm_program *p,
@@ -553,7 +553,7 @@ jitterlisp_translate_instruction (struct jitterlispvm_program *p,
 }
 
 /* Add each pseudo-instruction translated from its Lisp encoding into the
-   pointed Jittery VM program, validating it in the process.  Use the pointed
+   pointed Jittery VM routine, validating it in the process.  Use the pointed
    map associating Lisp labels to Jitter labels.
    The given Lisp instructions are assumed to be a Lisp list, as this function
    is called after a primitive has already validated its arguments. */
@@ -570,7 +570,7 @@ jitterlisp_translate_instructions (struct jitterlispvm_program *p,
 
   /* Generate the error-handling routine after the other instructions, if we
      have used it in the translation of the instructions before; if we haven't
-     then the current VM program doesn't need error handling. */
+     then the current VM routine doesn't need error handling. */
   if (jitterlisp_has_error_label (map))
     {
       jitterlispvm_append_label (p, jitterlisp_error_label (p, map));
@@ -585,7 +585,7 @@ jitterlisp_translate_instructions (struct jitterlispvm_program *p,
     }
 }
 
-/* Given the Lisp encoding of the VM program, generate the Jittery version. */
+/* Given the Lisp encoding of the VM routine, generate the Jittery version. */
 static struct jitterlispvm_program *
 jitterlisp_generate_jittery (jitterlisp_object code_as_sexpression)
 {
@@ -607,7 +607,7 @@ jitterlisp_generate_jittery (jitterlisp_object code_as_sexpression)
   /* We're done with the hash table. */
   jitter_word_hash_finalize (& map, jitter_do_nothing_on_word);
 
-  /* Specialize the VM program immediately.  We want it to be ready to be
+  /* Specialize the VM routine immediately.  We want it to be ready to be
      executed at any time. */
   jitterlispvm_specialize_program (res);
   return res;
@@ -625,7 +625,7 @@ jitterlisp_compile (struct jitterlisp_closure *c,
   cc->nonlocal_no = jitterlisp_length (nonlocals);
   // FIXME: don't leak.
   cc->vm_program = jitterlisp_generate_jittery (code_as_sexpression);
-  cc->first_program_point = JITTERLISPVM_PROGRAM_BEGINNING(cc->vm_program);
+  cc->first_program_point = JITTERLISPVM_ROUTINE_BEGINNING(cc->vm_program);
   /*
     printf ("codegen: first program point at %p\n", cc->first_program_point);
   */
@@ -647,7 +647,7 @@ jitterlisp_print_compiled_closure (struct jitterlisp_compiled_closure *cc)
 void
 jitterlisp_disassemble_compiled_closure (struct jitterlisp_compiled_closure *cc)
 {
-  struct jitter_program *p = cc->vm_program;
+  struct jitter_routine *p = cc->vm_program;
   if (jitterlisp_settings.cross_disassembler)
     jitterlispvm_disassemble_program (p, true, JITTER_CROSS_OBJDUMP, NULL);
   else

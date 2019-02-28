@@ -119,7 +119,7 @@ structured_consume_location (struct structured_static_environment *env,
 }
 
 /* Append the content of the pointed location as an instruction parameter, in
-   the pointed VM program. */
+   the pointed VM routine. */
 static void
 structured_emit_operand (struct structuredvm_program *vmp,
                          const struct structured_location *l)
@@ -722,7 +722,7 @@ structured_translate_program (struct structuredvm_program *vmp,
 
 
 
-/* Entry point: translate an AST program to a VM program.
+/* Entry point: translate an AST program to a VM routine.
  * ************************************************************************** */
 
 void
