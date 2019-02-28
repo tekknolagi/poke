@@ -41,7 +41,7 @@
    We need one forward-declaration here, as structured_translate_expression and
    structured_translate_primitive are mutually recursive. */
 static void
-structured_translate_expression (struct structuredvm_program *vmp,
+structured_translate_expression (struct structuredvm_routine *vmp,
                                  struct structured_expression *e,
                                  struct structured_static_environment *env);
 
@@ -50,7 +50,7 @@ structured_translate_expression (struct structuredvm_program *vmp,
    The primitive is given by its case and its two operands, of which the second
    is ignored if the primitive is unary. */
 static void
-structured_translate_primitive (struct structuredvm_program *vmp,
+structured_translate_primitive (struct structuredvm_routine *vmp,
                                 enum structured_primitive case_,
                                 struct structured_expression *operand_0,
                                 struct structured_expression *operand_1,
@@ -115,7 +115,7 @@ structured_translate_primitive (struct structuredvm_program *vmp,
 }
 
 static void
-structured_translate_expression (struct structuredvm_program *vmp,
+structured_translate_expression (struct structuredvm_routine *vmp,
                                  struct structured_expression *e,
                                  struct structured_static_environment *env)
 {
@@ -165,7 +165,7 @@ structured_translate_expression (struct structuredvm_program *vmp,
 /* Add code to translate the pointed statement AST to the pointed Jittery
    program, using the pointed static environment to be looked up and updated. */
 static void
-structured_translate_statement (struct structuredvm_program *vmp,
+structured_translate_statement (struct structuredvm_routine *vmp,
                                 struct structured_statement *s,
                                 struct structured_static_environment *env)
 {
@@ -237,7 +237,7 @@ structured_translate_statement (struct structuredvm_program *vmp,
 /* Add code to translate the pointed program AST to the pointed Jittery
    program. */
 static void
-structured_translate_program (struct structuredvm_program *vmp,
+structured_translate_program (struct structuredvm_routine *vmp,
                               struct structured_program *p)
 {
   struct structured_static_environment *env
@@ -253,7 +253,7 @@ structured_translate_program (struct structuredvm_program *vmp,
  * ************************************************************************** */
 
 void
-structured_translate_program_stack (struct structuredvm_program *vmp,
+structured_translate_program_stack (struct structuredvm_routine *vmp,
                                     struct structured_program *p)
 {
   /* Translate the AST pointed by p into *vmp.  This of course works by

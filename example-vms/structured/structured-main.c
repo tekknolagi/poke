@@ -331,7 +331,7 @@ structured_work (struct structured_command_line *cl)
   structuredvm_initialize ();
 
   /* Make an empty Jittery program and set options for it as needed. */
-  struct structuredvm_program *vmp = structuredvm_make_program ();
+  struct structuredvm_routine *vmp = structuredvm_make_program ();
   structuredvm_set_program_option_slow_literals_only (vmp,
                                                       cl->slow_literals_only);
   structuredvm_set_program_option_slow_registers_only (vmp,

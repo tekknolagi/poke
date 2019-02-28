@@ -76,8 +76,8 @@ jitterlispvm_state;
 /* The driver program, used to call compiled closures from the interpreter.
    Jumping from interpreted to compiled code is common and must be fast: we
    keep one driver program, to be reused. */
-static struct jitterlispvm_program *
-jitterlisp_driver_vm_program;
+static struct jitterlispvm_routine *
+jitterlisp_driver_vm_routine;
 
 void
 jitterlisp_reset_vm_state (void)
@@ -109,24 +109,24 @@ jitterlisp_vm_initialize (void)
         call-from-interpreter
         exitvm
      , of which the second is added implicitly. */
-  jitterlisp_driver_vm_program = jitterlispvm_make_program ();
+  jitterlisp_driver_vm_routine = jitterlispvm_make_program ();
   /* In the particular case of the driver I can keep the default option
      generating a final exitvm instruction at the end.  This will not be
      the same for compiled user code. */
-//JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, debug);
-  JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program,
+//JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine, debug);
+  JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine,
                                   call_mfrom_mc);
-//JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, debug);
-//JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_program, debug);
-  jitterlispvm_specialize_program (jitterlisp_driver_vm_program);
+//JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine, debug);
+//JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine, debug);
+  jitterlispvm_specialize_program (jitterlisp_driver_vm_routine);
 }
 
 void
 jitterlisp_vm_finalize (void)
 {
   /* Destroy the driver program and invalidate its pointer to catch mistakes. */
-  jitterlispvm_destroy_program (jitterlisp_driver_vm_program);
-  jitterlisp_driver_vm_program = NULL;
+  jitterlispvm_destroy_program (jitterlisp_driver_vm_routine);
+  jitterlisp_driver_vm_routine = NULL;
 
   /* Unregister the two stack backings as GC roots. */
   jitterlisp_pop_gc_roots (2);
@@ -163,9 +163,9 @@ jitterlisp_jump_to_driver_and_return_result (void)
       d = true;
       fprintf (stderr, "Driver:\n");
       if (jitterlisp_settings.cross_disassembler)
-        jitterlispvm_disassemble_program_to (stderr, jitterlisp_driver_vm_program, true, JITTER_CROSS_OBJDUMP, NULL);
+        jitterlispvm_disassemble_program_to (stderr, jitterlisp_driver_vm_routine, true, JITTER_CROSS_OBJDUMP, NULL);
       else
-        jitterlispvm_disassemble_program_to (stderr, jitterlisp_driver_vm_program, true, JITTER_OBJDUMP, NULL);
+        jitterlispvm_disassemble_program_to (stderr, jitterlisp_driver_vm_routine, true, JITTER_OBJDUMP, NULL);
       fprintf (stderr, "\n");
     }
   */
@@ -176,7 +176,7 @@ fputs ("{c", stdout); fflush (stdout);
   */
   /* Run the driver which will immediately call the closure, leaving only
      the result on the stack. */
-  jitterlispvm_interpret (jitterlisp_driver_vm_program, & jitterlispvm_state);
+  jitterlispvm_interpret (jitterlisp_driver_vm_routine, & jitterlispvm_state);
   /*
 fputs ("} --> ", stdout); fflush (stdout);
   */

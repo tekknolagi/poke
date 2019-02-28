@@ -71,7 +71,7 @@ struct vmprefix_main_command_line
 {
   bool debug;
   bool progress_on_stderr;
-  bool print_program, disassemble_program, run_program;
+  bool print_routine, disassemble_routine, run_routine;
   bool slow_literals_only, slow_registers_only;
   bool optimization_rewriting;
   char *input_file;
@@ -101,7 +101,7 @@ enum vmprefix_vm_negative_option
     vmprefix_vm_negative_option_no_disassemble = -2,
     vmprefix_vm_negative_option_no_debug = -3,
     vmprefix_vm_negative_option_no_dry_run = -4,
-    vmprefix_vm_negative_option_no_print_program = -5,
+    vmprefix_vm_negative_option_no_print_routine = -5,
     vmprefix_vm_negative_option_no_progress_on_stderr = -6,
     vmprefix_vm_negative_option_no_slow_literals_only = -7,
     vmprefix_vm_negative_option_no_slow_registers_only = -8,
@@ -131,9 +131,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       /* Set reasonable default values. */
       cl->debug = false;
       cl->progress_on_stderr = false;
-      cl->print_program = false;
-      cl->disassemble_program = false;
-      cl->run_program = true;
+      cl->print_routine = false;
+      cl->disassemble_routine = false;
+      cl->run_routine = true;
       cl->slow_literals_only = false;
       cl->slow_registers_only = false;
       cl->optimization_rewriting = true;
@@ -197,10 +197,10 @@ parse_opt (int key, char *arg, struct argp_state *state)
       cl->progress_on_stderr = false;
       break;
     case 'p':
-      cl->print_program = true;
+      cl->print_routine = true;
       break;
-    case vmprefix_vm_negative_option_no_print_program:
-      cl->print_program = false;
+    case vmprefix_vm_negative_option_no_print_routine:
+      cl->print_routine = false;
       break;
     case 'b':
       cl->objdump_name = arg;
@@ -210,16 +210,16 @@ parse_opt (int key, char *arg, struct argp_state *state)
       cl->objdump_options = arg;
       break;
     case 'D':
-      cl->disassemble_program = true;
+      cl->disassemble_routine = true;
       if (! cl->objdump_name_overridden)
         cl->objdump_name = (arg != NULL) ? arg : JITTER_OBJDUMP;
       break;
     case vmprefix_vm_negative_option_no_disassemble:
     case vmprefix_vm_negative_option_no_cross_disassemble:
-      cl->disassemble_program = false;
+      cl->disassemble_routine = false;
       break;
     case 'C':
-      cl->disassemble_program = true;
+      cl->disassemble_routine = true;
 #if defined(JITTER_CROSS_COMPILING) && defined (JITTER_CROSS_OBJDUMP)
       if (! cl->objdump_name_overridden)
         cl->objdump_name = JITTER_CROSS_OBJDUMP;
@@ -229,10 +229,10 @@ parse_opt (int key, char *arg, struct argp_state *state)
 #endif // #if defined(JITTER_CROSS_COMPILING) && defined (JITTER_CROSS_OBJDUMP)
       break;
     case 'n':
-      cl->run_program = false;
+      cl->run_routine = false;
       break;
     case vmprefix_vm_negative_option_no_dry_run:
-      cl->run_program = true;
+      cl->run_routine = true;
       break;
     case 'L':
       cl->slow_literals_only = true;
@@ -291,17 +291,17 @@ parse_opt (int key, char *arg, struct argp_state *state)
 static struct argp_option vmprefix_main_option_specification[] =
   {/* Most frequently used options. */
    {NULL, '\0', NULL, OPTION_DOC, "Frequently used options:", 10},
-   {"print-program", 'p', NULL, 0,
-    "Print back the parsed program"},
+   {"print-routine", 'p', NULL, 0,
+    "Print back the parsed routine"},
    {"dry-run", 'n', NULL, 0,
-    "Do not actually run the program"},
+    "Do not actually run the routine"},
    {"no-run", '\0', NULL, OPTION_ALIAS },
    /* Most frequently used negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 11},
    {"no-dry-run", vmprefix_vm_negative_option_no_dry_run, NULL, 0,
-    "Actually run the parsed program (default)"},
-   {"no-print-program", vmprefix_vm_negative_option_no_print_program, NULL, 0,
-    "Don't print back the parsed program (default)"},
+    "Actually run the parsed routine (default)"},
+   {"no-print-routine", vmprefix_vm_negative_option_no_print_routine, NULL, 0,
+    "Don't print back the parsed routine (default)"},
 
    /* Disassembly options. */
    {NULL, '\0', NULL, OPTION_DOC, "Disassembly options:", 20},
@@ -331,10 +331,10 @@ static struct argp_option vmprefix_main_option_specification[] =
    /* Disassembly negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 21},
    {"no-disassemble", vmprefix_vm_negative_option_no_disassemble, NULL, 0,
-    "Don't disassemble the parsed program (default)"},
+    "Don't disassemble the parsed routine (default)"},
    {"no-cross-disassemble", vmprefix_vm_negative_option_no_cross_disassemble,
     NULL, 0,
-    "Don't cross-disassemble the parsed program (default)"},
+    "Don't cross-disassemble the parsed routine (default)"},
 
    /* Debugging, testing and benchmarking options. */
    {NULL, '\0', NULL, OPTION_DOC,
@@ -429,7 +429,7 @@ static struct argp argp =
     vmprefix_main_option_specification,
     parse_opt,
     "FILE.vm",
-    "Run a program encoded as a text file on the " VMPREFIX_VM_NAME
+    "Run a routine encoded as a text file on the " VMPREFIX_VM_NAME
     " VM, using " JITTER_DISPATCH_NAME_STRING " dispatch."
   };
 
@@ -481,7 +481,7 @@ main (int argc, char **argv)
   vmprefix_initialize ();
 
   /* Make an empty VM routine, and set options as requested by the user. */
-  struct vmprefix_program *p = vmprefix_make_program ();
+  struct vmprefix_routine *p = vmprefix_make_program ();
   if (cl.debug)
     fprintf (progress,
              "Options:\n"
@@ -514,14 +514,14 @@ main (int argc, char **argv)
     fprintf (progress, "Specializing...\n");
   vmprefix_specialize_program (p);
 
-  if (cl.print_program)
+  if (cl.print_routine)
     {
       if (cl.debug)
-        fprintf (progress, "Printing back the program...\n");
+        fprintf (progress, "Printing back the routine...\n");
       vmprefix_print_program (stdout, p);
     }
 
-  if (cl.disassemble_program)
+  if (cl.disassemble_routine)
     {
       if (cl.debug)
         fprintf (progress, "Disassembling...\n");
@@ -529,16 +529,16 @@ main (int argc, char **argv)
                                     cl.objdump_options);
     }
 
-  /* If we printed back the program or disassembled, this run is not performance
+  /* If we printed back or disassembled the routine, this run is not performance
      critical and we afford a couple more syscalls.  Flush the output buffer, so
-     that the program is visible before running, and possibly crashing. */
-  if (cl.print_program || cl.disassemble_program)
+     that the routine is visible before running, and possibly crashing. */
+  if (cl.print_routine || cl.disassemble_routine)
     {
       fflush (stdout);
       fflush (stderr);
     }
 
-  if (cl.run_program)
+  if (cl.run_routine)
     {
       if (cl.debug)
         fprintf (progress, "Initializing VM state...\n");
@@ -555,7 +555,7 @@ main (int argc, char **argv)
     }
 
   if (cl.debug)
-    fprintf (progress, "Destroying the program data structure...\n");
+    fprintf (progress, "Destroying the routine data structure...\n");
   vmprefix_destroy_program (p);
 
   if (cl.debug)

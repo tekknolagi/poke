@@ -121,7 +121,7 @@ structured_consume_location (struct structured_static_environment *env,
 /* Append the content of the pointed location as an instruction parameter, in
    the pointed VM routine. */
 static void
-structured_emit_operand (struct structuredvm_program *vmp,
+structured_emit_operand (struct structuredvm_routine *vmp,
                          const struct structured_location *l)
 {
   switch (l->case_)
@@ -151,7 +151,7 @@ structured_emit_operand (struct structuredvm_program *vmp,
    result of the expression will be stored, in emitted code, in the required
    location, updated here if its case is "anywhere". */
 static void
-structured_translate_expression_literal (struct structuredvm_program *vmp,
+structured_translate_expression_literal (struct structuredvm_routine *vmp,
                                          struct structured_location *rl,
                                          jitter_int literal,
                                          struct structured_static_environment
@@ -195,7 +195,7 @@ structured_translate_expression_literal (struct structuredvm_program *vmp,
    specific when it is structured_location_case_anywhere or
    structured_location_case_nonconstant at entry. */
 static void
-structured_translate_expression_variable (struct structuredvm_program *vmp,
+structured_translate_expression_variable (struct structuredvm_routine *vmp,
                                           struct structured_location *rl,
                                           structured_register_index ri)
 {
@@ -231,7 +231,7 @@ structured_translate_expression_variable (struct structuredvm_program *vmp,
 
 /* Forward-declaration. */
 static void
-structured_translate_expression (struct structuredvm_program *vmp,
+structured_translate_expression (struct structuredvm_routine *vmp,
                                  struct structured_location *rl,
                                  struct structured_expression *e,
                                  struct structured_static_environment *env);
@@ -241,7 +241,7 @@ structured_translate_expression (struct structuredvm_program *vmp,
    primitive. */
 static void
 structured_translate_non_conditional_primitive_opcode
-   (struct structuredvm_program *vmp,
+   (struct structuredvm_routine *vmp,
     enum structured_primitive case_)
 {
   switch (case_)
@@ -268,7 +268,7 @@ structured_translate_non_conditional_primitive_opcode
 
 /* Forward-declaration. */
 static void
-structured_translate_conditional (struct structuredvm_program *vmp,
+structured_translate_conditional (struct structuredvm_routine *vmp,
                                   struct structured_expression *e,
                                   structuredvm_label label,
                                   bool branch_on_true,
@@ -277,7 +277,7 @@ structured_translate_conditional (struct structuredvm_program *vmp,
 /* Forward-declaration. */
 static void
 structured_translate_conditional_primitive
-   (struct structuredvm_program *vmp,
+   (struct structuredvm_routine *vmp,
     enum structured_primitive case_,
     struct structured_expression *operand_0,
     struct structured_expression *operand_1,
@@ -297,7 +297,7 @@ structured_translate_conditional_primitive
    they are used for branching. */
 static void
 structured_translate_expression_non_conditional_primitive
-   (struct structuredvm_program *vmp,
+   (struct structuredvm_routine *vmp,
     struct structured_location *rl,
     enum structured_primitive case_,
     struct structured_expression *operand_0,
@@ -345,7 +345,7 @@ structured_translate_expression_non_conditional_primitive
    case. */
 static void
 structured_translate_expression_conditional_primitive
-   (struct structuredvm_program *vmp,
+   (struct structuredvm_routine *vmp,
     struct structured_location *rl,
     struct structured_expression *e,
     struct structured_static_environment *env)
@@ -378,7 +378,7 @@ structured_translate_expression_conditional_primitive
    The result of the expression will be stored, in emitted code, in the required
    location, updated here if its case is "anywhere". */
 static void
-structured_translate_expression (struct structuredvm_program *vmp,
+structured_translate_expression (struct structuredvm_routine *vmp,
                                  struct structured_location *rl,
                                  struct structured_expression *e,
                                  struct structured_static_environment *env)
@@ -473,7 +473,7 @@ structured_comparison_primitive_to_instruction (enum structured_primitive p)
    branch-on-zero if branch_on_true is false. */
 static void
 structured_translate_conditional_primitive
-   (struct structuredvm_program *vmp,
+   (struct structuredvm_routine *vmp,
     enum structured_primitive case_,
     struct structured_expression *operand_0,
     struct structured_expression *operand_1,
@@ -547,7 +547,7 @@ structured_translate_conditional_primitive
    branch when the expression would evaluate to zero.
    When the generated code does not branch, it simply falls thru. */
 static void
-structured_translate_conditional (struct structuredvm_program *vmp,
+structured_translate_conditional (struct structuredvm_routine *vmp,
                                   struct structured_expression *e,
                                   structuredvm_label label,
                                   bool branch_on_true,
@@ -623,7 +623,7 @@ structured_translate_conditional (struct structuredvm_program *vmp,
 /* Emit code translating the pointed statement AST to the pointed Jittery
    program, using the pointed static environment to be looked up and updated. */
 static void
-structured_translate_statement (struct structuredvm_program *vmp,
+structured_translate_statement (struct structuredvm_routine *vmp,
                                 struct structured_statement *s,
                                 struct structured_static_environment *env)
 {
@@ -710,7 +710,7 @@ structured_translate_statement (struct structuredvm_program *vmp,
 }
 
 static void
-structured_translate_program (struct structuredvm_program *vmp,
+structured_translate_program (struct structuredvm_routine *vmp,
                               struct structured_program *p)
 {
   struct structured_static_environment *env
@@ -726,7 +726,7 @@ structured_translate_program (struct structuredvm_program *vmp,
  * ************************************************************************** */
 
 void
-structured_translate_program_register (struct structuredvm_program *vmp,
+structured_translate_program_register (struct structuredvm_routine *vmp,
                                        struct structured_program *p)
 {
   /* Translate the AST pointed by p into *vmp.  This of course works by
