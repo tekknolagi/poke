@@ -89,7 +89,7 @@ early-header-c
   end
 end
 
-register-class r 1 # 1 #2 #3
+register-class r 2 # 1 #2 #3
   code
     union vmprefix_currently_unique_kind_register_t
   end
@@ -968,7 +968,7 @@ end
 # This is convenient for testing stack effects, by first setting up a known
 # stack configuration with this instruction and then using print-topmost
 # twice, to print it out before and after a change.
-instruction push-depths (?n 0 1 2 3 4 5 6 7 8 9 10)
+instruction push-depths (?n)
   code
     /* Make place for JITTER_ARGN0 new elements on the stack. */
     int i;
@@ -986,7 +986,7 @@ end
 # An alternative to push-depth, also for testing.
 # Push n elements to the stack, the deepest one having value 0, the next
 # having value 1, up to the top having value (n - 1) .
-instruction push-increasing (?n 0 1 2 3 4 5 6 7 8 9 10)
+instruction push-increasing (?n)
   code
     /* Make place for JITTER_ARGN0 new elements on the stack. */
     int i;
@@ -1014,19 +1014,37 @@ instruction print-topmost (?n)
   end
 end
 
-instruction reverse (?n 0 1 2 3 4 5 6 7 8 9 10)
+instruction reverse (?n 0 1 2 3 4 5 6 7 8 9 10
+                        11 12 13 14 15 16 17 18 19 20
+                        21 22 23 24 25 26 27 28 29 30
+                        31 32 33 34 35 36 37 38 39 40
+                        41 42 43 44 45 46 47 48 49 50
+                        51 52 53 54 55 56 57 58 59 60
+                        61 62 63 64 65 66 67 68 69 70)
   code
     JITTER_REVERSE_STACK (JITTER_ARGN0);
   end
 end
 
-instruction roll (?n 0 1 2 3 4 5 6 7 8 9 10)
+instruction roll (?n 0 1 2 3 4 5 6 7 8 9 10
+                     11 12 13 14 15 16 17 18 19 20
+                     21 22 23 24 25 26 27 28 29 30
+                     31 32 33 34 35 36 37 38 39 40
+                     41 42 43 44 45 46 47 48 49 50
+                     51 52 53 54 55 56 57 58 59 60
+                     61 62 63 64 65 66 67 68 69 70)
   code
     JITTER_ROLL_STACK (JITTER_ARGN0);
   end
 end
 
-instruction mroll (?n 0 1 2 3 4 5 6 7 8 9 10)
+instruction mroll (?n 0 1 2 3 4 5 6 7 8 9 10
+                      11 12 13 14 15 16 17 18 19 20
+                      21 22 23 24 25 26 27 28 29 30
+                      31 32 33 34 35 36 37 38 39 40
+                      41 42 43 44 45 46 47 48 49 50
+                      51 52 53 54 55 56 57 58 59 60
+                      61 62 63 64 65 66 67 68 69 70)
   code
     JITTER_MROLL_STACK (JITTER_ARGN0);
   end
