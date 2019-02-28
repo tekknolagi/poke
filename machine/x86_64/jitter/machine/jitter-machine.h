@@ -32,6 +32,17 @@
 
 
 
+/* Debugging.
+ * ************************************************************************** */
+
+/* Expand to an inline assembly template generating a nop instruction containing
+   the given literal as an argument. */
+#define _JITTER_ASM_DEBUGGING_NOP(integer_literal_as_string)  \
+  "nopl " integer_literal_as_string "(%%eax)"
+
+
+
+
 /* Optional features.
  * ************************************************************************** */
 
@@ -285,7 +296,7 @@
                 : /* clobbers. */                                     \
                 : jitter_dispatch_label /* gotolabels. */);           \
       /* The rest of the VM instruction is unreachable. */            \
-      __builtin_unreachable ();                                       \
+      /*__builtin_unreachable (); */                                      \
     }                                                                 \
   while (false)
 
@@ -353,7 +364,7 @@
                 : jitter_dispatch_label /* goto labels */);                     \
       /* This is a tail call: the next statement within this VM instruction is  \
          not reachable. */                                                      \
-      __builtin_unreachable ();                                                 \
+      /* __builtin_unreachable (); */                                                \
     }                                                                           \
   while (false)
 #endif // #ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN
@@ -405,7 +416,7 @@
                 : /* clobbers. */                                     \
                 : jitter_dispatch_label /* gotolabels. */);           \
       /* The rest of the VM instruction is unreachable. */            \
-      __builtin_unreachable ();                                       \
+      /* __builtin_unreachable (); */                                      \
     }                                                                 \
   while (false)
 
@@ -448,7 +459,8 @@
                 : jitter_dispatch_label/*, \
  JITTER_SPECIALIZED_INSTRUCTION_END_LABEL*/ /* goto labels */\
                     );            \
-      /*__builtin_unreachable (); */\
+      /* Skip the rest of the specialized instruction, for compatibility */  \
+      /* with more limited dispatches. */                                    \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END; \
     }                                                                       \
   while (false)
@@ -469,7 +481,8 @@
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
                 : /* clobbers */                                                \
                 : jitter_dispatch_label /* goto labels */);                \
-      /* Make the rest of the VM instruction unreachable. */                    \
+      /* Skip the rest of the specialized instruction, for compatibility */  \
+      /* with more limited dispatches. */                                    \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                               \
     }                                                                           \
   while (false)
@@ -494,7 +507,7 @@
                 : jitter_dispatch_label /* goto labels */);                     \
       /* This is a tail call: the next statement within this VM instruction is  \
          not reachable. */                                                      \
-      __builtin_unreachable ();                                                 \
+      /* __builtin_unreachable (); */                                                \
     }                                                                           \
   while (false)
 

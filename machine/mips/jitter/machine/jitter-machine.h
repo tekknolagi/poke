@@ -32,6 +32,17 @@
 
 
 
+/* Debugging.
+ * ************************************************************************** */
+
+/* Expand to an inline assembly template generating a nop instruction containing
+   the given literal as an argument. */
+#define _JITTER_ASM_DEBUGGING_NOP(integer_literal_as_string)  \
+  "addi $0, $0, " integer_literal_as_string
+
+
+
+
 /* Computed goto.
  * ************************************************************************** */
 

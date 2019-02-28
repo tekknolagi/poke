@@ -32,6 +32,18 @@
 
 
 
+/* Debugging.
+ * ************************************************************************** */
+
+/* Expand to an inline assembly template generating a nop instruction containing
+   the given literal as an argument. */ // FIXME: define this for this architecture.
+#define _JITTER_ASM_DEBUGGING_NOP(integer_literal_as_string)  \
+  "xori %%r0, %%r0, " integer_literal_as_string "\n\t"        \
+  "xori %%r0, %%r0, " integer_literal_as_string "\n\t"
+
+
+
+
 /* Computed goto.
  * ************************************************************************** */
 

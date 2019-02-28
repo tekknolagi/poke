@@ -118,7 +118,7 @@
    different from all others, and a terminating "\n\t" sequence. */
 #define JITTER_ASM_COMMENT_UNIQUE(_jitter_string_literal)   \
   JITTER_ASM_COMMENT_PREFIX _jitter_string_literal " "      \
-    JITTER_STRING_LITERAL_UNIQUE "\n\t"
+  JITTER_STRING_LITERAL_UNIQUE "\n\t"
 
 /* Expand to an inline asm C statement containing the given comment, and a
    terminating "\n\t" sequence. */
@@ -130,6 +130,31 @@
    different expansions with the same argument. */
 #define JITTER_COMMENT_IN_ASM_UNIQUE(_jitter_string_literal)        \
   asm volatile (JITTER_ASM_COMMENT_UNIQUE(_jitter_string_literal))
+
+/* "Debugging nops" serve to generate nop instructions containing recognizable
+   integer arguments, to be read back by humans disassembling compiled code.
+   If there is no architecture-specific code for generating debugging nops, just
+   generate nothing in their place. */
+#ifndef _JITTER_ASM_DEBUGGING_NOP
+# define _JITTER_ASM_DEBUGGING_NOP(integer_literal_as_string)  \
+  ""
+#endif // #ifndef _JITTER_ASM_DEBUGGING_NOP
+
+/* Debugging nops: user macro, generating a readable asm comment followed (where
+   possible) by the nop.
+   The argument must be an integer literal in Gas syntax, with no surrounding
+   quotes.  The machine-specific macro will emit the appropriate prefix to
+   interpret the digit sequence as a hexadecimal constant.
+   For portability with respect to architectures only supporting small operands,
+   the arguments should be non-negative and representable in 7 bits (Rationale:
+   one way to implement a "nop" is by adding a short immediate to a register,
+   followed by adding it back with the opposite sign; another alternative is
+   xoring and a literal constant into the register itself, twice). */
+#define JITTER_ASM_DEBUGGING_NOP(integer_literal)                 \
+  JITTER_ASM_COMMENT_UNIQUE ("Debugging nop: "                    \
+                             JITTER_STRINGIFY (integer_literal))  \
+  _JITTER_ASM_DEBUGGING_NOP(JITTER_STRINGIFY (integer_literal))   \
+  "\n\t"
 
 
 
@@ -211,7 +236,7 @@
 
 // FIXME: comment.
 #ifdef JITTER_DISPATCH_NO_THREADING
-# define JITTER_IP_INPUT_CONSTRAINT "g"
+# define JITTER_IP_INPUT_CONSTRAINT "m" //"g"
 #else
 # define JITTER_IP_INPUT_CONSTRAINT "r"
 #endif
@@ -319,6 +344,30 @@
 
 
 
+/* User macros to access VM state data structures.
+ * ************************************************************************** */
+
+/* Expand to the current VM state runtime, as a struct. */
+#define JITTER_STATE_RUNTIME  \
+  jitter_state_runtime
+
+/* Expand to the current VM state backing, as a struct. */
+#define JITTER_STATE_BACKING  \
+  (jitter_original_state->jitterlispvm_state_backing)
+
+/* Expand to an l-value referrign the named field in the current VM state
+   runtime. */
+#define JITTER_STATE_RUNTIME_FIELD(field_name)  \
+  (JITTER_STATE_RUNTIME.field_name)
+
+/* Expand to an l-value referrign the named field in the current VM state
+   backing. */
+#define JITTER_STATE_BACKING_FIELD(field_name)  \
+  (JITTER_STATE_BACKING.field_name)
+
+
+
+
 /* Nullary macros expanding to per-instruction labels and variable names.
  * ************************************************************************** */
 
@@ -408,8 +457,11 @@
 { \
   JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL_OF(mangled_name):             \
     __attribute__ ((hotness_attribute));                                   \
-JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
-                      ": begin"); \
+  JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name) ": begin"); \
+  /*
+  asm volatile (JITTER_ASM_DEBUGGING_NOP(0x1) \
+                : [foo] "+m" (jitter_ip));*/ \
+  JITTER_PRETEND_TO_UPDATE_IP_; \
 /* NEW*/\
  /*JITTER_PRETEND_TO_UPDATE_IP_;*/\
  /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name))*/;
@@ -486,14 +538,33 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
 #elif defined(JITTER_DISPATCH_NO_THREADING)
 # define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
     } \
+    /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label); \
+    asm volatile (JITTER_ASM_COMMENT_UNIQUE("blah") \
+                  JITTER_ASM_DEBUGGING_NOP(0x2) \
+                  : [foo] "+m" (jitter_ip));*/ \
+    /*goto *((void*)jitter_ip);*/ \
     /*asm volatile ("addi $0, $0, 1");*/\
     /*JITTER_PRETEND_TO_UPDATE_IP_;*/ \
-    JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label); \
+      /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label);*/ \
+         /*JITTER_PRETEND_TO_UPDATE_IP_;*/ \
+    /* asm volatile (JITTER_ASM_COMMENT_UNIQUE("blah") \
+                  JITTER_ASM_DEBUGGING_NOP(0x2) \
+                  : [foo] "+m" (jitter_ip)); */\
+    /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label);*/ \
+    /*JITTER_PRETEND_TO_UPDATE_IP_;*/ \
     /*asm volatile ("addi $0, $0, 2");*/\
    JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):          \
+   /*asm volatile (JITTER_ASM_COMMENT_UNIQUE("blah") \
+                  JITTER_ASM_DEBUGGING_NOP(0x3) \
+                  : [foo] "+m" (jitter_ip));*/ \
+    /*goto jitter_dispatch_label;*/\
     /*asm volatile ("addi $0, $0, 3");*/\
-    JITTER_PRETEND_TO_UPDATE_IP_; \
-    JITTER_PRETEND_TO_JUMP_TO_(jitter_dispatch_label);
+    /*JITTER_PRETEND_TO_UPDATE_IP_;*/ \
+    /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label);*/ \
+ goto *((void*)jitter_ip); \
+    /*JITTER_PRETEND_TO_JUMP_TO_(jitter_dispatch_label);*/ \
+    /*JITTER_BRANCH_TO_IP();*/
+    /*JITTER_PRETEND_TO_JUMP_TO_(jitter_dispatch_label); */
 #else
 # error "unknown dispatching model"
 #endif // #if   defined(JITTER_DISPATCH_DIRECT_THREADING)
@@ -620,7 +691,9 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
                     /* inputs */                                               \
                   : JITTER_ASM_COMPUTED_GOTO_CLOBBERS /* clobbers */           \
 /*, "memory" */                                            \
-                  : jitter_dispatch_label /* gotolabels */);              \
+                  : jitter_dispatch_label /* gotolabels */);                   \
+        /* This is an unconditional branch: the following statement in the     \
+           same block is unreachable. */                                       \
         __builtin_unreachable();                                               \
       }                                                                        \
     while (false)
@@ -645,6 +718,30 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
     JITTER_COMPUTED_GOTO_TRIVIAL(target)
 #endif // #ifdef JITTER_REPLICATE
 
+////////////////
+/*
+  This is better on PowerPC: switching to this brought testsuite failures from 2 to 0.
+  Sparc32: from 4 or 2 to a few, or 0.
+    Some cases fail nondeterministically on Sparc32, independently from this; I suspect
+    it's due to qemu.  No test case fails deterministically.
+  MIPS: from 0 to 0.
+  x86_64 GCC 7: from 0 to 0.
+  x86_64 GCC 6: from 0 to 0.
+  x86_64 GCC 5: from 0 to 0.
+  But here is the problem:
+  x86_64 GCC 8: from 0 to 153, deterministically (!!).
+    every single no-threading case fails.  I can't see any obvious reason, even by
+    disassembling.
+      Found it: it's exitvm.  A stupid tail-merging.  It jumps to a jump within !INVALID,
+      possibly because !INVALID is cold.
+Shall I do it only in exit?  Why should I ever trust this optimization behavior to be consistent?
+*/
+/*
+#undef JITTER_COMPUTED_GOTO
+#   define JITTER_COMPUTED_GOTO(target)     \
+      JITTER_COMPUTED_GOTO_TRIVIAL(target)
+*/
+////////////////
 
 
 
@@ -698,6 +795,7 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
     {                                  \
       JITTER_SET_IP(target_pointer);   \
       JITTER_BRANCH_TO_IP();           \
+      __builtin_unreachable (); /* FIXME: this seems beneficial here, differently from the no-threading case; anyway, the problem could be catched with a defect handler, and this is not a guarantee of correctness. */ \
     }                                  \
   while (false)
 #endif // #ifdef JITTER_DISPATCH_NO_THREADING
@@ -883,50 +981,5 @@ JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name)  \
 #define JITTER_BRANCH_IF_NOTGREATER_UNSIGNED(operand0, operand1, target)  \
   _JITTER_BRANCH_IF(jitter_uint, operand0, <=, operand1, target)
 
-
-
-
-/* PC-relative address poisoning.
- * ************************************************************************** */
-
-/* Using PC-relative addressing within instruction bodies when replicating
-   always leads to memory accesses at the incorrect places, and we want to
-   prevent that.  It's better to fail at link time instead of generating wrong
-   code which will crash later, or introduce subtle bugs.
-
-   This is a heavyweight solution yielding big executables and heavily stressing
-   as and ld, potentially to an extent not suitable for production use; but it's
-   good to be able to build a testing executable, and have the build fail if
-   there will be problem; if not, an efficient executable can be built in a
-   second step.
-
-   By inserting useless data just larger than the maximum allowed value for
-   PC-relative offsets we guarantee that any code using PC-relative loads or
-   stores will fail to link.
-
-   PC-relative offsets are signed in all the architectures I know except SH
-   ( mov.w @(disp,pc),rn and mov.l @(disp,pc),rn : unfortunately they are the
-   useful cases here) but they may be implicitly scaled; the actual range is
-   architecture-dependent. */
-#ifdef JITTER_REPLICATE
-# define JITTER_POISON_PC_RELATIVE_ADDRESSING(size)           \
-    do                                                        \
-      {                                                       \
-        asm volatile ("#.section .bss\n"                      \
-                      ".section .rodata\n"                    \
-                      "#.data\n"                              \
-                      "# .data # .bss\n"                      \
-                      ".skip (" JITTER_STRINGIFY(size) ")\n"  \
-                      ".text");                               \
-      }                                                       \
-    while (false)
-#else
-# define JITTER_POISON_PC_RELATIVE_ADDRESSING(size)                        \
-    do                                                                     \
-      {                                                                    \
-        /* Do nothing: there is nothing to poison without replication. */  \
-      }                                                                    \
-    while (false)
-#endif // #ifdef JITTER_REPLICATE
 
 #endif // #ifndef JITTER_INTERPRETER_PRIVATE_H_
