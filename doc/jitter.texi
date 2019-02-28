@@ -134,6 +134,7 @@ software source code as @file{doc/COPYING.DOC}, and also on the web at
 
 @titlepage
 @title Jitter
+@subtitle a generator of efficient language virtual machines
 @subtitle for version @value{VERSION}, updated in @value{UPDATED-MONTH}
 @c @author Luca Saiu (@email{positron@@gnu.org}, @url{http://ageinghacker.net})
 @c @author Luca Saiu (@url{http://ageinghacker.net})
@@ -168,25 +169,27 @@ software source code as @file{doc/COPYING.DOC}, and also on the web at
 
 @menu
 @c What this software is and how it came to be
-* Introduction::            What Jitter is and why it is useful.
-@c Tutorial documentation
+* Introduction::               What Jitter is and why it is useful.
+@c Part I@* Tutorial documentation
 * Working with the Jitter sources::  How to configure, build and test Jitter, natively or cross-compiling.
-* Tutorial::                A simple but realistic example explained in detail.
-@c Reference documentation
-* Invoking @command{jitter}:: Generating C files with Jitter from the command line.
+* Tutorial::                   A simple but realistic example explained in detail.
+@c Part II@* Reference documentation
+* Invoking @command{jitter}::            Generating C files with Jitter from the command line.
+* Standalone VMs::             Using a generated VM as a self-contained program.
 * Compiling Jittery programs:: How to build executable from VMs and your code.
-* Writing VM specifications:: How to describe your virtual machine's behavior.
-* Standalone VMs::          Using a generated VM as a self-contained program.
-* C API::                   Calling C code from your VM and your VM from C.
-* Internals::               How the generated virtual machines work.
+* Writing VM specifications::  How to describe your virtual machine's behavior.
+* C API::                      Calling C code from your VM and your VM from C.
+@c Part III@* Performance
+* Writing code generators::    Tips about implementing compilers for your VM.
+* Internals::                  How the generated virtual machines work.
 @c Licenses
 @c * GNU General Public License::     How you can share and modify the software.
 @c * GNU Free Documentation License:: How you can share and modify this manual.
-* This is free software::   How you can share and change the software and this manual.
+* This is free software::      How you can share and change the software and this manual.
 @c Bibliography
-* Bibliography::            Interesting scientific articles about efficient VMs.
+* Bibliography::               Interesting scientific articles about efficient VMs.
 @c Indices
-* Index::                   The key words of this manual, with links.
+* Index::                      The key words of this manual, with links.
 @c Temporary stuff, for myself
 * Stuff still to be written:: What will be in this manual but is not fully written yet.
 * Stuff still to be implemented:: What will exist in the implementation in the future.
@@ -1189,6 +1192,12 @@ Happy hacking.
 @c tone.  Everything from here on should be in the first person
 @c *plural*.
 
+
+@c Tutorial part
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@part Part I@* Tutorial documentation
+
+
 @c Working with Jitter sources
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -1589,6 +1598,11 @@ design, doesn't emulate L1i invalidation}
 @section A VM definition
 
 
+@c Reference part
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@part Part II@* Reference documentation
+
+
 @c Invoking @command{jitter}
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @c This node name is required by the GNU standards.
@@ -1598,6 +1612,16 @@ design, doesn't emulate L1i invalidation}
 @cindex invoking
 @cindex command line
 @cindex @command{jitter}
+
+
+@c Standalone VMs
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Standalone VMs
+@chapter Standalone VMs
+
+@cindex standalone
+
 
 @c Compiling Jittery programs
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -1633,15 +1657,15 @@ design, doesn't emulate L1i invalidation}
 @cindex build system
 
 @menu
-* @command{jitter-config}::   A program printing the compiler options you need.
+* Invoking @command{jitter-config}:: You can print out the right compiler options.
 * Autoconf and Automake::     Compiling Jittery programs with the GNU build system.
 * Make::                      Simple makefiles and dependencies.
 * Other systems::             You're on your own, but you have @command{jitter-config}.
 @end menu
 
 @c @@@
-@node @command{jitter-config}
-@subsection @command{jitter-config}
+@node Invoking @command{jitter-config}
+@subsection Invoking @command{jitter-config}
 @cindex @command{jitter-config}
 
 @c @@@
@@ -1676,7 +1700,7 @@ Jittery program will avoid going to such lengths.}
 @cindex script, shell (for building)
 
 
-@c The language
+@c The Jitter language
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 @node Writing VM specifications
@@ -1823,15 +1847,6 @@ The specific macro generates faster code. @fixme{show the two disassemblies}}
 @fixme{constants, particularly if big: count down rather than up}
 
 
-@c Standalone VMs
-@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-@node Standalone VMs
-@chapter Standalone VMs
-
-@cindex standalone
-
-
 @c C API
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -1937,6 +1952,21 @@ There is no global interpreter lock.}
 @fixme{The user needs to take care of synchronization herself, when
 needed.  Of course it is possible to break reentrancy from
 user code, but it should be easy to avoid that.}
+
+
+@c Performance part
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@part Part III@* Performance
+
+
+@c Writing code generators
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Writing code generators
+@chapter Writing code generators
+
+@cindex code generator
+@cindex generator, code
 
 
 @c Internals
@@ -3281,3 +3311,8 @@ Everything would remain thread-local, which is good.
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 @bye
+Local Variables:
+  eval: (flyspell-mode t)
+  eval: (ispell-change-dictionary "american")
+  compile-command: "bash -ci 'make -C ~/repos/jitter/_build/native-gcc-9 info pdf'"
+End:

@@ -364,8 +364,8 @@ as long as we keep seeing it as an example for Jitter either
 classification will do.
 @c JitterLisp is a complex toy, or a simple real Lisp system; either will
 @c work as long as we keep seeing it as an example for Jitter.
-As for concrete applications it can certainly be made useful: the Lisp
-library can be extended, and JitterLisp itself could become both
+As for concrete applications it can certainly be made practical: the
+Lisp library can be extended, and JitterLisp itself could become both
 embeddable and extensible in C without unreasonable effort.  I might
 bend the system in some of these directions myself in the future, and
 the result would be useful, but writing yet another Lisp system was
@@ -383,24 +383,10 @@ I will not even try to hide my own personal goal for JitterLisp: being
 able to say that @emph{most language implementations are inexcusably
 bad}, as in fact they are, with a real implementation to present as
 a comparison point and not just a proof of concept; and numbers.
-
+@*
 @cindex Schadenfreude
-Here I stand, claiming my right to rub JitterLisp on everyone's face.
-How good it feels.
-
-@c I want to be able to say that 
-@c And here I am, rubbing
-@c @c my victory
-@c JitterLisp
-@c on their faces.
-
-@c We can, we must do better.
-
-@c The fashionable solutions are incredibly easy to beat.  Let us do it,
-@c and rub the victory in their faces.
-
-@c And if somebody read these words more like a criticism of others than
-@c an endorsement of myself, she would be correct.
+And so here I stand, claiming my right to rub JitterLisp on everyone's
+face.  How good it feels.
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -420,8 +406,8 @@ for simplicity my decision relied on two criteria:
 realistic?}
 JitterLisp should remain a Lisp, not more difficult to learn for a
 Lisper than another simple dialect nor too fundamentally different.
-JitterLisp must also be a practical system with the core features a
-programmer would expect, and not just an idealized prototype.
+JitterLisp must also be a reasonably practical system with the core
+features a programmer would expect, and not just an idealized prototype.
 @*
 It must be possible to compare the JitterLisp @emph{language} with
 standard dialects, and find them similar in practice.
@@ -433,7 +419,7 @@ standard dialects, and find them similar in practice.
 feature granted JitterLisp a performance advantage with respect to
 other Lisps at the cost of making JitterLisp very cumbersome to use,
 then not supporting it would make performance comparisons unfair.
-When, on the other hand, a feature has no performance overhead
+Where, on the other hand, a feature has no performance overhead
 (particularly when not in use), I can in good conscience leave it out
 and claim that an extended JitterLisp with the feature would still
 perform as well as the current system.
@@ -445,9 +431,9 @@ The language must make comparisons between the JitterLisp
 In the end the relative weight associated to each of the two criteria
 can only be a judgment call and some grey areas will remain, no matter
 how I strive for fairness.
-In case some reader felt that I unbalanced the comparison to
-JitterLisp's advantage by choosing to include or exclude some feature,
-I am open to discussion.
+In case some reader felt that I skewed the comparison to JitterLisp's
+advantage by choosing to include or exclude some feature, I am open to
+discussion.
 
 @cindex compatibility, other Lisp dialects (none)
 @cindex influence
@@ -457,11 +443,11 @@ I am open to discussion.
 JitterLisp draws inspiration from both Common Lisp and Scheme, without
 being compatible with either.
 However a competent programmer should be able to write code running
-unchanged on top of a Common Lisp or Scheme system, through a layer of
-simple macros.
+unchanged on top of JitterLisp, a Common Lisp system or a Scheme system,
+through a layer of simple macros.
 
 @cindex epsilon
-Several implementation ideas originate from my own GNU epsilon.
+Several design ideas originate from my own GNU epsilon.
 
 @menu
 * Comparison with other Lisps::     Some features come from Common Lisp and Scheme.
@@ -555,7 +541,8 @@ At the present time @emph{fixnums} are the only numeric type.
 @cindex identity, procedure across compiling
 Each procedure may be either @emph{interpreted} or @emph{compiled},
 and procedures of different kinds are allowed to call each other
-with no restrictions and no difference in observable behavior.
+with no restrictions and no difference in observable behavior
+apart from performance.
 Interpreted procedures can be compiled at run time without
 affecting their @emph{identity} as objects.
 
@@ -605,10 +592,10 @@ While these distinctly epsilonian features make the internal
 implementation simpler and more elegant they are meant to be invisible
 to the casual user.  In particular user macros operate on ordinary
 non-AST Lisp data structures, usually through Lisp quasiquoting, and
-will feel instantly familiar to any Common Lisp programmer; the fact
-that the core Lisp forms are themselves predefined macros expanding to
-ASTs may be safely ignored in ordinary programs as an implementation
-detail.
+will feel instantly familiar to any Common Lisp or Emacs Lisp programmer;
+the fact that the core Lisp forms are themselves predefined macros
+expanding to ASTs may be safely ignored in ordinary programs as an
+implementation detail.
 
 @xref{Interaction example} for a quick demo session introducing most
 of the non-traditional features likely to surprise a Lisp user.
@@ -629,14 +616,14 @@ of the non-traditional features likely to surprise a Lisp user.
 
 @fixme{no modules, packages or namespaces}
 
-@syindex values@r{ (non-existing form)}
+@syindex values@r{ (@emph{non-existing} form)}
 @fixme{no @code{values}}
 
-@syindex call/cc@r{ (non-existing form)}
+@syindex call/cc@r{ (@emph{non-existing} form)}
 @fixme{no continuations}
 
-@syindex throw@r{ (non-existing form)}
-@syindex catch@r{ (non-existing form)}
+@syindex throw@r{ (@emph{non-existing} form)}
+@syindex catch@r{ (@emph{non-existing} form)}
 @fixme{no exceptions}
 
 @cindex variadic, procedure (absent in JitterLisp)
@@ -760,7 +747,7 @@ readable git repository, is on my web site at the URL
 @cindex git branch
 @cindex @code{jitterlisp}, git branch
 @cindex @code{master}, git branch
-As of early 2018 JitterLisp's development takes place on the
+As of early 2019 JitterLisp's development takes place on the
 @code{jitterlisp} git branch, to be merged into @code{master} as soon
 as the code approaches a stable form.
 
@@ -820,7 +807,7 @@ Jitter.
 @cindex tarball, stable release (not yet)
 @xref{Working with the Jitter sources,,, jitter, The Jitter Manual} for
 detailed building instructions.  The build system follows the modern GNU
-style and in particular the common practice and suggestions from the GNU
+style and in particular the common practices and suggestions from the GNU
 Coding Standards
 (@pxref{Top,,, standards, The GNU Coding Standards}), which sets a few
 additional requirements such as GNU Autoconf and GNU Automake for
@@ -848,7 +835,7 @@ built.
 @cindex directory, build (Jitter)
 @cindex build directory (Jitter)
 Jitter's build system encourages a separate build directory and
-supports advanced features such as cross compilation, but should be
+supports advanced features such as cross compilation, but is
 standard enough to just work with the usual command line
 @example
 ./bootstrap && ./configure && make
@@ -972,12 +959,12 @@ Jitter's libraries and executables.
 @cindex shared library
 @cindex static library
 @cindex library (native, non-Lisp)
-However, as a simpler workaround, a user can configure
+However, as a simpler alternative, a user can configure
 Jitter to generate static libraries only by calling @file{configure}
 with the option @option{--disable-shared},
 and then build the examples.  Each JitterLisp executable will be one
 self-contained file with no external run-time dependencies, easy to
-copy by hand into some directory from @env{PATH} or to another
+copy by hand into some directory within @env{PATH} or to another
 convenient location.
 
 @cindex library file, JitterLisp
@@ -986,10 +973,10 @@ convenient location.
 @cindex GPL
 @cindex GNU General Public License
 If the Jitter libraries are statically linked and every dynamic
-library is installed then the JitterLisp executables will not access
-any other file by default: the large Lisp initialization file and the
-GPL license text are in fact embedded as constants within the native
-compiled file image (@pxref{constant-strings}).
+library is correctly installed then the JitterLisp executables will
+not access any other file by default: the large Lisp initialization
+file and the GPL license text are in fact embedded as constants within
+the native compiled file image (@pxref{constant-strings}).
 
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -1003,7 +990,7 @@ compiled file image (@pxref{constant-strings}).
 @cindex Read-Eval-Print Loop
 A user can either run JitterLisp @dfn{interactively} via a
 @dfn{Read-Eval-Print Loop}, or use it to execute a Lisp programs from
-any number of text files and then exit.
+any number of text files.
 
 An interactive run is the default: simply invoking a JitterLisp
 executable with no arguments, for example by typing
@@ -1025,7 +1012,7 @@ the user are allowed to span multiple lines.
 @cindex input, closing
 @cindex @key{C-d}, terminal input closing
 The user can exit by closing the input, typically by pressing
-@key{C-d} on GNU and other Unix systems.
+@key{C-d} on an empty line, on GNU and other Unix systems.
 
 @cindex non-option argument
 @cindex file name, non-option argument
@@ -1041,16 +1028,18 @@ executing the REPL.
 @cindex standard input
 @cindex input, standard
 A single dash @samp{-} is a non-option argument and stands for the
-process standard input.  Like the path name for a Lisp file, a
-@code{-} argument will make JitterLisp default to non-interactive mode.
+process standard input, from which the program will read Lisp forms.
+Like the path name for a Lisp file, a @code{-} argument will make
+JitterLisp default to non-interactive mode.
 
 @cindex output
 @cindex I/O
-Lisp forms @emph{from input files or @samp{-}}, in either interactive or
-non-interactive mode, will be evaluated without automatically printing
-each result, to avoid useless distractions.  Of course a Lisp program may
-call I/O procedures (@pxref{Input and output}) in order to print out
-information when needed, without such explicit output being suppressed.
+Lisp forms @emph{from input files or @samp{-}}, in either interactive
+or non-interactive mode, will be evaluated without automatically
+printing each result, to avoid clutter in the output.  Of course a
+Lisp program may still call I/O procedures (@pxref{Input and output})
+in order to print out information as desired, without such
+@emph{explicit} output being suppressed.
 
 A run-time error while executing a Lisp program given on the command line
 will cause JitterLisp to exit with failure, without processing any
@@ -1059,12 +1048,12 @@ remaining Lisp file.
 @cindex option, command line (@command{jitterlisp})
 @cindex command line option (@command{jitterlisp})
 @cindex @command{jitterlisp} and related executables, invoking
-By default any command-line argument beginning with a dash (@samp{-})
-is an @dfn{option}, affecting JitterLisp's behavior in one of the ways
-described in this section.  The exceptions are arguments constituted
-by a single dash, as explained above, or any arguments following an
-argument constituted by exactly two dashes (@samp{--}): those are
-interpreted as non-options.
+JitterLisp executables default to treating any command-line argument
+beginning with a dash (@samp{-}) as an @dfn{option} which affects the
+system behavior in one of the ways described in this section.
+The exceptions are arguments constituted by exactly a single dash, as
+explained above, or any arguments following an argument constituted by
+exactly two dashes (@samp{--}): those are interpreted as non-options.
 
 @cindex default, command-line option
 Several JitterLisp options affect the software behavior in some way
@@ -1078,13 +1067,13 @@ the command line prevails.
 @cindex shell alias
 I call @dfn{negative options} the options whose only purpose is to
 negate the effect of other options, therefore restoring the default
-behavior.  Negative options are useful to counteract the effect of
+behavior.  Negative options are useful for counteracting the effect of
 some option which is convenient to always pass and then occasionally
 override, for example as part of a shell alias or with quick
 interactive line editing of a complex shell command line.
 @*
-The output of @option{--help} shows negative options marked as
-@samp{(default)}.
+The output of @option{--help}, described below, shows negative options
+marked as @samp{(default)}.
 
 @cindex common GNU options, command-line
 @cindex standard GNU options, command-line
@@ -1322,7 +1311,9 @@ JitterLisp itself with respect to debugging or benchmarking.
 @item -v@r{, }--verbose
 @cindex verbosity
 @cindex debug
-Print out debugging information about JitterLisp's execution progress.
+Print out debugging information about JitterLisp's execution progress,
+including the full macroexpansion and evaluation of each library form
+executed at startup.
 The default it not to print such information.
 
 This option may occasionally be useful to discover the approximate
@@ -1363,6 +1354,14 @@ AST optimization
 (@pxref{AST optimization})
 or compilation
 (@pxref{Compilation}).
+A few globals documented as ``macro'' have actually two separate
+implementations, the first in C as a ``core macro'', to be used at
+initialization for bootstrapping the system, and then a second,
+cleaner or more powerful redefinition as an ordinary ``macro'',
+in Lisp.  The option @option{--no-library} exposes the
+core macro implementation in this case, which may differ in subtle
+ways from the normally available definition, and in fact is allowed
+to contradict the specification in this manual.
 
 This option is meant for debugging JitterLisp itself.
 
@@ -1394,9 +1393,9 @@ from the beginning of the reference part of this document
 (@pxref{Lisp reference}).
 I am particularly interested in feedback from readers who cannot
 program yet or are only weak programmers but are making a serious
-attempt to learn by following this route; should this be your case,
-please contact me (@pxref{Contacting the author,,, jitter, The Jitter
-Manual}).
+attempt to learn by following this route; any beginner with useful
+feedback to provide, positive or negative, is welcome to contact me
+(@pxref{Contacting the author,,, jitter, The Jitter Manual}).
 
 ???????????
 @fixme{Write this}
@@ -1562,8 +1561,8 @@ read from input via a @dfn{read syntax} as well.  The two syntaxes,
 where both defined, are compatible.
 @*
 For example the number @code{1234}, the boolean @code{#t} and the
-symbol @code{this-is-a-symbol} are written back by the system (for
-example when they occur as results in the REPL) as @code{1234},
+symbol @code{this-is-a-symbol} are written back by the system (when they
+occur as results in the REPL, or in output) as @code{1234},
 @code{#t} and @code{this-is-a-symbol}, in the same syntax available to
 the user for data input.  However some other objects such as
 procedures can be described in the output (for example
@@ -1595,7 +1594,7 @@ structures have no read syntax but can be built programmatically.}
 It is worth to repeat how the language defined in the rest of
 this section describes @emph{Lisp data}, and not necessarily valid
 Lisp expressions.  For example @code{foo} denotes a symbol object, but
-simply typing @code{foo} to the REPL prompt will cause an
+simply typing @code{foo} at the first REPL prompt will cause an
 unbound-variable error---in such a case the symbol object @code{foo}
 will be macroexpanded into a @emph{variable} named @samp{foo}.
 In the same way the read (and write) syntax @code{(1 2 3)} denotes a
@@ -1648,7 +1647,7 @@ accept either an interpreted closure or a compiled closure as a
 @cindex empty list
 @cindex list, empty
 A unique object important in practice is @dfn{the empty list}:
-@syindex ()
+@syindex ()@r{ (empty list object)}
 @deffn {unique} ()
 In read syntax it is acceptable to separate the open and closed
 parentheses with arbitrary whitespace or comments, in which last case
@@ -1660,14 +1659,14 @@ is used, in particular, as the trailing part of the of every list
 @emph{spine}:
 @pxref{lists}.
 
-@cindex boolean
-@cindex boolean, canonical
-@cindex canonical boolean
+@cindex Boolean
+@cindex Boolean, canonical
+@cindex canonical Boolean
 @cindex true
 @cindex false
-A @dfn{boolean} object or @dfn{canonical boolean} represents a truth
+A @dfn{Boolean} or @dfn{canonical Boolean} object represents a truth
 value, either @dfn{false} or @dfn{true}.  There are exactly two
-booleans:
+Booleans:
 @syindex #f
 @deffn  {unique} #f
 @syindex #t
@@ -1676,16 +1675,16 @@ The false object is written as @code{#f};
 the true object is written as @code{#t}.
 @end deffn
 @noindent
-@cindex generalized boolean
-@cindex boolean, generalized
+@cindex generalized Boolean
+@cindex Boolean, generalized
 @cindex conditional
 @cindex loop
 In practical use @code{#f} tends to be more important than @code{#t},
 as JitterLisp conditionals and loops distinguish between the @code{#f}
 value and @emph{any other} Lisp object which is taken as ``true'' for
-the purposes of tests.  A Lisp object used as a boolean
-in this extended sense is called a @dfn{generalized boolean}.  Of
-course generalized booleans are not necessarily unique objects.
+the purposes of tests.  A Lisp object used as a Boolean
+in this extended sense is called a @dfn{generalized Boolean}.  Of
+course generalized Booleans are not necessarily unique objects.
 
 @fixme{a few words about the following uniques}
 @syindex #<nothing>@r{ (no read syntax)}
@@ -1792,11 +1791,8 @@ can be used on many non-list conses as well:
 Let @var{a} and @var{b} be two objects.
 When @var{b} is either the empty list @code{()} or a cons, the
 cons @code{(@var{a} . @var{b})} can be written in the
-the @dfn{compact cons notation}: in compact notation @emph{both} the dot and the
-parentheses around @var{b}
-@c , but not the open parenthesis before @var{a} or the closed
-@c parenthesis after @var{b},
-are omitted.
+@dfn{compact cons notation}: in compact notation @emph{both} the dot
+and the parentheses around @var{b} are omitted.
 
 JitterLisp always adopts the compact cons notation in output, whenever
 applicable.  Its use in input is optional.
@@ -1886,10 +1882,10 @@ compiled, or even analyzed and transformed by other Lisp code.
 @cindex optimizer, self-
 JitterLisp in fact contains no executor for Lisp: there are only an
 @dfn{AST interpreter}, written in C, and an @dfn{AST compiler}
-generating code for the Jittery VM, written in Lisp.  It is thanks to
-the reflection capabilities provided by the AST data type that it is
-possible to write a self-compiler, and also a self-optimizer, in the
-language itself.
+translating ASTs into code for the Jittery VM, written in Lisp.
+It is thanks to the reflection capabilities provided by the AST data
+type that it is possible to write a self-compiler, and also a
+self-optimizer, in the language itself.
 
 ASTs have no read syntax, however the JitterLisp library provides
 facilities to conveniently inspect and build ASTs: @pxref{AST
@@ -2037,7 +2033,7 @@ also for efficiency's sake.}
 @deffn  {macro} define-macro (name . args-pattern) . forms
 @end deffn
 
-@syindex macrolet@r{ (non-existing form)}
+@syindex macrolet@r{ (@emph{non-existing} form)}
 There is currently no syntactic support for local macros, such as
 Common Lisp's @code{macrolet}.
 
@@ -2204,8 +2200,10 @@ Error out if @var{x} is not a symbol, if @var{x} is unbound, or if the binding f
 @end quotation
 
 @syindex make-constant!
-@deffn {primitive wrapper} make-constant! x
-@fixme{write.  @var{x} must be a symbol.  It is allowed to be lexically bound as well.
+@deffn {primitive wrapper} make-constant! e
+@fixme{write.  @var{e} must evaluate to a symbol, which is allowed to be
+@emph{also} lexically
+bound; however only its global binding is affected.
   If called on a globally unbound symbol, it becomes impossible to ever assign
   @emph{or define} it.}
 @end deffn
@@ -2315,12 +2313,13 @@ syntax: @pxref{define-macro}.
 @fixme{Write this}
 
 @fixme{Every symbol documented here is a global constant, except for
-macros; it is convenient to be able to re-define macros in a
-backwards-compatible way}
+macros; rationale: it is convenient to be able to re-define macros in a
+backwards-compatible way, and macros are not critical to performance as
+macro calls are always replaced with AST combinations before evaluation}
 
 @menu
 * Type checking::                     Testing a datum's type at run time.
-* Boolean operations::                Working with booleans.
+* Boolean operations::                Working with Booleans.
 * Arithmetic::                        Operations on numbers.
 * Number comparison::                 Comparing numbers.
 * Symbol handling::                   Working with symbols.
@@ -2363,7 +2362,7 @@ backwards-compatible way}
 
 @fixme{``Actual'' is a terrible word to use here.}
 
-@fixme{Write.  These return a canonical boolean and never fail.}
+@fixme{Write.  These return a canonical Boolean and never fail.}
 
 @syindex fixnum?
 @deffn  {primitive wrapper} fixnum? x
@@ -2460,8 +2459,10 @@ backwards-compatible way}
 @syindex lispy-or  @c Not a mistake: there is a reference.
 @deffnx {macro} lispy-and . clauses
 @fixme{@code{lispy-and} is provided just for symmetry with @code{lispy-or},
-and is in fact an alias for @code{and}, the traditional Lisp
-definition does introducing no inefficiencies in this case.}
+and is in fact an alias for @code{and}.  The traditional Lisp
+definition for @code{and} introduces no inefficiencies in this
+case, differently from the traditional Lisp implementation of
+@code{or}.}
 @end deffn
 
 @syindex boolean-canonicalize
@@ -3099,7 +3100,7 @@ performed by @code{set-@var{thing}!} procedures.}
 @deffn  {procedure} list->set xs
 @end deffn
 
-@syindex set->list@r{ (non-existing procedure)}
+@syindex set->list@r{ (@emph{non-existing} procedure)}
 @fixme{No @code{set->list} is needed}.
 
 
@@ -3227,7 +3228,7 @@ to highlight the lexical conventions.}
 @node Macroexpanding
 @subsection Macroexpanding
 
-@syindex macrolet@r{ (non-existing form)}
+@syindex macrolet@r{ (@emph{non-existing} form)}
 @fixme{There is currently no syntactic support for local macros, such as
 Common Lisp's @code{macrolet}.}
 
@@ -3438,14 +3439,17 @@ at the beginning}
 @node Symbol and reserved syntax index
 @unnumbered Symbol and reserved syntax index
 
-What follows is an alphabetical list of predefined JitterLisp globals,
-without distinction between core definitions coming from the C code
-and library definitions from the library written in Lisp and executed
-at startup.
+What follows is an alphabetical list of read syntax (@pxref{Lisp
+data}) and predefined JitterLisp globals, without distinction between
+core definitions coming from the C code and library definitions from
+the library written in Lisp and executed at startup.
 
 In the same sense the index glosses over the difference in type among
 globally defined symbols: some may be procedures or primitive wrappers
 and other macros, from either the core or the library.
+
+Most of the symbols named here are constant.  Some, particularly
+macros, may not be.
 
 @cindex symbol index
 @cindex index, for symbols
@@ -3490,3 +3494,8 @@ and other macros, from either the core or the library.
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 @bye
+Local Variables:
+  eval: (flyspell-mode t)
+  eval: (ispell-change-dictionary "american")
+  compile-command: "bash -ci 'make -C ~/repos/jitter/_build/native-gcc-9 info pdf'"
+End:
