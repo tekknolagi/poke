@@ -98,7 +98,7 @@ jitter_add_specialized_instruction_label_index (struct jitter_routine *p,
 }
 
 static void
-jitter_backpatch_labels_in_specialized_program (struct jitter_routine *p)
+jitter_backpatch_labels_in_specialized_routine (struct jitter_routine *p)
 {
   union jitter_word *specialized_program
     = jitter_dynamic_buffer_to_pointer (& p->specialized_program);
@@ -148,11 +148,11 @@ jitter_specialize_program (struct jitter_routine *p)
     jitter_fatal ("specializing program with native code already defined");
 
   /* Add epilog instructions.  This way we can be sure that the program
-     ends with an exitvm instruction. */
+     ends with an "exitvm" or "unreachable" instruction. */
   jitter_add_program_epilog (p);
 
   /* Resolve label arguments in unspecialized instruction parameters. */
-  jitter_resolve_labels_in_unspecialized_program (p);
+  jitter_resolve_labels_in_unspecialized_routine (p);
   /* Now label arguments refer unspecialized instruction indices. */
 
   /* Compute jump targets. */
@@ -236,7 +236,7 @@ jitter_specialize_program (struct jitter_routine *p)
 
   /* Now that p->instruction_index_to_specialized_instruction_offset is filled
      we have enough information to resolve label literals. */
-  jitter_backpatch_labels_in_specialized_program (p);
+  jitter_backpatch_labels_in_specialized_routine (p);
 
   /* The program is now specialized.  FIXME: shall I free p->jump_targets
      and set it to NULL now? */

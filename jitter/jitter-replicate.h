@@ -28,8 +28,8 @@
 #include <jitter/jitter-dispatch.h>
 #include <jitter/jitter.h>
 
-
 
+
 
 /* Do nothing if replication is not used.
  * ************************************************************************** */
@@ -58,10 +58,10 @@ void
 jitter_replicate_program (struct jitter_routine *p);
 
 /* Insert a !BEGINBASICBLOCK specialized instruction.  Such a specialized
-   instruction serves to support threaded jumps, and is inserted at
-   specialization time (only when replication is enabled) as the first
-   specialized instruction of each basic block.  See the comment within
-   vmprefix_specialize_program .  Not intended for the user. */
+   instruction serves to support threaded jumps with minimal-threading dispatch,
+   and is inserted at specialization time as the first specialized instruction
+   of each basic block.  See the comment within vmprefix_specialize_program .
+   Not intended for the user. */
 void
 jitter_insert_beginbasicblock (struct jitter_routine *p);
 

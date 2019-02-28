@@ -110,11 +110,11 @@ vmprefix_state_finalize (struct vmprefix_state *state)
 
 /* Return a freshly-allocated empty program for the vmprefix VM. */
 struct jitter_routine*
-vmprefix_make_program (void)
+vmprefix_make_routine (void)
   __attribute__ ((returns_nonnull));
 
 /* Program finalization is actually VM-independent, but a definition of
-   vmprefix_destroy_program is provided below as a macro, for cosmetic
+   vmprefix_destroy_routine is provided below as a macro, for cosmetic
    reasons. */
 
 
@@ -122,11 +122,11 @@ vmprefix_make_program (void)
  * ************************************************************************** */
 
 /* This is the preferred way of adding a new VM instruction to a pointed
-   program, more efficient than vmprefix_append_instruction_name even if only
+   routine, more efficient than vmprefix_append_instruction_name even if only
    usable when the VM instruction opcode is known at compile time.  The
    unspecialized instruction name must be explicitly mangled by the user as per
    the rules in jitterc_mangle.c .  For example an instruction named foo_bar can
-   be added to the program pointed by p with any one of
+   be added to the routine pointed by p with any one of
      vmprefix_append_instruction_name (p, "foo_bar");
    ,
      VMPREFIX_APPEND_INSTRUCTION(p, foo_ubar);
@@ -134,18 +134,18 @@ vmprefix_make_program (void)
      VMPREFIX_APPEND_INSTRUCTION_ID(p, vmprefix_meta_instruction_id_foo_ubar);
    .
    The string "foo_bar" is not mangled, but the token foo_ubar is. */
-#define VMPREFIX_APPEND_INSTRUCTION(program_p, instruction_mangled_name_root)  \
+#define VMPREFIX_APPEND_INSTRUCTION(routine_p, instruction_mangled_name_root)  \
   do                                                                           \
     {                                                                          \
       jitter_append_meta_instruction                                           \
-         ((program_p),                                                         \
+         ((routine_p),                                                         \
           vmprefix_meta_instructions                                           \
           + JITTER_CONCATENATE_TWO(vmprefix_meta_instruction_id_,              \
                                    instruction_mangled_name_root));            \
     }                                                                          \
   while (false)
 
-/* Append the unspecialized instruction whose id is given to the pointed program.
+/* Append the unspecialized instruction whose id is given to the pointed routine.
    The id must be a case of enum vmprefix_meta_instruction_id ; such cases have
    a name starting with vmprefix_meta_instruction_id_ .
    This is slightly less convenient to use than VMPREFIX_APPEND_INSTRUCTION
@@ -163,7 +163,7 @@ vmprefix_make_program (void)
   while (false)
 
 /* This is the preferred way of appending a register argument to the instruction
-   being added to the pointed program, more convenient than directly using
+   being added to the pointed routine, more convenient than directly using
    vmprefix_append_register_id_parameter , even if only usable when the register
    class is known at compile time.  Here the register class is only provided as
    a letter, but both the program pointer and the register index are arbitrary C
@@ -172,11 +172,11 @@ vmprefix_make_program (void)
      VMPREFIX_APPEND_REGISTER_PARAMETER(p, r, variable_to_index (x));
    the second macro argument "r" represents the register class named "r", and
    not the value of a variable named r. */
-#define VMPREFIX_APPEND_REGISTER_PARAMETER(program_p, class_letter, index)  \
+#define VMPREFIX_APPEND_REGISTER_PARAMETER(routine_p, class_letter, index)  \
   do                                                                        \
     {                                                                       \
       vmprefix_append_register_parameter                                    \
-         ((program_p),                                                      \
+         ((routine_p),                                                      \
           & JITTER_CONCATENATE_TWO(vmprefix_register_class_,                \
                                    class_letter),                           \
           (index));                                                         \
@@ -295,10 +295,11 @@ vmprefix_interpret (struct jitter_routine const *p, struct vmprefix_state *s)
 
 
 
-/* Program text frontend.
+/* Routine text frontend.
  * ************************************************************************** */
 
-/* Parse VM code from the given file or string, into the pointed VM routine.
+/* Parse VM code from the given file or string into the pointed VM routine,
+   which is allowed but not required to be empty.
    These are simple wrappers around functions implemented in the Bison file. */
 void
 vmprefix_parse_file_star (FILE *input_file, struct jitter_routine *p)
@@ -428,7 +429,7 @@ vmprefix_vm_configuration;
 #define vmprefix_routine jitter_routine
 
 /* Destroy programs (program initialization is actually VM-specific). */
-#define vmprefix_destroy_program jitter_destroy_program
+#define vmprefix_destroy_routine jitter_destroy_routine
 
 /* Program construction API. */
 #define vmprefix_append_instruction_name \
@@ -457,28 +458,26 @@ vmprefix_vm_configuration;
   jitter_label
 #define vmprefix_fresh_label \
   jitter_fresh_label
-#define vmprefix_print_program \
-  jitter_print_program
-#define vmprefix_print_program_possibly_with_slow_registers_only \
-  jitter_print_program_possibly_with_slow_registers_only
+#define vmprefix_print_routine \
+  jitter_print_routine
 #define vmprefix_specialize_program \
   jitter_specialize_program
-#define vmprefix_disassemble_program \
-  jitter_disassemble_program
-#define vmprefix_disassemble_program_to \
-  jitter_disassemble_program_to
+#define vmprefix_disassemble_routine \
+  jitter_disassemble_routine
+#define vmprefix_disassemble_routine_to \
+  jitter_disassemble_routine_to
 #define vmprefix_print_vm_configuration \
   jitter_print_vm_configuration
-#define vmprefix_set_program_option_slow_literals_only \
-  jitter_set_program_option_slow_literals_only
-#define vmprefix_set_program_option_slow_registers_only \
-  jitter_set_program_option_slow_registers_only
-#define vmprefix_set_program_option_slow_literals_and_registers_only \
-  jitter_set_program_option_slow_literals_and_registers_only
-#define vmprefix_set_program_option_add_final_exitvm \
-  jitter_set_program_option_add_final_exitvm
-#define vmprefix_set_program_option_optimization_rewriting \
-  jitter_set_program_option_optimization_rewriting
+#define vmprefix_set_routine_option_slow_literals_only \
+  jitter_set_routine_option_slow_literals_only
+#define vmprefix_set_routine_option_slow_registers_only \
+  jitter_set_routine_option_slow_registers_only
+#define vmprefix_set_routine_option_slow_literals_and_registers_only \
+  jitter_set_routine_option_slow_literals_and_registers_only
+#define vmprefix_set_routine_option_add_final_exitvm \
+  jitter_set_routine_option_add_final_exitvm
+#define vmprefix_set_routine_option_optimization_rewriting \
+  jitter_set_routine_option_optimization_rewriting
 
 
 

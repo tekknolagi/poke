@@ -68,7 +68,7 @@ jitter_print_vm_configuration (FILE *f,
    user. */
 
 /* A struct defining the VM-specific attributes of a VM.  Each VM has its own
-   unique instance of this, shared by every program for the same VM and
+   unique instance of this, shared by every routine for the same VM and
    initialized by vmprefix_initialize in template code.
    This structure is used internally, and the user does not need to see it. */
 struct jitter_vm
@@ -113,7 +113,7 @@ struct jitter_vm
   size_t meta_instruction_no;
 
   /* Specific meta-instruction pointers for implicit instructions.
-     VM-independent program specialization relies on those, so they have to be
+     VM-independent routine specialization relies on those, so they have to be
      accessible to the Jitter library, out of generated code*/
   const struct jitter_meta_instruction *exitvm_meta_instruction;
   const struct jitter_meta_instruction *unreachable_meta_instruction;
@@ -136,6 +136,9 @@ struct jitter_vm
      one new specialized instruction which is being added.  The result is always
      1 or more -- more than 1 when a superinstruction is being recognized.  The
      actual function is machine-generated. */
+  /* FIXME: the comment above has been obsolete for a long time (in the end I
+     decided not to have superinstructions), and the API can be simplified.
+     The result should be void, not int. */
   int (*specialize_instruction) (struct jitter_routine *p,
                                  const struct jitter_instruction *ins);
 

@@ -481,7 +481,7 @@ main (int argc, char **argv)
   vmprefix_initialize ();
 
   /* Make an empty VM routine, and set options as requested by the user. */
-  struct vmprefix_routine *p = vmprefix_make_program ();
+  struct vmprefix_routine *p = vmprefix_make_routine ();
   if (cl.debug)
     fprintf (progress,
              "Options:\n"
@@ -491,9 +491,9 @@ main (int argc, char **argv)
              cl.slow_literals_only ? "yes" : "no",
              cl.slow_registers_only ? "yes" : "no",
              cl.optimization_rewriting ? "yes" : "no");
-  vmprefix_set_program_option_slow_literals_only (p, cl.slow_literals_only);
-  vmprefix_set_program_option_slow_registers_only (p, cl.slow_registers_only);
-  vmprefix_set_program_option_optimization_rewriting
+  vmprefix_set_routine_option_slow_literals_only (p, cl.slow_literals_only);
+  vmprefix_set_routine_option_slow_registers_only (p, cl.slow_registers_only);
+  vmprefix_set_routine_option_optimization_rewriting
      (p, cl.optimization_rewriting);
 
   /* Print the VM configuration if in debugging mode. */
@@ -518,14 +518,14 @@ main (int argc, char **argv)
     {
       if (cl.debug)
         fprintf (progress, "Printing back the routine...\n");
-      vmprefix_print_program (stdout, p);
+      vmprefix_print_routine (stdout, p);
     }
 
   if (cl.disassemble_routine)
     {
       if (cl.debug)
         fprintf (progress, "Disassembling...\n");
-      vmprefix_disassemble_program (p, true, cl.objdump_name,
+      vmprefix_disassemble_routine (p, true, cl.objdump_name,
                                     cl.objdump_options);
     }
 
@@ -556,7 +556,7 @@ main (int argc, char **argv)
 
   if (cl.debug)
     fprintf (progress, "Destroying the routine data structure...\n");
-  vmprefix_destroy_program (p);
+  vmprefix_destroy_routine (p);
 
   if (cl.debug)
     fprintf (progress, "Finalizing...\n");

@@ -1,4 +1,4 @@
-/* Jitter: VM-independent program data structures.
+/* Jitter: VM-independent routine data structures.
 
    Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
@@ -72,7 +72,7 @@ jitter_fail_unless_options_changeable (struct jitter_routine *p)
 }
 
 void
-jitter_set_program_option_slow_registers_only (struct jitter_routine *p,
+jitter_set_routine_option_slow_registers_only (struct jitter_routine *p,
                                                bool option)
 {
   jitter_fail_unless_options_changeable (p);
@@ -80,7 +80,7 @@ jitter_set_program_option_slow_registers_only (struct jitter_routine *p,
 }
 
 void
-jitter_set_program_option_slow_literals_only (struct jitter_routine *p,
+jitter_set_routine_option_slow_literals_only (struct jitter_routine *p,
                                               bool option)
 {
   jitter_fail_unless_options_changeable (p);
@@ -88,15 +88,15 @@ jitter_set_program_option_slow_literals_only (struct jitter_routine *p,
 }
 
 void
-jitter_set_program_option_slow_literals_and_registers_only
+jitter_set_routine_option_slow_literals_and_registers_only
    (struct jitter_routine *p, bool option)
 {
-  jitter_set_program_option_slow_registers_only (p, option);
-  jitter_set_program_option_slow_literals_only (p, option);
+  jitter_set_routine_option_slow_registers_only (p, option);
+  jitter_set_routine_option_slow_literals_only (p, option);
 }
 
 void
-jitter_set_program_option_add_final_exitvm (struct jitter_routine *p,
+jitter_set_routine_option_add_final_exitvm (struct jitter_routine *p,
                                             bool option)
 {
   jitter_fail_unless_options_changeable (p);
@@ -104,7 +104,7 @@ jitter_set_program_option_add_final_exitvm (struct jitter_routine *p,
 }
 
 void
-jitter_set_program_option_optimization_rewriting (struct jitter_routine *p,
+jitter_set_routine_option_optimization_rewriting (struct jitter_routine *p,
                                                   bool option)
 {
   jitter_fail_unless_options_changeable (p);
@@ -175,7 +175,7 @@ jitter_finalize_program (struct jitter_routine *p)
 }
 
 struct jitter_routine*
-jitter_make_program (const struct jitter_vm *vm)
+jitter_make_routine (const struct jitter_vm *vm)
 {
   struct jitter_routine *res = jitter_xmalloc (sizeof (struct jitter_routine));
   jitter_initialize_program (res);
@@ -184,7 +184,7 @@ jitter_make_program (const struct jitter_vm *vm)
 }
 
 void
-jitter_destroy_program (struct jitter_routine *p)
+jitter_destroy_routine (struct jitter_routine *p)
 {
   if (p == NULL)
     return;
@@ -767,7 +767,7 @@ jitter_maximum_instruction_name_length (const struct jitter_routine *p)
 }
 
 void
-jitter_print_program (FILE *out, const struct jitter_routine *p)
+jitter_print_routine (FILE *out, const struct jitter_routine *p)
 {
   const bool slow_registers_only = p->options.slow_registers_only;
   const int instruction_no = jitter_routine_instruction_no (p);
@@ -868,10 +868,10 @@ jitter_print_program (FILE *out, const struct jitter_routine *p)
  * ************************************************************************** */
 
 void
-jitter_resolve_labels_in_unspecialized_program (struct jitter_routine *pr)
+jitter_resolve_labels_in_unspecialized_routine (struct jitter_routine *pr)
 {
   if (pr->stage != jitter_routine_stage_unspecialized)
-    jitter_fatal ("resolving unspecialized labels in non-unspecialized program");
+    jitter_fatal ("resolving unspecialized labels in non-unspecialized routine");
 
   const int instruction_no = jitter_routine_instruction_no (pr);
   struct jitter_instruction **ins

@@ -46,7 +46,7 @@
 #ifdef JITTER_DISPATCH_SWITCH
 __attribute__ ((noinline, noclone))
 void
-jitter_disassemble_program_to (FILE *f,
+jitter_disassemble_routine_to (FILE *f,
                                const struct jitter_routine *p, bool raw,
                                const char *objdump_name,
                                const char *objdump_options_or_NULL)
@@ -327,7 +327,7 @@ jitter_disassemble_show_specialized_instruction
 
 __attribute__ ((noinline, noclone))
 void
-jitter_disassemble_program_to (FILE *f,
+jitter_disassemble_routine_to (FILE *f,
                                const struct jitter_routine *p, bool raw,
                                const char *objdump_name,
                                const char *objdump_options_or_NULL)
@@ -356,7 +356,7 @@ jitter_disassemble_program_to (FILE *f,
 
 #ifdef JITTER_REPLICATE
   if (p->stage != jitter_routine_stage_replicated)
-    jitter_fatal ("disassembling non-replicated program");
+    jitter_fatal ("disassembling non-replicated routine");
 
   for (i = 0; i < specialized_instruction_no; i ++)
     {
@@ -401,7 +401,7 @@ jitter_disassemble_program_to (FILE *f,
     }
 #else
   if (p->stage != jitter_routine_stage_specialized)
-    jitter_fatal ("disassembling non-specialized program");
+    jitter_fatal ("disassembling non-specialized routine");
   for (i = 0; i < specialized_instruction_no; i ++)
     {
       /* Find the native code for the i-th VM specialized instruction.  See the
@@ -437,10 +437,10 @@ jitter_disassemble_program_to (FILE *f,
 #endif // #ifdef JITTER_DISPATCH_SWITCH
 
 void
-jitter_disassemble_program (const struct jitter_routine *p, bool raw,
+jitter_disassemble_routine (const struct jitter_routine *p, bool raw,
                             const char *objdump_name,
                             const char *objdump_options_or_NULL)
 {
-  jitter_disassemble_program_to (stdout, p, raw, objdump_name,
+  jitter_disassemble_routine_to (stdout, p, raw, objdump_name,
                                  objdump_options_or_NULL);
 }

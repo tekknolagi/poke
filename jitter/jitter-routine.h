@@ -1,4 +1,4 @@
-/* Jitter: VM-independent program data structures: header.
+/* Jitter: VM-independent routine data structures: header.
 
    Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
@@ -19,8 +19,8 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-#ifndef JITTER_PROGRAM_H_
-#define JITTER_PROGRAM_H_
+#ifndef JITTER_ROUTINE_H_
+#define JITTER_ROUTINE_H_
 
 #include <stdio.h>
 
@@ -233,12 +233,12 @@ jitter_routine_instruction_no (const struct jitter_routine *p)
 
 /* Return a freshly-allocated, empty program with an empty vm field. */
 struct jitter_routine*
-jitter_make_program (const struct jitter_vm *vm)
+jitter_make_routine (const struct jitter_vm *vm)
   __attribute__ ((nonnull (1), returns_nonnull));
 
 /* Destroy the pointed program, if any.  Do nothing if p is NULL. */
 void
-jitter_destroy_program (struct jitter_routine *p);
+jitter_destroy_routine (struct jitter_routine *p);
 
 
 
@@ -253,37 +253,37 @@ jitter_destroy_program (struct jitter_routine *p);
 /* Set the slow_registers_only option to the given value in the pointed program.
    Fail fatally if the option is no longer settable. */
 void
-jitter_set_program_option_slow_registers_only (struct jitter_routine *p,
+jitter_set_routine_option_slow_registers_only (struct jitter_routine *p,
                                                bool option)
   __attribute__ ((nonnull (1)));
 
 /* Set the slow_registers_only option to the given value in the pointed program.
    Fail fatally if the option is no longer settable. */
 void
-jitter_set_program_option_slow_literals_only (struct jitter_routine *p,
+jitter_set_routine_option_slow_literals_only (struct jitter_routine *p,
                                               bool option)
   __attribute__ ((nonnull (1)));
 
 /* A convenience function behaving in an equivalent way to a call to
-   jitter_set_program_option_slow_registers_only followed by a call to
-   jitter_set_program_option_slow_literals_only on the same program with the
+   jitter_set_routine_option_slow_registers_only followed by a call to
+   jitter_set_routine_option_slow_literals_only on the same program with the
    same option value. */
 void
-jitter_set_program_option_slow_literals_and_registers_only
+jitter_set_routine_option_slow_literals_and_registers_only
    (struct jitter_routine *p, bool option)
   __attribute__ ((nonnull (1)));
 
 /* Set the add_final_exitvm option to the given value in the pointed program.
    Fail fatally if the option is no longer settable. */
 void
-jitter_set_program_option_add_final_exitvm (struct jitter_routine *p,
+jitter_set_routine_option_add_final_exitvm (struct jitter_routine *p,
                                             bool option)
   __attribute__ ((nonnull (1)));
 
 /* Set the optimization_rewriting option to the given value in the pointed
    program.  Fail fatally if the option is no longer settable. */
 void
-jitter_set_program_option_optimization_rewriting (struct jitter_routine *p,
+jitter_set_routine_option_optimization_rewriting (struct jitter_routine *p,
                                                   bool option)
   __attribute__ ((nonnull (1)));
 
@@ -457,7 +457,7 @@ jitter_append_parameter_copy (struct jitter_routine *p,
 /* Print a readable representation of the pointed program to the pointed
    stream. */
 void
-jitter_print_program (FILE *out, const struct jitter_routine *p);
+jitter_print_routine (FILE *out, const struct jitter_routine *p);
 
 
 
@@ -491,7 +491,7 @@ jitter_jump_targets (const struct jitter_routine *p)
    Fail fatally if any referred label is still undefined, or if the program is
    not unspecialized. */
 void
-jitter_resolve_labels_in_unspecialized_program (struct jitter_routine *p)
+jitter_resolve_labels_in_unspecialized_routine (struct jitter_routine *p)
   __attribute__ ((nonnull (1)));
 
-#endif // #ifndef JITTER_PROGRAM_H_
+#endif // #ifndef JITTER_ROUTINE_H_

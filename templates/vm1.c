@@ -403,9 +403,9 @@ vmprefix_finalize (void)
  * ************************************************************************** */
 
 struct jitter_routine*
-vmprefix_make_program (void)
+vmprefix_make_routine (void)
 {
-  return jitter_make_program (vmprefix_vm);
+  return jitter_make_routine (vmprefix_vm);
 }
 
 

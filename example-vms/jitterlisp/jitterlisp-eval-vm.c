@@ -109,7 +109,7 @@ jitterlisp_vm_initialize (void)
         call-from-interpreter
         exitvm
      , of which the second is added implicitly. */
-  jitterlisp_driver_vm_routine = jitterlispvm_make_program ();
+  jitterlisp_driver_vm_routine = jitterlispvm_make_routine ();
   /* In the particular case of the driver I can keep the default option
      generating a final exitvm instruction at the end.  This will not be
      the same for compiled user code. */
@@ -125,7 +125,7 @@ void
 jitterlisp_vm_finalize (void)
 {
   /* Destroy the driver program and invalidate its pointer to catch mistakes. */
-  jitterlispvm_destroy_program (jitterlisp_driver_vm_routine);
+  jitterlispvm_destroy_routine (jitterlisp_driver_vm_routine);
   jitterlisp_driver_vm_routine = NULL;
 
   /* Unregister the two stack backings as GC roots. */
