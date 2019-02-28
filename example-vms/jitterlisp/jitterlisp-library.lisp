@@ -4952,6 +4952,23 @@
                                 optimized-body
                                 ))))
 
+;;; Destructively modify the given closure, replacing its fields with a
+;;; semantically equivalent optimized version.  Return the argument.  This is a
+;;; trivial convenience wrapper around interpreted-closure-optimize! , meant for
+;;; interactive use.
+(define-constant (interpreted-closure-optimize closure)
+  (interpreted-closure-optimize! closure)
+  closure)
+
+;;; Another convenience wrapper for interactive use, also accepting (and
+;;; currently doing nothing on) compiled closures.
+(define-constant (closure-optimize closure)
+  (unless (closure? closure)
+    (error `(closure-optimized called on non-closure ,closure)))
+  (when (interpreted-closure? closure)
+    (interpreted-closure-optimize! closure))
+  closure)
+
 
 
 
@@ -6174,6 +6191,22 @@
               (set! worklist (cons (car first) worklist)))
             (set! worklist (cdr worklist)))))
     res))
+
+(define-constant (even?-tr n)
+  (cond ((zero? n)
+         #t)
+        ((= n 1)
+         #f)
+        (else
+         (odd?-tr (- n 1)))))
+(define-constant (odd?-tr n)
+  (cond ((zero? n)
+         #f)
+        ((= n 1)
+         #t)
+        (else
+         (even?-tr (- n 1)))))
+
 
 (define-constant (sign n)
   (cond ((zero? n) 0)
