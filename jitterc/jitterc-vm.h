@@ -563,6 +563,9 @@ struct jitterc_specialized_instruction
   /* Hot specialized instructions are given the "hot" GCC label attribute. */
   enum jitterc_hotness hotness;
 
+  /* The specialized instruction relocatability. */
+  enum jitterc_relocatability relocatability;
+
   /* A pointer to the unspecialized instruction of which the present structure
      is one specialization.  This is NULL for special specialized instructions,
      since they have no unspecialized counterpart. */

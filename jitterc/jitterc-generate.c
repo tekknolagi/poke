@@ -423,7 +423,8 @@ jitterc_emit_meta_instructions (const struct jitterc_vm *vm)
            ((in->calleeness == jitterc_calleeness_callee)
             ? "true" : "false"),
            ((in->relocatability == jitterc_relocatability_relocatable)
-            ? "true" : "false"));
+            ? "true /* FIXME: this may be wrong with replacements. */"
+            : "false  /* FIXME: this may be wrong with replacements. */"));
       if (in_arity == 0)
         EMIT("NULL }%s\n", comma);
       else
@@ -601,9 +602,8 @@ jitterc_emit_specialized_instruction_relocatables
       const struct jitterc_specialized_instruction* sins
         = ((const struct jitterc_specialized_instruction*)
            gl_list_get_at (vm->specialized_instructions, i));
-      bool relocatable = (   sins->instruction == NULL
-                          || sins->instruction->relocatability
-                             == jitterc_relocatability_relocatable);
+      bool relocatable = (sins->relocatability
+                          == jitterc_relocatability_relocatable);
       EMIT("      %s%s // %s\n",
            relocatable ? "true" : "false",
            comma,
@@ -1226,7 +1226,7 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
       size_t residual_no = gl_list_size (sins->specialized_arguments);
       bool is_non_relocatable
         = (   uins != NULL
-           && uins->relocatability == jitterc_relocatability_non_relocatable);
+           && sins->relocatability == jitterc_relocatability_non_relocatable);
       bool is_caller
         = (   uins != NULL
            && uins->callerness == jitterc_callerness_caller);
@@ -1509,14 +1509,13 @@ jitterc_emit_state_h (const struct jitterc_vm *vm)
   EMIT("struct vmprefix_state_backing\n");
   EMIT("{\n");
   EMIT("  /* The Array.  This initial pointer is kept in the backing, since it is\n");
-  EMIT("     not normally needed at run time.  By subtracting JITTER_BIAS from it\n");
-  EMIT("     (as a pointer to char) we get the base pointer. */\n");
-  EMIT("  volatile union vmprefix_any_register * jitter_array;\n");
+  EMIT("     not normally needed at run time.  By subtracting JITTER_ARRAY_BIAS from\n");
+  EMIT("     it (as a pointer to char) we get the base pointer. */\n");
+  EMIT("  volatile union vmprefix_any_register *jitter_array;\n");
   EMIT("\n");
   EMIT("  /* How many slow registers per class the Array can hold, without being\n");
-  EMIT("     reallocated. */\n");
+  EMIT("     reallocated.  This number is always the same for evey class. */\n");
   EMIT("  size_t jitter_slow_register_no_per_class;\n");
-  EMIT("\n");
   EMIT("\n");
 
   /* Emit declarations for stack backing data structures. */
@@ -1848,30 +1847,38 @@ jitterc_emit_interpreter_register_access_macros (FILE *f,
   EMIT("  (* ((JITTER_CONCATENATE_TWO(vmprefix_register_, c) * restrict)  \\\n");
   EMIT("      (((char *) jitter_slow_registers) + offset)))\n");
   EMIT("\n");
-  EMIT("/* Expand to the i-th register, which must be a slow register, as an lvalue. */\n");
-  EMIT("#define JITTER_SLOW_REGISTER(c, i)                                         \\\n");
+  const int vmprefix_slow_register_with_access_macro_no = 32;
+  EMIT("/* Expand to the i-th register, which must be a slow register, as an lvalue.\n");
+  EMIT("   The given index must be a register index counting from 0 and including fast\n");
+  EMIT("   regusters as well, if there are any.  For example if an r class had 3 fast\n");
+  EMIT("   registers then the first slow register would be %%r3, to be accessed as\n");
+  EMIT("   JITTER_SLOW_REGISTER(r, 3).  It would be invalid to access %%r0, %%r1 and\n");
+  EMIT("   %%r2 which this macro, as %%r0, %%r1 and %%r2 would be fast. */\n");
+  EMIT("#define JITTER_SLOW_REGISTER(c, i)                                          \\\n");
   EMIT("  JITTER_SLOW_REGISTER_FROM_OFFSET(c, VMPREFIX_SLOW_REGISTER_OFFSET(c, i))\n");
   EMIT("\n");
   EMIT("/* It's not possible to have a single macro JITTER_REGISTER taking an index and\n");
   EMIT("   expanding to either a fast or a slow register lvalue, due to CPP conditional\n");
   EMIT("   limitations.  This restriction is unfortunate, but we have to live with it\n");
   EMIT("   as long as we don't switch to a different preprocessor.\n");
-  EMIT("\n");
   EMIT("   What we can have is a set of zero-argument macros each expanding to a register\n");
-  EMIT("   lvalue, for *some* registers. */\n");
-  // FIXME: this "10" is completely arbitrary.  The user should be able to specifiy an
-  // adequate value.  FIXME: generalize this when there are multiple register classes.
+  EMIT("   lvalue, for *a limited number* of registers.  Here we define access macros for\n");
+  EMIT("   every fast register plus a reasonable number (currently %i) of slow registers,\n",
+       vmprefix_slow_register_with_access_macro_no);
+  EMIT("   per class. */\n");
   FOR_LIST(i, comma, vm->register_classes)
     {
       const struct jitterc_register_class *c
         = (gl_list_get_at (vm->register_classes, i));
-      for (j = 0; j < 10; j ++)
-        if (j < c->fast_register_no)
-          EMIT("#define JITTER_REGISTER_%c_%i JITTER_FAST_REGISTER(%c, %i)\n",
-               c->character, j, c->character, j);
-        else
-          EMIT("#define JITTER_REGISTER_%c_%i JITTER_SLOW_REGISTER(%c, %i)\n",
-               c->character, j, c->character, j);
+      for (j = 0; j < c->fast_register_no; j ++)
+        EMIT("#define JITTER_REGISTER_%c_%-3i  JITTER_FAST_REGISTER(%c, %i)\n",
+             c->character, j, c->character, j);
+      for (;
+           j < (c->fast_register_no
+                + vmprefix_slow_register_with_access_macro_no);
+           j ++)
+        EMIT("#define JITTER_REGISTER_%c_%-3i  JITTER_SLOW_REGISTER(%c, %i)\n",
+             c->character, j, c->character, j);
     }
   EMIT("\n");
   EMIT("\n");
@@ -1998,9 +2005,21 @@ jitterc_emit_interpreter_reserve_registers (FILE *f,
 }
 
 static void
-jitterc_emit_interpreter_wrap
+jitterc_emit_interpreter_global_wrappers
    (FILE *f, const struct jitterc_vm *vm)
 {
+  EMIT("/* Selectively suppress suprious -Wmaybe-uninitialized .\n");
+  EMIT("   The indirect jump hack I use in profiling mode in order to\n");
+  EMIT("   have a large gap inside a function introduced by assembler without\n");
+  EMIT("   being restricted by jump offset limits (intentionally) tricks GCC\n");
+  EMIT("   into believing that the indirect jump may reach any instruction label;\n");
+  EMIT("   GCC would then warn that some locals might be used uninitialized,\n");
+  EMIT("   by skipping over their initialization.  This however is not possible,\n");
+  EMIT("   and I want to selectively silence the warning for the variables in\n");
+  EMIT("   question. */\n");
+  EMIT("#pragma GCC diagnostic push\n");
+  EMIT("#pragma GCC diagnostic ignored \"-Wmaybe-uninitialized\"\n");
+  EMIT("\n");
   EMIT("  /* Wrap functions and globals used within VM instructions, if needed.\n");
   EMIT("     This is a trick to keep instructions readable while avoiding PC-relative\n");
   EMIT("     addressing, which would mess up replicated code. */\n");
@@ -2045,7 +2064,10 @@ jitterc_emit_interpreter_wrap
       EMIT("# undef %s\n", name);
       EMIT("# define %s _my_%s\n\n", name, name);
     }
+  EMIT("/* See the comment above about spurious -Wmaybe-uninitialized warnings. */\n");
+  EMIT("#pragma GCC diagnostic pop\n");
   EMIT("#endif // #ifdef JITTER_REPLICATE\n\n");
+  EMIT("\n");
 }
 
 /* Emit macro definitions (and possibly inline asm statements) for the given
@@ -2344,7 +2366,7 @@ jitterc_emit_interpreter_ordinary_specialized_instructions
 
       const struct jitterc_instruction* uins = sins->instruction;
       bool is_relocatable
-        = (uins->relocatability == jitterc_relocatability_relocatable);
+        = (sins->relocatability == jitterc_relocatability_relocatable);
       bool is_caller = (uins->callerness == jitterc_callerness_caller);
       bool is_callee = (uins->calleeness == jitterc_calleeness_callee);
 
@@ -2452,7 +2474,7 @@ jitterc_emit_interpreter_ordinary_specialized_instructions
           EMIT("    && ! defined(JITTER_MACHINE_SUPPORTS_PROCEDURE)\n");
           EMIT("  /* We use the implicit atgument at the end of the calling.\n");
           EMIT("     instruction to discover the procedure return address. */\n");
-          EMIT("  const void * const _jitter_return_pointer = JITTER_ARGP%i;\n",
+          EMIT("  const void * _jitter_return_pointer = JITTER_ARGP%i;\n",
                (int) (gl_list_size (sins->specialized_arguments) - 1));
           EMIT("  /* And make it accessible to the user (who will usually call \n");
           EMIT("     JITTER_BRANCH_AND_LINK) thru a nice macro. */\n");
@@ -2480,10 +2502,10 @@ jitterc_emit_interpreter_ordinary_specialized_instructions
           EMIT("#ifdef JITTER_REPLICATE\n");
           EMIT("    /* Advance the instruction pointer, if any, to skip residuals;\n");
           EMIT("       then jump back to replicated code. */\n");
-          EMIT("    const void *_jitter_return_pointer = JITTER_ARGP%i;\n",
+          EMIT("    const void *_jitter_back_to_replicated_code_pointer = JITTER_ARGP%i;\n",
                (int) (gl_list_size (sins->specialized_arguments) - 1));
           EMIT("    JITTER_SKIP_RESIDUALS;\n");
-          EMIT("    goto * _jitter_return_pointer;\n");
+          EMIT("    goto * _jitter_back_to_replicated_code_pointer;\n");
           EMIT("#endif // #ifdef JITTER_REPLICATE\n\n");
         }
 
@@ -2695,6 +2717,25 @@ jitterc_emit_interpreter_main_function
   EMIT("      vmprefix_thread_sizes = vmprefix_the_thread_sizes;\n");
   EMIT("      vmprefix_threads = vmprefix_the_threads;\n");
   EMIT("      vmprefix_thread_ends = vmprefix_the_thread_ends;\n");
+
+  /// FIXME: this is for debugging: begin
+  EMIT("#ifdef JITTER_PROFILE\n");
+  EMIT("      fprintf (stderr, \"VM instruction range: \");\n");
+  const struct jitterc_specialized_instruction* first_sins
+    = ((const struct jitterc_specialized_instruction*)
+       gl_list_get_at (vm->specialized_instructions, 0));
+  const struct jitterc_specialized_instruction* last_sins
+    = ((const struct jitterc_specialized_instruction*)
+       gl_list_get_at (vm->specialized_instructions,
+                       gl_list_size (vm->specialized_instructions) - 1));
+  EMIT("      fprintf (stderr, \"[%%p, \", && JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL_OF(%s));\n",
+       first_sins->mangled_name);
+  EMIT("      fprintf (stderr, \"%%p)\", && JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(%s));\n",
+       last_sins->mangled_name);
+  EMIT("      fprintf (stderr, \"\\n\");\n");
+  EMIT("#endif // #ifdef JITTER_PROFILE\n");
+  /// FIXME: this is for debugging: end
+
   EMIT("#endif // #ifndef JITTER_DISPATCH_SWITCH\n");
   EMIT("\n");
   EMIT("      /* Back to regular C, without our reserved registers if any; I can share\n");
@@ -2709,7 +2750,7 @@ jitterc_emit_interpreter_main_function
   EMIT("  /* Here is the actual *interpreter* initialization, to be run before\n");
   EMIT("     actually running the code. */\n\n");
 
-  jitterc_emit_interpreter_wrap (f, vm);
+  jitterc_emit_interpreter_global_wrappers (f, vm);
 
   /* If control flow reaches this point then we are actually intepreting. */
   EMIT("  /* Make an automatic struct holding a copy of the state whose pointer was given.\n");
@@ -2719,7 +2760,13 @@ jitterc_emit_interpreter_main_function
 
   EMIT("  /* FIXME: this initialization should not be here. */\n");
   EMIT("  static volatile size_t slow_register_no; slow_register_no = 200;\n");
-  EMIT("  vmprefix_register_r * restrict jitter_slow_registers = malloc (sizeof (union vmprefix_any_register) * slow_register_no * VMPREFIX_REGISTER_CLASS_NO);\n");
+  EMIT("/* About the pragma, look for \"-Wmaybe-uninitialized\" in the comments above. */\n");
+  EMIT("#pragma GCC diagnostic push\n");
+  EMIT("#pragma GCC diagnostic ignored \"-Wmaybe-uninitialized\"\n");
+  //EMIT("  vmprefix_register_r * restrict jitter_slow_registers = malloc (sizeof (union vmprefix_any_register) * slow_register_no * VMPREFIX_REGISTER_CLASS_NO);\n");
+  EMIT("  vmprefix_register_r * restrict jitter_slow_registers;\n");
+  EMIT("#pragma GCC diagnostic pop\n");
+  EMIT("  jitter_slow_registers = malloc (sizeof (union vmprefix_any_register) * slow_register_no * VMPREFIX_REGISTER_CLASS_NO);\n");
   EMIT("  if (jitter_slow_registers == NULL)\n");
   EMIT("    jitter_fatal (\"could not allocate slow registers\");\n");
   EMIT("\n");
@@ -2778,8 +2825,7 @@ jitterc_emit_interpreter_main_function
 
       /* Ignore special and relocatable specialized instructions. */
       if (sins->instruction == NULL
-          || sins->instruction->relocatability
-             == jitterc_relocatability_relocatable)
+          || sins->relocatability == jitterc_relocatability_relocatable)
         continue;
 
       EMIT("  volatile void *JITTER_SPECIALIZED_INSTRUCTION_NON_RELOCATABLE_CODE_VARIABLE_OF(%s)\n",
@@ -2797,12 +2843,6 @@ jitterc_emit_interpreter_main_function
   EMIT("  /* Initialization C code from the user */\n");
   EMIT("%s", vm->initialization_c_code);
   EMIT("  /* End of the initialization C code from the user */\n\n");
-
-  /* Insert a large block of useless data to poison PC-relative addressing.
-     FIXME: conditionalize this, and use a parameter appropriate for the
-     host architecture. */
-//  EMIT("JITTER_POISON_PC_RELATIVE_ADDRESSING(1024 * 1024 * 1024 * 2 + 4);\n");
-//EMIT("JITTER_POISON_PC_RELATIVE_ADDRESSING(64 * 16000 * 1024 + 4);\n");
 
   EMIT("  /* Jump to the first instruction.  If replication is enabled this point\n");
   EMIT("     marks the boundary between the ordinary world of C compiled code and\n");
@@ -2990,7 +3030,25 @@ jitterc_emit_interpreter_main_function
   EMIT("       values held in such registers at entry. */\n");
   EMIT("    vmprefix_restore_registers (jitter_register_buffer);\n");
   EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n");
+
+  // FIXME: this is a test, for profiling: begin
+  EMIT("#ifdef JITTER_PROFILE\n");
+  EMIT("#define PROFILING_SPACE (1024 * 1024 * 100)\n");
+  EMIT("    if (jitter_initialize)\n");
+  EMIT("      fprintf (stderr, \"Profiling space: [%%p, %%p)\\n\", && vmprefix_profiling_space, ((char *) (&& vmprefix_profiling_space)) + PROFILING_SPACE);\n");
+  EMIT("    /* Do an indirect jump to the return statement rather than a simple\n");
+  EMIT("       conditional.  With this trick I can afford even a very large gap\n");
+  EMIT("       within the code for a single C function, without being constrained\n");
+  EMIT("       by branch offset limits on any architecture. */\n");
+  EMIT("    void *return_address_variable = && return_label;\n");
+  EMIT("    JITTER_MARK_LVALUE_AS_SET_BY_ASSEMBLY (return_address_variable);\n");
+  EMIT("    goto *return_address_variable;\n");
+  EMIT("  vmprefix_profiling_space: __attribute__ ((unused)) // FIXME: do this from assembly\n");
+  EMIT("    asm volatile (\".fill (\" JITTER_STRINGIFY(PROFILING_SPACE) \")\");\n");
+  EMIT("  return_label:\n");
+  EMIT("#endif // #ifdef JITTER_PROFILE\n");
   EMIT("    return;\n");
+  // FIXME: this is a test, for profiling: end
   EMIT("}\n");
   EMIT("\n");
 }

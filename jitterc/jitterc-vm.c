@@ -752,6 +752,17 @@ jitterc_make_specialized_instruction_internal (struct jitterc_vm *vm,
   res->has_as_replacement = NULL;
   res->is_replacement_of = NULL;
 
+  /* By default a specialized instruction has the same relocatability as its
+     unspecialized counterpart, when such counterpart exists.
+//     If it doesn't then the instruction is non-relocatable.
+     If it doesn't then the instruction is relocatable.
+ */
+  if (ui != NULL)
+    res->relocatability = ui->relocatability;
+  else
+//    res->relocatability = jitterc_relocatability_non_relocatable;
+    res->relocatability = jitterc_relocatability_relocatable;
+
   /* By default the specialized instruction hotness is the same as the
      unspecialized hotness.  However if a meta-instruction is declared hot its
      specializations involving residual non-label arguments are low-priority,
@@ -1009,6 +1020,9 @@ jitterc_generate_replacement_for (struct jitterc_vm *vm,
 
   /* Mark the new instruction as a replacement. */
   new_sins->is_replacement_of = sins;
+
+  /* Replacement instructions are non-relocatable. */
+  new_sins->relocatability = jitterc_relocatability_non_relocatable;
 }
 
 /* Generate replacement specialized instructions where needed, updating the

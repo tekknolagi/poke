@@ -32,6 +32,20 @@
 
 
 
+/* Debugging.
+ * ************************************************************************** */
+
+/* Expand to an inline assembly template generating a nop instruction containing
+   the given literal as an argument. */
+#define _JITTER_ASM_DEBUGGING_NOP(integer_literal_as_string)  \
+  "nop\n\t"                                                   \
+  "xor #" integer_literal_as_string ", r0\n\t"                \
+  "xor #" integer_literal_as_string ", r0\n\t"               \
+  "nop"
+
+
+
+
 /* Assembly comment syntax.
  * ************************************************************************** */
 
@@ -163,7 +177,7 @@
                 : "pr" /* clobbers. */                                         \
                 : jitter_dispatch_label /* gotolabels. */);                    \
       /* The rest of the VM instruction is unreachable. */                     \
-      __builtin_unreachable ();                                                \
+      /*__builtin_unreachable ();*/                                                \
     }                                                                          \
   while (false)
 
@@ -211,7 +225,7 @@
                 : jitter_dispatch_label /* gotolabels. */);                   \
       /* The rest of the VM instruction is unreachable: this is an            \
          unconditional jump. */                                               \
-      __builtin_unreachable ();                                               \
+      /*__builtin_unreachable (); */                                              \
     }                                                                         \
   while (false)
 
