@@ -358,7 +358,7 @@ EXTRA_DIST += \
   m4-utility/jitter-script.m4sh
 
 
-# VM program frontend based on flex and Bison.
+# VM routine code frontend based on flex and Bison.
 # ################################################################
 
 # The generated C files mentioned here are part of libjitter, for every
@@ -370,16 +370,16 @@ EXTRA_DIST += \
 # token, and appended to the current program by the parser; checking for
 # instruction names and argument types is done out of the parser but still in
 # VM-independent code, using VM-dependent data structures.
-FRONTEND_NON_GENERATED_FILES += jitter/program.l jitter/program.y
+FRONTEND_NON_GENERATED_FILES += jitter/jitter-routine.l jitter/jitter-routine.y
 FRONTEND_GENERATED_FILES += \
    jitter/jitter-parser.c jitter/jitter-parser.h \
    jitter/jitter-scanner.c jitter/jitter-scanner.h
-$(srcdir)/jitter/jitter-parser.c: jitter/program.y
-	$(YACC) -o "$@" "$(srcdir)/jitter/program.y"
+$(srcdir)/jitter/jitter-parser.c: jitter/jitter-routine.y
+	$(YACC) -o "$@" "$(srcdir)/jitter/jitter-routine.y"
 $(srcdir)/jitter/jitter-parser.h: jitter/jitter-parser.c
-$(srcdir)/jitter/jitter-scanner.c: jitter/program.l
+$(srcdir)/jitter/jitter-scanner.c: jitter/jitter-routine.l
 	$(LEX) --header-file=$(srcdir)/jitter/jitter-scanner.h -o"$@" \
-	  "$(srcdir)/jitter/program.l"
+	  "$(srcdir)/jitter/jitter-routine.l"
 $(srcdir)/jitter/jitter-scanner.h: jitter/jitter-scanner.c
 
 
@@ -429,7 +429,7 @@ SOURCES_FOR_LIBJITTER = \
   jitter/jitter-config.h \
   jitter/jitter-dispatch.h \
   jitter/jitter-instruction.c jitter/jitter-instruction.h \
-  jitter/jitter-program.c jitter/jitter-program.h \
+  jitter/jitter-routine.c jitter/jitter-routine.h \
   jitter/jitter-rewrite.c jitter/jitter-rewrite.h \
   jitter/jitter-specialize.c jitter/jitter-specialize.h \
   jitter/jitter-replicate.c jitter/jitter-replicate.h \
@@ -462,7 +462,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-instruction.h \
   jitter/jitter-machine-common.h \
   jitter/jitter-mmap.h \
-  jitter/jitter-program.h \
+  jitter/jitter-routine.h \
   jitter/jitter-rewrite.h \
   jitter/jitter-specialize.h \
   jitter/jitter-disassemble.h \
@@ -758,7 +758,7 @@ if JITTER_ENABLE_DISPATCH_NO_THREADING
     $(JITTER_NO_THREADING_LDADD) $(LDADD_FOR_GNULIB)
 endif # JITTER_ENABLE_DISPATCH_NO_THREADING
 
-# Examples VM programs for the Uninspired VM example, to be distributed.
+# Examples VM routines for the Uninspired VM example, to be distributed.
 EXTRA_DIST += \
   example-vms/uninspired/examples/euclid.vm \
   example-vms/uninspired/examples/euclid-faster.vm \
@@ -1016,7 +1016,7 @@ $(srcdir)/example-vms/structured/structuredvm-vm.h: example-vms/structured/struc
 $(srcdir)/example-vms/structured/structuredvm-vm1.c: example-vms/structured/structuredvm-vm-main.c
 $(srcdir)/example-vms/structured/structuredvm-vm2.c: example-vms/structured/structuredvm-vm-main.c
 
-# Example high-level programs for the Structured example, to be distributed.
+# Example high-level routines for the Structured example, to be distributed.
 EXTRA_DIST += \
   example-vms/structured/examples/count-down.structured \
   example-vms/structured/examples/count-up-down.structured \
@@ -1024,7 +1024,7 @@ EXTRA_DIST += \
   example-vms/structured/examples/primes.structured \
   example-vms/structured/examples/primes.c
 
-# Example VM-assembly programs for the Structured (VM) example, to be
+# Example VM-assembly routines for the Structured (VM) example, to be
 # distributed.
 EXTRA_DIST += \
   example-vms/structured/examples/count-down-optimized.structuredvm \

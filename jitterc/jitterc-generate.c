@@ -902,7 +902,7 @@ jitterc_emit_rewrite_rule_instruction_template
 
       // FIXME: make a rewriting-specific macro instead of using
       // jitter_append_parameter_copy ?
-      EMIT("    jitter_append_parameter_copy (jitter_program_p,\n");
+      EMIT("    jitter_append_parameter_copy (jitter_routine_p,\n");
       jitterc_emit_rewrite_rule_template_expression (f, vm, ae, false);
       EMIT("                                 );\n");
     }
@@ -984,7 +984,7 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
   FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
 
   EMIT("void\n");
-  EMIT("vmprefix_rewrite (struct jitter_program *jitter_program_p)\n");
+  EMIT("vmprefix_rewrite (struct jitter_routine *jitter_routine_p)\n");
   EMIT("{\n");
 
   /* Add the common prolog, defining variables to be visible to the entire
@@ -1165,7 +1165,7 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
   /* Generate the main recognizer function. */
   EMIT("/* Recognizer entry point. */\n");
   EMIT("static enum vmprefix_specialized_instruction_opcode\n");
-  EMIT("vmprefix_recognize_specialized_instruction (struct jitter_program *p,\n");
+  EMIT("vmprefix_recognize_specialized_instruction (struct jitter_routine *p,\n");
   EMIT("                                            const struct jitter_instruction *ins)\n");
   EMIT("{\n");
   EMIT("  bool fl = ! p->options.slow_literals_only;\n");
@@ -1190,7 +1190,7 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
   /* Generate the specializer function. */
   EMIT("/* Specializer entry point: the only non-static function here. */\n");
   EMIT("int\n");
-  EMIT("vmprefix_specialize_instruction (struct jitter_program *p,\n");
+  EMIT("vmprefix_specialize_instruction (struct jitter_routine *p,\n");
   EMIT("                                 const struct jitter_instruction *ins)\n");
   EMIT("{\n");
   EMIT("  enum vmprefix_specialized_instruction_opcode opcode\n");
@@ -2642,7 +2642,7 @@ jitterc_emit_interpreter_main_function
   /* Generate the actual interpreter main function. */
   EMIT("static void\n");
   EMIT("vmprefix_interpret_or_initialize (bool jitter_initialize,\n");
-  EMIT("                                  struct jitter_program const *jitter_program,\n");
+  EMIT("                                  struct jitter_routine const *jitter_routine,\n");
   EMIT("                                  struct vmprefix_state * const jitter_original_state)\n");
   EMIT("{\n");
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
@@ -2850,7 +2850,7 @@ jitterc_emit_interpreter_main_function
   EMIT("     not work as intended (which prevents the use of global and static\n");
   EMIT("     variables, string literals and possibly large literal constants), and\n");
   EMIT("     GDB gets easily confused. */\n");
-  EMIT("  jitter_ip = VMPREFIX_PROGRAM_BEGINNING(jitter_program);\n\n");
+  EMIT("  jitter_ip = VMPREFIX_ROUTINE_BEGINNING(jitter_routine);\n\n");
   EMIT("  /* This is the actual jump to the first instruction: it's not an\n");
   EMIT("     inline asm constraint lie like below. */\n\n");
   EMIT("# if   defined(JITTER_DISPATCH_SWITCH)\n");
@@ -3069,7 +3069,7 @@ jitterc_emit_interpreter_wrappers
   EMIT("   If not initializing then interpret p in s. */\n");
   EMIT("static void\n");
   EMIT("vmprefix_interpret_or_initialize (bool jitter_initialize,\n");
-  EMIT("                                  struct jitter_program const *jitter_program,\n");
+  EMIT("                                  struct jitter_routine const *jitter_routine,\n");
   EMIT("                                  struct vmprefix_state * const jitter_original_state)\n");
   EMIT("__attribute__ ((noclone, noinline));\n");
   EMIT("\n");
@@ -3095,7 +3095,7 @@ jitterc_emit_interpreter_wrappers
   EMIT("\n");
 
   EMIT("void\n");
-  EMIT("vmprefix_interpret (struct jitter_program const *p, struct vmprefix_state *s)\n");
+  EMIT("vmprefix_interpret (struct jitter_routine const *p, struct vmprefix_state *s)\n");
   EMIT("{\n");
   EMIT("  vmprefix_make_place_for_slow_registers (s, p->slow_register_per_class_no);\n");
   EMIT("  vmprefix_interpret_or_initialize (false, p, s);\n");

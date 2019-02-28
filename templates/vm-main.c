@@ -480,7 +480,7 @@ main (int argc, char **argv)
     fprintf (progress, "Initializing...\n");
   vmprefix_initialize ();
 
-  /* Make an empty VM program, and set options as requested by the user. */
+  /* Make an empty VM routine, and set options as requested by the user. */
   struct vmprefix_program *p = vmprefix_make_program ();
   if (cl.debug)
     fprintf (progress,

@@ -25,7 +25,7 @@
 #include <stdio.h>
 
 #include <jitter/jitter.h>
-#include <jitter/jitter-program.h>
+#include <jitter/jitter-routine.h>
 #include <jitter/jitter-patch-in.h>
 
 
@@ -136,12 +136,12 @@ struct jitter_vm
      one new specialized instruction which is being added.  The result is always
      1 or more -- more than 1 when a superinstruction is being recognized.  The
      actual function is machine-generated. */
-  int (*specialize_instruction) (struct jitter_program *p,
+  int (*specialize_instruction) (struct jitter_routine *p,
                                  const struct jitter_instruction *ins);
 
   /* Rewrite an instruction.  This points to the vmprefix_rewrite function declared
      in templates/vm.h and implemented in Jitter-generated code. */
-  void (*rewrite) (struct jitter_program *p);
+  void (*rewrite) (struct jitter_routine *p);
 };
 
 

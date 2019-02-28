@@ -27,17 +27,17 @@
 #include <jitter/jitter-fatal.h>
 
 struct jitter_instruction*
-jitter_last_instruction (struct jitter_program *p)
+jitter_last_instruction (struct jitter_routine *p)
 {
   return * jitter_last_instructions (p, 1);
 }
 
 struct jitter_instruction**
-jitter_last_instructions (struct jitter_program *p, size_t how_many)
+jitter_last_instructions (struct jitter_routine *p, size_t how_many)
 {
   // FIXME: probably useless here.  Make this always unsafe, as it's only called
   // from a safe plaace.
-  if (p->stage != jitter_program_stage_unspecialized)
+  if (p->stage != jitter_routine_stage_unspecialized)
     jitter_fatal ("jitter_last_instruction: non non-unspecialized program");
   if (p->expected_parameter_no != 0)
     jitter_fatal ("jitter_last_instruction: previous instruction incomplete");
@@ -56,7 +56,7 @@ jitter_last_instructions (struct jitter_program *p, size_t how_many)
 }
 
 struct jitter_instruction*
-jitter_pop_instruction (struct jitter_program *p)
+jitter_pop_instruction (struct jitter_routine *p)
 {
   // FIXME: possibly too defensive?
   if (p->rewritable_instruction_no == 0)
@@ -64,7 +64,7 @@ jitter_pop_instruction (struct jitter_program *p)
 
   // FIXME: probably useless here.  Make this always unsafe, as it's only called
   // from a safe plaace.
-  if (p->stage != jitter_program_stage_unspecialized)
+  if (p->stage != jitter_routine_stage_unspecialized)
     jitter_fatal ("jitter_last_instruction: non non-unspecialized program");
   if (p->expected_parameter_no != 0)
     jitter_fatal ("jitter_last_instruction: previous instruction incomplete");
@@ -78,7 +78,7 @@ jitter_pop_instruction (struct jitter_program *p)
 }
 
 void
-jitter_destroy_last_instructions (struct jitter_program *p,
+jitter_destroy_last_instructions (struct jitter_routine *p,
                                   size_t how_many)
 {
   // FIXME: possibly too defensive?

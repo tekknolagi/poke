@@ -41,7 +41,7 @@
  * ************************************************************************** */
 
 /* A rule is a <guard, pattern, template> triple.  It means that when the
-   trailing part of unspecialized VM program which is being built matches the
+   trailing part of unspecialized VM routine which is being built matches the
    pattern, it is replaced by the template instantiated by replacing template
    placeholders with their matched arguments, if the guard is true.  The
    replacement is allowed to trigger other rules, and it's the user's

@@ -25,7 +25,7 @@
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-mmap.h>
-#include <jitter/jitter-program.h>
+#include <jitter/jitter-routine.h>
 #include <jitter/jitter-vm.h>
 #include <jitter/jitter-rewrite.h>
 
@@ -41,7 +41,7 @@
 
 /* Set the pointed program-option struct to the default state. */
 static void
-jitter_initialize_options (struct jitter_program_options *op)
+jitter_initialize_options (struct jitter_routine_options *op)
 {
   op->can_change = true;
   op->slow_registers_only = false;
@@ -58,21 +58,21 @@ jitter_initialize_options (struct jitter_program_options *op)
    always follow instruction appending, so the low-level API only used for
    rewriting does not need to use this. */
 static void
-jitter_program_make_options_unchangeable (struct jitter_program *p)
+jitter_routine_make_options_unchangeable (struct jitter_routine *p)
 {
   p->options.can_change = false;
 }
 
 /* Fail fatally if the options in the pointed program are no changeable. */
 static void
-jitter_fail_unless_options_changeable (struct jitter_program *p)
+jitter_fail_unless_options_changeable (struct jitter_routine *p)
 {
   if (! p->options.can_change)
     jitter_fatal ("cannot change options in non-empty program");
 }
 
 void
-jitter_set_program_option_slow_registers_only (struct jitter_program *p,
+jitter_set_program_option_slow_registers_only (struct jitter_routine *p,
                                                bool option)
 {
   jitter_fail_unless_options_changeable (p);
@@ -80,7 +80,7 @@ jitter_set_program_option_slow_registers_only (struct jitter_program *p,
 }
 
 void
-jitter_set_program_option_slow_literals_only (struct jitter_program *p,
+jitter_set_program_option_slow_literals_only (struct jitter_routine *p,
                                               bool option)
 {
   jitter_fail_unless_options_changeable (p);
@@ -89,14 +89,14 @@ jitter_set_program_option_slow_literals_only (struct jitter_program *p,
 
 void
 jitter_set_program_option_slow_literals_and_registers_only
-   (struct jitter_program *p, bool option)
+   (struct jitter_routine *p, bool option)
 {
   jitter_set_program_option_slow_registers_only (p, option);
   jitter_set_program_option_slow_literals_only (p, option);
 }
 
 void
-jitter_set_program_option_add_final_exitvm (struct jitter_program *p,
+jitter_set_program_option_add_final_exitvm (struct jitter_routine *p,
                                             bool option)
 {
   jitter_fail_unless_options_changeable (p);
@@ -104,7 +104,7 @@ jitter_set_program_option_add_final_exitvm (struct jitter_program *p,
 }
 
 void
-jitter_set_program_option_optimization_rewriting (struct jitter_program *p,
+jitter_set_program_option_optimization_rewriting (struct jitter_routine *p,
                                                   bool option)
 {
   jitter_fail_unless_options_changeable (p);
@@ -117,9 +117,9 @@ jitter_set_program_option_optimization_rewriting (struct jitter_program *p,
  * ************************************************************************** */
 
 static void
-jitter_initialize_program (struct jitter_program *p)
+jitter_initialize_program (struct jitter_routine *p)
 {
-  p->stage = jitter_program_stage_unspecialized;
+  p->stage = jitter_routine_stage_unspecialized;
 
   jitter_initialize_options (& p->options);
   p->expected_parameter_no = 0;
@@ -145,7 +145,7 @@ jitter_initialize_program (struct jitter_program *p)
 }
 
 static void
-jitter_finalize_program (struct jitter_program *p)
+jitter_finalize_program (struct jitter_routine *p)
 {
   struct jitter_dynamic_buffer * const is = & p->instructions;
   while (jitter_dynamic_buffer_size (is) != 0)
@@ -174,17 +174,17 @@ jitter_finalize_program (struct jitter_program *p)
   jitter_dynamic_buffer_finalize (& p->specialized_label_indices);
 }
 
-struct jitter_program*
+struct jitter_routine*
 jitter_make_program (const struct jitter_vm *vm)
 {
-  struct jitter_program *res = jitter_xmalloc (sizeof (struct jitter_program));
+  struct jitter_routine *res = jitter_xmalloc (sizeof (struct jitter_routine));
   jitter_initialize_program (res);
   res->vm = vm;
   return res;
 }
 
 void
-jitter_destroy_program (struct jitter_program *p)
+jitter_destroy_program (struct jitter_routine *p)
 {
   if (p == NULL)
     return;
@@ -194,7 +194,7 @@ jitter_destroy_program (struct jitter_program *p)
 }
 
 size_t
-jitter_program_instruction_no (const struct jitter_program *p)
+jitter_routine_instruction_no (const struct jitter_routine *p)
 {
   return jitter_dynamic_buffer_size (& p->instructions)
          / sizeof (struct jitter_instruction*);
@@ -207,7 +207,7 @@ jitter_program_instruction_no (const struct jitter_program *p)
  * ************************************************************************** */
 
 jitter_label
-jitter_fresh_label (struct jitter_program *p)
+jitter_fresh_label (struct jitter_routine *p)
 {
   /* Allocate an identifier. */
   jitter_label res = p->next_unused_opaque_label ++;
@@ -223,7 +223,7 @@ jitter_fresh_label (struct jitter_program *p)
 }
 
 jitter_label
-jitter_symbolic_label (struct jitter_program *p, const char *symbolic_name)
+jitter_symbolic_label (struct jitter_routine *p, const char *symbolic_name)
 {
   /* If the name is already known, return its label. */
   if (jitter_string_hash_table_has (& p->label_name_to_opaque_label,
@@ -245,7 +245,7 @@ jitter_symbolic_label (struct jitter_program *p, const char *symbolic_name)
    program, or -1 if the label is not associated to any instruction.
    Unspecified behavior if the label is out of bounds. */
 static jitter_int
-jitter_get_label_instruction_index (struct jitter_program *p,
+jitter_get_label_instruction_index (struct jitter_routine *p,
                                     jitter_label label)
 {
   jitter_int *array
@@ -258,7 +258,7 @@ jitter_get_label_instruction_index (struct jitter_program *p,
    instruction index.  Fail fatally if the label was already associated to an
    index.  Unspecified behavior if the label is out of bounds. */
 static void
-jitter_set_label_instruction_index (struct jitter_program *p,
+jitter_set_label_instruction_index (struct jitter_routine *p,
                                     jitter_label label,
                                     jitter_int instruction_index)
 {
@@ -278,16 +278,16 @@ jitter_set_label_instruction_index (struct jitter_program *p,
  * ************************************************************************** */
 
 void
-jitter_append_label (struct jitter_program *p, jitter_label label)
+jitter_append_label (struct jitter_routine *p, jitter_label label)
 {
-  if (p->stage != jitter_program_stage_unspecialized)
+  if (p->stage != jitter_routine_stage_unspecialized)
     jitter_fatal ("appending label in non non-unspecialized program");
   if (p->expected_parameter_no != 0)
     jitter_fatal ("appending label %li with previous instruction "
                   "incomplete", (long) label);
-  jitter_program_make_options_unchangeable (p);
+  jitter_routine_make_options_unchangeable (p);
 
-  jitter_int instruction_index = jitter_program_instruction_no (p);
+  jitter_int instruction_index = jitter_routine_instruction_no (p);
   jitter_set_label_instruction_index (p, label, instruction_index);
 
   /* We added a label.  Everything before it can no longer be rewritten. */
@@ -295,7 +295,7 @@ jitter_append_label (struct jitter_program *p, jitter_label label)
 }
 
 jitter_label
-jitter_append_symbolic_label (struct jitter_program *p, const char *label_name)
+jitter_append_symbolic_label (struct jitter_routine *p, const char *label_name)
 {
   jitter_label res = jitter_symbolic_label (p, label_name);
   jitter_append_label (p, res);
@@ -308,9 +308,9 @@ jitter_append_symbolic_label (struct jitter_program *p, const char *label_name)
    is not known yet, and a new instruction is expected first.  Increment the
    instruction counter. */
 static void
-jitter_close_current_instruction (struct jitter_program *p)
+jitter_close_current_instruction (struct jitter_routine *p)
 {
-  if (p->stage != jitter_program_stage_unspecialized)
+  if (p->stage != jitter_routine_stage_unspecialized)
     jitter_fatal ("closing instruction in non-unspecialized program");
   if (p->expected_parameter_no != 0)
     jitter_fatal ("closing an instruction still expecting parameters");
@@ -335,13 +335,13 @@ jitter_close_current_instruction (struct jitter_program *p)
    register, register class.  Fail fatally if that's not the case. */
 static void
 jitter_check_paremater_compatibility
-   (struct jitter_program *p,
+   (struct jitter_routine *p,
     enum jitter_parameter_type actual_type,
     const struct jitter_register_class *register_class)
 {
   /* Check that the program is in the right stage, and that we're
      actually expecting a parameter. */
-  if (p->stage != jitter_program_stage_unspecialized)
+  if (p->stage != jitter_routine_stage_unspecialized)
     jitter_fatal ("appending parameter in non-unspecialized program");
   if (p->expected_parameter_no == 0)
     jitter_fatal ("appending parameter with previous instruction complete");
@@ -401,7 +401,7 @@ jitter_check_paremater_compatibility
    expected parameter as its own and start a new instruction if that parameter
    was the last, but *don't* close the old instruction.  Don't make checks. */
 static void
-jitter_advance_past_next_parameter (struct jitter_program *p)
+jitter_advance_past_next_parameter (struct jitter_routine *p)
 {
   if ((-- p->expected_parameter_no) != 0)
     {
@@ -434,7 +434,7 @@ jitter_advance_past_next_parameter (struct jitter_program *p)
    jitter_append_label_parameter . */
 static struct jitter_parameter *
 jitter_append_uninitialized_paremater
-   (struct jitter_program *p,
+   (struct jitter_routine *p,
     enum jitter_parameter_type actual_type,
     const struct jitter_register_class *register_class)
 {
@@ -456,14 +456,14 @@ jitter_append_uninitialized_paremater
 /* Close the current instruction if the last appended parameter was the last
    one.  See the comment before as to why this is not done there. */
 static void
-jitter_close_instruction_when_no_more_parameters (struct jitter_program *p)
+jitter_close_instruction_when_no_more_parameters (struct jitter_routine *p)
 {
   if (p->expected_parameter_no == 0)
     jitter_close_current_instruction (p);
 }
 
 void
-jitter_append_literal_parameter (struct jitter_program *p,
+jitter_append_literal_parameter (struct jitter_routine *p,
                                  union jitter_word immediate)
 {
   struct jitter_parameter * const pa
@@ -478,7 +478,7 @@ jitter_append_literal_parameter (struct jitter_program *p,
 /* This is just a convenience wrapper around jitter_append_literal_parameter
    . */
 void
-jitter_append_signed_literal_parameter (struct jitter_program *p,
+jitter_append_signed_literal_parameter (struct jitter_routine *p,
                                         jitter_int immediate)
 {
   union jitter_word immediate_union = {.fixnum = immediate};
@@ -488,7 +488,7 @@ jitter_append_signed_literal_parameter (struct jitter_program *p,
 /* This is just a convenience wrapper around jitter_append_literal_parameter
    . */
 void
-jitter_append_unsigned_literal_parameter (struct jitter_program *p,
+jitter_append_unsigned_literal_parameter (struct jitter_routine *p,
                                           jitter_uint immediate)
 {
   union jitter_word immediate_union = {.ufixnum = immediate};
@@ -498,7 +498,7 @@ jitter_append_unsigned_literal_parameter (struct jitter_program *p,
 /* This is just a convenience wrapper around jitter_append_literal_parameter
    . */
 void
-jitter_append_pointer_literal_parameter (struct jitter_program *p,
+jitter_append_pointer_literal_parameter (struct jitter_routine *p,
                                          void *immediate)
 {
   union jitter_word immediate_union = {.pointer = immediate};
@@ -507,7 +507,7 @@ jitter_append_pointer_literal_parameter (struct jitter_program *p,
 
 void
 jitter_append_register_parameter
-   (struct jitter_program *p,
+   (struct jitter_routine *p,
     const struct jitter_register_class *register_class,
     jitter_register_index register_index)
 {
@@ -540,7 +540,7 @@ jitter_append_register_parameter
 }
 
 jitter_label
-jitter_append_symbolic_label_parameter (struct jitter_program *p,
+jitter_append_symbolic_label_parameter (struct jitter_routine *p,
                                         const char *label_name)
 {
   jitter_label res = jitter_symbolic_label (p, label_name);
@@ -548,7 +548,7 @@ jitter_append_symbolic_label_parameter (struct jitter_program *p,
   return res;
 }
 void
-jitter_append_label_parameter (struct jitter_program *p,
+jitter_append_label_parameter (struct jitter_routine *p,
                                jitter_label label)
 {
   struct jitter_parameter * const pa
@@ -560,16 +560,16 @@ jitter_append_label_parameter (struct jitter_program *p,
 }
 
 void
-jitter_append_meta_instruction (struct jitter_program *p,
+jitter_append_meta_instruction (struct jitter_routine *p,
                                 const struct jitter_meta_instruction * const mi)
 {
-  if (p->stage != jitter_program_stage_unspecialized)
+  if (p->stage != jitter_routine_stage_unspecialized)
     jitter_fatal ("appending instruction %s in non-unspecialized program",
                   mi->name);
   if (p->expected_parameter_no != 0)
     jitter_fatal ("appending instruction %s with previous instruction"
                   " incomplete", mi->name);
-  jitter_program_make_options_unchangeable (p);
+  jitter_routine_make_options_unchangeable (p);
 
   /* Make the instruction. */
   struct jitter_instruction *i
@@ -595,7 +595,7 @@ jitter_append_meta_instruction (struct jitter_program *p,
 }
 
 void
-jitter_append_instruction_id (struct jitter_program *p,
+jitter_append_instruction_id (struct jitter_routine *p,
                               const struct jitter_meta_instruction * const mis,
                               size_t meta_instruction_no,
                               unsigned unspecialized_opcode)
@@ -614,7 +614,7 @@ jitter_append_instruction_id (struct jitter_program *p,
 }
 
 void
-jitter_append_instruction_name (struct jitter_program *p,
+jitter_append_instruction_name (struct jitter_routine *p,
                                 const char *instruction_name)
 {
   const struct jitter_meta_instruction * const mi
@@ -630,10 +630,10 @@ jitter_append_instruction_name (struct jitter_program *p,
  * ************************************************************************** */
 
 void
-jitter_append_instruction (struct jitter_program *p,
+jitter_append_instruction (struct jitter_routine *p,
                            const struct jitter_instruction *ip)
 {
-  if (p->stage != jitter_program_stage_unspecialized)
+  if (p->stage != jitter_routine_stage_unspecialized)
     jitter_fatal ("jitter_append_instruction: non non-unspecialized program");
   if (p->expected_parameter_no != 0)
     jitter_fatal ("jitter_append_instruction: previous instruction incomplete");
@@ -654,7 +654,7 @@ jitter_append_instruction (struct jitter_program *p,
 }
 
 void
-jitter_append_parameter_copy (struct jitter_program *p,
+jitter_append_parameter_copy (struct jitter_routine *p,
                               const struct jitter_parameter *pp)
 {
   /* Check that the parameter is compatbile with what we are expecting; fail
@@ -679,12 +679,12 @@ jitter_append_parameter_copy (struct jitter_program *p,
  * ************************************************************************** */
 
 bool*
-jitter_jump_targets (const struct jitter_program *p)
+jitter_jump_targets (const struct jitter_routine *p)
 {
   if (p->expected_parameter_no != 0)
     jitter_fatal ("computing jump targets with an instruction incomplete");
 
-  const int instruction_no = jitter_program_instruction_no (p);
+  const int instruction_no = jitter_routine_instruction_no (p);
   const struct jitter_instruction **ins
     = (const struct jitter_instruction **)
       jitter_dynamic_buffer_to_const_pointer (& p->instructions);
@@ -745,9 +745,9 @@ jitter_jump_targets (const struct jitter_program *p)
 /* Return the length of the longest instruction name actually used in this
    program. */
 static size_t
-jitter_maximum_instruction_name_length (const struct jitter_program *p)
+jitter_maximum_instruction_name_length (const struct jitter_routine *p)
 {
-  const int instruction_no = jitter_program_instruction_no (p);
+  const int instruction_no = jitter_routine_instruction_no (p);
   const struct jitter_instruction **ins
     = (const struct jitter_instruction **)
       jitter_dynamic_buffer_to_const_pointer (& p->instructions);
@@ -767,10 +767,10 @@ jitter_maximum_instruction_name_length (const struct jitter_program *p)
 }
 
 void
-jitter_print_program (FILE *out, const struct jitter_program *p)
+jitter_print_program (FILE *out, const struct jitter_routine *p)
 {
   const bool slow_registers_only = p->options.slow_registers_only;
-  const int instruction_no = jitter_program_instruction_no (p);
+  const int instruction_no = jitter_routine_instruction_no (p);
   const struct jitter_instruction **ins
     = (const struct jitter_instruction **)
       jitter_dynamic_buffer_to_const_pointer (& p->instructions);
@@ -779,7 +779,7 @@ jitter_print_program (FILE *out, const struct jitter_program *p)
      already have the information, which is computed at specialization time,
      then use it; otherwise compute it now. */
   bool *is_target;
-  if (p->stage >= jitter_program_stage_specialized)
+  if (p->stage >= jitter_routine_stage_specialized)
     is_target = p->jump_targets;
   else
     is_target = jitter_jump_targets (p);
@@ -857,7 +857,7 @@ jitter_print_program (FILE *out, const struct jitter_program *p)
   /* If we have allocated the boolean array here then free it; if not then we
      were reusing some part of the program, and of course we should not break
      it. */
-  if (p->stage < jitter_program_stage_specialized)
+  if (p->stage < jitter_routine_stage_specialized)
     free (is_target);
 }
 
@@ -868,12 +868,12 @@ jitter_print_program (FILE *out, const struct jitter_program *p)
  * ************************************************************************** */
 
 void
-jitter_resolve_labels_in_unspecialized_program (struct jitter_program *pr)
+jitter_resolve_labels_in_unspecialized_program (struct jitter_routine *pr)
 {
-  if (pr->stage != jitter_program_stage_unspecialized)
+  if (pr->stage != jitter_routine_stage_unspecialized)
     jitter_fatal ("resolving unspecialized labels in non-unspecialized program");
 
-  const int instruction_no = jitter_program_instruction_no (pr);
+  const int instruction_no = jitter_routine_instruction_no (pr);
   struct jitter_instruction **ins
     = jitter_dynamic_buffer_to_pointer (& pr->instructions);
 

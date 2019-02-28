@@ -411,7 +411,7 @@
 
 
 
-/* VM program termination.
+/* VM routine termination.
  * ************************************************************************** */
 
 /* Exit the "interpreter" function and return to C. */

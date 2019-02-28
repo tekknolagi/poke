@@ -460,10 +460,10 @@ struct jitterlisp_compiled_closure
      size to avoid an indirection, after I properly implement vectors. */
   jitterlisp_object nonlocals;
 
-  /* The specialized VM program for the closure code. */
-  struct jitter_program *vm_program;
+  /* The specialized VM routine for the closure code. */
+  struct jitter_routine *vm_program;
 
-  /* The first program point of the VM program above, always a prolog
+  /* The first program point of the VM routine above, always a prolog
      instructions.  This could be extracted as a field from the code itself, but
      it's better to keep a copy here and avoid a memory dereference at call
      time.

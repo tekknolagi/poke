@@ -1,6 +1,6 @@
-/* VM-independent program frontend: Bison parser.
+/* VM-independent routine code frontend: Bison parser.
 
-   Copyright (C) 2016, 2017 Luca Saiu
+   Copyright (C) 2016, 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -25,7 +25,7 @@
   #include <limits.h>
   #include <jitter/jitter.h>
   #include <jitter/jitter-instruction.h>
-  #include <jitter/jitter-program.h>
+  #include <jitter/jitter-routine.h>
 
   #include <jitter/jitter-parser.h>
   #include <jitter/jitter-scanner.h>
@@ -34,7 +34,7 @@
   /* This is currently a fatal error.  I could longjmp away instead. */
   static void
   jitter_error (YYLTYPE *locp,
-                struct parser_arg *parser_arg, /*struct jitter_program *program,*/
+                struct parser_arg *parser_arg, /*struct jitter_routine *routine,*/
                 yyscan_t scanner, const char *message)
     __attribute__ ((noreturn));
 
@@ -124,7 +124,7 @@
 %parse-param { void* jitter_scanner }
 
 /* We don't need a %initial-action block, because the parser receives an already
-   initialized program; see the definition of jitter_parse_file_star . */
+   initialized routine; see the definition of jitter_parse_file_star . */
 
 /* This goes to the header file. */
 %code requires {
@@ -132,16 +132,17 @@
 
   #include <jitter/jitter.h>
   #include <jitter/jitter-instruction.h>
-  #include <jitter/jitter-program.h>
+  #include <jitter/jitter-routine.h>
   #include <jitter/jitter-vm.h>
 
   /* The structure whose pointer is passed to the parser function.  FIXME:
-     revert to having just the program as a parser argument: the VM is reachable
-     from the program. */
+     revert to having just the routine as a parser argument: the VM is reachable
+     from the routine. */
   struct parser_arg
   {
-    /* The program to be parsed, empty on input. */
-    struct jitter_program *program;
+    /* The routine to be parsed, allowed but not required to be empty on
+       input. */
+    struct jitter_routine *routine;
 
     /* VM-dependent data.  Not modified. */
     const struct jitter_vm *vm;
@@ -155,21 +156,21 @@
   void
   jitter_parse_error (void *jitter_scanner) __attribute__ ((noreturn));
 
-  /* Parse a program for the pointed VM from a file or a string in memory, adding
-     code to the pointed VM program.
+  /* Parse a routine for the pointed VM from a file or a string in memory, adding
+     code to the pointed VM routine.
      These functions work of course on any VM, but are slightly inconvenient for
      the user to call directly.  For this reason they are wrapped in the vm1.c
      template into VM-specific functions not requiring a VM struct pointer. */
   void
-  jitter_parse_file_star (FILE *input_file, struct jitter_program *p,
+  jitter_parse_file_star (FILE *input_file, struct jitter_routine *p,
                           const struct jitter_vm *vm)
     __attribute__ ((nonnull (1, 2, 3)));
   void
-  jitter_parse_file (const char *input_file_name, struct jitter_program *p,
+  jitter_parse_file (const char *input_file_name, struct jitter_routine *p,
                      const struct jitter_vm *vm)
     __attribute__ ((nonnull (1, 2, 3)));
   void
-  jitter_parse_string (const char *string, struct jitter_program *p,
+  jitter_parse_string (const char *string, struct jitter_routine *p,
                        const struct jitter_vm *vm)
     __attribute__ ((nonnull (1, 2, 3)));
 }
@@ -195,9 +196,9 @@
 
 %%
 
-program :
+routine :
   /* nothing */
-| program instruction_or_label
+| routine instruction_or_label
 ;
 
 instruction_or_label :
@@ -213,12 +214,12 @@ label :
   LABEL { char *label = jitter_get_text (jitter_scanner);
           label [strlen (label) - 1] = '\0';  /* Remove the trailing colon. */
           /* Add one to skip the prefix. */
-          jitter_append_symbolic_label (parser_arg->program, label + 1); }
+          jitter_append_symbolic_label (parser_arg->routine, label + 1); }
 ;
 
 instruction_name :
   INSTRUCTION_NAME { char *name = jitter_get_text (jitter_scanner);
-                     jitter_append_instruction_name (parser_arg->program,
+                     jitter_append_instruction_name (parser_arg->routine,
                                                      name); }
 ;
 
@@ -276,20 +277,20 @@ int_expression :
 ;
 
 argument :
-  int_expression { jitter_append_literal_parameter (parser_arg->program,
+  int_expression { jitter_append_literal_parameter (parser_arg->routine,
                                                     $1); }
 | LABEL_LITERAL  { char *text = jitter_get_text (jitter_scanner) + 1; /* Skip the prefix. */
-                   jitter_append_symbolic_label_parameter (parser_arg->program,
+                   jitter_append_symbolic_label_parameter (parser_arg->routine,
                                                            text); }
 | REGISTER       { char *text = jitter_get_text (jitter_scanner);
                    char register_class_character = text [1];
                    const struct jitter_register_class *register_class
-                     = parser_arg->program->vm->register_class_character_to_register_class
+                     = parser_arg->routine->vm->register_class_character_to_register_class
                           (register_class_character);
                    if (register_class == NULL)
                      jitter_simple_error (jitter_scanner, "invalid register class");
                    int register_id = strtol (text + 2, NULL, 10);
-                   jitter_append_register_parameter (parser_arg->program,
+                   jitter_append_register_parameter (parser_arg->routine,
                                                      register_class,
                                                      register_id); }
 ;
@@ -313,7 +314,7 @@ __attribute__ ((noreturn)) static void
 jitter_simple_error (void *jitter_scanner, const char *message)
 {
   jitter_error (jitter_get_lloc (jitter_scanner),
-            NULL, /* We have no program here, but it's not important. */
+            NULL, /* We have no routine here, but it's not important. */
             jitter_scanner,
             message);
 }
@@ -336,14 +337,14 @@ jitter_parse_error (void *jitter_scanner)
    The pointed scanner must be already initialized when this is called, and
    it's the caller's responsibility to finalize it. */
 static void
-jitter_parse_core (yyscan_t scanner, struct jitter_program *p,
+jitter_parse_core (yyscan_t scanner, struct jitter_routine *p,
                    const struct jitter_vm *vm)
 {
   struct parser_arg pa;
   pa.vm = (struct jitter_vm *) vm;
-  pa.program = p;
+  pa.routine = p;
   /* FIXME: if I ever make parsing errors non-fatal, call jitter_lex_destroy before
-     returning, and finalize the program -- which might be incomplete! */
+     returning. */
   if (jitter_parse (& pa, scanner))
     jitter_error (jitter_get_lloc (scanner),
                   & pa,
@@ -351,7 +352,7 @@ jitter_parse_core (yyscan_t scanner, struct jitter_program *p,
 }
 
 void
-jitter_parse_file_star (FILE *input_file, struct jitter_program *p,
+jitter_parse_file_star (FILE *input_file, struct jitter_routine *p,
                         const struct jitter_vm *vm)
 {
   yyscan_t scanner;
@@ -365,7 +366,7 @@ jitter_parse_file_star (FILE *input_file, struct jitter_program *p,
 }
 
 void
-jitter_parse_file (const char *input_file_name, struct jitter_program *p,
+jitter_parse_file (const char *input_file_name, struct jitter_routine *p,
                    const struct jitter_vm *vm)
 {
   FILE *f;
@@ -382,7 +383,7 @@ jitter_parse_file (const char *input_file_name, struct jitter_program *p,
 }
 
 void
-jitter_parse_string (const char *string, struct jitter_program *p,
+jitter_parse_string (const char *string, struct jitter_routine *p,
                      const struct jitter_vm *vm)
 {
   yyscan_t scanner;

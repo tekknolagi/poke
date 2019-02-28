@@ -26,7 +26,7 @@
 #include "structuredvm-vm.h"
 #include "structured-syntax.h"
 
-/* Fill the pointed empty VM program using stack-based instructions which are
+/* Fill the pointed empty VM routine using stack-based instructions which are
    the translation of the pointed AST program. */
 void
 structured_translate_program_stack (struct structuredvm_program *vmp,

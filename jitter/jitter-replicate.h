@@ -45,7 +45,7 @@
  * ************************************************************************** */
 
 //#include <jitter/jitter-instruction.h>
-#include <jitter/jitter-program.h>
+#include <jitter/jitter-routine.h>
 
 
 
@@ -55,7 +55,7 @@
 
 /* Replicate code in an already specialized program. */
 void
-jitter_replicate_program (struct jitter_program *p);
+jitter_replicate_program (struct jitter_routine *p);
 
 /* Insert a !BEGINBASICBLOCK specialized instruction.  Such a specialized
    instruction serves to support threaded jumps, and is inserted at
@@ -63,7 +63,7 @@ jitter_replicate_program (struct jitter_program *p);
    specialized instruction of each basic block.  See the comment within
    vmprefix_specialize_program .  Not intended for the user. */
 void
-jitter_insert_beginbasicblock (struct jitter_program *p);
+jitter_insert_beginbasicblock (struct jitter_routine *p);
 
 #endif // #ifdef JITTER_REPLICATE
 #endif // #ifndef JITTER_REPLICATE_H_

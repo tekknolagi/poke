@@ -26,13 +26,13 @@
 #include <stdio.h>
 
 #include <jitter/jitter.h>
-#include <jitter/jitter-program.h>
+#include <jitter/jitter-routine.h>
 
 /* Disassemble the given program to stdout.  The internal implementation is
    currently inefficient, as it relies on one objdump invocation per specialized
    instruction. */
 void
-jitter_disassemble_program (const struct jitter_program *p, bool raw,
+jitter_disassemble_program (const struct jitter_routine *p, bool raw,
                             const char *objdump_name,
                             const char *objdump_options_or_NULL)
   __attribute__ ((nonnull(1)));
@@ -41,7 +41,7 @@ jitter_disassemble_program (const struct jitter_program *p, bool raw,
    instead of stdout. */
 void
 jitter_disassemble_program_to (FILE *f,
-                               const struct jitter_program *p, bool raw,
+                               const struct jitter_routine *p, bool raw,
                                const char *objdump_name,
                                const char *objdump_options_or_NULL)
   __attribute__ ((nonnull(1, 2)));
