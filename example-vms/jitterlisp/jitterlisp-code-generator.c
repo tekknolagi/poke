@@ -152,7 +152,7 @@ jitterlisp_minus_one = JITTERLISP_FIXNUM_ENCODE(-1);
 /* Return the Jitter label associated to the given Lisp label, adding a fresh
    binding to the table if the Lisp label was unknown before. */
 static jitterlispvm_label
-jitterlisp_lookup_label (struct jitterlispvm_program *p,
+jitterlisp_lookup_label (struct jitterlispvm_routine *p,
                          struct jitter_hash_table *map,
                          jitterlisp_object lisp_tagged_label)
 {
@@ -178,7 +178,7 @@ jitterlisp_lookup_label (struct jitterlispvm_program *p,
    a negative Lisp identifier) if this is its first use for the current VM
    program.  See the initialization code below for rationale. */
 static jitterlispvm_label
-jitterlisp_error_label (struct jitterlispvm_program *p,
+jitterlisp_error_label (struct jitterlispvm_routine *p,
                         struct jitter_hash_table *map)
 {
   return jitterlisp_lookup_label (p, map, jitterlisp_minus_one);
@@ -204,7 +204,7 @@ jitterlisp_has_error_label (const struct jitter_hash_table *map)
 /* A helper function for jitterlisp_translate_instruction .  Translate a
    primitive use of the given primitive in the given program. */
 static void
-jitterlisp_translate_primitive (struct jitterlispvm_program *p,
+jitterlisp_translate_primitive (struct jitterlispvm_routine *p,
                                 struct jitter_hash_table *map,
                                 const struct jitterlisp_primitive *pri)
 {
@@ -423,7 +423,7 @@ jitterlisp_translate_primitive (struct jitterlispvm_program *p,
    pointed Jittery VM routine, validating it in the process.  Use the pointed
    map associating Lisp labels to Jitter labels. */
 static void
-jitterlisp_translate_instruction (struct jitterlispvm_program *p,
+jitterlisp_translate_instruction (struct jitterlispvm_routine *p,
                                   struct jitter_hash_table *map,
                                   jitterlisp_object insn)
 {
@@ -558,7 +558,7 @@ jitterlisp_translate_instruction (struct jitterlispvm_program *p,
    The given Lisp instructions are assumed to be a Lisp list, as this function
    is called after a primitive has already validated its arguments. */
 static void
-jitterlisp_translate_instructions (struct jitterlispvm_program *p,
+jitterlisp_translate_instructions (struct jitterlispvm_routine *p,
                                    struct jitter_hash_table *map,
                                    jitterlisp_object insns)
 {
@@ -586,10 +586,10 @@ jitterlisp_translate_instructions (struct jitterlispvm_program *p,
 }
 
 /* Given the Lisp encoding of the VM routine, generate the Jittery version. */
-static struct jitterlispvm_program *
+static struct jitterlispvm_routine *
 jitterlisp_generate_jittery (jitterlisp_object code_as_sexpression)
 {
-  struct jitterlispvm_program *res
+  struct jitterlispvm_routine *res
     = jitterlispvm_make_program ();
 
   /* Set program options for user-compiled code. */

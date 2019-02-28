@@ -423,9 +423,9 @@ vmprefix_vm_configuration;
    some VM-independent functions and data structures actually look as if they
    were specific to the user VM. */
 
-/* What the user refers to as struct vmprefix_program is actually a struct
+/* What the user refers to as struct vmprefix_routine is actually a struct
    jitter_routine , whose definition is VM-independent. */
-#define vmprefix_program jitter_routine
+#define vmprefix_routine jitter_routine
 
 /* Destroy programs (program initialization is actually VM-specific). */
 #define vmprefix_destroy_program jitter_destroy_program
@@ -630,14 +630,14 @@ vmprefix_rewrite (struct jitter_routine *p);
   /* In this case the program structure contains a separate pointer to the
      beginning of the executable region for the native program.  Of course
      the first instruction is at the beginning of the region. */
-# define VMPREFIX_ROUTINE_BEGINNING(_vmprefix_program_pointer)  \
-    ((_vmprefix_program_pointer)->native_code)
+# define VMPREFIX_ROUTINE_BEGINNING(_vmprefix_routine_pointer)  \
+    ((_vmprefix_routine_pointer)->native_code)
 #else
   /* With switch dispatching or threading the first program point is a pointer
      to the beginning of the specialized program array. */
-# define VMPREFIX_ROUTINE_BEGINNING(_vmprefix_program_pointer)   \
+# define VMPREFIX_ROUTINE_BEGINNING(_vmprefix_routine_pointer)   \
     ((vmprefix_program_point)                                      \
-     ((_vmprefix_program_pointer)->specialized_program.region))
+     ((_vmprefix_routine_pointer)->specialized_program.region))
 #endif // ifdef JITTER_DISPATCH_NO_THREADING
 
 

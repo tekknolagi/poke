@@ -423,7 +423,7 @@ end
 printer-c
   code
 /* Print a Lisp object in Lisp notation.  This is convenient to read VM
-   programs in textual form. */
+   routines in textual form. */
 static void
 print_object (FILE *out, jitter_uint u)
 {
@@ -1558,9 +1558,9 @@ end
 # and the number of arguments (untagged) on the top of stack.  Replace all the
 # stack operands with the call result.
 # Rationale: this instruction has been designed to be the first and only
-# instruction executed in the driver VM program, called from the AST interpreter
+# instruction executed in the driver VM routine, called from the AST interpreter
 # in C.
-# The same driver program can be generated once at initialization, and then
+# The same driver routine can be generated once at initialization, and then
 # reused to launch procedures as needed: this is why the instruction takes
 # the closure in-arity from the stack instead of from an instruction argument.
 instruction call-from-c ()
