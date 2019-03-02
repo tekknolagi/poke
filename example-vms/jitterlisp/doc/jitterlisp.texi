@@ -34,8 +34,10 @@
 @c Define a symbol index, with entries typeset in @code .
 @defcodeindex sy
 
-@c @c Add index entries for symbols to the concept index as well.
-@syncodeindex sy cp
+@c @c Merge index entries for symbols to the concept index.
+@c I've noticed that it's unfortunately impossible to reliably print
+@c both indices, when one is merged into the other.
+@c @syncodeindex sy cp
 
 
 @c File name and title
@@ -1650,6 +1652,7 @@ accept either an interpreted closure or a compiled closure as a
 @cindex list, empty
 A unique object important in practice is @dfn{the empty list}:
 @syindex ()@r{ (empty list object)}
+@syindex @r{parentheses (}@code{()}@r{), empty list object}
 @deffn {unique} ()
 In read syntax it is acceptable to separate the open and closed
 parentheses with arbitrary whitespace or comments, in which last case
@@ -1734,7 +1737,10 @@ called its @dfn{cdr}.
 @cindex output syntax, cons
 @syindex (@r{ (open parenthesis, cons syntax)}
 @syindex )@r{ (closed parenthesis, cons syntax)}
+@syindex @r{parenthesis, cons syntax}
 @syindex .@r{ (dot, cons syntax)}
+@syindex @r{dot (}@code{.}@r{), cons syntax}
+@syindex @r{period (}@code{.}@r{), cons syntax}
 @quotation Syntax
 If @var{a} and @var{b} are two Lisp objects, then
 @code{(@var{a} . @var{b})} is a cons containing
@@ -1796,6 +1802,10 @@ can be used on many non-list conses as well:
 @cindex compact cons notation
 @cindex cons notation, compact
 @cindex notation, cons, compact
+@syindex @r{parenthesis, compact cons notation}
+@syindex .@r{ (dot), compact cons notation}
+@syindex @r{dot (}@code{.}@r{), compact cons notation}
+@syindex @r{period (}@code{.}@r{), compact cons notation}
 @quotation Compact cons notation
 Let @var{a} and @var{b} be two objects.
 When @var{b} is either the empty list @code{()} or a cons, the
@@ -1824,16 +1834,20 @@ Let @var{q} be the read syntax for a Lisp object.  Then:
 @itemize
 @item
 @syindex '@r{ (apostrophe, prefix for @code{quote})}
+@syindex @r{apostrophe (}'@r{), prefix for @code{quote}}
 @code{'@var{q}} is an alternative read syntax for @code{(quote @var{q})};
 @item
 @syindex `@r{ (backtick, prefix for @code{quasiquote})}
+@syindex @r{backtick (}`@r{), prefix for @code{quasiquote}}
 @code{`@var{q}} is an alternative read syntax for @code{(quasiquote @var{q})};
 @item
 @syindex ,@r{ (comma, prefix for @code{unquote})}
+@syindex @r{comma (},@r{), prefix for @code{unquote}}
 @code{,@var{q}} is an alternative read syntax for @code{(unquote @var{q})};
 and
 @item
 @syindex ,@@@r{ (comma at, prefix for @code{unquote-splicing})}
+@syindex @r{comma at (},@@@r{), prefix for @code{unquote-splicing}}
 @code{,@@@var{q}} is an alternative read syntax for @code{(unquote-splicing @var{q})}.
 @end itemize
 The prefix notation is recognized by the reader, but currently not emitted
@@ -2957,6 +2971,10 @@ syntax: @pxref{define-macro}.
 @syindex `@r{ (backtick, prefix for @code{quasiquote})}
 @syindex ,@r{ (comma, prefix for @code{unquote})}
 @syindex ,@@@r{ (comma at, prefix for @code{unquote-splicing})}
+@syindex @r{apostrophe (}'@r{), prefix for @code{quote}}
+@syindex @r{backtick (}`@r{), prefix for @code{quasiquote}}
+@syindex @r{comma (},@r{), prefix for @code{unquote}}
+@syindex @r{comma at (},@@@r{), prefix for @code{unquote-splicing}}
 @fixme{link prefixes.  Remind that ' is usable}
 
 
