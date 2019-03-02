@@ -2584,7 +2584,7 @@ jitterc_emit_patch_in_header (FILE *f, const struct jitterc_vm *vm)
   EMIT("  /* Generate the single patch-in header for this interpreter as a\n");
   EMIT("     global asm statement.  This expands into a global definition in\n");
   EMIT("     assembly in a separate subsection, and relies on toplevel C\n");
-  EMIT("     definitions not being reordered: vmprefix_interpret_or_initialize\n");
+  EMIT("     definitions not being reordered: vmprefix_execute_or_initialize\n");
   EMIT("     will add to the same global.  Do the same for defects. */\n");
   EMIT("  JITTER_DEFECT_HEADER(vmprefix);\n");
   EMIT("  JITTER_PATCH_IN_HEADER(vmprefix);\n");
@@ -2641,9 +2641,9 @@ jitterc_emit_interpreter_main_function
 {
   /* Generate the actual interpreter main function. */
   EMIT("static void\n");
-  EMIT("vmprefix_interpret_or_initialize (bool jitter_initialize,\n");
-  EMIT("                                  struct jitter_routine const *jitter_routine,\n");
-  EMIT("                                  struct vmprefix_state * const jitter_original_state)\n");
+  EMIT("vmprefix_execute_or_initialize (bool jitter_initialize,\n");
+  EMIT("                                vmprefix_program_point jitter_initial_program_point,\n");
+  EMIT("                                struct vmprefix_state * const jitter_original_state)\n");
   EMIT("{\n");
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("  /* Save the values in the registers we reserved as global variables,\n");
@@ -2850,7 +2850,7 @@ jitterc_emit_interpreter_main_function
   EMIT("     not work as intended (which prevents the use of global and static\n");
   EMIT("     variables, string literals and possibly large literal constants), and\n");
   EMIT("     GDB gets easily confused. */\n");
-  EMIT("  jitter_ip = VMPREFIX_ROUTINE_BEGINNING(jitter_routine);\n\n");
+  EMIT("  jitter_ip = jitter_initial_program_point;\n\n");
   EMIT("  /* This is the actual jump to the first instruction: it's not an\n");
   EMIT("     inline asm constraint lie like below. */\n\n");
   EMIT("# if   defined(JITTER_DISPATCH_SWITCH)\n");
@@ -3063,15 +3063,27 @@ jitterc_emit_interpreter_wrappers
   /* This function is the most critical to compile with the right GCC options;
      for any threading model more sophisticated than direct threading this is a
      matter of correctness, not just efficiency. */
-  EMIT("/* The definition of this is machine-generated in interpreter.c , and\n");
-  EMIT("   the function is not intended for the user.  If initializing then set\n");
-  EMIT("   vmprefix_threads and vmprefix_thread_sizes and just return, ignoring p and s.\n");
-  EMIT("   If not initializing then interpret p in s. */\n");
+  EMIT("/* The definition of this is machine-generated in vmprefix-vm2.c , and the\n");
+  EMIT("   function is not intended for the user.  If initializing then set\n");
+  EMIT("   structuredvm_threads and structuredvm_thread_sizes and just return, ignoring\n");
+  EMIT("   the other fieldsp and s.  If not initializing then actually enter VM code\n");
+  EMIT("   starting from the given program point in the pointed state. */\n");
   EMIT("static void\n");
-  EMIT("vmprefix_interpret_or_initialize (bool jitter_initialize,\n");
-  EMIT("                                  struct jitter_routine const *jitter_routine,\n");
-  EMIT("                                  struct vmprefix_state * const jitter_original_state)\n");
-  EMIT("__attribute__ ((noclone, noinline));\n");
+  EMIT("vmprefix_execute_or_initialize (bool jitter_initialize,\n");
+  EMIT("                                vmprefix_program_point jitter_initial_program_point,\n");
+  EMIT("                                struct vmprefix_state * const jitter_original_state)\n");
+  EMIT("  __attribute__ ((noclone, noinline));\n");
+  EMIT("\n");
+  EMIT("void\n");
+  EMIT("vmprefix_execute_executable_routine (const struct jitter_executable_routine *er,\n");
+  EMIT("                                     struct vmprefix_state *s)\n");
+  EMIT("{\n");
+  EMIT("  vmprefix_make_place_for_slow_registers (s, er->slow_register_per_class_no);\n");
+  EMIT("  jitter_program_point initial_program_point\n");
+  EMIT("    = VMPREFIX_EXECUTABLE_ROUTINE_BEGINNING (er);\n");
+  EMIT("  vmprefix_execute_or_initialize (false, initial_program_point, s);\n");
+  EMIT("}\n");
+  EMIT("\n");
   EMIT("\n");
   EMIT("/* Threads or pointers to native code blocks of course don't exist with\n");
   EMIT("   switch-dispatching. */\n");
@@ -3090,15 +3102,14 @@ jitterc_emit_interpreter_wrappers
   EMIT("void\n");
   EMIT("vmprefix_initialize_threads (void)\n");
   EMIT("{\n");
-  EMIT("  vmprefix_interpret_or_initialize (true, NULL, NULL);\n");
+  EMIT("  vmprefix_execute_or_initialize (true, NULL, NULL);\n");
   EMIT("}\n");
   EMIT("\n");
 
   EMIT("void\n");
-  EMIT("vmprefix_interpret (struct jitter_routine const *p, struct vmprefix_state *s)\n");
+  EMIT("vmprefix_branch_to_program_point (vmprefix_program_point p, struct vmprefix_state *s)\n");
   EMIT("{\n");
-  EMIT("  vmprefix_make_place_for_slow_registers (s, p->slow_register_per_class_no);\n");
-  EMIT("  vmprefix_interpret_or_initialize (false, p, s);\n");
+  EMIT("  vmprefix_execute_or_initialize (false, p, s);\n");
   EMIT("}\n");
   EMIT("\n");
 }
@@ -3201,7 +3212,7 @@ jitterc_emit_interpreter (const struct jitterc_vm *vm)
   EMIT("%s", vm->before_main_c_code);
   EMIT("/* End of the late C code from the user. */\n\n");
 
-  /* Generate a few easy wrapper functions calling vmprefix_interpret_or_initialize ,
+  /* Generate a few easy wrapper functions calling vmprefix_execute_or_initialize ,
      which are the actual entry points into this compilation unit. */
   jitterc_emit_interpreter_wrappers (f, vm);
 

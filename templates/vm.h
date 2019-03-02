@@ -186,18 +186,6 @@ vmprefix_make_routine (void)
 
 
 
-/* Interpretation.
- * ************************************************************************** */
-
-/* Interpret the given program, which must be already specialized, in the given
-   state. */
-void
-vmprefix_interpret (struct jitter_routine const *p, struct vmprefix_state *s)
-  __attribute__ ((nonnull (1, 2)));
-
-
-
-
 /* Array element access: residuals, transfers, slow registers, more to come.
  * ************************************************************************** */
 
@@ -428,7 +416,11 @@ vmprefix_vm_configuration;
    jitter_routine , whose definition is VM-independent. */
 #define vmprefix_routine jitter_routine
 
-/* Destroy programs (program initialization is actually VM-specific). */
+/* Same for executable routines. */
+#define vmprefix_executable_routine jitter_executable_routine
+
+/* Destroy a non-executable routine (routine initialization is actually
+   VM-specific). */
 #define vmprefix_destroy_routine jitter_destroy_routine
 
 /* Program construction API. */
@@ -460,12 +452,14 @@ vmprefix_vm_configuration;
   jitter_fresh_label
 #define vmprefix_print_routine \
   jitter_print_routine
-#define vmprefix_specialize_program \
-  jitter_specialize_program
-#define vmprefix_disassemble_routine \
-  jitter_disassemble_routine
-#define vmprefix_disassemble_routine_to \
-  jitter_disassemble_routine_to
+#define vmprefix_make_executable_routine \
+  jitter_make_executable_routine
+#define vmprefix_destroy_executable_routine \
+  jitter_destroy_executable_routine
+#define vmprefix_disassemble_executable_routine \
+  jitter_disassemble_executable_routine
+#define vmprefix_disassemble_executable_routine_to \
+  jitter_disassemble_executable_routine_to
 #define vmprefix_print_vm_configuration \
   jitter_print_vm_configuration
 #define vmprefix_set_routine_option_slow_literals_only \
@@ -591,53 +585,46 @@ vmprefix_rewrite (struct jitter_routine *p);
 /* Program points at runtime in specialized programs.
  * ************************************************************************** */
 
-/* The type of a program point at run time in a specialized program.  This is
-   the type of object than can be passed to JITTER_BRANCH , and its actual
-   definition depends on the dispatching model.  Notice that however, in every
-   case, a program point is a pointer-to-constant type and therefore fits in a
-   word. */
-#ifdef JITTER_DISPATCH_NO_THREADING
-  /* With no-threading dispatch a program point is the address of a machine
-     instruction -- from C, it's what a goto * statement accepts.  I don't
-     need to worry about non-GCC compilers, since no-threading relies on GCC
-     extensions. */
-  typedef void *
-  vmprefix_program_point;
-#else
-  /* On every other dispatching model a program point is a pointer to a word
-     in the specialized program -- in the case of switch dispatching that word
-     will contain a specialized opcode, with threading it will contain the
-     address of a machine instruction (see the case above) followed by the
-     VM instruction arguments. */
-  typedef const union jitter_word *
-  vmprefix_program_point;
-#endif // #ifdef JITTER_DISPATCH_NO_THREADING
+/* Provide a nice name for a program point type which looks VM-dependent. */
+typedef jitter_program_point
+vmprefix_program_point;
 
-/* Expand to an expression evaluating to the program point of the first
-   instruction in the pointed vmprefix VM routine, as some object which is
-   correct to pass to JITTER_BRANCH.  The expression type will be
-   vmprefix_program_point.
+/* Again, provide a VM-dependent alias for an actually VM-independent macro. */
+#define VMPREFIX_EXECUTABLE_ROUTINE_BEGINNING(_jitter_executable_routine_ptr)  \
+  JITTER_EXECUTABLE_ROUTINE_BEGINNING(_jitter_executable_routine_ptr)
 
-   This is useful to execute a program without explicitly calling the
-   interpreter function, for example from a VM instruction jumping to the
-   beginning of another VM routine.  The expansion of this macro is guaranteed
-   not to contain function calls, and is safe to use from VM instructions
-   without C function wrappers.
 
-   This assumes, without checking, that the program is already specialized. */
-#ifdef JITTER_DISPATCH_NO_THREADING
-  /* In this case the program structure contains a separate pointer to the
-     beginning of the executable region for the native program.  Of course
-     the first instruction is at the beginning of the region. */
-# define VMPREFIX_ROUTINE_BEGINNING(_vmprefix_routine_pointer)  \
-    ((_vmprefix_routine_pointer)->native_code)
-#else
-  /* With switch dispatching or threading the first program point is a pointer
-     to the beginning of the specialized program array. */
-# define VMPREFIX_ROUTINE_BEGINNING(_vmprefix_routine_pointer)   \
-    ((vmprefix_program_point)                                      \
-     ((_vmprefix_routine_pointer)->specialized_program.region))
-#endif // ifdef JITTER_DISPATCH_NO_THREADING
+
+
+/* Executing code from an executable routine.
+ * ************************************************************************** */
+
+/* Make sure that the pointed state has enough slow registers to run the pointed
+   executable routine; if that is not the case, allocate more slow registers. */
+void
+vmprefix_ensure_enough_slow_registers_for
+   (const struct jitter_executable_routine *er, struct vmprefix_state *s)
+  __attribute__ ((nonnull (1, 2)));
+
+/* Run VM code starting from the given program point (which must belong to some
+   executable routine), in the pointed VM state.
+
+   Since no executable routine is given this cannot automatically guarantee that
+   the slow registers in the pointed state are in sufficient number; it is the
+   user's responsibility to check, if needed. */
+void
+vmprefix_branch_to_program_point (vmprefix_program_point p,
+                                  struct vmprefix_state *s)
+  __attribute__ ((nonnull (1, 2)));
+
+/* Run VM code starting from the beginning of the pointed executable routine,
+   in the pointed VM state.  This does ensure that the slow registers in
+   the pointed state are in sufficient number, by calling
+   vmprefix_ensure_enough_slow_registers_for . */
+void
+vmprefix_execute_executable_routine (const struct jitter_executable_routine *er,
+                                     struct vmprefix_state *s)
+  __attribute__ ((nonnull (1, 2)));
 
 
 

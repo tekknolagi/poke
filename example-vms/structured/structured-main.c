@@ -331,53 +331,56 @@ structured_work (struct structured_command_line *cl)
   structuredvm_initialize ();
 
   /* Make an empty Jittery program and set options for it as needed. */
-  struct structuredvm_routine *vmp = structuredvm_make_routine ();
-  structuredvm_set_routine_option_slow_literals_only (vmp,
+  struct structuredvm_routine *vmr = structuredvm_make_routine ();
+  structuredvm_set_routine_option_slow_literals_only (vmr,
                                                       cl->slow_literals_only);
-  structuredvm_set_routine_option_slow_registers_only (vmp,
+  structuredvm_set_routine_option_slow_registers_only (vmr,
                                                        cl->slow_registers_only);
   structuredvm_set_routine_option_optimization_rewriting
-     (vmp, cl->optimization_rewriting);
+     (vmr, cl->optimization_rewriting);
 
   /* Translate the AST program into a jittery program. */
   switch (cl->code_generator)
     {
     case structured_code_generator_stack:
-      structured_translate_program_stack (vmp, p);
+      structured_translate_program_stack (vmr, p);
       break;
     case structured_code_generator_register:
-      structured_translate_program_register (vmp, p);
+      structured_translate_program_register (vmr, p);
       break;
     default:
       jitter_fatal ("unknwon code generator (bug): %i", (int) cl->code_generator);
     }
 
-  /* Specialize the jittery program, so that we can run it. */
-  structuredvm_specialize_program (vmp);
+  /* Make an executable jittery routine. */
+  struct structuredvm_executable_routine *vmer
+    = structuredvm_make_executable_routine (vmr);
 
   /* Print and/or disassemble the program as requested. */
   if (cl->print)
-    structuredvm_print_routine (stdout, vmp);
+    structuredvm_print_routine (stdout, vmr);
   if (cl->cross_disassemble)
     cl->disassemble = true;
   if (cl->disassemble)
-    structuredvm_disassemble_routine (vmp, true,
-                                      (cl->cross_disassemble
-                                       ? JITTER_CROSS_OBJDUMP
-                                       : JITTER_OBJDUMP),
-                                      NULL);
+    structuredvm_disassemble_executable_routine (vmer, true,
+                                                 (cl->cross_disassemble
+                                                  ? JITTER_CROSS_OBJDUMP
+                                                  : JITTER_OBJDUMP),
+                                                 NULL);
 
-  /* Run the Jittery program in a temporary state, unless this is a dry run. */
+  /* Run the Jittery routine in a temporary state, unless this is a dry run. */
   if (! cl->dry_run)
     {
       struct structuredvm_state s;
       structuredvm_state_initialize (& s);
-      structuredvm_interpret (vmp, &s);
+      structuredvm_execute_executable_routine (vmer, & s);
       structuredvm_state_finalize (& s);
     }
 
-  /* Destroy the Jittery program. */
-  structuredvm_destroy_routine (vmp);
+  /* Destroy the Jittery routine in both its versions, executable and
+     non-executable. */
+  structuredvm_destroy_executable_routine (vmer);
+  structuredvm_destroy_routine (vmr);
 
   /* Finalize the structured-VM subsystem. */
   structuredvm_finalize ();

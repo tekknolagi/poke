@@ -111,8 +111,14 @@ struct jitter_routine_options
   bool optimization_rewriting;
 };
 
-/* The internal representation of a program.  This should be considered
-   an abstract type, as the internal structure is subject to change. */
+/* This is enough for declaring pointer to structs of this type here.  See
+   jitter-specialize.h for an actual definition, and a description of the
+   idea. */
+struct jitter_executable_routine;
+
+/* The internal representation of a program being edited by the user.  This
+   should be considered an abstract type, as the internal structure is subject
+   to change. */
 struct jitter_routine
 {
   /* The program stage at the present time. */
@@ -220,6 +226,10 @@ struct jitter_routine
      number for all classes, even if each class may have a different number of
      fast registers. */
   jitter_int slow_register_per_class_no;
+
+  /* The executable version of this routine, if one exists.  NULL before the
+     executable routine is made. */
+  struct jitter_executable_routine *executable_routine;
 
   /* A pointer to the VM-specific definitions of the VM for this program. */
   const struct jitter_vm *vm;

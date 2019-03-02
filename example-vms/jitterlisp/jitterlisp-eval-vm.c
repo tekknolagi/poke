@@ -1,7 +1,6 @@
 /* JitterLisp: interpreter: naïve C version.
 
-   Copyright (C) 2018 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Copyright (C) 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -73,11 +72,13 @@ jitterlisp_apply_vm (jitterlisp_object closure_value,
 struct jitterlispvm_state
 jitterlispvm_state;
 
-/* The driver program, used to call compiled closures from the interpreter.
+/* The driver routine, used to call compiled closures from the interpreter.
    Jumping from interpreted to compiled code is common and must be fast: we
-   keep one driver program, to be reused. */
+   keep one driver routine, always the same, to be reused. */
 static struct jitterlispvm_routine *
 jitterlisp_driver_vm_routine;
+static struct jitterlispvm_executable_routine *
+jitterlisp_driver_vm_executable_routine;
 
 void
 jitterlisp_reset_vm_state (void)
@@ -104,8 +105,8 @@ jitterlisp_vm_initialize (void)
   jitterlisp_push_stack_backing_as_gc_root
      (& sb->jitter_stack_returnstack_backing);
 
-  /* Make the driver program and keep it ready to be use, pre-specialized.
-     The driver program consists of exactly two instructions:
+  /* Make the driver routine and keep it ready to be use, already executable.
+     The driver routine consists of exactly two instructions:
         call-from-interpreter
         exitvm
      , of which the second is added implicitly. */
@@ -118,15 +119,19 @@ jitterlisp_vm_initialize (void)
                                   call_mfrom_mc);
 //JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine, debug);
 //JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine, debug);
-  jitterlispvm_specialize_program (jitterlisp_driver_vm_routine);
+  jitterlisp_driver_vm_executable_routine
+    = jitterlispvm_make_executable_routine (jitterlisp_driver_vm_routine);
 }
 
 void
 jitterlisp_vm_finalize (void)
 {
-  /* Destroy the driver program and invalidate its pointer to catch mistakes. */
+  /* Destroy the driver routine and invalidate its pointer to catch mistakes. */
+  jitterlispvm_destroy_executable_routine
+     (jitterlisp_driver_vm_executable_routine);
   jitterlispvm_destroy_routine (jitterlisp_driver_vm_routine);
   jitterlisp_driver_vm_routine = NULL;
+  jitterlisp_driver_vm_executable_routine = NULL;
 
   /* Unregister the two stack backings as GC roots. */
   jitterlisp_pop_gc_roots (2);
@@ -163,9 +168,9 @@ jitterlisp_jump_to_driver_and_return_result (void)
       d = true;
       fprintf (stderr, "Driver:\n");
       if (jitterlisp_settings.cross_disassembler)
-        jitterlispvm_disassemble_program_to (stderr, jitterlisp_driver_vm_routine, true, JITTER_CROSS_OBJDUMP, NULL);
+        jitterlispvm_disassemble_routine_to (stderr, jitterlisp_driver_vm_routine, true, JITTER_CROSS_OBJDUMP, NULL);
       else
-        jitterlispvm_disassemble_program_to (stderr, jitterlisp_driver_vm_routine, true, JITTER_OBJDUMP, NULL);
+        jitterlispvm_disassemble_routine_to (stderr, jitterlisp_driver_vm_routine, true, JITTER_OBJDUMP, NULL);
       fprintf (stderr, "\n");
     }
   */
@@ -176,7 +181,8 @@ fputs ("{c", stdout); fflush (stdout);
   */
   /* Run the driver which will immediately call the closure, leaving only
      the result on the stack. */
-  jitterlispvm_interpret (jitterlisp_driver_vm_routine, & jitterlispvm_state);
+  jitterlispvm_execute_executable_routine
+     (jitterlisp_driver_vm_executable_routine, & jitterlispvm_state);
   /*
 fputs ("} --> ", stdout); fflush (stdout);
   */
@@ -203,7 +209,8 @@ jitterlisp_call_compiled (jitterlisp_object rator_value,
 printf ("The encoded rator is %p\n", (void*)rator_value);
 printf ("The decoded rator is %p\n", c);
 printf ("The decoded cc is at %p\n", cc);
-printf ("The cc program is at %p\n", cc->vm_program);
+printf ("The cc routine is at %p\n", cc->routine);
+printf ("The cc executable routine is at %p\n", cc->executable_routine);
 printf ("The cc first program point is at %p\n", cc->first_program_point);
   */
   // FIXME: shall I check the arity *before* evaluating actuals or after?

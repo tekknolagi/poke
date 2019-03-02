@@ -481,7 +481,7 @@ main (int argc, char **argv)
   vmprefix_initialize ();
 
   /* Make an empty VM routine, and set options as requested by the user. */
-  struct vmprefix_routine *p = vmprefix_make_routine ();
+  struct vmprefix_routine *r = vmprefix_make_routine ();
   if (cl.debug)
     fprintf (progress,
              "Options:\n"
@@ -491,10 +491,10 @@ main (int argc, char **argv)
              cl.slow_literals_only ? "yes" : "no",
              cl.slow_registers_only ? "yes" : "no",
              cl.optimization_rewriting ? "yes" : "no");
-  vmprefix_set_routine_option_slow_literals_only (p, cl.slow_literals_only);
-  vmprefix_set_routine_option_slow_registers_only (p, cl.slow_registers_only);
+  vmprefix_set_routine_option_slow_literals_only (r, cl.slow_literals_only);
+  vmprefix_set_routine_option_slow_registers_only (r, cl.slow_registers_only);
   vmprefix_set_routine_option_optimization_rewriting
-     (p, cl.optimization_rewriting);
+     (r, cl.optimization_rewriting);
 
   /* Print the VM configuration if in debugging mode. */
   if (cl.debug)
@@ -503,30 +503,32 @@ main (int argc, char **argv)
   if (cl.debug)
     fprintf (progress, "Parsing...\n");
   if (! strcmp (cl.input_file, "-"))
-    vmprefix_parse_file_star (stdin, p);
+    vmprefix_parse_file_star (stdin, r);
   else
-    vmprefix_parse_file (cl.input_file, p);
+    vmprefix_parse_file (cl.input_file, r);
   if (cl.debug)
     fprintf (progress, "The requried slow register number is %li per class.\n",
-             (long) p->slow_register_per_class_no);
+             (long) r->slow_register_per_class_no);
 
+  /* Make an executable jittery routine. */
   if (cl.debug)
-    fprintf (progress, "Specializing...\n");
-  vmprefix_specialize_program (p);
+    fprintf (progress, "Making executable...\n");
+  struct vmprefix_executable_routine *er
+    = vmprefix_make_executable_routine (r);
 
   if (cl.print_routine)
     {
       if (cl.debug)
         fprintf (progress, "Printing back the routine...\n");
-      vmprefix_print_routine (stdout, p);
+      vmprefix_print_routine (stdout, r);
     }
 
   if (cl.disassemble_routine)
     {
       if (cl.debug)
         fprintf (progress, "Disassembling...\n");
-      vmprefix_disassemble_routine (p, true, cl.objdump_name,
-                                    cl.objdump_options);
+      vmprefix_disassemble_executable_routine (er, true, cl.objdump_name,
+                                               cl.objdump_options);
     }
 
   /* If we printed back or disassembled the routine, this run is not performance
@@ -547,7 +549,7 @@ main (int argc, char **argv)
 
       if (cl.debug)
         fprintf (progress, "Interpreting...\n");
-      vmprefix_interpret (p, &s);
+      vmprefix_execute_executable_routine (er, & s);
 
       if (cl.debug)
         fprintf (progress, "Finalizing VM state...\n");
@@ -556,7 +558,10 @@ main (int argc, char **argv)
 
   if (cl.debug)
     fprintf (progress, "Destroying the routine data structure...\n");
-  vmprefix_destroy_routine (p);
+  /* Destroy the Jittery routine in both its versions, executable and
+     non-executable. */
+  vmprefix_destroy_executable_routine (er);
+  vmprefix_destroy_routine (r);
 
   if (cl.debug)
     fprintf (progress, "Finalizing...\n");

@@ -28,6 +28,7 @@
 #include <jitter/jitter-routine.h>
 #include <jitter/jitter-vm.h>
 #include <jitter/jitter-rewrite.h>
+#include <jitter/jitter-specialize.h>
 
 #include <jitter/jitter-hash.h>
 #include <jitter/jitter-malloc.h>
@@ -142,6 +143,9 @@ jitter_initialize_routine (struct jitter_routine *p)
 
   /* No slow registers have been seen yet. */
   p->slow_register_per_class_no = 0;
+
+  /* No executable routine exists yet for this routine. */
+  p->executable_routine = NULL;
 }
 
 static void
@@ -165,12 +169,19 @@ jitter_finalize_routine (struct jitter_routine *p)
   if (p->instruction_index_to_specialized_instruction_offset != NULL)
     free (p->instruction_index_to_specialized_instruction_offset);
 
+  /* The specialized_program field may have been extracted, if this routine has
+     been made executable; in any case, this finalization will be valid. */
   jitter_dynamic_buffer_finalize (& p->specialized_program);
+
   jitter_dynamic_buffer_finalize (& p->replicated_blocks);
+
 #ifdef JITTER_REPLICATE
-  if (p->native_code != 0)
+  /* The native_code field may be NULL because native code has never been
+     generated, but also if the routine was made executable.  In either case the
+     pointer field here will be NULL, so that we don't deallocate twice.  */
+  if (p->native_code != NULL)
     jitter_executable_deallocate (p->native_code);
-#endif // #ifdef JITTER_REPLICATE  
+#endif // #ifdef JITTER_REPLICATE
   jitter_dynamic_buffer_finalize (& p->specialized_label_indices);
 }
 
@@ -186,6 +197,10 @@ jitter_make_routine (const struct jitter_vm *vm)
 void
 jitter_destroy_routine (struct jitter_routine *p)
 {
+  /* Unlink the executable routine, if any. */
+  if (p->executable_routine != NULL)
+    p->executable_routine->routine = NULL;
+
   if (p == NULL)
     return;
 

@@ -443,6 +443,13 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
   return (volatile union vmprefix_any_register *) res;
 }
 
+void
+vmprefix_ensure_enough_slow_registers_for
+   (const struct jitter_executable_routine *er, struct vmprefix_state *s)
+{
+  vmprefix_make_place_for_slow_registers (s, er->slow_register_per_class_no);
+}
+
 
 
 

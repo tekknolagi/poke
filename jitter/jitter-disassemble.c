@@ -46,10 +46,11 @@
 #ifdef JITTER_DISPATCH_SWITCH
 __attribute__ ((noinline, noclone))
 void
-jitter_disassemble_routine_to (FILE *f,
-                               const struct jitter_routine *p, bool raw,
-                               const char *objdump_name,
-                               const char *objdump_options_or_NULL)
+jitter_disassemble_executable_routine_to (FILE *f,
+                                          const struct jitter_executable_routine
+                                          *er, bool raw,
+                                          const char *objdump_name,
+                                          const char *objdump_options_or_NULL)
 {
   /* Just refuse to disassemble under switch dispatching. */
   fprintf (f, "<switch dispatching: refusing to disassemble>\n");
@@ -327,11 +328,38 @@ jitter_disassemble_show_specialized_instruction
 
 __attribute__ ((noinline, noclone))
 void
-jitter_disassemble_routine_to (FILE *f,
-                               const struct jitter_routine *p, bool raw,
-                               const char *objdump_name,
-                               const char *objdump_options_or_NULL)
+jitter_disassemble_executable_routine_to (FILE *f,
+                                          const struct jitter_executable_routine
+                                          *er,
+                                          bool raw,
+                                          const char *objdump_name,
+                                          const char *objdump_options_or_NULL)
 {
+  /* Get the non-executable routine for er.  If that is no longer available we
+     have to work differently. */
+  const struct jitter_routine *p = er->routine;
+  if (p == NULL)
+    {
+#if defined(JITTER_DISPATCH_SWITCH)
+# error "this code should never be compiled."
+#elif defined(JITTER_DISPATCH_DIRECT_THREADING)
+      fprintf (f, "<cannot disassemble direct-threaded code without\n");
+      fprintf (f, " non-executable routine>\n");
+#elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
+#elif defined(JITTER_DISPATCH_NO_THREADING)
+      jitter_disassemble_range (f, er->native_code, er->native_code_size, raw,
+                                objdump_name,
+                                ((objdump_options_or_NULL != NULL)
+                                 ? objdump_options_or_NULL
+                                 : JITTER_OBJDUMP_OPTIONS));
+#else
+# error "unknown dispatch: this should never happen."
+#endif // dispatch
+      return;
+    }
+
+  /* If we arrived here then the non-executable routine is available. */
+  
   /* Refuse to disassemble if threads are overlapping or of negative size. */
   if (! p->vm->threads_validated)
     {
@@ -339,15 +367,27 @@ jitter_disassemble_routine_to (FILE *f,
       return;
     }
 
-  const char *specialized_instructions
+  /* The specialized_instructions field has been extracted to the specialized
+     routine, in every dispatching mode except no-threading , which doesn't
+     need it at all. */
+  const union jitter_word *specialized_instructions
+#if   (defined(JITTER_DISPATCH_SWITCH)                 \
+       || defined(JITTER_DISPATCH_DIRECT_THREADING)    \
+       || defined(JITTER_DISPATCH_MINIMAL_THREADING))
+    = (const union jitter_word *) er->specialized_program;
+#elif defined(JITTER_DISPATCH_NO_THREADING)
     = jitter_dynamic_buffer_to_const_pointer (& p->specialized_program);
+#else
+# error "unknown dispatch: this should not happen"
+#endif /* dispatch */
+
   const int specialized_instruction_no
     = jitter_dynamic_buffer_size (& p->replicated_blocks)
       / sizeof (struct jitter_replicated_block);
   const struct jitter_replicated_block * const replicated_blocks
     = jitter_dynamic_buffer_to_const_pointer (& p->replicated_blocks);
-  union jitter_word *next_thread
-    = (union jitter_word *)specialized_instructions;
+  const union jitter_word *next_thread
+    = specialized_instructions;
   int i;
 
   const char *objdump_options = JITTER_OBJDUMP_OPTIONS;
@@ -437,10 +477,10 @@ jitter_disassemble_routine_to (FILE *f,
 #endif // #ifdef JITTER_DISPATCH_SWITCH
 
 void
-jitter_disassemble_routine (const struct jitter_routine *p, bool raw,
-                            const char *objdump_name,
-                            const char *objdump_options_or_NULL)
+jitter_disassemble_executable_routine (const struct jitter_executable_routine
+                                       *er, bool raw, const char *objdump_name,
+                                       const char *objdump_options_or_NULL)
 {
-  jitter_disassemble_routine_to (stdout, p, raw, objdump_name,
-                                 objdump_options_or_NULL);
+  jitter_disassemble_executable_routine_to (stdout, er, raw, objdump_name,
+                                            objdump_options_or_NULL);
 }
