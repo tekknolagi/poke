@@ -203,6 +203,7 @@ his contact information.
 
 @titlepage
 @title JitterLisp
+@subtitle An efficient Lisp system, conceived as an advanced example for Jitter
 @subtitle for Jitter version @value{VERSION}, updated in @value{UPDATED-MONTH}
 @c @author Luca Saiu (@email{positron@@gnu.org}, @url{http://ageinghacker.net})
 @c @author Luca Saiu (@url{http://ageinghacker.net})
@@ -366,10 +367,10 @@ classification will do.
 @c work as long as we keep seeing it as an example for Jitter.
 As for concrete applications it can certainly be made practical: the
 Lisp library can be extended, and JitterLisp itself could become both
-embeddable and extensible in C without unreasonable effort.  I might
-bend the system in some of these directions myself in the future, and
-the result would be useful, but writing yet another Lisp system was
-never my primary goal.
+embeddable and extensible in C without unreasonable effort.  If in the
+future I bent the system in some of these directions, as I might
+well do, I guess the result would be useful; but writing yet another
+Lisp system was never my primary goal.
 
 Even without the ambitious scope of Jitter I consider JitterLisp
 useful to show the level of performance within the reach of small,
