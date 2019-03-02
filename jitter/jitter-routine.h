@@ -287,6 +287,7 @@ jitter_set_routine_option_optimization_rewriting (struct jitter_routine *p,
                                                   bool option)
   __attribute__ ((nonnull (1)));
 
+
 
 
 /* Label handing.
