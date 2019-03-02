@@ -30,7 +30,7 @@
 #include <jitter/jitter-instruction.h>
 
 
-/* Program data structures.
+/* Routine data structures.
  * ************************************************************************** */
 
 // FIXME: comment.
@@ -300,7 +300,7 @@ jitter_label
 jitter_fresh_label (struct jitter_routine *p)
   __attribute__ ((nonnull (1)));
 
-/* Return a label for the pointed program, associated to the given symbolic
+/* Return a label for the pointed routine, associated to the given symbolic
    name.  If the symbolic name is new for the program, associate the label
    to an internally-allocated copy of it; if the symbolic name is already
    known, return the label already associated to it. */
@@ -463,16 +463,16 @@ jitter_print_routine (FILE *out, const struct jitter_routine *p);
 
 
 
-/* Jump target computation on unspecialized programs.
+/* Jump target computation on unspecialized routines.
  * ************************************************************************** */
 
-/* Given a program return a pointer to a new array of booleans, allocated with
-   malloc, having the same size as the number of instructions in the program.
-   Each element of the array is true if and only if the corresponding program
+/* Given a routine return a pointer to a new array of booleans, allocated with
+   malloc, having the same size as the number of instructions in the routine.
+   Each element of the array is true if and only if the corresponding routine
    instruction is a jump target.
 
    This is used at specialization time to compute the jump_targets field of a
-   struct jitter_routine , but also elsewhere, for printing unspecialized programs
+   struct jitter_routine , but also elsewhere, for printing unspecialized routines
    -- therefore it cannot be a static function.
 
    This function is used internally, and the user does not need to see it. */
@@ -483,13 +483,13 @@ jitter_jump_targets (const struct jitter_routine *p)
 
 
 
-/* Label resolution in unspecialized programs.
+/* Label resolution in unspecialized routines.
  * ************************************************************************** */
 
 /* Resolve label arguments in unspecialized instruction parameters, replacing
    opaque labels with unspecialized instruction indices.  After this is done
    instruction parameters refer labels as unspecialized instruction indices.
-   Fail fatally if any referred label is still undefined, or if the program is
+   Fail fatally if any referred label is still undefined, or if the routine is
    not unspecialized. */
 void
 jitter_resolve_labels_in_unspecialized_routine (struct jitter_routine *p)
