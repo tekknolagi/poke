@@ -499,7 +499,7 @@ jitterlisp_print_ast (jitterlisp_char_printer_function cp, void *cps,
       jitterlisp_print_string (cp, cps, "while");
       break;
     case jitterlisp_ast_case_primitive:
-      jitterlisp_print_string (cp, cps, "primitive");
+      jitterlisp_print_string (cp, cps, "primitive "); /* Space.  See below. */
       break;
     case jitterlisp_ast_case_call:
       jitterlisp_print_string (cp, cps, "call");
@@ -527,11 +527,13 @@ jitterlisp_print_ast (jitterlisp_char_printer_function cp, void *cps,
     {
       struct jitterlisp_primitive * const primitive
         = JITTERLISP_PRIMITIVE_DECODE(ast->subs [0]);
-      jitterlisp_print_char (cp, cps, ' ');
+      jitterlisp_print_decoration (cp, cps, PRIMITIVEATTR);
       jitterlisp_print_string (cp, cps, primitive->name);
+      jitterlisp_print_decoration (cp, cps, NOATTR);
       jitterlisp_print_subs (cp, cps, st, ast->subs + 1, ast->sub_no - 1);
     }
   else
+    /* Default non-primitive case: print every sub using its own decoration. */
     jitterlisp_print_subs (cp, cps, st, ast->subs, ast->sub_no);
   jitterlisp_print_decoration (cp, cps, ASTATTR);
   jitterlisp_print_string (cp, cps, "]");
