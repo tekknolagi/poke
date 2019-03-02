@@ -35,7 +35,7 @@
 @defcodeindex sy
 
 @c @c Add index entries for symbols to the concept index as well.
-@c @syncodeindex sy cp
+@syncodeindex sy cp
 
 
 @c File name and title
@@ -1389,8 +1389,8 @@ dialects.
 @cindex learning Lisp
 @cindex programmer, non-
 I believe that a sufficiently motivated beginner should be able to
-follow this section after first understanding the fundamentals of Lisp
-from the beginning of the reference part of this document
+follow this section, possibly after first understanding the fundamentals
+of Lisp from the beginning of the reference part of this document
 (@pxref{Lisp reference}).
 I am particularly interested in feedback from readers who cannot
 program yet or are only weak programmers but are making a serious
@@ -1575,7 +1575,8 @@ be built programmatically.
 @cindex address
 @cindex sharing
 @cindex substructure sharing
-@cindex Direct Acyclic Graph
+@cindex DAG, output syntax
+@cindex Directed Acyclic Graph, output syntax
 @cindex circularity
 @cindex cycle (of pointers, within a Lisp object)
 @fixme{Out of convenience the written notation of an object does not
@@ -1780,6 +1781,13 @@ Given a nonempty list its first element and its first sublist can always
 be found by taking, respectively, the car and the cdr of the list.  Taking
 the car and cdr of the first sublist yields the second element and the
 second sublist of the original list, and so on.
+@*
+It is easy to see how composed cons selectors applied to a list
+identify specific sublists and elements: the list sublists will be its
+cdr, cddr, cdddr, cddddr, and so on; then taking the car of the list
+itself and its sublists yields the list elements: therefore the first,
+second, third and fourth element of a list will be respectively its car,
+cadr, caddr and cadddr.
 
 @cindex spine, list
 The following notation makes lists much easier to write, as it
@@ -1892,8 +1900,8 @@ ASTs have no read syntax, however the JitterLisp library provides
 facilities to conveniently inspect and build ASTs: @pxref{AST
 operations}.
 
-@xref{ASTs} for a complete description of the structure of Abstract
-Syntax Trees and their semantics.
+@xref{Abstract Syntax Trees and their semantics} for a complete description of
+the structure of Abstract Syntax Trees and their behavior.
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Macros
@@ -1909,9 +1917,654 @@ Syntax Trees and their semantics.
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Abstract Syntax Trees and their semantics
 @section Abstract Syntax Trees and their semantics
-@anchor{ASTs}
-
 @cindex Abstract Syntax Tree (AST)
+JitterLisp is executing by first translating user syntax into
+@dfn{Abstract Syntax Trees}, which are easy to interpret or compile.
+Far from being only an implementation device, JitterLisp ASTs are also
+exposed to the user who may execute them
+(@pxref{Code execution})
+but also work on them just as on any other Lisp data
+structure.
+
+There is no read syntax allowing the user to directly enter an AST as
+a literal datum; however the library includes sufficient functionality
+to inspect or build ASTs (@pxref{AST operations}).  Such functionality
+is used extensively in macroexpansion and compilation.
+
+@menu
+* AST syntax::       A definition of the possible shapes for correct ASTs.
+* AST semantics::    How the evaluation of an AST behaves.
+@end menu
+
+@c @@@@@@@@@@@@@@@
+@node AST syntax
+@subsection AST syntax
+
+@cindex syntax (output), ASTs
+@cindex AST output syntax
+@cindex AST syntax (output)
+ASTs define a minimalistic programming language, operating on
+Lisp data but otherwise not particularly similar to Lisp.  The syntax
+given here is the @emph{output} syntax used by the implementation for
+printing AST data, for example as the result of @code{macroexpand}
+(@pxref{Macroexpanding}).  This syntax is designed to be simple and
+unambiguous.  In order to visually stand apart from user syntax it
+indicates grouping by brackets (@samp{[}, @samp{]}) rather than
+parentheses.
+
+@cindex expression, AST
+Every AST represents an @dfn{expression}.  Each expression has exactly
+one of the following forms, named after the identifier immediately
+following the open bracket:
+@itemize @bullet
+@c -------
+@cindex literal, AST syntax
+@item @code{[literal @var{value}]}
+
+@cindex value, literal, AST syntax
+The literal @var{value} may be any Lisp datum.
+@c -------
+
+@cindex variable, AST syntax
+@item @code{[variable @var{name}]}
+
+@cindex name, variable, AST syntax
+The variable @var{name} must be a symbol.
+@c -------
+
+@cindex primitive, AST syntax
+@item @code{[primitive @var{operator} @var{operands}]}
+
+@cindex operator, primitive, AST syntax
+@cindex primitive name, primitive, AST syntax
+The primitive @var{operator} or @dfn{primitive name} must be a symbol
+which is the name of a primitive.
+@cindex operands, primitive, AST syntax
+The primitive @var{operands} must be a list of ASTs, having exactly
+as many elements as the arguments expected by the named primitive.
+@c -------
+
+@cindex let, AST syntax
+@cindex block, AST syntax
+@item @code{[let @var{name} @var{bound-expression} @var{body}]}
+
+@cindex bound variable, block, AST syntax
+@cindex name, block, AST syntax
+The @var{name} or @dfn{bound variable name} in a let or @dfn{block} must
+be a symbol.
+@cindex bound expression, block, AST syntax
+A block @var{bound-expression} must be an AST.
+@cindex body, block, AST syntax
+A block @var{body} must also be an AST.
+@c -------
+
+@cindex global definition, AST syntax
+@item @code{[define @var{name} @var{expression}]}
+
+@cindex name, global definition, AST syntax
+The @dfn{global definition} @var{name} must be a symbol.
+@cindex expression, global definition, AST syntax
+The definition @var{expression} or @dfn{defined expression} must be an AST.
+@c -------
+
+@cindex assignment, AST syntax
+@cindex set!, AST syntax
+@item @code{[set! @var{name} @var{expression}]}
+
+@cindex name, assignment, AST syntax
+@cindex variable name, assignment, AST syntax
+@cindex expression, assignment, AST syntax
+The @dfn{assignment} variable @var{name} must be a symbol.
+The assignment @var{expression} must be an AST.
+@c -------
+
+@cindex sequence, AST syntax
+@item @code{[sequence @var{expression-0} @var{expression-1}]}
+
+@cindex first expression, sequence, AST syntax
+@cindex second expression, sequence, AST syntax
+@cindex expresion-0, sequence, AST syntax
+@cindex expresion-1, sequence, AST syntax
+Each of the @dfn{first expression} or @var{expression-0} and
+the @dfn{second expression} or @var{expression-1} in a sequence must be
+an AST.
+@c -------
+
+@cindex conditional, AST syntax
+@cindex if, AST syntax
+@item @code{[if @var{condition} @var{then-branch} @var{else-branch}]}
+
+@cindex condition, conditional, AST syntax
+@cindex then branch, conditional, AST syntax
+@cindex else branch, conditional, AST syntax
+@cindex branch, conditional, AST syntax
+Each of the if (or @dfn{conditional}) @var{condition} and @dfn{branches} must
+be an AST.
+@c -------
+
+@cindex while, AST syntax
+@cindex loop, AST syntax
+@item @code{[while @var{guard} @var{body}]}
+
+@cindex guard, while, AST syntax
+@cindex body, while, AST syntax
+Each of the while or @dfn{loop} @var{guard} and @var{body} must be an AST.
+@c -------
+
+@cindex lambda, AST syntax
+@cindex abstraction, AST syntax
+@item @code{[lambda @var{formals} @var{body}]}
+
+@cindex formal, lambda, AST syntax
+@cindex argument (formal), lambda, AST syntax
+The lambda or @dfn{abstraction} @var{formals} or @dfn{formal arguments}
+must be a list of symbols.
+@cindex body, lambda, AST syntax
+The lambda @var{body} must be an AST.
+@c -------
+
+@cindex call, AST syntax
+@cindex procedure call, AST syntax
+@item @code{[call @var{operator} @var{operands}]}
+
+@cindex operator, call, AST syntax
+@cindex call name, call, AST syntax
+The call (or @dfn{procedure call}) @var{operator} must be an AST.
+@cindex operands, call, AST syntax
+The call @var{operands} must be a list of ASTs.
+@c -------
+@end itemize
+
+@cindex minimalism
+@cindex complexity, syntax
+@cindex syntactic complexity
+These forms specify @emph{the entirety} of the AST syntax: every
+JitterLisp form, before being executed, is translated into an AST of
+the shape described below, which in most cases will contain other
+ASTs; still, all the language power and complexity arise solely from
+the @emph{combination} of the AST cases given above.
+@*
+@cindex syntactic abstraction
+@cindex abstraction, syntactic
+@cindex macro
+Conspicuously absent from the forms above is any form of
+@dfn{syntactic abstraction} such as macros: macros serve to automatically
+rewrite complex user syntax into a combination of simple ASTs, so that no
+use of a macro survives the expansion process.
+
+@cindex syntactic constraint, AST
+@cindex AST syntactic constraint
+It is important to notice that the syntactic constraints specified
+above, for example @code{[if@tie{}@r{@dots{}}]} having exactly three
+subforms and the first component of @code{[set!@tie{}@r{@dots{}}]} being a
+symbol, are verified at AST construction time: it is impossible to
+build a syntactically incorrect AST without immediately failing.
+In this sense only syntactically correct ASTs may be said to ``exist''.
+
+@c @@@@@@@@@@@@@@@
+@node AST semantics
+@subsection AST semantics
+@cindex imperative
+@cindex scoping
+@cindex state
+@cindex global state
+@cindex eager
+@cindex call-by-value
+JitterLisp ASTs constitute an eager imperative call-by-value language
+based on named, lexically scoped variables and global state.
+
+What follows is an attempt of describing the behavior of AST
+evaluation in a precise way without the burden of complicated
+notation.
+
+@cindex operational semantics (in the reader's head)
+@cindex logic rules, operational semantics (in the reader's head)
+The mathematically-inclined reader will see immediately how the AST
+semantics would be easy to model in an operational style, with logic
+rules having multiple premises and one conclusion.
+Here I will content myself with rendering those rules into more
+accessible English.
+
+@menu
+* Semantics preliminaries::      The general ideas, and the entities involved.
+* Failure::                      JitterLisp handles failure in a crude way.
+* AST semantics in detail::      How each AST behaves.
+* From ASTs to JitterLisp::      You can see what macros do by looking at ASTs.
+@end menu
+
+@c @@@@@@@@
+@node Semantics preliminaries
+@subsubsection Semantics preliminaries
+
+@cindex lexical scoping
+@cindex static scoping
+@cindex scoping, lexical
+JitterLisp, like most modern Lisp dialects with the (now partial)
+exception of Emacs Lisp, is @dfn{lexically scoped}.  This means that a
+variable use refers to the innermost variable binding with the same
+name which was visible at the time of the definition of the variable
+AST.  This reference may be different from the @emph{most recent}
+binding in time still in force for the same variable---which is used
+in ``dynamically scoped'' languages, but not in JitterLisp.
+
+An @dfn{environment} is a mapping from each variable name to its
+associated value.  During the evaluation of an AST some environment is
+always implicitly in force, which dictates the current value of every
+variable.
+
+Variable scopes can be @emph{nested}, adding bindings to the local
+environment which are visible by variable references until the scope
+ends.
+An inner block or call may @dfn{shadow} a variable binding, by
+re-binding a variable with the same name to a possibly new value and
+thus making the original variable temporarily inaccessible, as long as
+the new environment re-binding the same variable is in force.
+
+Some variables may be @dfn{globally bound}: the global binding for a
+variable records the default value of a variable to be used when a
+variable is not bound in the currently active environment.
+
+@c @@@@@@@@
+@node Failure
+@subsubsection Failure
+
+@cindex error
+@cindex failure
+JitterLisp treats @dfn{failure} or @dfn{errors} in a trivial way.
+
+@cindex failure, out of the REPL
+@cindex error, out of the REPL
+If evaluation fails at any point out of the REPL, then the error is
+fatal: the execution ends, and the JitterLisp program exits reporting
+failure.
+
+@cindex failure, at the REPL
+@cindex error, at the REPL
+If evaluation fails when evaluating a form entered at the REPL, then
+the error is equally unrecoverable, and the AST evaluation terminates,
+reporting failure; however the REPL is @emph{not} exited, and the user
+has the opportunity to try and execute other forms in a state altered
+by the changes which were executed with success @emph{before} the
+error, and in an empty local environment.
+
+@cindex exceptions (@emph{non-existing} feature)
+JitterLisp currently provides no exception system, either at the AST
+level or as part of higher layers.
+@*
+@syindex throw@r{ (@emph{non-existing} form)}
+@syindex catch@r{ (@emph{non-existing} form)}
+@syindex error
+The @code{error} primitive (@pxref{Erroring out}) provides a way to
+explicitly fail under program control, but it is not possible to
+recover from such a failure with any form similar to ``@code{catch}''
+or ``@code{try}'', as in other Lisp dialects or in other languages.
+
+@c @@@@@@@@
+@node AST semantics in detail
+@subsubsection AST semantics in detail
+
+An AST is evaluated in a given @emph{environment}, which is empty at
+the top level.
+
+Evaluating an AST will either fail or yield exactly one value, allowed
+to have any JitterLisp data type (@pxref{Lisp data}), as the
+@dfn{result}.
+
+In the following, particularly within examples, I will use the
+following notation:
+@smallquotation Evaluation notation
+@c@*
+@*
+@var{form}, @var{environment} @result{} @var{result} [@print{} @var{output}]
+@*
+@c@*
+@var{form}, @var{environment} @error{}
+@c@*
+@end smallquotation
+To mean, respectively, that a given form evaluated with a given environment
+either returns a result (possibly with an output side effect), or fails.  An
+environment, as stated already, is a mapping from variables to values.
+
+@cindex circularity (forbidden), AST
+@cindex cyclicity (forbidden), AST
+@cindex DAG, AST in memory
+@cindex Directed Acyclic Graph, AST in memory
+@cindex structure sharing, AST
+ASTs must be finite in size and non-circular@footnote{At the time of
+writing this restriction is moot.  It is in fact impossible in the
+current implementation to build a circular AST, for two reasons: first
+of all, ASTs are immutable from JitterLisp, with the currently
+existing primitives; second, @code{letrec} (@pxref{Blocks}) relies on
+assignment to a variable when building circular closures, and the
+strict constraint-checking policy of ASTs along with call-by-value
+evaluation prevent a ``temporary'' value from being used inside an AST
+to be built and then replaced later.}; however different parts of the
+same AST are allowed to share structure, as long as AST objects in
+memory form a DAG and not a cyclic graph.
+
+@itemize @bullet
+@cindex literal, AST semantics
+@item @code{[literal @var{value}]}
+
+@cindex value, literal, AST semantics
+Evaluating a literal AST yields its value as the result, as contained
+within the AST and independently from its type, without any further
+processing, independently from the environment.
+The evaluation of a literal AST always terminates and never fails.
+
+@smallquotation Examples
+@itemize @bullet
+@item
+@verb{|[literal #t]|}, @{@} @result{} @verb{|#t|}
+@item
+@verb{|[literal (a . 42)]|}, @{@} @result{} @verb{|(a . 42)|}
+@item
+@verb{|[literal a]|}, @{@} @result{} @verb{|a|}
+@item
+@verb{|[literal a]|}, @{@verb{|a|} = @verb{|42|}@} @result{} @verb{|a|}
+@item
+@verb{|[literal [literal a]]|}, @{@} @result{} @verb{|[literal a]|}
+@end itemize
+@end smallquotation
+@c -------
+
+@cindex variable, AST semantics
+@item @code{[variable @var{name}]}
+
+@cindex name, variable, AST semantics
+If the named variable is bound in the current environment, then the
+result is its value in the environment; otherwise, if the variable is
+not bound in the environment but is bound globally, then the result is
+its global value.  If the variable is unbound both in the environment
+and globally, then evaluation fails.
+
+@smallquotation Examples
+@itemize @bullet
+@item
+@verb{|[variable a]|}, @{@} @result{} @verb{|4|} if @code{a} is globally bound to @verb{|4|}
+@item
+@verb{|[variable a]|}, @{@} @error{} if @code{a} is globally unbound
+@item
+@verb{|[variable a]|}, @{@verb{|a|} = @verb{|7|}@} @result{} @verb{|7|} independently from global bindings
+@end itemize
+@end smallquotation
+@c -------
+
+@cindex primitive, AST semantics
+@item @code{[primitive @var{operator} @var{operands}]}
+
+@cindex operator, primitive, AST semantics
+@cindex primitive name, primitive, AST semantics
+@cindex operands, primitive, AST semantics
+@cindex operand values, primitive, AST semantics
+Evaluating a primitive begins by evaluating the operands, in a strict
+left-to-right order, to obtain the @dfn{operand values} as results.
+Then, unless evaluation has failed already on the operands, the result
+is the result of applying the primitive to the operand values,
+according to the primitive behavior.  This primitive application may
+fail, for example if the operand values do not have the expected type,
+in which case the evaluation of the entire AST fails.
+
+@smallquotation Examples
+@itemize @bullet
+@item
+@verb{|[primitive 1+ [literal 42]]|}, @{@} @result{} @verb{|43|}
+@item
+@verb{|[primitive negate [variable a]]|}, @{@verb{|a|} = @verb{|7|}@} @result{} @verb{|-7|}
+@item
+@verb{|[primitive 1+ [variable a]]|}, @{@} @error{} if @verb{|a|} is globally unbound or bound to a non-number
+@item
+@verb{|[primitive 1+ [literal a]]|}, @{@} @error{}
+@item
+@verb{|[primitive display [literal 42]]|}, @{@} @result{} @verb{|#<nothing>|} @print{} 42
+@end itemize
+@end smallquotation
+
+@c -------
+@cindex let, AST semantics
+@cindex block, AST semantics
+@item @code{[let @var{name} @var{bound-expression} @var{body}]}
+
+@cindex bound variable, block, AST semantics
+@cindex name, block, AST semantics
+@cindex bound expression, block, AST semantics
+@cindex body, block, AST semantics
+@cindex local variable
+A block serves to introduce a @dfn{local variable}, whose value is visible
+within the body.
+
+@cindex bound value, block
+Evaluating a block starts with the evaluation of the bound expression in the
+current environment, whose result is the @dfn{bound value}.
+Then the block body is evaluated in an environment extended by binding the
+bound variable to the bound value: the result of this evaluation of the body
+is the result of evaluation of the block.
+
+If evaluating either the bound expression or the body fails, then the
+evaluation of the entire block fails.
+
+@smallquotation Examples
+@itemize @bullet
+@item
+@verb{|[let a [literal 42] [primitive 1+ [variable a]]]|}, @{@} @result{} @verb{|43|}
+@item
+@verb{|[let a [primitive 1+ [literal 42]] [primitive negate [variable a]]]|}, @{@} @result{} @verb{|-43|}
+@item
+@verb{|[let a [literal 42] [let a [literal #t] [variable a]]]|}, @{@} @result{} @verb{|#t|}
+@end itemize
+@end smallquotation
+
+@c -------
+@cindex global definition, AST semantics
+@item @code{[define @var{name} @var{expression}]}
+
+@cindex name, global definition, AST semantics
+@cindex expression, global definition, AST semantics
+A global definition serves to alter the @emph{global binding} of a
+variable.
+
+@cindex defined value, global definition
+In order to evaluate a global definition we first evaluate its
+expression in the current environment, obtaining the @dfn{defined
+value}.  Then we alter the global binding for the named variable,
+setting it to the defined value.  Only the @emph{global} binding
+is ever altered by @code{define}, even if the variable happens to
+be bound locally.
+
+A global definition fails if either the expression fails or the
+named variable has already been made constant (@pxref{constants}).
+
+@syindex #<nothing>@r{ (no read syntax)}
+The result of a global definition AST is @code{#<nothing>}.
+
+@c -------
+@cindex assignment, AST semantics
+@cindex set!, AST semantics
+@item @code{[set! @var{name} @var{expression}]}
+
+@cindex name, assignment, AST semantics
+@cindex variable name, assignment, AST semantics
+@cindex expression, assignment, AST semantics
+An assignment @emph{destructively} modifies the given environment,
+replacing the current value for the name variable with another.  This
+altered binding is visible in the following code using the same
+environment.
+
+An assignment evaluation starts by evaluating the expression in the
+given environment, yielding the @dfn{assigned value} as result.  Then,
+unless the expression evaluation failed, we alter a binding.  If the
+named variable is locally bound, then the local environment is
+modified by changing the binding for the named variable to the
+assigned value; otherwise, if the named variable is globally bound,
+we set its global binding to the assigned value.
+
+Evaluating an assignment AST fails when evaluating the expression
+fails, or because the variable is unbound (@emph{both} locally and
+globally) at the time of the assignment, or because the variable is
+locally unbound and globally bound as a constant.
+
+@syindex #<nothing>@r{ (no read syntax)}
+The result of an assignment AST is @code{#<nothing>}.
+
+@c -------
+@cindex sequence, AST semantics
+@item @code{[sequence @var{expression-0} @var{expression-1}]}
+
+@cindex first expression, sequence, AST semantics
+@cindex second expression, sequence, AST semantics
+@cindex expresion-0, sequence, AST semantics
+@cindex expresion-1, sequence, AST semantics
+
+A sequence serves to evaluate two ASTs one after the other.  The fact
+that the sub-ASTs of a sequence are exactly two is not a limitation,
+since by nesting sequences one inside the other, it is possible to
+evaluate any number of ASTs.
+
+Evaluation starts by evaluating the first expression in the given
+environment.  Its result is ignored.  Then, in the same environment,
+we evaluate the second expression; its result will be the result of
+the sequence AST evaluation.
+
+Evaluating a sequence fails if evaluating either the first or the
+second expression fails.
+
+@c -------
+@cindex conditional, AST semantics
+@item @code{[if @var{condition} @var{then-branch} @var{else-branch}]}
+
+@cindex condition, conditional, AST semantics
+@cindex then branch, conditional, AST semantics
+@cindex else branch, conditional, AST semantics
+@cindex branch, conditional, AST semantics
+@fixme{write}
+
+@c -------
+@cindex while, AST semantics
+@cindex loop, AST semantics
+@item @code{[while @var{guard} @var{body}]}
+
+@cindex guard, while, AST semantics
+@cindex body, while, AST semantics
+@fixme{write}
+
+@c -------
+@cindex lambda, AST semantics
+@cindex abstraction, AST semantics
+@item @code{[lambda @var{formals} @var{body}]}
+
+@cindex formal, lambda, AST semantics
+@cindex argument (formal), lambda, AST semantics
+@cindex body, lambda, AST semantics
+@fixme{write}
+
+@c -------
+@cindex call, AST semantics
+@cindex procedure call, AST semantics
+@item @code{[call @var{operator} @var{operands}]}
+
+@cindex operator, call, AST semantics
+@cindex call name, call, AST semantics
+@cindex operands, call, AST semantics
+@fixme{write}
+
+@c -------
+@end itemize
+
+@c @@@@@@@@
+@node From ASTs to JitterLisp
+@subsubsection From ASTs to JitterLisp
+
+At this point, in principle, it would be possible to describe how each
+individual JitterLisp form expands into ASTs.
+
+I will not.
+
+In fact one of the justifications for having a core-based language
+like JitterLisp (and epsilon) is that once the core and the expansion
+mechanisms are specified in a sufficiently formal way, every language
+extension automatically inherits the mathematical precision of its
+definition; the source code of each macro can be, I argue, a rigorous
+enough specification.
+
+@syindex begin
+Not more than a handful of macros are defined in C, and even those
+should present no particular difficulty.  For example @code{begin}
+(@pxref{Sequencing}) is a core macro, defined in
+@file{jitterlisp-macros.c}:
+@smallformat
+@verbatim
+/* Return the expansion of the given list of forms as a sequence.
+   This is what the primitive macro begin does and the same code is
+   used whenever a form sequence is allowed, for example in a lambda
+   body. */
+static jitterlisp_object
+jitterlisp_macroexpand_begin (jitterlisp_object forms,
+                              jitterlisp_object env)
+{
+  /* Zero-form body. */
+  if (JITTERLISP_IS_EMPTY_LIST (forms))
+    return jitterlisp_ast_make_literal (JITTERLISP_NOTHING);
+
+  /* Ill-formed body. */
+  if (! JITTERLISP_IS_CONS (forms))
+    jitterlisp_error_cloned ("begin: non-list body");
+
+  /* At this point we have to look inside the cons. */
+  jitterlisp_object first = JITTERLISP_EXP_C_A_CAR(forms);
+  jitterlisp_object rest = JITTERLISP_EXP_C_A_CDR(forms);
+
+  /* One-form body. */
+  if (JITTERLISP_IS_EMPTY_LIST (rest))
+    return jitterlisp_macroexpand (first, env);
+
+  /* Multiple-form body. */
+  return jitterlisp_ast_make_sequence
+            (jitterlisp_macroexpand (first, env),
+             jitterlisp_macroexpand_begin (rest, env));
+}
+@end verbatim
+@end smallformat
+
+@syindex begin
+@syindex macroexpand
+@cindex macroexpansion
+@cindex REPL
+The code shows that the sub-forms within a @code{begin} form are
+recursively expanded in right-nested AST sequences, and that there are
+special cases for a @code{begin} with zero or one sub-forms.  It is
+easy to check that this is indeed the case, by observing the ASTs
+generated by @code{macroexpand} from @code{begin} forms at the REPL:
+@smallexample
+(macroexpand '(begin))
+  @result{}
+  [literal #<nothing>]
+(macroexpand '(begin 42))
+  @result{}
+  [literal 42]
+(macroexpand '(begin (display 42)))
+  @result{}
+  [call [variable display] [literal 42]]
+(macroexpand '(begin (display 42) (newline)))
+  @result{}
+  [sequence
+    [call [variable display] [literal 42]]
+    [call [variable newline]]]
+(macroexpand '(begin (display 42) (newline) (display 43) (newline)))
+  @result{}
+  [sequence
+    [call [variable display] [literal 42]]
+    [sequence
+      [call [variable newline]]
+      [sequence
+        [call [variable display] [literal 43]]
+        [call [variable newline]]]]]
+@end smallexample
+
+@syindex macroexpand
+@cindex macroexpansion
+The description above should be sufficient for a motivated reader,
+along with @code{macroexpand} and the informal description in the
+following, to follow every macro definition in the implementation.
 
 
 @c @@@@@@@@@@@@@@@@@@@
@@ -1965,6 +2618,8 @@ and other things simpler.}
 
 @fixme{Write this.}
 
+@cindex language form
+@cindex form, language
 The distinction between language and library is not clear-cut in a
 system like JitterLisp with strong syntactic abstraction, where almost
 all of the language is implemented in itself.  Here I present the
@@ -2505,10 +3160,10 @@ case, differently from the traditional Lisp implementation of
 @deffnx {primitive wrapper} primordial-* x y
 @syindex primordial-/
 @deffnx {primitive wrapper} primordial-/ x y
-@syindex primordial-quotient
-@deffnx {primitive wrapper} primordial-quotient x y
-@syindex primordial-remainder
-@deffnx {primitive wrapper} primordial-remainder x y
+@syindex quotient
+@deffnx {primitive wrapper} quotient x y
+@syindex remainder
+@deffnx {primitive wrapper} remainder x y
 @end deffn
 
 @syindex *-by-sums-procedure
@@ -3237,6 +3892,7 @@ Common Lisp's @code{macrolet}.}
 @deffn {primitive wrapper} primordial-macroexpand form env
 @end deffn
 
+@cindex macroexpansion
 @syindex macroexpand
 @deffn {macro} macroexpand form . optional-env
 @end deffn
@@ -3380,6 +4036,7 @@ or an excerpt explaining how there is no warranty of any kind.
 @deffnx {primitive wrapper} not-eq? x y
 @end deffn
 
+@anchor{Erroring out}
 @syindex error
 @deffn {primitive wrapper} error thing
 @end deffn
