@@ -519,7 +519,20 @@ jitterlisp_print_ast (jitterlisp_char_printer_function cp, void *cps,
       return;
     }
   jitterlisp_print_decoration (cp, cps, NOATTR);
-  jitterlisp_print_subs (cp, cps, st, ast->subs, ast->sub_no);
+  /* I can have a special case for primitives: instead of printing the entire
+     primitive object, which is very verbose, just print the primitive name when
+     occurring within a primitive AST.  There is no ambiguity, and the notation
+     gets much leaner: */
+  if (ast->case_ == jitterlisp_ast_case_primitive)
+    {
+      struct jitterlisp_primitive * const primitive
+        = JITTERLISP_PRIMITIVE_DECODE(ast->subs [0]);
+      jitterlisp_print_char (cp, cps, ' ');
+      jitterlisp_print_string (cp, cps, primitive->name);
+      jitterlisp_print_subs (cp, cps, st, ast->subs + 1, ast->sub_no - 1);
+    }
+  else
+    jitterlisp_print_subs (cp, cps, st, ast->subs, ast->sub_no);
   jitterlisp_print_decoration (cp, cps, ASTATTR);
   jitterlisp_print_string (cp, cps, "]");
   jitterlisp_print_decoration (cp, cps, NOATTR);
