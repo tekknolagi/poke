@@ -1,6 +1,7 @@
 /* Jitter: host configuration header to install.
 
    Copyright (C) 2017 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -50,6 +51,7 @@
 
 /* These are needed by jitter-dispatch.h when no dispatching-model CPP macros
    are defined from the command line. */
+#undef JITTER_BEST_DISPATCHING_MODEL_IS_SWITCH
 #undef JITTER_BEST_DISPATCHING_MODEL_IS_DIRECT_THREADING
 #undef JITTER_BEST_DISPATCHING_MODEL_IS_MINIMAL_THREADING
 #undef JITTER_BEST_DISPATCHING_MODEL_IS_NO_THREADING
