@@ -26,25 +26,25 @@
 #include <stdio.h>
 
 #include <jitter/jitter.h>
-#include <jitter/jitter-routine.h>
+#include <jitter/jitter-specialize.h>
 
 /* Disassemble the given routine to stdout.  The internal implementation is
    currently inefficient, as it relies on one objdump invocation per specialized
    instruction. */
 void
-jitter_disassemble_routine (const struct jitter_routine *p, bool raw,
-                            const char *objdump_name,
-                            const char *objdump_options_or_NULL)
-  __attribute__ ((nonnull(1)));
+jitter_disassemble_executable_routine (const struct jitter_executable_routine
+                                       *er, bool raw, const char *objdump_name,
+                                       const char *objdump_options_or_NULL)
+  __attribute__ ((nonnull (1, 3)));
 
 /* Like jitter_disassemble_routine, but write the output to the pointed stream
    instead of stdout. */
 void
-jitter_disassemble_routine_to (FILE *f,
-                               const struct jitter_routine *p, bool raw,
-                               const char *objdump_name,
-                               const char *objdump_options_or_NULL)
-  __attribute__ ((nonnull(1, 2)));
+jitter_disassemble_executable_routine_to (FILE *f,
+                                          const struct jitter_executable_routine
+                                          *er, bool raw, const char *objdump_name,
+                                          const char *objdump_options_or_NULL)
+  __attribute__ ((nonnull(1, 2, 4)));
 
 
 #endif // #ifndef JITTER_DISASSEMBLE_H_

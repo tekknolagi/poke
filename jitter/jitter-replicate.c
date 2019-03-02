@@ -1,6 +1,7 @@
 /* Jitter: replication functionality.
 
    Copyright (C) 2016, 2017, 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -142,8 +143,7 @@ jitter_replicate_program (struct jitter_routine *p)
 
   assert (p->native_code == NULL);
   p->native_code = code;
-  // FIXME: shall I write the exact used size or the allocated size here?  Probably the allocated size, for ease of freeing.  FIXME: rename to make that clear.
-  p->native_code_size = code_length;
+  /* The native code size will be set later, when we know it exactly. */
 
   struct jitter_replicated_block * const replicated_blocks
     = jitter_dynamic_buffer_to_pointer (& p->replicated_blocks);
@@ -539,6 +539,9 @@ jitter_replicate_program (struct jitter_routine *p)
   if (written_bytes > code_length)
     jitter_fatal ("generated more than the safe size upper bound: this should never happen");
 
+  /* Set the exact code size length. */
+  p->native_code_size = written_bytes;
+  
   /* Invalidate the icache, at the logical addresses where we wrote.  This GCC
      builtin for doing so is not even needed on a few architectures (i386 and
      x86_64).  On others it is necessary and sufficient (I see that on my Ben

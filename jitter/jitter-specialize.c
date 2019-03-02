@@ -19,8 +19,6 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-//#include <config.h>
-
 #include <assert.h>
 
 #include <jitter/jitter-malloc.h>
@@ -34,7 +32,62 @@
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-replicate.h>
 #include <jitter/jitter-vm.h>
+#include <jitter/jitter-mmap.h>  /* For executable deallocation. */
 
+
+/* Executable routines: initialization and finalization.
+ * ************************************************************************** */
+
+/* Initialize the pointed executable routine from the pointed non-executable
+   routine, without filling in the actual routine data.
+   Fail fatally if the routine already has another executable routine. */
+static void
+jitter_initialize_executable_routine (struct jitter_executable_routine *er,
+                                      struct jitter_routine *r)
+{
+  //fprintf (stderr, "[Making an executable routine at %p]\n", er);
+  /* Fail if this executable routine is not the first for the routine. */
+  if (r->executable_routine != NULL)
+    jitter_fatal ("cannot generate an executable routine from %p twice", r);
+
+  /* Link the two routines together thru pointers, so that destroying one can
+     update the other. */
+  r->executable_routine = er;
+  er->routine = r;
+
+  /* Initialize the other fields, where we already have enough information. */
+  er->slow_register_per_class_no = r->slow_register_per_class_no;
+
+  /* The remaining fields are still uninitialized. */
+}
+
+void
+jitter_destroy_executable_routine (struct jitter_executable_routine *er)
+{
+  //fprintf (stderr, "[Destroying executable routine at %p]\n", er);
+  /* If the non-executable routine which was translated into *er still exists
+     then unlink this. */
+  struct jitter_routine *r = er->routine;
+  if (r != NULL)
+    r->executable_routine = NULL;
+
+  /* Destroy heap-allocated fields reachable from the compiled routine. */
+#if   (defined(JITTER_DISPATCH_SWITCH)                \
+       || defined(JITTER_DISPATCH_DIRECT_THREADING))
+  free (er->specialized_program);
+#elif (defined(JITTER_DISPATCH_MINIMAL_THREADING)  \
+       || defined(JITTER_DISPATCH_NO_THREADING))
+  jitter_executable_deallocate (er->native_code);
+#else
+# error "unknown dispatch: this should not happen"
+#endif /* dispatch */
+
+  /* Release memory for the struct itself. */
+  free (er);
+}
+
+
+
 
 /* Specialization.
  * ************************************************************************** */
@@ -137,8 +190,14 @@ jitter_add_program_epilog (struct jitter_routine *p)
     jitter_append_meta_instruction (p, p->vm->unreachable_meta_instruction);
 }
 
-void
-jitter_specialize_program (struct jitter_routine *p)
+
+
+
+/* Making an executable routine.
+ * ************************************************************************** */
+
+struct jitter_executable_routine*
+jitter_make_executable_routine (struct jitter_routine *p)
 {
   if (p->stage != jitter_routine_stage_unspecialized)
     jitter_fatal ("specializing non-unspecialized program");
@@ -247,4 +306,41 @@ jitter_specialize_program (struct jitter_routine *p)
      program stage again. */
   jitter_replicate_program (p);
 #endif // #ifdef JITTER_REPLICATE
+
+  /* Make an executable routine containing what we need to actually run the
+     code. */
+  struct jitter_executable_routine *res
+    = jitter_xmalloc (sizeof (struct jitter_executable_routine));
+  jitter_initialize_executable_routine (res, p);
+
+  /* Transfer the relevant fields from the non-executable routine to the
+     executable routine, invalidating the originals to avoid double freeing. */
+
+  /* Set the specialized_program field, where it exists. */
+#if (defined(JITTER_DISPATCH_SWITCH)                 \
+     || defined(JITTER_DISPATCH_DIRECT_THREADING)    \
+     || defined(JITTER_DISPATCH_MINIMAL_THREADING))
+  res->specialized_program
+    = jitter_dynamic_buffer_extract_trimmed (& p->specialized_program);
+#elif defined(JITTER_DISPATCH_NO_THREADING)
+  /* Nothing. */
+#else
+# error "unknown dispatch: this should not happen"
+#endif /* dispatch */
+
+  /* Set the native_code and native_code_size fields, where they exist. */
+#if (defined(JITTER_DISPATCH_SWITCH)             \
+  || defined(JITTER_DISPATCH_DIRECT_THREADING))  \
+  /* Nothing. */
+#elif (defined(JITTER_DISPATCH_MINIMAL_THREADING)  \
+     || defined(JITTER_DISPATCH_NO_THREADING))
+  res->native_code = p->native_code;
+  res->native_code_size = p->native_code_size;
+  p->native_code = NULL;
+#else
+# error "unknown dispatch: this should not happen"
+#endif /* dispatch */
+
+  /* Return a pointer to the executable routine. */
+  return res;
 }

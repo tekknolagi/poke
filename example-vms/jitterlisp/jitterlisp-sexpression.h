@@ -460,8 +460,17 @@ struct jitterlisp_compiled_closure
      size to avoid an indirection, after I properly implement vectors. */
   jitterlisp_object nonlocals;
 
-  /* The specialized VM routine for the closure code. */
-  struct jitter_routine *vm_program;
+  /* The non-executable VM routine for the closure code.  FIXME: I may want to
+     remove this, or make it optional for disassembling only, after the new
+     Jitter API allows me to free this independently from executable_routine. */
+  /* This is actually a struct jitterlispvm_routine * object, but I'm declaring
+     this as a generic pointer to avoid cyclical CPP inclusion. */
+  void *routine;
+
+  /* The executable VM routine for the closure code. */
+  /* This is actually a struct jitterlispvm_executable_routine * object, but I'm
+     declaring this as a generic pointer to avoid cyclical CPP inclusion. */
+  void *executable_routine;
 
   /* The first program point of the VM routine above, always a prolog
      instructions.  This could be extracted as a field from the code itself, but

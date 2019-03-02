@@ -25,6 +25,11 @@
 #include <stdio.h> // FIXME: remove unless needed.
 #include <string.h> // FIXME: remove unless needed.
 
+#ifdef JITTERLISP_BOEHM_GC
+# define GC_THREADS 1
+# include <gc/gc.h>
+#endif // #ifdef JITTERLISP_BOEHM_GC
+
 #include "jitterlisp.h"
 #include <jitter/jitter-hash.h>
 
@@ -585,33 +590,71 @@ jitterlisp_translate_instructions (struct jitterlispvm_routine *p,
     }
 }
 
-/* Given the Lisp encoding of the VM routine, generate the Jittery version. */
-static struct jitterlispvm_routine *
-jitterlisp_generate_jittery (jitterlisp_object code_as_sexpression)
+/* Given the Lisp encoding of the VM routine, generate the Jittery version.
+   Set pointers to the Jittery non-executable and executable routines at
+   the given addresses. */
+static void
+jitterlisp_generate_jittery (jitterlisp_object code_as_sexpression,
+                             struct jitterlispvm_routine **rp,
+                             struct jitterlispvm_executable_routine **erp)
 {
-  struct jitterlispvm_routine *res
+  /* Make a non-executable routine, and immediately store a pointer to it where
+     the caller requested. */
+  struct jitterlispvm_routine *r
     = jitterlispvm_make_routine ();
+  * rp = r;
 
   /* Set program options for user-compiled code. */
-  jitterlispvm_set_routine_option_add_final_exitvm (res, false);
+  jitterlispvm_set_routine_option_add_final_exitvm (r, false);
   jitterlispvm_set_routine_option_optimization_rewriting
-     (res, jitterlisp_settings.optimization_rewriting);
+     (r, jitterlisp_settings.optimization_rewriting);
 
   /* Make the label hash table. */
   struct jitter_hash_table map;
   jitter_hash_initialize (& map);
 
   /* Translate instructions. */
-  jitterlisp_translate_instructions (res, & map, code_as_sexpression);
+  jitterlisp_translate_instructions (r, & map, code_as_sexpression);
 
   /* We're done with the hash table. */
   jitter_word_hash_finalize (& map, jitter_do_nothing_on_word);
 
-  /* Specialize the VM routine immediately.  We want it to be ready to be
+  /* Make an executable VM routine immediately.  We want it to be ready to be
      executed at any time. */
-  jitterlispvm_specialize_program (res);
-  return res;
+  * erp = jitterlispvm_make_executable_routine (r);
 }
+
+
+
+
+/* Compiled closure GC finalization.
+ * ************************************************************************** */
+
+#ifdef JITTERLISP_BOEHM_GC
+/* Finalizer for VM routines associated to a closure, only used if we are
+   actually garbage collecting.  A pointer to this function has type
+   GC_finalization_proc , as defined in the Boehm garbage collector header. */
+static void
+jitterlisp_finalize_closure (void *object, void *client_data)
+{
+  /* This is only ever used on compiled closures, and since compilation is
+     irreversible it is safe to extract the field without checking. */
+  struct jitterlisp_compiled_closure * cc
+    = & ((struct jitterlisp_closure *) object)->compiled;
+
+  /* Destroy the routine for the closure in both versions, executable and
+     non-executable (if the non-executable version still exists). */
+  jitterlispvm_destroy_executable_routine (cc->executable_routine);
+  if (cc->routine != NULL)
+    jitterlispvm_destroy_routine (cc->routine);
+}
+#endif
+
+
+
+
+/* Compiling an existing closure.
+ * ************************************************************************** */
 
 void
 jitterlisp_compile (struct jitterlisp_closure *c,
@@ -623,12 +666,32 @@ jitterlisp_compile (struct jitterlisp_closure *c,
   struct jitterlisp_compiled_closure * const cc = & c->compiled;
   cc->nonlocals = nonlocals;
   cc->nonlocal_no = jitterlisp_length (nonlocals);
-  // FIXME: don't leak.
-  cc->vm_program = jitterlisp_generate_jittery (code_as_sexpression);
-  cc->first_program_point = JITTERLISPVM_ROUTINE_BEGINNING(cc->vm_program);
+  struct jitterlispvm_routine *r;
+  struct jitterlispvm_executable_routine *er;
+  jitterlisp_generate_jittery (code_as_sexpression, & r, & er);
+
+  /* Make sure there are enough slow registers in the VM state to run this code
+     as well.  Since we only have one state struct, this is easy: just update it
+     now, after we have generated a new executable routine and we know how many
+     registers this will take.  Of course if we already have more, none will be
+     removed. */
+  jitterlispvm_ensure_enough_slow_registers_for (er, & jitterlispvm_state);
+
+  /* Set closure fields. */
+  jitterlispvm_destroy_routine (r); // FIXME: conditionalize?
+  cc->routine = NULL; //cc->routine = r; // FIXME: conditionalize?
+  cc->executable_routine = er;
+  cc->first_program_point = JITTERLISPVM_EXECUTABLE_ROUTINE_BEGINNING (er);
   /*
     printf ("codegen: first program point at %p\n", cc->first_program_point);
   */
+
+#ifdef JITTERLISP_BOEHM_GC
+  /* Register a finalizer with the garbage collector, so that the VM routine can
+     be destroyed when the closure is garbage-collected. */
+  GC_register_finalizer (c, jitterlisp_finalize_closure, NULL,
+                         NULL, NULL);
+#endif // #ifdef JITTERLISP_BOEHM_GC
 }
 
 
@@ -640,16 +703,21 @@ jitterlisp_compile (struct jitterlisp_closure *c,
 void
 jitterlisp_print_compiled_closure (struct jitterlisp_compiled_closure *cc)
 {
-  jitterlispvm_print_routine (stdout, cc->vm_program);
+  /* Print VM instructions, if we have them. */
+  if (cc->routine != NULL)
+    jitterlispvm_print_routine (stdout, cc->routine);
+  else
+    printf ("<non-executable routine destroyed: cannot print it>\n");
 }
 
 /* Disassemble native code from the given compiled closure. */
 void
 jitterlisp_disassemble_compiled_closure (struct jitterlisp_compiled_closure *cc)
 {
-  struct jitter_routine *p = cc->vm_program;
+  struct jitter_executable_routine *er = cc->executable_routine;
   if (jitterlisp_settings.cross_disassembler)
-    jitterlispvm_disassemble_routine (p, true, JITTER_CROSS_OBJDUMP, NULL);
+    jitterlispvm_disassemble_executable_routine (er, true, JITTER_CROSS_OBJDUMP,
+                                                 NULL);
   else
-    jitterlispvm_disassemble_routine (p, true, JITTER_OBJDUMP, NULL);
+    jitterlispvm_disassemble_executable_routine (er, true, JITTER_OBJDUMP, NULL);
 }
