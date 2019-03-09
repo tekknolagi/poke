@@ -2550,6 +2550,19 @@
          (,operator ,(car operands))
          (map-syntactically ,operator ,@(cdr operands)))))
 
+;;; Expand to an expression evaluating the given operators applied the one
+;;; operand (given as the last argument), in sequence.  The expression is meant
+;;; to have side effects, for example by applying definition, optimization or
+;;; disassembly forms; its final result is #<nothing>.
+;;; "pam" is "map" reversed, but I didn't use a "-reverse" suffix in the name
+;;; as that suggests that the list is reversed..
+(define-macro (pam-syntactically . operators-and-operand)
+  (let ((operators (all-but-last operators-and-operand))
+        (operand (last operators-and-operand)))
+    `(begin
+       ,@(map (lambda (operator) `(,operator ,operand))
+              operators))))
+
 
 
 
