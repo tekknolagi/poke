@@ -1,6 +1,5 @@
 # Jitter testsuite: testsuite -*- sh -*- library, not to be run as a script.
-# Copyright (C) 2017 Luca Saiu
-# Updated in 2019 by Luca Saiu
+# Copyright (C) 2017, 2019 Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -50,6 +49,15 @@ jitter_test_name="$(@JITTER_BASENAME@ $0 .test)"
 # emulators; exceeding the limit will be seen as a failure.
 # This is useful for tests which might incorrectly loop.
 jitter_timeout=1
+
+# ...However, when running the testsuite thru emulation there is considerable
+# overhead, and I have seen many false failures due to timeouts where in fact
+# the test case would have succeeded.
+# The additional time required can be considerable in some cases, so I will
+# play it safe here.
+if test "x@JITTER_EMULATOR@" != 'x'; then
+    jitter_timeout=$(( "$jitter_timeout" + 3 ))
+fi
 
 # If we have the GNU coreutils we can use timeout to avoid running a test case
 # too long.  If not we will run without it, and the test suite may hang.  We allow
