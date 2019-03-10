@@ -141,14 +141,14 @@
    useful for multiplications by a constant (in which case the constant should
    be on the right). */
 #if (JITTERLISP_FIXNUM_TAG) == 0
-# define JITTERLISP_EXP_FF_F_TIMES(_jitterlisp_tagged_fixnum_a,       \
-                                   _jitterlisp_tagged_fixnum_b)       \
-   ((jitterlisp_object) \
-    (((jitter_int) (_jitterlisp_tagged_fixnum_a))              \
-     *                                                                \
-     (((jitter_int)                                            \
-       JITTER_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_fixnum_b,      \
-                                    JITTERLISP_FIXNUM_TAG,            \
+# define JITTERLISP_EXP_FF_F_TIMES(_jitterlisp_tagged_fixnum_a,        \
+                                   _jitterlisp_tagged_fixnum_b)        \
+   ((jitterlisp_object)                                                \
+    (((jitter_int) (_jitterlisp_tagged_fixnum_a))                      \
+     *                                                                 \
+     (((jitter_int)                                                    \
+       JITTER_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_fixnum_b,       \
+                                    JITTERLISP_FIXNUM_TAG,             \
                                     JITTERLISP_FIXNUM_TAG_BIT_NO)))))
 #else // fixnum tag non-zero
 # define JITTERLISP_EXP_FF_F_TIMES(_jitterlisp_tagged_fixnum_a,  \
