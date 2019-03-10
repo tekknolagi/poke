@@ -1,6 +1,7 @@
 /* Jitter: dynamic buffer data structure header.
 
    Copyright (C) 2017, 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -185,9 +186,11 @@ jitter_dynamic_buffer_to_const_pointer (const struct jitter_dynamic_buffer *db)
  * ************************************************************************** */
 
 /* "Extracting" data from a dynamic buffer means returning the malloc-allocated
-   buffer contained in the dynamic buffer struct, thus making it invalid.  It is
-   *incorrect* to finalize a dynamic buffer after calling this, even if of course
-   the struct itself, if heap-allocated, should be freed. */
+   buffer contained in the dynamic buffer struct, thus making it invalid.
+
+   The finalization API recognizes these invalid buffers, and avoids freeing the
+   extracted data which is (supposedly) held elsewhere, and needs to be finalized
+   by the user with free . */
 
 /* Return the malloc-allocated data held in the pointed dynamic buffer, which is
    then no longer usable.  It is the caller's responsibility to free the data.
