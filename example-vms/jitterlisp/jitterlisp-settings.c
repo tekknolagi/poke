@@ -42,6 +42,7 @@ jitterlisp_settings_set_default (void)
   jitterlisp_settings.library = true;
   jitterlisp_settings.print_nothing_results = false;
   jitterlisp_settings.print_compact_uninterned_symbols = false;
+  jitterlisp_settings.free_routines = false;
   jitterlisp_settings.cross_disassembler = false;
   jitterlisp_settings.optimization_rewriting = true;
   jitterlisp_settings.colorize = false;

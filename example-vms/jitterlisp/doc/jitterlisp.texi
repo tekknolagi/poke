@@ -1250,6 +1250,29 @@ The default, reasonable for running JitterLisp without command-line
 options on the host architecture it was configured for, is using the
 native disassembler.
 
+@cindex @option{--free-routines}, command-line option
+@cindex routine, Jittery
+@cindex routine, non-executable, Jittery
+@cindex routine, executable, Jittery
+@cindex non-executable, Jittery routine
+@item --free-routines
+Normally, when compiling a closure (@pxref{Compilation}) the
+JitterLisp system keeps two versions of the resulting routine in
+memory: one @dfn{non-executable routine}, and one @dfn{executable
+routine}.  The executable routine is necessary for executing the
+closure code, and therefore will always remain in memory until
+garbage-collected---forever, for littering JitterLisp programs.  The
+non-executable routine, on the other hand, can be destroyed immediately
+at compilation time to save memory; its only purpose after compilation
+is debugging, using @code{disassemble} and @code{disassemble-vm}
+(@pxref{Compilation} and @pxref{Disassembly,,, jitter, The Jitter Manual}).
+
+By default JitterLisp keeps non-executable routines in memory, and
+garbage-collects them along with executable routines.  By specifying
+this option only executable routines are kept, which saves memory at
+the cost of making debugging output less friendly if not, according to
+the dispatching mode, completely useless.
+
 @cindex @option{--no-verbose-litter}, command-line option
 @item --no-verbose-litter
 @cindex litter
@@ -1298,6 +1321,8 @@ and arguments from the @option{--eval} option.
 @item --no-compact-uninterned
 @cindex @option{--no-cross-disassembler}, command-line option
 @item --no-cross-disassembler
+@cindex @option{--no-free-routines}, command-line option
+@item --no-free-routines
 @cindex @option{--verbose-litter}, command-line option
 @item --verbose-litter
 @cindex @option{--no-time}, command-line option

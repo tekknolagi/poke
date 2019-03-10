@@ -55,6 +55,7 @@ enum jitterlisp_negative_option
     jitterlisp_negative_option_repl,
     jitterlisp_negative_option_no_colorize,
     jitterlisp_negative_option_no_cross_disassembler,
+    jitterlisp_negative_option_no_free_routines,
     jitterlisp_negative_option_no_time,
     jitterlisp_negative_option_optimization_rewriting
   };
@@ -70,6 +71,7 @@ enum jitterlisp_long_only_option
     jitterlisp_long_only_option_no_repl,
     jitterlisp_long_only_option_dump_version,
     jitterlisp_long_only_option_cross_disassembler,
+    jitterlisp_long_only_option_free_routines,
     jitterlisp_long_only_option_time,
     jitterlisp_long_only_option_no_optimization_rewriting
   };
@@ -104,6 +106,9 @@ static struct argp_option jitterlisp_option_specification[] =
     0, "Print uninterned symbols in compact notation" },
    {"cross-disassembler", jitterlisp_long_only_option_cross_disassembler, NULL,
     0, "Use the cross-disassembler instead of the native disassembler" },
+   {"free-routines", jitterlisp_long_only_option_free_routines, NULL,
+    0, "Destroy non-executable routines for compiled closures; this"
+    "makes debugging less friendly, but saves memory"},
    {"no-verbose-litter", jitterlisp_long_only_option_no_verbose_litter, NULL, 0,
     "Don't show littering information at run time"
 #ifndef JITTERLISP_LITTER
@@ -126,6 +131,8 @@ static struct argp_option jitterlisp_option_specification[] =
    {"no-cross-disassembler", jitterlisp_negative_option_no_cross_disassembler,
     NULL, 0, "Use the native disassembler instead of the cross-disassembler "
     "(default)" },
+   {"no-free-routines", jitterlisp_negative_option_no_free_routines, NULL,
+    0, "Keep non-executable routines for compiled closures (default)"},
    {"verbose-litter", jitterlisp_negative_option_verbose_litter, NULL, 0,
     "Show littering information at run time (default"
 #ifndef JITTERLISP_LITTER
@@ -230,6 +237,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case jitterlisp_long_only_option_cross_disassembler:
       sp->cross_disassembler = true;
       break;
+    case jitterlisp_long_only_option_free_routines:
+      sp->free_routines = true;
+      break;
     case jitterlisp_long_only_option_no_verbose_litter:
       sp->verbose_litter = false;
       break;
@@ -257,6 +267,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case jitterlisp_negative_option_no_cross_disassembler:
       sp->cross_disassembler = false;
+      break;
+    case jitterlisp_negative_option_no_free_routines:
+      sp->free_routines = false;
       break;
     case jitterlisp_negative_option_verbose_litter:
       sp->verbose_litter = true;

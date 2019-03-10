@@ -86,6 +86,11 @@ struct jitterlisp_settings
      for reading machine-rewritten ASTs. */
   bool print_compact_uninterned_symbols;
 
+  /* If true destroy non-executable routines for compiled closures.  This makes
+     disassembling less friendly and VM-disassembling essentially useless, but
+     saves memory. */
+  bool free_routines;
+
   /* If true use the cross-disassembler (as found by Jitter's configure script)
      rather than the native disassembler.  This is useful for developing using
      emulators. */
