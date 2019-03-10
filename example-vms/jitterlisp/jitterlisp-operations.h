@@ -136,10 +136,27 @@
        JITTERLISP_FIXNUM_TAG_BIT_NO)
 #endif // #if fixnum tag is zero
 
-/* FIXME: it is almost certinaly possible to apply the same idea used here for
-   sum and subtraction to multiplication and division as well.  Even with one
-   explicit arithmetic shift introduced by the macro here, the generated code
-   would be better than what I currently get. */
+/* Multiplication can also be defined in a more efficient way when the fixnum
+   tag is zero, relying on two's complement arithmetic.  This is particularly
+   useful for multiplications by a constant (in which case the constant should
+   be on the right). */
+#if (JITTERLISP_FIXNUM_TAG) == 0
+# define JITTERLISP_EXP_FF_F_TIMES(_jitterlisp_tagged_fixnum_a,       \
+                                   _jitterlisp_tagged_fixnum_b)       \
+   ((jitterlisp_object) \
+    (((jitter_int) (_jitterlisp_tagged_fixnum_a))              \
+     *                                                                \
+     (((jitter_int)                                            \
+       JITTER_WITH_TAG_ASHIFTED_OFF(_jitterlisp_tagged_fixnum_b,      \
+                                    JITTERLISP_FIXNUM_TAG,            \
+                                    JITTERLISP_FIXNUM_TAG_BIT_NO)))))
+#else // fixnum tag non-zero
+# define JITTERLISP_EXP_FF_F_TIMES(_jitterlisp_tagged_fixnum_a,  \
+                                   _jitterlisp_tagged_fixnum_b)  \
+    JITTERLISP_EXP_FF_F_BINARY(*,                                \
+                               _jitterlisp_tagged_fixnum_a,      \
+                               _jitterlisp_tagged_fixnum_b)
+#endif // #if fixnum tag is zero
 
 /* Expression oprations on fixnums. */
 #define JITTERLISP_EXP_FF_F_PLUS(_jitterlisp_tagged_fixnum_a,     \
@@ -152,11 +169,7 @@
   JITTERLISP_EXP_FF_F_PLUS_OR_MINUS(-,                            \
                                     _jitterlisp_tagged_fixnum_a,  \
                                     _jitterlisp_tagged_fixnum_b)
-#define JITTERLISP_EXP_FF_F_TIMES(_jitterlisp_tagged_fixnum_a,  \
-                                  _jitterlisp_tagged_fixnum_b)  \
-  JITTERLISP_EXP_FF_F_BINARY(*,                                 \
-                             _jitterlisp_tagged_fixnum_a,       \
-                             _jitterlisp_tagged_fixnum_b)
+/* JITTERLISP_EXP_FF_F_TIMES is defined above. */
 #define JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_tagged_fixnum_a,  \
                                 _jitterlisp_tagged_fixnum_b)      \
   JITTERLISP_EXP_FF_F_BINARY(/,                                   \
