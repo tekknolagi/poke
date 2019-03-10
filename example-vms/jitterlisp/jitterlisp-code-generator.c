@@ -678,8 +678,13 @@ jitterlisp_compile (struct jitterlisp_closure *c,
   jitterlispvm_ensure_enough_slow_registers_for (er, & jitterlispvm_state);
 
   /* Set closure fields. */
-  jitterlispvm_destroy_routine (r); // FIXME: conditionalize?
-  cc->routine = NULL; //cc->routine = r; // FIXME: conditionalize?
+  if (jitterlisp_settings.free_routines)
+    {
+      jitterlispvm_destroy_routine (r);
+      cc->routine = NULL;
+    }
+  else
+    cc->routine = r;
   cc->executable_routine = er;
   cc->first_program_point = JITTERLISPVM_EXECUTABLE_ROUTINE_BEGINNING (er);
   /*
