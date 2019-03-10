@@ -486,7 +486,7 @@ will feel familiar to any programmer already mastering any other Lisp.
 JitterLisp is a
 @emph{lexically-scoped}
 @emph{higher-order}
-@emph{homoiconic}
+@emph{homoiconic}@footnote{@anchor{homoiconicity-footnote}@fixme{justify; not as homoiconic as other Lisps appear, but still more than epsilon.  I argue that any Lisp system aiming at decent performance must do something like that; the difference is that I @emph{expose} this mechanism.}}
 @emph{Lisp/1}
 featuring
 @emph{closures},
@@ -1560,7 +1560,7 @@ twice
 @cindex homoiconicity
 @fixme{we will first define Lisp data structures, then show how some
 of them are mapped into expressions}
-
+@fixme{@pxref{homoiconicity-footnote}}
 @menu
 * Lisp data::                           The possible shapes of Lisp objects.
 * Abstract Syntax Trees and their semantics:: The core language.
@@ -1935,7 +1935,7 @@ It is thanks to the reflection capabilities provided by the AST data
 type that it is possible to write a self-compiler, and also a
 self-optimizer, in the language itself.
 
-ASTs have no read syntax, however the JitterLisp library provides
+Even if ASTs have no read syntax the JitterLisp library provides
 facilities to conveniently inspect and build ASTs: @pxref{AST
 operations}.
 
@@ -1991,6 +1991,15 @@ unambiguous.  In order to visually stand apart from user syntax it
 indicates grouping by brackets (@samp{[}, @samp{]}) rather than
 parentheses.
 
+@cindex @code{.} AST meta-syntax
+@cindex dot (@code{.}), AST meta-syntax
+A dot (@samp{.}) in the syntax below indicates the convention of
+writing a sequence of zero or more entities, represented in memory as
+a list, @emph{without} the surrounding parentheses.  For example a
+valid primitive will be @code{[primitive + [literal 2] [variable x]]},
+where @code{[literal 2]} and @code{[variable x]} are ASTs encoded as
+the elements of a two-element list within the AST for the primitive.
+
 @cindex expression, AST
 Every AST represents an @dfn{expression}.  Each expression has exactly
 one of the following forms, named after the identifier immediately
@@ -1998,21 +2007,21 @@ following the open bracket:
 @itemize @bullet
 @c -------
 @cindex literal, AST syntax
-@item @code{[literal @var{value}]}
+@item @code{[literal @var{value}]}, a @dfn{literal}.
 
 @cindex value, literal, AST syntax
 The literal @var{value} may be any Lisp datum.
 @c -------
 
 @cindex variable, AST syntax
-@item @code{[variable @var{name}]}
+@item @code{[variable @var{name}]}, a @dfn{variable}.
 
 @cindex name, variable, AST syntax
 The variable @var{name} must be a symbol.
 @c -------
 
 @cindex primitive, AST syntax
-@item @code{[primitive @var{operator} @var{operands}]}
+@item @code{[primitive @var{operator} . @var{operands}]}, a @dfn{primitive} or @dfn{primitive use}.
 
 @cindex operator, primitive, AST syntax
 @cindex primitive name, primitive, AST syntax
@@ -2025,7 +2034,7 @@ as many elements as the arguments expected by the named primitive.
 
 @cindex let, AST syntax
 @cindex block, AST syntax
-@item @code{[let @var{name} @var{bound-expression} @var{body}]}
+@item @code{[let @var{name} @var{bound-expression} @var{body}]}, a @dfn{let} or @dfn{block}.
 
 @cindex bound variable, block, AST syntax
 @cindex name, block, AST syntax
@@ -2038,7 +2047,7 @@ A block @var{body} must also be an AST.
 @c -------
 
 @cindex global definition, AST syntax
-@item @code{[define @var{name} @var{expression}]}
+@item @code{[define @var{name} @var{expression}]}, a @dfn{definition} or @dfn{global definition}.
 
 @cindex name, global definition, AST syntax
 The @dfn{global definition} @var{name} must be a symbol.
@@ -2048,7 +2057,7 @@ The definition @var{expression} or @dfn{defined expression} must be an AST.
 
 @cindex assignment, AST syntax
 @cindex set!, AST syntax
-@item @code{[set! @var{name} @var{expression}]}
+@item @code{[set! @var{name} @var{expression}]}, an @dfn{assignment}.
 
 @cindex name, assignment, AST syntax
 @cindex variable name, assignment, AST syntax
@@ -2058,7 +2067,7 @@ The assignment @var{expression} must be an AST.
 @c -------
 
 @cindex sequence, AST syntax
-@item @code{[sequence @var{expression-0} @var{expression-1}]}
+@item @code{[sequence @var{expression-0} @var{expression-1}]}, a @dfn{sequence}.
 
 @cindex first expression, sequence, AST syntax
 @cindex second expression, sequence, AST syntax
@@ -2071,7 +2080,7 @@ an AST.
 
 @cindex conditional, AST syntax
 @cindex if, AST syntax
-@item @code{[if @var{condition} @var{then-branch} @var{else-branch}]}
+@item @code{[if @var{condition} @var{then-branch} @var{else-branch}]}, a @dfn{conditional}.
 
 @cindex condition, conditional, AST syntax
 @cindex then branch, conditional, AST syntax
@@ -2083,7 +2092,7 @@ be an AST.
 
 @cindex while, AST syntax
 @cindex loop, AST syntax
-@item @code{[while @var{guard} @var{body}]}
+@item @code{[while @var{guard} @var{body}]}, a @dfn{while} or @dfn{loop}.
 
 @cindex guard, while, AST syntax
 @cindex body, while, AST syntax
@@ -2092,7 +2101,7 @@ Each of the while or @dfn{loop} @var{guard} and @var{body} must be an AST.
 
 @cindex lambda, AST syntax
 @cindex abstraction, AST syntax
-@item @code{[lambda @var{formals} @var{body}]}
+@item @code{[lambda @var{formals} @var{body}]}, a @dfn{lambda} or @dfn{abstraction}.
 
 @cindex formal, lambda, AST syntax
 @cindex argument (formal), lambda, AST syntax
@@ -2104,7 +2113,7 @@ The lambda @var{body} must be an AST.
 
 @cindex call, AST syntax
 @cindex procedure call, AST syntax
-@item @code{[call @var{operator} @var{operands}]}
+@item @code{[call @var{operator} . @var{operands}]}, a @dfn{call} or @dfn{procedure call}.
 
 @cindex operator, call, AST syntax
 @cindex call name, call, AST syntax
@@ -2118,8 +2127,8 @@ The call @var{operands} must be a list of ASTs.
 @cindex complexity, syntax
 @cindex syntactic complexity
 These forms specify @emph{the entirety} of the AST syntax: every
-JitterLisp form, before being executed, is translated into an AST of
-the shape described below, which in most cases will contain other
+JitterLisp form, before being executed, is translated into an AST having
+one of the shapes described above, which in many cases will contain other
 ASTs; still, all the language power and complexity arise solely from
 the @emph{combination} of the AST cases given above.
 @*
@@ -2264,6 +2273,11 @@ To mean, respectively, that a given form evaluated with a given environment
 either returns a result (possibly with an output side effect), or fails.  An
 environment, as stated already, is a mapping from variables to values.
 
+@fixme{Update the evaluation notation and the description below: a form should return a
+new environment as the result, and possibly a new global environment as well.}
+@fixme{distinguish environment extension from environment update.  This is important
+for let versus set!, below.}
+
 @cindex circularity (forbidden), AST
 @cindex cyclicity (forbidden), AST
 @cindex DAG, AST in memory
@@ -2330,7 +2344,7 @@ and globally, then evaluation fails.
 @c -------
 
 @cindex primitive, AST semantics
-@item @code{[primitive @var{operator} @var{operands}]}
+@item @code{[primitive @var{operator} . @var{operands}]}
 
 @cindex operator, primitive, AST semantics
 @cindex primitive name, primitive, AST semantics
@@ -2499,7 +2513,7 @@ second expression fails.
 @c -------
 @cindex call, AST semantics
 @cindex procedure call, AST semantics
-@item @code{[call @var{operator} @var{operands}]}
+@item @code{[call @var{operator} . @var{operands}]}
 
 @cindex operator, call, AST semantics
 @cindex call name, call, AST semantics
@@ -2569,7 +2583,7 @@ jitterlisp_macroexpand_begin (jitterlisp_object forms,
 @cindex macroexpansion
 @cindex REPL
 The code shows that the sub-forms within a @code{begin} form are
-recursively expanded in right-nested AST sequences, and that there are
+recursively expanded in right-nested sequence ASTs, and that there are
 special cases for a @code{begin} with zero or one sub-forms.  It is
 easy to check that this is indeed the case, by observing the ASTs
 generated by @code{macroexpand} from @code{begin} forms at the REPL:
@@ -2695,6 +2709,9 @@ powerful way.
 @fixme{There is a lot of redundancy, by design.  It is desirable to
 use the most specific form available, for readability and occasionally
 also for efficiency's sake.}
+
+@fixme{dot notation, again, like in AST syntax: here, however, we are
+speaking of user syntax with Lisp conses.}
 
 @menu
 * Definition forms::         Adding or changing global variable bindings.
