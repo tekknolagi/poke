@@ -158,6 +158,23 @@
                                _jitterlisp_tagged_fixnum_b)
 #endif // #if fixnum tag is zero
 
+/* Division can be defined in a more efficient way when the fixnum tag is zero,
+   relying on two's complement arithmetic.  This implementation, compared to the
+   naïve one, avoids right-shifting the two arguments. */
+#if (JITTERLISP_FIXNUM_TAG) == 0
+# define JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_tagged_fixnum_a,         \
+                                     _jitterlisp_tagged_fixnum_b)         \
+    JITTERLISP_FIXNUM_ENCODE((jitter_int) (_jitterlisp_tagged_fixnum_a)   \
+                             /                                            \
+                             (jitter_int) (_jitterlisp_tagged_fixnum_b))
+#else // fixnum tag non-zero
+# define JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_tagged_fixnum_a,  \
+                                   _jitterlisp_tagged_fixnum_b)  \
+    JITTERLISP_EXP_FF_F_BINARY(/,                                \
+                               _jitterlisp_tagged_fixnum_a,      \
+                               _jitterlisp_tagged_fixnum_b)
+#endif // #if fixnum tag is zero
+
 /* Expression oprations on fixnums. */
 #define JITTERLISP_EXP_FF_F_PLUS(_jitterlisp_tagged_fixnum_a,     \
                                  _jitterlisp_tagged_fixnum_b)     \
@@ -170,11 +187,7 @@
                                     _jitterlisp_tagged_fixnum_a,  \
                                     _jitterlisp_tagged_fixnum_b)
 /* JITTERLISP_EXP_FF_F_TIMES is defined above. */
-#define JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_tagged_fixnum_a,  \
-                                _jitterlisp_tagged_fixnum_b)      \
-  JITTERLISP_EXP_FF_F_BINARY(/,                                   \
-                             _jitterlisp_tagged_fixnum_a,         \
-                             _jitterlisp_tagged_fixnum_b)
+/* JITTERLISP_EXP_FF_F_DIVIDED is defined above. */
 #define JITTERLISP_EXP_FF_F_REMAINDER(_jitterlisp_tagged_fixnum_a,  \
                                   _jitterlisp_tagged_fixnum_b)      \
   JITTERLISP_EXP_FF_F_BINARY(%,                                     \
