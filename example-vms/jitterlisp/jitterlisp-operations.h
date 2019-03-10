@@ -169,9 +169,9 @@
                              (jitter_int) (_jitterlisp_tagged_fixnum_b))
 #else // fixnum tag non-zero
 # define JITTERLISP_EXP_FF_F_DIVIDED(_jitterlisp_tagged_fixnum_a,  \
-                                   _jitterlisp_tagged_fixnum_b)  \
-    JITTERLISP_EXP_FF_F_BINARY(/,                                \
-                               _jitterlisp_tagged_fixnum_a,      \
+                                   _jitterlisp_tagged_fixnum_b)    \
+    JITTERLISP_EXP_FF_F_BINARY(/,                                  \
+                               _jitterlisp_tagged_fixnum_a,        \
                                _jitterlisp_tagged_fixnum_b)
 #endif // #if fixnum tag is zero
 
