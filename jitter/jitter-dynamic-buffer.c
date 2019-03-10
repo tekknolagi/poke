@@ -1,6 +1,6 @@
 /* Jitter: dynamic buffer data structure.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -63,6 +63,10 @@ jitter_dynamic_buffer_initialize (struct jitter_dynamic_buffer *da)
 void
 jitter_dynamic_buffer_finalize (struct jitter_dynamic_buffer *da)
 {
+  /* Do nothing is the region has been extracted. */
+  if (da->region == NULL)
+    return;
+
   /* Free the malloc-allocated part. */
   free (da->region);
 
@@ -184,8 +188,7 @@ jitter_dynamic_buffer_to_const_pointer (const struct jitter_dynamic_buffer *db)
 void *
 jitter_dynamic_buffer_extract (struct jitter_dynamic_buffer *db)
 {
-  /* Return the pointed buffer, invalidating the pointer in *db out of
-     defensiveness, */
+  /* Return the pointed buffer, and mark the region is invalidated. */
   void *res = db->region;
   db->region = NULL;
   return res;
