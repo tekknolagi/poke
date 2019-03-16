@@ -1372,6 +1372,8 @@ Do not run the default Lisp library at initialization, exposing only
 the language and library features implemented in C.
 
 @cindex core macro
+@cindex C, macro defined in
+@cindex macro, core
 @cindex primitive wrapper
 The predefined Lisp globals available when using this option will be
 limited to the ones marked as ``core macro'', and ``primitive
@@ -1996,7 +1998,9 @@ parentheses.
 A dot (@samp{.}) in the syntax below indicates the convention of
 writing a sequence of zero or more entities, represented in memory as
 a list, @emph{without} the surrounding parentheses.  For example a
-valid primitive will be @code{[primitive + [literal 2] [variable x]]},
+valid primitive following the syntax
+@samp{[primitive @var{operator} . @var{operands}]}
+will be @code{[primitive + [literal 2] [variable x]]},
 where @code{[literal 2]} and @code{[variable x]} are ASTs encoded as
 the elements of a two-element list within the AST for the primitive.
 
@@ -2167,7 +2171,7 @@ notation.
 
 @cindex operational semantics (in the reader's head)
 @cindex logic rules, operational semantics (in the reader's head)
-The mathematically-inclined reader will see immediately how the AST
+The mathematically inclined reader will see immediately how the AST
 semantics would be easy to model in an operational style, with logic
 rules having multiple premises and one conclusion.
 Here I will content myself with rendering those rules into more
@@ -2540,7 +2544,11 @@ definition; the source code of each macro can be, I argue, a rigorous
 enough specification.
 
 @syindex begin
-Not more than a handful of macros are defined in C, and even those
+@cindex C, macro defined in
+@cindex macro, core
+@cindex core macro
+Not more than a handful of macros, called @dfn{core macros} are
+defined in C, and even those
 should present no particular difficulty.  For example @code{begin}
 (@pxref{Sequencing}) is a core macro, defined in
 @file{jitterlisp-macros.c}:
