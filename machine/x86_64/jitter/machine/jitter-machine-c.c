@@ -1,6 +1,6 @@
 /* VM library: native code patching for x86_64 .
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -50,28 +50,36 @@ jitter_routine_for_loading_register (const char *immediate_pointer,
       {
       case 0:  return jitter_routine_load_0_to_64bit_residual_register_0;
       case 1:  return jitter_routine_load_0_to_64bit_residual_register_1;
-      default: jitter_fatal ("impossible");
+      case 2:  return jitter_routine_load_0_to_64bit_residual_register_2;
+      case 3:  return jitter_routine_load_0_to_64bit_residual_register_3;
+      default: jitter_fatal ("impossible A");
       }
   if (immediate == -1)
     switch (residual_register_index)
       {
       case 0:  return jitter_routine_load_minus_1_to_64bit_residual_register_0;
       case 1:  return jitter_routine_load_minus_1_to_64bit_residual_register_1;
-      default: jitter_fatal ("impossible");
+      case 2:  return jitter_routine_load_minus_1_to_64bit_residual_register_2;
+      case 3:  return jitter_routine_load_minus_1_to_64bit_residual_register_3;
+      default: jitter_fatal ("impossible B");
       }
   else if (jitter_fits_in_bits_zero_extended (immediate, 32))
     switch (residual_register_index)
       {
       case 0:  return jitter_routine_set_32bit_residual_register_0;
       case 1:  return jitter_routine_set_32bit_residual_register_1;
-      default: jitter_fatal ("impossible");
+      case 2:  return jitter_routine_set_32bit_residual_register_2;
+      case 3:  return jitter_routine_set_32bit_residual_register_3;
+      default: jitter_fatal ("impossible C");
       }
   else
     switch (residual_register_index)
       {
       case 0:  return jitter_routine_set_64bit_residual_register_0;
       case 1:  return jitter_routine_set_64bit_residual_register_1;
-      default: jitter_fatal ("impossible");
+      case 2:  return jitter_routine_set_64bit_residual_register_2;
+      case 3:  return jitter_routine_set_64bit_residual_register_3;
+      default: jitter_fatal ("impossible D");
       }
 }
 
@@ -100,13 +108,19 @@ jitter_patch_load_immediate_to_register (char *native_code,
     {
     case jitter_routine_load_0_to_64bit_residual_register_0:
     case jitter_routine_load_0_to_64bit_residual_register_1:
+    case jitter_routine_load_0_to_64bit_residual_register_2:
+    case jitter_routine_load_0_to_64bit_residual_register_3:
     case jitter_routine_load_minus_1_to_64bit_residual_register_0:
     case jitter_routine_load_minus_1_to_64bit_residual_register_1:
+    case jitter_routine_load_minus_1_to_64bit_residual_register_2:
+    case jitter_routine_load_minus_1_to_64bit_residual_register_3:
       /* Do nothing: these routines do not need patching. */
       break;
 
     case jitter_routine_set_32bit_residual_register_0:
     case jitter_routine_set_32bit_residual_register_1:
+    case jitter_routine_set_32bit_residual_register_2:
+    case jitter_routine_set_32bit_residual_register_3:
       /* Since x86_64 is little-endian I can truncate a 64-bit value to its
          lower 32 bits by just taking its *first* four bytes. */
       memcpy (native_code + native_code_size - 4, immediate_pointer, 4);
@@ -114,6 +128,8 @@ jitter_patch_load_immediate_to_register (char *native_code,
 
     case jitter_routine_set_64bit_residual_register_0:
     case jitter_routine_set_64bit_residual_register_1:
+    case jitter_routine_set_64bit_residual_register_2:
+    case jitter_routine_set_64bit_residual_register_3:
       memcpy (native_code + native_code_size - 8, immediate_pointer, 8);
       break;
 

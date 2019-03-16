@@ -80,8 +80,15 @@
    I've seen GCC complain ("error: frame pointer required, but reserved")
    in some cases if I reserve %rbp, so that is better avoided. */
 
+/* Register pointing to the base of The Array.  This is always used as a
+   64-bit register, so no _32BIT version is needed. */
+#define JITTER_BASE_REGISTER                %rbx
+
 /* How many registers we can use to hold residual arguments. */
-#define JITTER_RESIDUAL_REGISTER_NO   2
+/* FIXME: redefine this as 4, but reserve fewer register by default on
+   register-starved architectures like this one. */
+#define JITTER_RESIDUAL_REGISTER_NO         1 // 2 // 4
+
 //#define JITTER_RESIDUAL_REGISTER_NO   0 // this is good for testing memory literals
 
 /* Registers holding residual arguments, with 0-based suffixes.  These have to
@@ -91,25 +98,18 @@
    either Gas or CPP macros due to the irregularity of the syntax (%eax<->%rax
    vs. %r12<->%r12d), the different definitions need to be kept synchronized by
    hand. */
-#define JITTER_RESIDUAL_REGISTER_0          %rbx
-#define JITTER_RESIDUAL_REGISTER_0_32BIT    %ebx
+#define JITTER_RESIDUAL_REGISTER_0          %rbp
+#define JITTER_RESIDUAL_REGISTER_0_32BIT    %ebp
 #define JITTER_RESIDUAL_REGISTER_1          %r12
 #define JITTER_RESIDUAL_REGISTER_1_32BIT    %r12d
+#define JITTER_RESIDUAL_REGISTER_2          %r13
+#define JITTER_RESIDUAL_REGISTER_2_32BIT    %r13d
+#define JITTER_RESIDUAL_REGISTER_3          %r14
+#define JITTER_RESIDUAL_REGISTER_3_32BIT    %r14d
 
-/* These are normally used when JITTER_RESIDUAL_REGISTER_NO is 2. */
-#define JITTER_RESIDUAL_REGISTER_2          %r15
-#define JITTER_RESIDUAL_REGISTER_2_32BIT    %r15d
-
-/* The scratch register.  The same remark above applies. */
-#define JITTER_SCRATCH_REGISTER             %r13
-#define JITTER_SCRATCH_REGISTER_32BIT       %r13d
-/* #define JITTER_SCRATCH_REGISTER             %rbx */
-/* #define JITTER_SCRATCH_REGISTER_32BIT       %ebx */
-
-/* Register pointing to a memory buffer holding residual arguments not fitting
-   in the registers above.  This is always used as a 64-bit register, so no
-   _32BIT version is needed. */
-#define JITTER_RESIDUAL_BASE_REGISTER       %r14
+/* The scratch register. */
+#define JITTER_SCRATCH_REGISTER             %r15
+#define JITTER_SCRATCH_REGISTER_32BIT       %r15d
 
 
 
@@ -564,15 +564,23 @@ enum jitter_routine_to_patch
   {
     jitter_routine_load_0_to_64bit_residual_register_0,
     jitter_routine_load_0_to_64bit_residual_register_1,
+    jitter_routine_load_0_to_64bit_residual_register_2,
+    jitter_routine_load_0_to_64bit_residual_register_3,
     jitter_routine_load_minus_1_to_64bit_residual_register_0,
     jitter_routine_load_minus_1_to_64bit_residual_register_1,
+    jitter_routine_load_minus_1_to_64bit_residual_register_2,
+    jitter_routine_load_minus_1_to_64bit_residual_register_3,
     jitter_routine_set_64bit_residual_register_0,
     jitter_routine_set_64bit_residual_register_1,
+    jitter_routine_set_64bit_residual_register_2,
+    jitter_routine_set_64bit_residual_register_3,
     jitter_routine_set_64bit_residual_memory_small_offset,
     jitter_routine_set_64bit_residual_memory_zero_offset,
     jitter_routine_set_64bit_residual_memory_big_offset,
     jitter_routine_set_32bit_residual_register_0,
     jitter_routine_set_32bit_residual_register_1,
+    jitter_routine_set_32bit_residual_register_2,
+    jitter_routine_set_32bit_residual_register_3,
     jitter_routine_set_32bit_residual_memory_small_offset,
     jitter_routine_set_32bit_residual_memory_zero_offset,
     jitter_routine_set_32bit_residual_memory_big_offset,

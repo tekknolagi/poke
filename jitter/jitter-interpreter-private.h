@@ -551,9 +551,10 @@
                   JITTER_ASM_DEBUGGING_NOP(0x2) \
                   : [foo] "+m" (jitter_ip)); */\
     /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label);*/ \
-    /*JITTER_PRETEND_TO_UPDATE_IP_;*/ \
+    JITTER_PRETEND_TO_UPDATE_IP_; \
     /*asm volatile ("addi $0, $0, 2");*/\
    JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):          \
+    JITTER_PRETEND_TO_UPDATE_IP_; \
    /*asm volatile (JITTER_ASM_COMMENT_UNIQUE("blah") \
                   JITTER_ASM_DEBUGGING_NOP(0x3) \
                   : [foo] "+m" (jitter_ip));*/ \

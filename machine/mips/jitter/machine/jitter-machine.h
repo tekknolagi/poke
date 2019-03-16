@@ -72,26 +72,24 @@
    seriously investigated $26-$27/$k0-k1 , but as far as I understand they
    are clobbered by the operating system at unpredictable times. */
 
+/* Register pointing to The Array base. */
+#define JITTER_BASE_REGISTER          $16
+
 /* How many registers we can use to hold residual arguments. */
 #define JITTER_RESIDUAL_REGISTER_NO   6
 //#define JITTER_RESIDUAL_REGISTER_NO   0 // this is good for testing memory literals
 
 /* Registers holding residual arguments, with 0-based suffixes.  These have to
    be as many as JITTER_RESIDUAL_REGISTER_NO . */
-#define JITTER_RESIDUAL_REGISTER_0    $16
-#define JITTER_RESIDUAL_REGISTER_1    $17
-#define JITTER_RESIDUAL_REGISTER_2    $18
-#define JITTER_RESIDUAL_REGISTER_3    $19
-#define JITTER_RESIDUAL_REGISTER_4    $20
-#define JITTER_RESIDUAL_REGISTER_5    $21
+#define JITTER_RESIDUAL_REGISTER_0    $17
+#define JITTER_RESIDUAL_REGISTER_1    $18
+#define JITTER_RESIDUAL_REGISTER_2    $19
+#define JITTER_RESIDUAL_REGISTER_3    $20
+#define JITTER_RESIDUAL_REGISTER_4    $21
+#define JITTER_RESIDUAL_REGISTER_5    $22
 
 /* The scratch register.  The same remark above applies. */
-#define JITTER_SCRATCH_REGISTER       $22
-
-/* Register pointing to a memory buffer holding residual arguments not fitting
-   in the registers above.  I doubt that will happen much on such a
-   register-rich architecture. */
-#define JITTER_RESIDUAL_BASE_REGISTER $23
+#define JITTER_SCRATCH_REGISTER       $23
 
 
 

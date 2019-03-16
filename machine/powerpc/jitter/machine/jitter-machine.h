@@ -1,6 +1,6 @@
 /* VM library: PowerPC definitions, to be included from both C and assembly.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -73,35 +73,33 @@
    example GCC says that %r31 is used as a frame pointer, but stops complaining if
    I use -fomit-frame-pointer -- which I certainly do for VMs. */
 
+/* Register pointing to The Array base. */
+#define JITTER_BASE_REGISTER          %r14
+
 /* How many registers we can use to hold residual arguments. */
 #define JITTER_RESIDUAL_REGISTER_NO   15
 //#define JITTER_RESIDUAL_REGISTER_NO   0 // this is good for testing memory literals
 
 /* Registers holding residual arguments, with 0-based suffixes.  These have to
    be as many as JITTER_RESIDUAL_REGISTER_NO . */
-#define JITTER_RESIDUAL_REGISTER_0    %r16
-#define JITTER_RESIDUAL_REGISTER_1    %r17
-#define JITTER_RESIDUAL_REGISTER_2    %r18
-#define JITTER_RESIDUAL_REGISTER_3    %r19
-#define JITTER_RESIDUAL_REGISTER_4    %r20
-#define JITTER_RESIDUAL_REGISTER_5    %r21
-#define JITTER_RESIDUAL_REGISTER_6    %r22
-#define JITTER_RESIDUAL_REGISTER_7    %r23
-#define JITTER_RESIDUAL_REGISTER_8    %r24
-#define JITTER_RESIDUAL_REGISTER_9    %r25
-#define JITTER_RESIDUAL_REGISTER_10   %r26
-#define JITTER_RESIDUAL_REGISTER_11   %r27
-#define JITTER_RESIDUAL_REGISTER_12   %r28
-#define JITTER_RESIDUAL_REGISTER_13   %r29
-#define JITTER_RESIDUAL_REGISTER_14   %r30
+#define JITTER_RESIDUAL_REGISTER_0    %r15
+#define JITTER_RESIDUAL_REGISTER_1    %r16
+#define JITTER_RESIDUAL_REGISTER_2    %r17
+#define JITTER_RESIDUAL_REGISTER_3    %r18
+#define JITTER_RESIDUAL_REGISTER_4    %r19
+#define JITTER_RESIDUAL_REGISTER_5    %r20
+#define JITTER_RESIDUAL_REGISTER_6    %r21
+#define JITTER_RESIDUAL_REGISTER_7    %r22
+#define JITTER_RESIDUAL_REGISTER_8    %r23
+#define JITTER_RESIDUAL_REGISTER_9    %r24
+#define JITTER_RESIDUAL_REGISTER_10   %r25
+#define JITTER_RESIDUAL_REGISTER_11   %r26
+#define JITTER_RESIDUAL_REGISTER_12   %r27
+#define JITTER_RESIDUAL_REGISTER_13   %r28
+#define JITTER_RESIDUAL_REGISTER_14   %r29
 
-/* The scratch register.  The same remark above applies. */
-#define JITTER_SCRATCH_REGISTER       %r14
-
-/* Register pointing to a memory buffer holding residual arguments not fitting
-   in the registers above.  I doubt that will happen much on such a
-   register-rich architecture. */
-#define JITTER_RESIDUAL_BASE_REGISTER %r15
+/* The scratch register. */
+#define JITTER_SCRATCH_REGISTER       %r30
 
 
 

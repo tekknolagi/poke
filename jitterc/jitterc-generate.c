@@ -1792,10 +1792,6 @@ jitterc_emit_register_access_macros_h (const struct jitterc_vm *vm)
 {
   FILE *f = jitterc_fopen_a_basename (vm, "vm.h");
 
-  /* EMIT("/\* How many fast registers we have.  FIXME: this will disappear, as each register class will have its own number of fast registers. *\/\n"); */
-  /* EMIT("#define VMPREFIX_FAST_REGISTER_NO  %i\n", (int)vm->fast_register_no); */
-  /* EMIT("\n"); */
-
   EMIT("/* How many residuals we can have at most.  This, with some dispatching models,\n");
   EMIT("   is needed to compute a slow register offset from the base. */\n");
   EMIT("#define VMPREFIX_MAX_RESIDUAL_ARITY  %i\n\n", (int)vm->max_residual_arity);
@@ -1845,7 +1841,7 @@ jitterc_emit_interpreter_register_access_macros (FILE *f,
   EMIT("/* Expand to a slow register lvalue, given an offset in bytes from the base. */\n");
   EMIT("#define JITTER_SLOW_REGISTER_FROM_OFFSET(c, offset)               \\\n");
   EMIT("  (* ((JITTER_CONCATENATE_TWO(vmprefix_register_, c) * restrict)  \\\n");
-  EMIT("      (((char *) jitter_slow_registers) + offset)))\n");
+  EMIT("      (((char *) jitter_array_base) + offset)))\n");
   EMIT("\n");
   const int vmprefix_slow_register_with_access_macro_no = 32;
   EMIT("/* Expand to the i-th register, which must be a slow register, as an lvalue.\n");
@@ -1895,24 +1891,20 @@ jitterc_emit_interpreter_reserve_registers (FILE *f,
 
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n\n");
 
-  EMIT("/* Reserve our scratch register, if any. */\n");
+  EMIT("/* Reserve the scratch register, if any. */\n");
   EMIT("#ifdef JITTER_SCRATCH_REGISTER\n");
   EMIT("  register union jitter_word\n");
   EMIT("  jitter_residual_argument_scratch_register_variable asm (JITTER_STRINGIFY(JITTER_SCRATCH_REGISTER));\n");
   EMIT("#endif // #ifdef JITTER_SCRATCH_REGISTER\n\n");
 
-  EMIT("/* If this VM has more residual arguments than the assembly machine\n");
-  EMIT("   residual registers then reserve a base register and define\n");
-  EMIT("   JITTER_NEEDS_RESIDUAL_BASE so that we know we have to initialize it. */\n");
-  EMIT("#if (VMPREFIX_MAX_RESIDUAL_ARITY > JITTER_RESIDUAL_REGISTER_NO)\n");
-  EMIT("# ifndef JITTER_RESIDUAL_BASE_REGISTER\n");
-  EMIT("#   error \"this VM needs more residual args, but the machine does not define JITTER_RESIDUAL_BASE_REGISTER\"\n");
-  EMIT("# endif // #ifndef JITTER_RESIDUAL_BASE_REGISTER\n");
-  EMIT("# define JITTER_NEEDS_RESIDUAL_BASE\n");
-  EMIT("\n");
-  EMIT("  register volatile union jitter_word * restrict\n");
-  EMIT("  vmprefix_residual_base_register_variable asm (JITTER_STRINGIFY(JITTER_RESIDUAL_BASE_REGISTER));\n");
-  EMIT("#endif // #if (VMPREFIX_MAX_RESIDUAL_ARITY > JITTER_RESIDUAL_REGISTER_NO)\n\n");
+  EMIT("/* Reserve The Array base register. */\n");
+  EMIT("#ifndef JITTER_BASE_REGISTER\n");
+  EMIT("# error \"the machine does not define JITTER_BASE_REGISTER\"\n");
+  EMIT("#else\n");
+  EMIT("//register volatile union jitter_word * restrict\n");
+  EMIT("register char * restrict\n");
+  EMIT("vmprefix_array_base_register_variable asm (JITTER_STRINGIFY(JITTER_BASE_REGISTER));\n");
+  EMIT("#endif // #ifndef JITTER_BASE_REGISTER\n\n");
 
   EMIT("/* Reserve registers for our %i residual arguments.  If this particular VM doesn't\n",
        (int) vm->max_residual_arity);
@@ -1936,11 +1928,11 @@ jitterc_emit_interpreter_reserve_registers (FILE *f,
       EMIT("# define JITTER_MARK_RESIDUAL_%i_AS_SET_BY_ASSEMBLY                 \\\n", i);
       EMIT("    JITTER_MARK_REGISTER_AS_SET_BY_ASSEMBLY(jitter_residual_argument_%i_register_variable)\n", i);
       EMIT("#else\n");
-      EMIT("# define JITTER_RESIDUAL_ARGUMENT_%i \\\n", i);
-      EMIT("    (vmprefix_residual_base_register_variable [%i - JITTER_RESIDUAL_REGISTER_NO])\n", i);
+      EMIT("# define JITTER_RESIDUAL_ARGUMENT_%i  \\\n", i);
+      EMIT("    (* (union jitter_word *)                 \\\n");
+      EMIT("       (jitter_array_base + VMPREFIX_RESIDUAL_OFFSET(%i)))\n", i);
       EMIT("# define JITTER_MARK_RESIDUAL_%i_AS_SET_BY_ASSEMBLY                    \\\n", i);
-      EMIT("    JITTER_MARK_ARRAY_ELEMENT_AS_SET_BY_ASSEMBLY(vmprefix_residual_base_register_variable,            \\\n");
-      EMIT("                                                 VMPREFIX_RESIDUAL_OFFSET(%i))\n", i);
+      EMIT("    JITTER_MARK_MEMORY_AS_SET_BY_ASSEMBLY(JITTER_RESIDUAL_ARGUMENT_%i)\n", i);
       EMIT("#endif // #if (%i < JITTER_RESIDUAL_REGISTER_NO)\n\n", i);
     }
 
@@ -1967,9 +1959,7 @@ jitterc_emit_interpreter_reserve_registers (FILE *f,
   EMIT("static void\n");
   EMIT("vmprefix_save_registers (union jitter_word *buffer)\n");
   EMIT("{\n");
-  EMIT("#ifdef JITTER_NEEDS_RESIDUAL_BASE\n");
-  EMIT("  buffer [0].pointer = (union jitter_word*) vmprefix_residual_base_register_variable;\n");
-  EMIT("#endif // #ifdef JITTER_NEEDS_RESIDUAL_BASE\n");
+  EMIT("  buffer [0].pointer = (union jitter_word*) vmprefix_array_base_register_variable;\n");
   EMIT("#ifdef JITTER_SCRATCH_REGISTER\n");
   EMIT("  buffer [1] = jitter_residual_argument_scratch_register_variable;\n");
   EMIT("#endif // #ifdef JITTER_SCRATCH_REGISTER\n");
@@ -1986,9 +1976,7 @@ jitterc_emit_interpreter_reserve_registers (FILE *f,
   EMIT("static void\n");
   EMIT("vmprefix_restore_registers (const union jitter_word *buffer)\n");
   EMIT("{\n");
-  EMIT("#ifdef JITTER_NEEDS_RESIDUAL_BASE\n");
-  EMIT("  vmprefix_residual_base_register_variable = buffer [0].pointer;\n");
-  EMIT("#endif // #ifdef JITTER_NEEDS_RESIDUAL_BASE\n");
+  EMIT("  vmprefix_array_base_register_variable = (char *) buffer [0].pointer;\n");
   EMIT("#ifdef JITTER_SCRATCH_REGISTER\n");
   EMIT("  jitter_residual_argument_scratch_register_variable = buffer [1];\n");
   EMIT("#endif // #ifdef JITTER_SCRATCH_REGISTER\n");
@@ -2090,22 +2078,22 @@ jitterc_emit_interpreter_sarg_definition
   switch (sarg->kind)
     {
     case jitterc_instruction_argument_kind_register:
-      EMIT("    /* The %ith argument is a %s register. */\n",
+      EMIT("    /* The %ith argument is a %s\n        register. */\n",
            index,
            sarg->residual ? "slow (therefore residual, passed as an offset)"
            : "fast");
       if (sarg->residual)
         {
-          EMIT("//FIXME: cast the argument to const?  Even better: define an automatic const variable.\n");
+          EMIT("  /* Define a macro expanding to the slow register offset. */\n");
           EMIT("#if defined(JITTER_DISPATCH_NO_THREADING)\n");
-          EMIT("#   define JITTER_SLOW_REGISTER_OFFSET%i  (JITTER_RESIDUAL_ARGUMENT_%i.fixnum)\n", index, residual_index);
-          EMIT("    JITTER_MARK_RESIDUAL_%i_AS_SET_BY_ASSEMBLY;\n", residual_index);
-          EMIT("#elif defined (JITTER_REPLICATE)\n");
-          EMIT("#   define JITTER_SLOW_REGISTER_OFFSET%i  ((((union jitter_word*)jitter_ip)[%i]).fixnum)\n", index, residual_index);
+          EMIT("# define JITTER_SLOW_REGISTER_OFFSET%i (JITTER_RESIDUAL_ARGUMENT_%i.fixnum)\n", index, residual_index);
+          EMIT("#elif defined (JITTER_DISPATCH_MINIMAL_THREADING)\n");
+          EMIT("# define JITTER_SLOW_REGISTER_OFFSET%i ((((union jitter_word*)jitter_ip)[%i]).fixnum)\n", index, residual_index);
           EMIT("#else\n");
-          EMIT("#   define JITTER_SLOW_REGISTER_OFFSET%i  ((((union jitter_word*)jitter_ip)[%i]).fixnum)\n", index, residual_index + 1);
+          EMIT("# define JITTER_SLOW_REGISTER_OFFSET%i ((((union jitter_word*)jitter_ip)[%i]).fixnum)\n", index, residual_index + 1);
           EMIT("#endif // #if defined(JITTER_DISPATCH_NO_THREADING)\n");
 
+          EMIT("  /* Define a macro expanding to an l-value for the VM register content. */\n");
           EMIT("#   define JITTER_ARG%i  JITTER_SLOW_REGISTER_FROM_OFFSET(%c, JITTER_SLOW_REGISTER_OFFSET%i)\n",
                index, sarg->unspecialized->register_class_character, index);
         }
@@ -2645,6 +2633,27 @@ jitterc_emit_interpreter_main_function
   EMIT("                                vmprefix_program_point jitter_initial_program_point,\n");
   EMIT("                                struct vmprefix_state * const jitter_original_state)\n");
   EMIT("{\n");
+
+  /* Emit debugging prints.  FIXME: implement something like this, cleanly, in a
+     different function. */
+  /*
+  EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
+  EMIT("  printf (\"JITTER_RESIDUAL_REGISTER_NO is %%i\\n\", (int)JITTER_RESIDUAL_REGISTER_NO);\n");
+  EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n");
+  EMIT("  printf (\"VMPREFIX_MAX_RESIDUAL_ARITY is %%i\\n\", (int)VMPREFIX_MAX_RESIDUAL_ARITY);\n");
+  EMIT("  printf (\"VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY is %%i\\n\", (int)VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY);\n");
+  EMIT("  {int q;\n");
+  EMIT("#ifdef JITTER_REPLICATE\n");
+  EMIT("  for (q = JITTER_RESIDUAL_REGISTER_NO; q < VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY; q ++)\n");
+  EMIT("    printf (\"VMPREFIX_RESIDUAL_OFFSET(%%i) is %%i or 0x%%x\\n\", q, (int)VMPREFIX_RESIDUAL_OFFSET(q), (int)VMPREFIX_RESIDUAL_OFFSET(q));\n");
+  EMIT("#endif // #ifdef JITTER_REPLICATE\n");
+  EMIT("  printf (\"VMPREFIX_REGISTER_r_FAST_REGISTER_NO is %%i\\n\", (int)VMPREFIX_REGISTER_r_FAST_REGISTER_NO);\n");
+  EMIT("  for (q = VMPREFIX_REGISTER_r_FAST_REGISTER_NO; q < (VMPREFIX_REGISTER_r_FAST_REGISTER_NO + 10); q ++)\n");
+  EMIT("    printf (\"VMPREFIX_SLOW_REGISTER_OFFSET(r, %%i) is %%i or 0x%%x\\n\", q, (int)VMPREFIX_SLOW_REGISTER_OFFSET(r, q), (int)VMPREFIX_SLOW_REGISTER_OFFSET(r, q));\n");
+  EMIT("  }\n");
+  EMIT("\n\n");
+  */
+
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("  /* Save the values in the registers we reserved as global variables,\n");
   EMIT("     since from the point of view of the other C compilation units such\n");
@@ -2752,23 +2761,28 @@ jitterc_emit_interpreter_main_function
 
   jitterc_emit_interpreter_global_wrappers (f, vm);
 
-  /* If control flow reaches this point then we are actually intepreting. */
+  /* If control flow reaches this point then we are actually executing code. */
   EMIT("  /* Make an automatic struct holding a copy of the state whose pointer was given.\n");
   EMIT("     The idea is that the copy should be in registers, as far as possible. */\n");
   EMIT("  struct vmprefix_state_runtime jitter_state_runtime\n");
-  EMIT("    = jitter_original_state->vmprefix_state_runtime;\n");
+  EMIT("    = jitter_original_state->vmprefix_state_runtime;\n\n");
 
-  EMIT("  /* FIXME: this initialization should not be here. */\n");
-  EMIT("  static volatile size_t slow_register_no; slow_register_no = 200;\n");
-  EMIT("/* About the pragma, look for \"-Wmaybe-uninitialized\" in the comments above. */\n");
+  EMIT("  /* Initialize a pointer to The Array base.  This pointer will be in a\n");
+  EMIT("     global register variable with no-threading dispatch, and with\n");
+  EMIT("     other dispatches in an automatic variable, still hopefully kept\n");
+  EMIT("     in a register. */\n");
+  EMIT("/* About the pragma, look for \"-Wmaybe-uninitialized\" in the comments above. FIXME: this is to avoid a GCC warning with profiling.  Check with profiling on. */\n");
   EMIT("#pragma GCC diagnostic push\n");
   EMIT("#pragma GCC diagnostic ignored \"-Wmaybe-uninitialized\"\n");
-  //EMIT("  vmprefix_register_r * restrict jitter_slow_registers = malloc (sizeof (union vmprefix_any_register) * slow_register_no * VMPREFIX_REGISTER_CLASS_NO);\n");
-  EMIT("  vmprefix_register_r * restrict jitter_slow_registers;\n");
+  EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
+  EMIT("# define jitter_array_base vmprefix_array_base_register_variable\n");
+  EMIT("#else\n");
+  EMIT("  char * volatile jitter_array_base;\n");
+  EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("#pragma GCC diagnostic pop\n");
-  EMIT("  jitter_slow_registers = malloc (sizeof (union vmprefix_any_register) * slow_register_no * VMPREFIX_REGISTER_CLASS_NO);\n");
-  EMIT("  if (jitter_slow_registers == NULL)\n");
-  EMIT("    jitter_fatal (\"could not allocate slow registers\");\n");
+  EMIT("  jitter_array_base\n");
+  EMIT("    = (((char *) jitter_original_state->vmprefix_state_backing.jitter_array)\n");
+  EMIT("       + JITTER_ARRAY_BIAS);\n");
   EMIT("\n");
 
   EMIT("  /* Declare the instruction pointer from the thread array, unless the dispatching\n");
@@ -2786,17 +2800,6 @@ jitterc_emit_interpreter_main_function
   /* EMIT("     in memory rather than in a register, so as not to waste one register on this. *\/\n"); */
   /* EMIT("  volatile union jitter_word jitter_anywhere_variable __attribute__ ((unused));\n\n"); */
 
-  EMIT("  /* Initialize the residual base, if needed.  After this we will be able to\n");
-  EMIT("     safely access jitter_residual_argument_INDEX, with any index from zero up to\n");
-  EMIT("     VMPREFIX_MAX_RESIDUAL_ARITY - 1, independently from whether\n");
-  EMIT("     jitter_residual_argument_INDEX is a global register variable or a macro\n");
-  EMIT("     expanding to an array lookup from vmprefix_residual_base_register_variable . */\n");
-  EMIT("#ifdef JITTER_NEEDS_RESIDUAL_BASE\n");
-  EMIT("  union jitter_word residual_arg_array [VMPREFIX_MAX_RESIDUAL_ARITY\n");
-  EMIT("                                    - JITTER_RESIDUAL_REGISTER_NO];\n");
-  EMIT("  vmprefix_residual_base_register_variable = residual_arg_array;\n");
-  EMIT("#endif // #ifdef JITTER_NEEDS_RESIDUAL_BASE\n");
-  EMIT("\n\n");
   EMIT("  /* Save an instruction address within this function, to jump to at VM exit\n");
   EMIT("     time; that way we can be sure that at exit time we are back to\n");
   EMIT("     non-replicated code, and stuff like PC-relative addressing work again\n");
@@ -3006,10 +3009,6 @@ jitterc_emit_interpreter_main_function
   EMIT("    jitter_original_state->vmprefix_state_runtime = jitter_state_runtime;\n");
   EMIT("\n");
   EMIT("    // fprintf (stderr, \"Exiting the VM...\\n\");\n\n");
-
-  EMIT("  /* FIXME: of course we don't really want this. */\n");
-  EMIT("  // fprintf (stderr, \"Freeing jitter_slow_registers...\\n\"); fflush (stderr);\n");
-  EMIT("  free (jitter_slow_registers);\n\n");
 
   /* Emit the patch-in footer.  This must come after every patch-in or defect
      use. */
