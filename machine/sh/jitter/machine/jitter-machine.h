@@ -84,12 +84,8 @@
    the only valid target for some operations and the only register usable
    for certain addressing modes. */
 
-/* Register pointing to a memory buffer holding... [FIXME: this will soon
-   change, and become more central]. */
-#define JITTER_RESIDUAL_BASE_REGISTER  r8
-
-/* The scratch register. */
-#define JITTER_SCRATCH_REGISTER       r12
+/* Register pointing to The Array base. */
+#define JITTER_BASE_REGISTER          r8
 
 /* How many registers we can use to hold residual arguments. */
 #define JITTER_RESIDUAL_REGISTER_NO   3
@@ -100,8 +96,13 @@
 #define JITTER_RESIDUAL_REGISTER_1    r10
 #define JITTER_RESIDUAL_REGISTER_2    r11
 
-/* FIXME: I'm probably reserving way too many registers, but this is still a
-   test. */
+/* The scratch register. */
+#define JITTER_SCRATCH_REGISTER       r12
+
+/* FIXME: I'm probably reserving way too many registers.  I should still be able
+   to declare every usable register as a candidate to be reserved, but use only
+   a few by default on architectures not providing so many registers, such as
+   this one. */
 
 
 

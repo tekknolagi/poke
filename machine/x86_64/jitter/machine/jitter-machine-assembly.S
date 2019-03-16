@@ -1,6 +1,6 @@
 /* VM library: assembly support for x86_64 .
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -42,6 +42,10 @@ jitter_routine load_0_to_64bit_residual_register_0, \
            <xorl JITTER_RESIDUAL_REGISTER_0_32BIT, JITTER_RESIDUAL_REGISTER_0_32BIT>
 jitter_routine load_0_to_64bit_residual_register_1, \
            <xorl JITTER_RESIDUAL_REGISTER_1_32BIT, JITTER_RESIDUAL_REGISTER_1_32BIT>
+jitter_routine load_0_to_64bit_residual_register_2, \
+           <xorl JITTER_RESIDUAL_REGISTER_2_32BIT, JITTER_RESIDUAL_REGISTER_2_32BIT>
+jitter_routine load_0_to_64bit_residual_register_3, \
+           <xorl JITTER_RESIDUAL_REGISTER_3_32BIT, JITTER_RESIDUAL_REGISTER_3_32BIT>
 
 /* Load -1 into a 64-bit register by or-ing it with a one-byte -1 literal.
    This assembles to something like
@@ -51,6 +55,10 @@ jitter_routine load_minus_1_to_64bit_residual_register_0, \
            <orq $-1, JITTER_RESIDUAL_REGISTER_0>
 jitter_routine load_minus_1_to_64bit_residual_register_1, \
            <orq $-1, JITTER_RESIDUAL_REGISTER_1>
+jitter_routine load_minus_1_to_64bit_residual_register_2, \
+           <orq $-1, JITTER_RESIDUAL_REGISTER_2>
+jitter_routine load_minus_1_to_64bit_residual_register_3, \
+           <orq $-1, JITTER_RESIDUAL_REGISTER_3>
 
 /* Load a 64-bit literal into a register.  These assemble to something like
      48 bb 00 00 00 00 00 00 00 00   # movabsq $0x0, %rbx
@@ -61,23 +69,27 @@ jitter_routine set_64bit_residual_register_0,       \
            <movabsq $0, JITTER_RESIDUAL_REGISTER_0>
 jitter_routine set_64bit_residual_register_1,       \
            <movabsq $0, JITTER_RESIDUAL_REGISTER_1>
+jitter_routine set_64bit_residual_register_2,       \
+           <movabsq $0, JITTER_RESIDUAL_REGISTER_2>
+jitter_routine set_64bit_residual_register_3,       \
+           <movabsq $0, JITTER_RESIDUAL_REGISTER_3>
 
 /* Load a 64-bit literal into residual argument memory at a fixed offset.
    This assembles to something like:
      49 bd 00 00 00 00 00 00 00 00   # movabsq $0x0, %r13
      4d 89 6c 24 08                  # movq    %r13, 0x8(%r12)
    In the movq instruction the trailing 0x08 is the offset in bytes from
-   the residual base, which is supposed to be patched in.  This format
+   The Array base, which is supposed to be patched in.  This format
    can be used for offsets up to 0x7f (127) included, therefore allowing
    for 16 + JITTER_RESIDUAL_REGISTER_NO residual arguments (but passing 0 as
    an offset here is inefficient: in that case the routine below should
    be used instead) -- which should be plenty.
-   Since the encoding is messy and the total length may change with a
-   different choice of registers, it is better to find patch locations by
-   looking for the first 0x0 byte, and taking the last byte. */
-jitter_routine set_64bit_residual_memory_small_offset,                     \
-           <movabsq $0, JITTER_SCRATCH_REGISTER>,                           \
-           <movq JITTER_SCRATCH_REGISTER, 0x8(JITTER_RESIDUAL_BASE_REGISTER)>
+   Since the instruction encoding is messy and the total length may change
+   with a different choice of registers, it is better to find patch locations
+   by looking for the first 0x0 byte, and taking the last byte. */
+jitter_routine set_64bit_residual_memory_small_offset,                \
+           <movabsq $0, JITTER_SCRATCH_REGISTER>,                     \
+           <movq JITTER_SCRATCH_REGISTER, 0x8(JITTER_BASE_REGISTER)>
 
 /* Just like set_64bit_residual_memory_small_offset, with zero offset.
    This assembles to something like:
@@ -85,9 +97,9 @@ jitter_routine set_64bit_residual_memory_small_offset,                     \
      4d 89 2c 24                     # movq    %r13, 0x0(%r12)
    This is one byte smaller than set_64bit_residual_memory_small_offset .
    See the comment above about patching. */
-jitter_routine set_64bit_residual_memory_zero_offset,                    \
-           <movabsq $0, JITTER_SCRATCH_REGISTER>,                         \
-           <movq JITTER_SCRATCH_REGISTER, 0(JITTER_RESIDUAL_BASE_REGISTER)>
+jitter_routine set_64bit_residual_memory_zero_offset,               \
+           <movabsq $0, JITTER_SCRATCH_REGISTER>,                   \
+           <movq JITTER_SCRATCH_REGISTER, 0(JITTER_BASE_REGISTER)>
 
 /* Just like set_64bit_residual_memory_small_offset, but allowing for
    larger offsets.  This assembles to something like:
@@ -95,9 +107,9 @@ jitter_routine set_64bit_residual_memory_zero_offset,                    \
      4d 89 ac 24 ff 00 00 00         # movq    %r13, 0xff(%r12)
    The last four bytes are the offset from the residual base.
    See the comment above about patching. */
-jitter_routine set_64bit_residual_memory_big_offset,                       \
-           <movabsq $0, JITTER_SCRATCH_REGISTER>,                           \
-           <movq JITTER_SCRATCH_REGISTER, 0xff(JITTER_RESIDUAL_BASE_REGISTER)>
+jitter_routine set_64bit_residual_memory_big_offset,                   \
+           <movabsq $0, JITTER_SCRATCH_REGISTER>,                      \
+           <movq JITTER_SCRATCH_REGISTER, 0xff(JITTER_BASE_REGISTER)>
 
 /* Load a 32-bit literal into a register.  These assemble to something
    like
@@ -113,12 +125,16 @@ jitter_routine set_32bit_residual_register_0,           \
            <movl $0, JITTER_RESIDUAL_REGISTER_0_32BIT>
 jitter_routine set_32bit_residual_register_1,           \
            <movl $0, JITTER_RESIDUAL_REGISTER_1_32BIT>
+jitter_routine set_32bit_residual_register_2,           \
+           <movl $0, JITTER_RESIDUAL_REGISTER_2_32BIT>
+jitter_routine set_32bit_residual_register_3,           \
+           <movl $0, JITTER_RESIDUAL_REGISTER_3_32BIT>
 
 /* Load a 32-bit literal (zero-extended) into residual argument memory at
    a fixed offset.  This assembles to something like:
      49 c7 44 24 08 00 00 00 00   # movq   $0x0, 0x8(%r12)
    In the movq instruction the 0x08 byte before the 32-bit literal is
-   the offset in bytes from the residual base, which is also supposed to
+   the offset in bytes from The Array base, which is also supposed to
    be patched over.  This format can be used for offsets up to 0x7f (127)
    included, therefore allowing for 16 + JITTER_RESIDUAL_REGISTER_NO residual
    arguments (but passing 0 as an offset here is inefficient: in that case
@@ -127,7 +143,7 @@ jitter_routine set_32bit_residual_register_1,           \
    but computing the offsets from the end is reliable and easy.  No
    assumption should be made about the total code length. */
 jitter_routine set_32bit_residual_memory_small_offset,  \
-           <movq $0, 0x8(JITTER_RESIDUAL_BASE_REGISTER)>
+           <movq $0, 0x8(JITTER_BASE_REGISTER)>
 
 /* Just like set_32bit_residual_memory_small_offset, with zero offset.
    This assembles to something like:
@@ -135,7 +151,7 @@ jitter_routine set_32bit_residual_memory_small_offset,  \
    This is one byte smaller than set_32bit_residual_memory_small_offset .
    See the comment above about patching. */
 jitter_routine set_32bit_residual_memory_zero_offset,  \
-           <movq $0, 0(JITTER_RESIDUAL_BASE_REGISTER)>
+           <movq $0, 0(JITTER_BASE_REGISTER)>
 
 /* Just like set_32bit_residual_memory_small_offset, but allowing for
    larger offsets.  This assembles to something like:
@@ -144,7 +160,7 @@ jitter_routine set_32bit_residual_memory_zero_offset,  \
    before that are the 32-bit offset from the residual base.
    See the comment above about patching. */
 jitter_routine set_32bit_residual_memory_big_offset,  \
-           <movq $0, 0xff(JITTER_RESIDUAL_BASE_REGISTER)>
+           <movq $0, 0xff(JITTER_BASE_REGISTER)>
 
 /* Branch relative (to the end of the jmp instruction) with a 32-bit signed
    offset.  This assembles to something like:

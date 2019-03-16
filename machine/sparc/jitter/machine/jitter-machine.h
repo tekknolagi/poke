@@ -1,7 +1,7 @@
 /* VM library: SPARC definitions, to be included from both C and assembly.
    This supports both 32- and 64-bit configurations.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -74,8 +74,11 @@
    but usable as scratch.
     %g6 (??) and %g7 (thread pointer) are reserved for the system. */
 
+/* Register pointing to The Array base. */
+#define JITTER_BASE_REGISTER           %l7
+
 /* How many registers we can use to hold residual arguments. */
-#define JITTER_RESIDUAL_REGISTER_NO   12
+#define JITTER_RESIDUAL_REGISTER_NO    12
 //#define JITTER_RESIDUAL_REGISTER_NO   0 // this is good for testing memory literals
 
 /* Registers holding residual arguments, with 0-based suffixes.  These have to
@@ -97,11 +100,6 @@
 //#define JITTER_SCRATCH_REGISTER        %g1 // FIXME: this is call-clobbered, so I can't easily
                                              // reserve it, but it would work well as scratch.
 #define JITTER_SCRATCH_REGISTER        %l6
-
-/* Register pointing to a memory buffer holding residual arguments not fitting
-   in the registers above.  I doubt that will happen much on such a
-   register-rich architecture. */
-#define JITTER_RESIDUAL_BASE_REGISTER  %l7
 
 
 

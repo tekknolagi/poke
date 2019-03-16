@@ -186,6 +186,7 @@ vmprefix_make_routine (void)
 
 
 
+
 /* Array element access: residuals, transfers, slow registers, more to come.
  * ************************************************************************** */
 
@@ -207,31 +208,36 @@ vmprefix_make_routine (void)
 #define VMPREFIX_GLOBAL_NO 0
 
 #ifdef JITTER_DISPATCH_NO_THREADING
-/* Expand to the offset of the i-th residual from the base, in bytes.  This is
-   not useful with any of the other dispatching modes, where residuals directly
-   follow each VM instruction opcode or thread.
-   For good performance i should always be a compile-time constant, as it is
-   in machine-generated code.
-
-   FIXME: right now there is a separate base for residuals and for slow
-   registers, but this will change. */
+/* Expand to the offset from the base, in bytes, of the i-th residual.  The
+   given index must be greater than or equal to JITTER_RESIDUAL_REGISTER_NO;
+   residuals with indices lower than that number are not stored in The Array
+   at all.
+   This is not useful with any of the other dispatching modes, where residuals
+   directly follow each VM instruction opcode or thread.  For good performance i
+   should always be a compile-time constant, as it is in machine-generated
+   code. */
+/* FIXME: if later I use a different policy than simply checking
+   JITTER_RESIDUAL_REGISTER_NO to decide how many residuals to keep in
+   registers, then I have to change this or meet very nasty bugs. */
 # define VMPREFIX_RESIDUAL_UNBIASED_OFFSET(i)  \
-    (sizeof (union vmprefix_any_register) * (i))
+    (sizeof (union vmprefix_any_register) *    \
+     (i - JITTER_RESIDUAL_REGISTER_NO))
 # define VMPREFIX_RESIDUAL_OFFSET(i)  \
     (VMPREFIX_RESIDUAL_UNBIASED_OFFSET(i) - JITTER_ARRAY_BIAS)
 #endif // #ifdef JITTER_DISPATCH_NO_THREADING
 
 /* Define a macro holding the first slow register offset in bytes from an
-   initial Array pointer Array */
+   initial Array pointer. */
 #ifdef JITTER_DISPATCH_NO_THREADING
   /* With no-threading dispatch we have to keep into account residuals and
      transfer registers, which come before slow registers.  [FIXME: and more in
-     the future].  This relies on UNINSPIRED_MAX_RESIDUAL_ARITY , defined below
-     in machine-generated code. */
+     the future].  This relies on VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY ,
+     defined below, which in its turn depends on VMPREFIX_MAX_RESIDUAL_ARITY,
+     which is machine-generated. */
 # define VMPREFIX_FIRST_SLOW_REGISTER_UNBIASED_OFFSET  \
   (sizeof (union vmprefix_any_register)                \
    * (  VMPREFIX_GLOBAL_NO                             \
-      + VMPREFIX_MAX_RESIDUAL_ARITY                    \
+      + VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY             \
       + VMPREFIX_TRANSFER_REGISTER_NO))
 #else
   /* With any dispatching model different from no-threading the Array begins
@@ -279,6 +285,37 @@ vmprefix_make_routine (void)
    + (sizeof (union vmprefix_any_register)                               \
       * VMPREFIX_REGISTER_CLASS_NO                                       \
       * (slow_register_per_class_no)))
+
+
+
+
+/* Residual access.
+ * ************************************************************************** */
+
+/* How many residuals we can have at most in memory, which is to say,
+   without counting residuals kept in reserved registers.
+
+   Implementation note: it would be wrong here to use a CPP conditional based on
+   the value of VMPREFIX_MAX_RESIDUAL_ARITY , as I was doing in a preliminary
+   version.  That lead to a tricky bug, since VMPREFIX_MAX_RESIDUAL_ARITY ,
+   which is defined below but is not yet available here, simply counted as 0
+   for the purposes of evaluating the CPP condititional. */
+#ifdef JITTER_DISPATCH_NO_THREADING
+  /* We are using no-threading dispatch.  If there are no more residuals
+     than reserved residual registers then we never need to keep any in
+     memory.  Otherwise we need to keep as many residuals in memory as the
+     total number of residuals minus how many registers are reserved for
+     them. */
+# define VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY                          \
+    ((VMPREFIX_MAX_RESIDUAL_ARITY <= JITTER_RESIDUAL_REGISTER_NO)    \
+     ? 0                                                             \
+     : (VMPREFIX_MAX_RESIDUAL_ARITY - JITTER_RESIDUAL_REGISTER_NO))
+#else
+  /* No registers are reserved for residuals in this dispatching mode, so
+     every residual is a memory residual. */
+# define VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY  \
+  VMPREFIX_MAX_RESIDUAL_ARITY
+#endif // #ifdef JITTER_DISPATCH_NO_THREADING
 
 
 
