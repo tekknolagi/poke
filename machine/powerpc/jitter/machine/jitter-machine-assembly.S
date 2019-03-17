@@ -38,37 +38,51 @@ jitter_arrays .long
      3b e0 00 42   # addi %r31, %r0, 0x42
    where the rightmost 16-bits, here 0x0042, are the literal.  In the case
    of addi (but not, unfortunately, for ori) %r0 is taken to mean zero, and
-   not the content of %r0. */
+   not the content of %r0.
+
+   Using bodies such as
+     <addi JITTER_RESIDUAL_REGISTER_0, %r0, 0>
+   used to work fine with older versions of Gas, but now I'm seeing warnings
+   (but still the same correct code).
+   I suppose this counterintuitive use or %r0 has been deprecated, even if I
+   find nothing specific in the documentation at a quick look.
+   According to the PowerPC user instruction set architecture manual
+     li Rx, value
+   is just an extended mnemonic for
+     addi Rx, 0, value.
+   I will now use
+     <addi JITTER_RESIDUAL_REGISTER_0, 0, 0>
+   .  I prefer never to use extended mnemonic or pseudo-instructions, out
+   of fear that their encoding may change in the future, breaking my patch
+   mechanism. */
 jitter_routine load_sign_extended_16bit_to_register_0, \
-           <addi JITTER_RESIDUAL_REGISTER_0, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_0, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_1, \
-           <addi JITTER_RESIDUAL_REGISTER_1, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_1, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_2, \
-           <addi JITTER_RESIDUAL_REGISTER_2, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_2, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_3, \
-           <addi JITTER_RESIDUAL_REGISTER_3, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_3, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_4, \
-           <addi JITTER_RESIDUAL_REGISTER_4, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_4, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_5, \
-           <addi JITTER_RESIDUAL_REGISTER_5, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_5, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_6, \
-           <addi JITTER_RESIDUAL_REGISTER_6, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_6, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_7, \
-           <addi JITTER_RESIDUAL_REGISTER_7, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_7, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_8, \
-           <addi JITTER_RESIDUAL_REGISTER_8, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_8, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_9, \
-           <addi JITTER_RESIDUAL_REGISTER_9, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_9, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_10, \
-           <addi JITTER_RESIDUAL_REGISTER_10, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_10, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_11, \
-           <addi JITTER_RESIDUAL_REGISTER_11, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_11, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_12, \
-           <addi JITTER_RESIDUAL_REGISTER_12, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_12, 0, 0>
 jitter_routine load_sign_extended_16bit_to_register_13, \
-           <addi JITTER_RESIDUAL_REGISTER_13, %r0, 0>
-jitter_routine load_sign_extended_16bit_to_register_14, \
-           <addi JITTER_RESIDUAL_REGISTER_14, %r0, 0>
+           <addi JITTER_RESIDUAL_REGISTER_13, 0, 0>
 
 
 /* Load a 32-bit literal into a 32-bit register.  This assembles to
@@ -120,9 +134,6 @@ jitter_routine load_32bit_to_register_12,                               \
 jitter_routine load_32bit_to_register_13,                               \
            <lis JITTER_RESIDUAL_REGISTER_13, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_13, JITTER_RESIDUAL_REGISTER_13, 0>
-jitter_routine load_32bit_to_register_14,                               \
-           <lis JITTER_RESIDUAL_REGISTER_14, 0>,                        \
-           <ori JITTER_RESIDUAL_REGISTER_14, JITTER_RESIDUAL_REGISTER_14, 0>
 
 /* FIXME: actually implement. */
 jitter_routine load_sign_extended_16bit_to_memory,  \

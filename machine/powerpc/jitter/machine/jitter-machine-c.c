@@ -1,6 +1,6 @@
 /* VM library: native code patching for PowerPC .
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -57,11 +57,14 @@ jitter_invalidate_icache (char *from, size_t byte_no)
   for (p = from ; p < limit; p += 32)
     /* Both dcbf and icbi take two registers as parameters, whose contents are
        summed to get a logical address, unless ther first register is %r0 --
-       in which case only the second register is used. */
-    asm volatile ("dcbf %%r0, %0\n\t"
-                  "icbi %%r0, %0\n\t"
+       in which case only the second register is used.
+       See the comment for load_sign_extended_16bit_to_register_0 in
+       jitter-machine-assembly.S about the reason why the first operand here
+       is "0" rather than "%%r0". */
+    asm volatile ("dcbf 0, %[pointer]\n\t"
+                  "icbi 0, %[pointer]\n\t"
                   :
-                  : "r" (p)
+                  : [pointer] "r" (p)
                   : "memory");
 
   /* Ensure the instructions we wrote are now in memory. */
@@ -99,7 +102,6 @@ jitter_routine_for_loading_register (const char *immediate_pointer,
       case 11:  return jitter_routine_load_sign_extended_16bit_to_register_11;
       case 12:  return jitter_routine_load_sign_extended_16bit_to_register_12;
       case 13:  return jitter_routine_load_sign_extended_16bit_to_register_13;
-      case 14:  return jitter_routine_load_sign_extended_16bit_to_register_14;
       default: jitter_fatal ("impossible");
       }
   else
@@ -120,7 +122,6 @@ jitter_routine_for_loading_register (const char *immediate_pointer,
       case 11:  return jitter_routine_load_32bit_to_register_11;
       case 12:  return jitter_routine_load_32bit_to_register_12;
       case 13:  return jitter_routine_load_32bit_to_register_13;
-      case 14:  return jitter_routine_load_32bit_to_register_14;
       default: jitter_fatal ("impossible");
       }
 }
