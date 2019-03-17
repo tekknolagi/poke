@@ -1,7 +1,7 @@
 .\" This is -*- nroff -*-.
 .\" Stub man page for Jitter, to be used when help2man is not usable.
 .\"
-.\" Copyright (C) 2017 Luca Saiu
+.\" Copyright (C) 2017, 2019 Luca Saiu
 .\"
 .\" About this man page:
 .\" Permission is granted to copy, distribute and/or modify this
@@ -21,15 +21,19 @@
 .\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 .\" GNU General Public License for more details.
 .\" You should have received a copy of the GNU General Public License
-.\" along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
-
+.\" along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+.\"
+.\"
+.\" This file is crude.  I have only a very superficial understanding
+.\" of nroff.  It should still be adequate for a stub pointing to other.
+.\" documentation.
 .TH JITTER 1
 
 .SH NAME
 Jitter \- an efficient Virtual Machine generator
 
 .SH DESCRIPTION
-Alas, there is no information here.
+Alas, there is not much information here.
 
 .SH THIS MAN PAGE IS A STUB
 The system on which the source tarball was built lacked the
@@ -38,13 +42,28 @@ emulator available to run the produced file with
 \fB\-\-help\fR ;
 for these reasons this page is just a placeholder.
 
-Anyway, the actual documentation is in Texinfo.
+Anyway, the actual documentation is in Texinfo.  If your Info system
+is well configured and you have installed Jitter then you should be
+able to use the command line
+
+\fBinfo\ jitter\fR
+
+to access the full documentation; otherwise, the best way to use the Info
+documentation is certainly from GNU Emacs.
+
+The official manual can also be compiled into Info, PostScript, PDF or HTML
+from the source distribution via
+
+\fBmake\ info\ ps\ pdf\ html\fR
+
+JitterLisp, an elaborate example of Jitter use, also has its own manual written
+in Texinfo, which is built from the same command line above.
 
 .SH AUTHOR
 Written by Luca Saiu.
 
 .SH COPYRIGHT FOR JITTER
-Copyright \(co 2017 Luca Saiu
+Copyright \(co 2016, 2017, 2018, 2019 Luca Saiu
 
 You may redistribute copies of Jitter under the terms of the GNU General Public
 License, version 3 or any later version published by the Free Software
@@ -52,7 +71,7 @@ Foundation.  For more information see the file named COPYING in the source
 distribution.
 
 .SH COPYRIGHT FOR THIS STUB MAN PAGE
-Copyright \(co 2017 Luca Saiu
+Copyright \(co 2017, 2019 Luca Saiu
 
 Permission is granted to copy, distribute and/or modify this
 document under the terms of the GNU Free Documentation License,
@@ -61,3 +80,9 @@ Foundation; with no Invariant Sections, no Front-Cover Texts, and
 no Back-Cover Texts.  A copy of the license is included in the
 Jitter distribution as \fBCOPYING.DOC\fR .
 
+.SH "SEE ALSO"
+.BR info(1)\fR,
+.BR makeinfo(1)\fR,
+.BR texi2any(1)\fR,
+the Jitter web page at
+.BR http://ageinghacker.net/projects/jitter\fR

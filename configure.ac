@@ -672,16 +672,18 @@ AC_SUBST([JITTER_EMULATOR], $jitter_with_emulator)
 # Can we actually rebuild man pages?
 ################################################################
 
-# GNU help2man can be made to work even when cross-compiling, as long as there
-# is a usable emulator.  If not we have to do without man pages.
-if    test "x$jitter_cross_compiling" = "xyes" \
-   && test "x$jitter_with_emulator" = "x"; then
-   jitter_can_rebuild_man_pages="no"
-else
+# GNU help2man could be made to work even when cross-compiling, as long as there
+# is a usable emulator.  Still, there is very little gain in doing this and lots
+# of gratuitous headaches when using the missing script with an emulator.  I
+# will keep things simple for now.
+AC_MSG_CHECKING([if we should use help2man to rebuild man pages])
+if    test "x$jitter_cross_compiling" != "xyes" \
+   && test "x$jitter_has_help2man"    =  "xyes"; then
    jitter_can_rebuild_man_pages="yes"
-fi
-if test "x$jitter_has_help2man" != "xyes"; then
+   AC_MSG_RESULT([yes])
+else
    jitter_can_rebuild_man_pages="no"
+   AC_MSG_RESULT([no (cross-compiling or no help2man)])
 fi
 AM_CONDITIONAL([JITTER_CAN_REBUILD_MAN_PAGES],
                [test "x$jitter_can_rebuild_man_pages" = "xyes"])
