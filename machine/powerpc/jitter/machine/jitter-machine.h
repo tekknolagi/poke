@@ -36,7 +36,7 @@
  * ************************************************************************** */
 
 /* Expand to an inline assembly template generating a nop instruction containing
-   the given literal as an argument. */ // FIXME: define this for this architecture.
+   the given literal as an argument. */
 #define _JITTER_ASM_DEBUGGING_NOP(integer_literal_as_string)  \
   "xori %%r0, %%r0, " integer_literal_as_string "\n\t"        \
   "xori %%r0, %%r0, " integer_literal_as_string "\n\t"
@@ -68,16 +68,22 @@
 /* PowerPC configurations should have at least the following registers available
    as callee-save:
      %r14 %r15 %r16 %r17 %r18 %r19 %r20 %r21 %r22
-     %r23 %r24 %r25 %r26 %r27 %r28 %r29 %r30 .
+     %r23 %r24 %r25 %r26 %r27 %r28 %r29 .
    This is already excellent, but I suspect a few others might work as well.  For
    example GCC says that %r31 is used as a frame pointer, but stops complaining if
-   I use -fomit-frame-pointer -- which I certainly do for VMs. */
+   I use -fomit-frame-pointer -- which I certainly do for VMs.
+   I have seen this error message attempting to use %r30 on 32-bit PowerPC
+   GNU/Linux:
+     error: 30 cannot be used in asm here
+   Not using it seems to solve the problem, so I deduce that %r30 is not usable,
+   even I read somewhere that it was supposed to be callee-save.  I doubt PowerPC
+   has instructions not accepting specific registers as arguments. */
 
 /* Register pointing to The Array base. */
 #define JITTER_BASE_REGISTER          %r14
 
 /* How many registers we can use to hold residual arguments. */
-#define JITTER_RESIDUAL_REGISTER_NO   15
+#define JITTER_RESIDUAL_REGISTER_NO   14
 //#define JITTER_RESIDUAL_REGISTER_NO   0 // this is good for testing memory literals
 
 /* Registers holding residual arguments, with 0-based suffixes.  These have to
@@ -96,10 +102,9 @@
 #define JITTER_RESIDUAL_REGISTER_11   %r26
 #define JITTER_RESIDUAL_REGISTER_12   %r27
 #define JITTER_RESIDUAL_REGISTER_13   %r28
-#define JITTER_RESIDUAL_REGISTER_14   %r29
 
 /* The scratch register. */
-#define JITTER_SCRATCH_REGISTER       %r30
+#define JITTER_SCRATCH_REGISTER       %r29
 
 
 
@@ -160,7 +165,6 @@ enum jitter_routine_to_patch
     jitter_routine_load_sign_extended_16bit_to_register_11,
     jitter_routine_load_sign_extended_16bit_to_register_12,
     jitter_routine_load_sign_extended_16bit_to_register_13,
-    jitter_routine_load_sign_extended_16bit_to_register_14,
     jitter_routine_load_32bit_to_register_0,
     jitter_routine_load_32bit_to_register_1,
     jitter_routine_load_32bit_to_register_2,
@@ -175,7 +179,6 @@ enum jitter_routine_to_patch
     jitter_routine_load_32bit_to_register_11,
     jitter_routine_load_32bit_to_register_12,
     jitter_routine_load_32bit_to_register_13,
-    jitter_routine_load_32bit_to_register_14,
     /* FIXME: the next two routines are not implemented yet. */
     jitter_routine_load_sign_extended_16bit_to_memory,
     jitter_routine_load_32bit_to_memory,
