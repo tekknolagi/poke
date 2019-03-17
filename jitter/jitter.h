@@ -1,6 +1,7 @@
 /* Jitter: VM-independent library.
 
    Copyright (C) 2016, 2017 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -96,7 +97,7 @@
 
 
 /* A thread, which is to say a label-as-value using the GNU C extension.  From
-   the interpreter point of view the memory is constant, so restrict here is
+   the executor point of view the memory is constant, so restrict here is
    correct and might possibly enable some optimization. */
 typedef const void * restrict jitter_thread;
 

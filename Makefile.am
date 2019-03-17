@@ -436,7 +436,7 @@ SOURCES_FOR_LIBJITTER = \
   jitter/jitter-mmap.c jitter/jitter-mmap.h \
   jitter/jitter-disassemble.c jitter/jitter-disassemble.h \
   jitter/jitter-fast-branch.c jitter/jitter-fast-branch.h \
-  jitter/jitter-interpreter-private.h \
+  jitter/jitter-executor.h \
   jitter/jitter-parser.c jitter/jitter-parser.h \
   jitter/jitter-scanner.c jitter/jitter-scanner.h \
   jitter/jitter-tagging.c jitter/jitter-tagging.h \
@@ -466,7 +466,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-rewrite.h \
   jitter/jitter-specialize.h \
   jitter/jitter-disassemble.h \
-  jitter/jitter-interpreter-private.h \
+  jitter/jitter-executor.h \
   jitter/jitter-patch-in.h \
   jitter/jitter-parser.h \
   jitter/jitter-scanner.h \

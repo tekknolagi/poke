@@ -2540,7 +2540,7 @@ No-threading works well.
 x86_64 is very well supported and has patch-ins for branches, both
 unconditional and conditional, and procedures.
 
-Compiling the interpreter with the GCC option @code{-mcmodel=large} is
+Compiling the executor with the GCC option @code{-mcmodel=large} is
 an easy and reliable way of preventing the compiler from using
 @code{%rip}-relative addressing to access data from relocated code:
 the trick is that x86_64 can only encode a displacement from
@@ -2833,7 +2833,7 @@ directly in DFA form by using a hash at generation time.  I cannot
 really tell how much of a problem specialization performance is at run
 time without benchmarking a complete Jittery application.  As for
 compile time, specialization is heavyweight but not the bottleneck:
-the interpreter, being a single huge function, is more demanding on
+the executor, being essentially one huge function, is more demanding on
 the compiler than a large set of small static functions calling each
 other.  Switching from the current approach based on custom code
 generated for each specialized instruction to a single generated table

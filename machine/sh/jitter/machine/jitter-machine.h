@@ -65,7 +65,7 @@
 /* Computed goto implemented with inline asm.  See the comments about
    JITTER_ASM_COMPUTED_GOTO_TEMPLATE, and
    JITTER_ASM_COMPUTED_GOTO_INPUT_CONSTRAINT and
-   JITTER_ASM_COMPUTED_GOTO_CLOBBERS in jitter/jitter-interpreter-private.h . */
+   JITTER_ASM_COMPUTED_GOTO_CLOBBERS in jitter/jitter-executor.h . */
 #define JITTER_ASM_COMPUTED_GOTO_TEMPLATE  \
   "jmp @%[_jitter_the_target]\n\t"         \
   "nop"  /* Delay slot. */
