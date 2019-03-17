@@ -40,7 +40,6 @@ check_SCRIPTS =
 dist_flag_DATA =
 dist_lisp_LISP =
 dist_man1_MANS =
-dist_noinst_MANS =
 dist_template_DATA =
 info_TEXINFOS =
 jitterinclude_HEADERS =
@@ -1590,7 +1589,7 @@ HELP2MAN_WITH_OPTIONS = \
 # cannot actually rebuild man pages; in this case we will make copies from a
 # stub.  The stub has to be distributed even if it's not needed in the current
 # configuration.
-dist_noinst_MANS += doc/missing-man-page.1
+EXTRA_DIST += doc/missing-man-page.1
 
 # The actual man pages.
 dist_man1_MANS += \
