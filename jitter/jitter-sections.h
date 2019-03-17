@@ -53,7 +53,7 @@
 
    The descriptor array is defined, of course within its subsection, from a
    "header" in top-level inline assembly, which *must* come before the
-   "interpreter" code containing patch-in placeholders.  Instead of relying on
+   executor code containing patch-in placeholders.  Instead of relying on
    the no_reorder attribute as I used to do, I now generate header and footer
    within the same function, relying on the ordering semantics of inline asm
    statements with dependencies and asm volatile.

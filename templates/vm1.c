@@ -73,7 +73,7 @@ vmprefix_vm_configuration = & the_vmprefix_vm.configuration;
  * ************************************************************************** */
 
 /* Initialize threads.  This only needs to be called once at initialization, and
-   the user doesn't need to bother with it.  Defined along with the interpreter. */
+   the user doesn't need to bother with it.  Defined along with the executor. */
 void
 vmprefix_initialize_threads (void);
 
@@ -483,7 +483,8 @@ vmprefix_parse_string (const char *string, struct jitter_routine *p)
 /* What follows could be conceptually split into several generated C files, but
    having too many of them would be inconvenient for the user to compile and
    link.  For this reason we currently generate just three files: one is this,
-   another is for the specializer and the last one for the interpreter.  The
-   interpreter will be potentially very large, so it is best compiled
-   separately.  The specializer might be large as well at this stage, even if
-   its compilation is usually much less expensive. */
+   which also contains the specializer, another is for the executor, and then a
+   header -- a main module is optional.  The executor will be potentially very
+   large, so it is best compiled separately.  The specializer might be large as
+   well at this stage, even if its compilation is usually much less
+   expensive. */

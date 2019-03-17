@@ -49,7 +49,7 @@
 /* Computed goto implemented with inline asm.  See the comments about
    JITTER_ASM_COMPUTED_GOTO_TEMPLATE, and
    JITTER_ASM_COMPUTED_GOTO_INPUT_CONSTRAINT and
-   JITTER_ASM_COMPUTED_GOTO_CLOBBERS in jitter/jitter-interpreter-private.h .
+   JITTER_ASM_COMPUTED_GOTO_CLOBBERS in jitter/jitter-executor.h .
    In the case of MIPS we can afford to keep .reorder on as per the default
    setting, and *not* to specify a delay slot.  Gas will be able to fill the
    delay slot itself with something useful, when we are lucky. */
@@ -408,8 +408,8 @@
     && defined(JITTER_MACHINE_SUPPORTS_PROCEDURE)
 
 /* The return address is in $31 (and I never need to worry about saving its
-   initial value before starting, since the interpreter has already called C
-   functions at initialization, which means that before the interpreter
+   initial value before starting, since the executor has already called C
+   functions at initialization, which means that before the executor
    returns it will have to restore its original $31 from the stack anyway);
    just copy $31 to link_lvalue . */
 #define _JITTER_PROCEDURE_PROLOG(link_lvalue)                                   \

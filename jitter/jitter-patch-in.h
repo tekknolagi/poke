@@ -203,7 +203,7 @@ struct jitter_patch_in_descriptor
 
 /* Expand to an inline asm statement containing the patch-in header.  Here
    volatility serves to force this statement to be emitted before the other asm
-   volatile statements within the "interpreter" and before the footer, therefore
+   volatile statements within the executor and before the footer, therefore
    forcing a correct order in the generated assembly file. */
 #define JITTER_PATCH_IN_HEADER(_jitter_vm_the_prefix)                       \
   asm volatile (JITTER_ASM_OPEN_DEFINITION(JITTER_ASM_PATCH_IN_SUBSECTION,  \

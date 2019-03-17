@@ -1786,7 +1786,7 @@ jitterc_emit_register_classes (const struct jitterc_vm *vm)
 
 /* Emit macro definitions for accessing slow registers.  These go into the
    VM header, since they are useful both in specialization, for computing
-   offsets from the base, and in the interpreter. */
+   offsets from the base, and in the executor. */
 static void
 jitterc_emit_register_access_macros_h (const struct jitterc_vm *vm)
 {
@@ -1802,7 +1802,7 @@ jitterc_emit_register_access_macros_h (const struct jitterc_vm *vm)
 
 
 
-/* Interpreter generation.
+/* Executor generation.
  * ************************************************************************** */
 
 /* Emit macro definitions for accessing registers as lvalues, available to user
@@ -1816,7 +1816,7 @@ jitterc_emit_register_access_macros_h (const struct jitterc_vm *vm)
 
    FIXME: this will need generalization when I introduce register classes. */
 static void
-jitterc_emit_interpreter_register_access_macros (FILE *f,
+jitterc_emit_executor_register_access_macros (FILE *f,
                                                  const struct jitterc_vm *vm)
 {
   EMIT("/* Expand to the i-th fast register as an lvalue.  This is used internally,\n");
@@ -1881,7 +1881,7 @@ jitterc_emit_interpreter_register_access_macros (FILE *f,
 }
 
   static void
-jitterc_emit_interpreter_reserve_registers (FILE *f,
+jitterc_emit_executor_reserve_registers (FILE *f,
                                             const struct jitterc_vm *vm)
 {
   /* We don't need to reserve global registers even with no-threading dispatch
@@ -1993,7 +1993,7 @@ jitterc_emit_interpreter_reserve_registers (FILE *f,
 }
 
 static void
-jitterc_emit_interpreter_global_wrappers
+jitterc_emit_executor_global_wrappers
    (FILE *f, const struct jitterc_vm *vm)
 {
   EMIT("/* Selectively suppress suprious -Wmaybe-uninitialized .\n");
@@ -2070,7 +2070,7 @@ jitterc_emit_interpreter_global_wrappers
    - 1 (second residual non-fast-label)
    - 1 (second "residual" fast label). */
 static void
-jitterc_emit_interpreter_sarg_definition
+jitterc_emit_executor_sarg_definition
    (FILE *f, int index, int residual_index,
     const struct jitterc_specialized_argument* sarg,
     bool have_fast_labels)
@@ -2148,7 +2148,7 @@ jitterc_emit_interpreter_sarg_definition
       break;
 
     default:
-      jitter_fatal ("jitterc_emit_interpreter_sarg_definition: invalid argument kind %i", (int) sarg->kind);
+      jitter_fatal ("jitterc_emit_executor_sarg_definition: invalid argument kind %i", (int) sarg->kind);
     }
   EMIT("#   define JITTER_ARGN%i (JITTER_ARG%i.fixnum)\n", index, index);
   EMIT("#   define JITTER_ARGU%i (JITTER_ARG%i.ufixnum)\n", index, index);
@@ -2184,12 +2184,12 @@ jitterc_emit_sarg_definitions_internal
       if (   have_fast_labels
           && sarg->kind == jitterc_instruction_argument_kind_fast_label)
         {
-          jitterc_emit_interpreter_sarg_definition
+          jitterc_emit_executor_sarg_definition
             (f, j, residual_label_index, sarg, have_fast_labels);
           residual_label_index ++;
         }
       else
-        jitterc_emit_interpreter_sarg_definition
+        jitterc_emit_executor_sarg_definition
           (f, j, residual_arity, sarg, have_fast_labels);
 
       if (   sarg->residual
@@ -2312,7 +2312,7 @@ jitter_fast_branch_macro_no
 /* Emit macro definitions for fast branching.  These are defined in a different
    way for replacement and non-replacement specialized instructions. */
 static void
-jitterc_emit_interpreter_fast_branch_definitions
+jitterc_emit_executor_fast_branch_definitions
   (FILE *f, const struct jitterc_vm *vm,
    const struct jitterc_specialized_instruction* sins)
 {
@@ -2335,7 +2335,7 @@ jitterc_emit_interpreter_fast_branch_definitions
 }
 
 static void
-jitterc_emit_interpreter_ordinary_specialized_instructions
+jitterc_emit_executor_ordinary_specialized_instructions
    (FILE *f, const struct jitterc_vm *vm)
 {
   int i; char *comma __attribute__ ((unused));
@@ -2367,7 +2367,7 @@ jitterc_emit_interpreter_ordinary_specialized_instructions
 
       /* Emit definitions for fast-branch macros.  The definitions will be
          different for replacement and non-replacement instructions. */
-      jitterc_emit_interpreter_fast_branch_definitions (f, vm, sins);
+      jitterc_emit_executor_fast_branch_definitions (f, vm, sins);
 
       if (! is_relocatable)
         {
@@ -2561,15 +2561,15 @@ jitterc_emit_interpreter_ordinary_specialized_instructions
   EMIT("  /* End of the ordinary specialized instructions. */\n\n");
 }
 
-/* Emit the patch-in header, before the main interpreter. */
+/* Emit the patch-in header, before the main executor. */
 static void
 jitterc_emit_patch_in_header (FILE *f, const struct jitterc_vm *vm)
 {
   /* Generate the patch-in header.  The generated code expands to an inline asm
      statement.  It is convenient to keep header and footer within the main
-     "interpreter" function, so as to guarantee that the order is respected. */
+     executor function, so as to guarantee that the order is respected. */
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
-  EMIT("  /* Generate the single patch-in header for this interpreter as a\n");
+  EMIT("  /* Generate the single patch-in header for this executor as a\n");
   EMIT("     global asm statement.  This expands into a global definition in\n");
   EMIT("     assembly in a separate subsection, and relies on toplevel C\n");
   EMIT("     definitions not being reordered: vmprefix_execute_or_initialize\n");
@@ -2580,14 +2580,14 @@ jitterc_emit_patch_in_header (FILE *f, const struct jitterc_vm *vm)
   EMIT("\n");
 }
 
-/* Emit the patch-in footer, after the main interpreter. */
+/* Emit the patch-in footer, after the main executor. */
 static void
 jitterc_emit_patch_in_footer (FILE *f, const struct jitterc_vm *vm)
 {
   /* Generate the patch-in footer.  See the comment in
      jitterc_emit_patch_in_header . */
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
-  EMIT("  /* Close the patch-in global definition for this interpreter.  This defines a\n");
+  EMIT("  /* Close the patch-in global definition for this executor.  This defines a\n");
   EMIT("     new global in the patch-in subsection, holding the descriptor number.\n");
   EMIT("     This is a global asm statement.  Same for defects.  See the comment before\n");
   EMIT("      the JITTER_PATCH_IN_HEADER use above. */\n");
@@ -2596,9 +2596,9 @@ jitterc_emit_patch_in_footer (FILE *f, const struct jitterc_vm *vm)
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
 }
 
-/* Emit the case for a special specialized instruction in the interpreter. */
+/* Emit the case for a special specialized instruction in the executor. */
 static void
-jitterc_emit_interpreter_special_specialized_instruction
+jitterc_emit_executor_special_specialized_instruction
    (FILE *f, const struct jitterc_vm *vm,
     const char *name,
     enum jitter_specialized_instruction_opcode opcode,
@@ -2624,10 +2624,10 @@ jitterc_emit_interpreter_special_specialized_instruction
 }
 
 static void
-jitterc_emit_interpreter_main_function
+jitterc_emit_executor_main_function
    (FILE *f, const struct jitterc_vm *vm)
 {
-  /* Generate the actual interpreter main function. */
+  /* Generate the actual executor main function. */
   EMIT("static void\n");
   EMIT("vmprefix_execute_or_initialize (bool jitter_initialize,\n");
   EMIT("                                vmprefix_program_point jitter_initial_program_point,\n");
@@ -2668,7 +2668,7 @@ jitterc_emit_interpreter_main_function
      defect use. */
   jitterc_emit_patch_in_header (f, vm);
 
-  /* The main interpreter function begins with three big static arrays containing
+  /* The main executor function begins with three big static arrays containing
      the labels where every specialized instruction begins and ends, and their sizes
      (only when replication is enabled), to be used only at initialization. */
   EMIT("  /* Initialization.  This is only called once at startup. */\n");
@@ -2756,10 +2756,10 @@ jitterc_emit_interpreter_main_function
   EMIT("    }\n");
   EMIT("\n\n");
 
-  EMIT("  /* Here is the actual *interpreter* initialization, to be run before\n");
+  EMIT("  /* Here is the actual *executor* initialization, to be run before\n");
   EMIT("     actually running the code. */\n\n");
 
-  jitterc_emit_interpreter_global_wrappers (f, vm);
+  jitterc_emit_executor_global_wrappers (f, vm);
 
   /* If control flow reaches this point then we are actually executing code. */
   EMIT("  /* Make an automatic struct holding a copy of the state whose pointer was given.\n");
@@ -2842,7 +2842,7 @@ jitterc_emit_interpreter_main_function
   // FIXME: move to a new function: END
 
   /* Insert C code from the user.  This is supposed to come in right before
-     interpretation starts. */
+     execution starts. */
   EMIT("  /* Initialization C code from the user */\n");
   EMIT("%s", vm->initialization_c_code);
   EMIT("  /* End of the initialization C code from the user */\n\n");
@@ -2948,33 +2948,33 @@ jitterc_emit_interpreter_main_function
      manually synchronized with jitterc-vm.c in case I add, remove or change
      any special specialized instruction. */
 
-  jitterc_emit_interpreter_special_specialized_instruction
+  jitterc_emit_executor_special_specialized_instruction
      (f, vm, "!INVALID",
       jitter_specialized_instruction_opcode_INVALID,
       "cold", 0,
       "jitter_fatal (\"reached the !INVALID instruction\");");
-  jitterc_emit_interpreter_special_specialized_instruction
+  jitterc_emit_executor_special_specialized_instruction
      (f, vm, "!BEGINBASICBLOCK",
       jitter_specialized_instruction_opcode_BEGINBASICBLOCK,
       "hot", /* This zero is a special case.  FIXME: explain. */0,
       "#ifdef JITTER_DISPATCH_MINIMAL_THREADING\n"
       "  JITTER_SET_IP (jitter_ip + 1);\n"
       "#endif // #ifdef JITTER_DISPATCH_MINIMAL_THREADING\n");
-  jitterc_emit_interpreter_special_specialized_instruction
+  jitterc_emit_executor_special_specialized_instruction
      (f, vm, "!EXITVM",
       jitter_specialized_instruction_opcode_EXITVM,
       "cold", 0, "JITTER_EXIT();");
-  jitterc_emit_interpreter_special_specialized_instruction
+  jitterc_emit_executor_special_specialized_instruction
      (f, vm, "!UNREACHABLE0",
       jitter_specialized_instruction_opcode_UNREACHABLE0,
       "cold", 0,
       "jitter_fatal (\"reached the !UNREACHABLE0 instruction\");");
-  jitterc_emit_interpreter_special_specialized_instruction
+  jitterc_emit_executor_special_specialized_instruction
      (f, vm, "!UNREACHABLE1",
       jitter_specialized_instruction_opcode_UNREACHABLE1,
       "cold", 0,
       "jitter_fatal (\"reached the !UNREACHABLE0 instruction\");");
-  jitterc_emit_interpreter_special_specialized_instruction
+  jitterc_emit_executor_special_specialized_instruction
      (f, vm, "!UNREACHABLE2",
       jitter_specialized_instruction_opcode_UNREACHABLE2,
       "cold", 0,
@@ -2982,7 +2982,7 @@ jitterc_emit_interpreter_main_function
 
   /* Generate code for the ordinary specialized instructions as specified in
      user code. */
-  jitterc_emit_interpreter_ordinary_specialized_instructions (f, vm);
+  jitterc_emit_executor_ordinary_specialized_instructions (f, vm);
 
   /* Close the dispatcher switch; of course this will expand to nothing unless
      switch-dispatching is enabled. */
@@ -2995,7 +2995,7 @@ jitterc_emit_interpreter_main_function
   EMIT("\n");
 
   /* Emit the final part of the function, consisting in the label to jump to
-     before exiting from the interpreter. */
+     before exiting from the executor. */
   EMIT("  /* The code jumps here when executing the special specialized instruction\n");
   EMIT("     EXITVM, or on a call to the macro JITTER_EXIT from an ordinary specialized\n");
   EMIT("     instruction.  This code is *not* replicated: when replication is enabled\n");
@@ -3015,13 +3015,13 @@ jitterc_emit_interpreter_main_function
   jitterc_emit_patch_in_footer (f, vm);
 
   /* Insert C code from the user.  This is supposed to come in right after
-     interpretation ends. */
+     execution ends. */
   EMIT("  /* Finalization C code from the user */\n");
   EMIT("%s", vm->finalization_c_code);
   EMIT("  /* End of the finalization C code from the user */\n\n");
 
   EMIT("  /* This program point is reachable for both thread initialization and\n");
-  EMIT("     interpretation.  In either case it is not performance-critical. */\n");
+  EMIT("     execution.  In either case it is not performance-critical. */\n");
   EMIT("  jitter_possibly_restore_registers_and_return_label: __attribute__ ((cold));\n");
   EMIT("    //if (jitter_initialize) puts (\"-- RETURNING FROM INITIALIZATION\\n\");\n");
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
@@ -3053,10 +3053,10 @@ jitterc_emit_interpreter_main_function
 }
 
 /* FIXME: move to a template.  This might need a forward declarartion for the
-   main interpret-or-initialize function, currently relying on complicated
+   main execute-or-initialize function, currently relying on complicated
    function attributes; but that will be simplified. */
 void
-jitterc_emit_interpreter_wrappers
+jitterc_emit_executor_wrappers
    (FILE *f, const struct jitterc_vm *vm)
 {
   /* This function is the most critical to compile with the right GCC options;
@@ -3131,8 +3131,8 @@ jitterc_emit_vm_name_macros (FILE *f, const struct jitterc_vm *vm)
   EMIT("\n");
 }
 
-/* Do the job of jitterc_emit_vm_name_macros for the non-interpreter generated C
-   file. */
+/* Do the job of jitterc_emit_vm_name_macros for the generated .c file
+   containing everything excpept the executor. */
 static void
 jitterc_emit_vm_name_macros_vm1 (const struct jitterc_vm *vm)
 {
@@ -3142,7 +3142,7 @@ jitterc_emit_vm_name_macros_vm1 (const struct jitterc_vm *vm)
 }
 
 static void
-jitterc_emit_interpreter (const struct jitterc_vm *vm)
+jitterc_emit_executor (const struct jitterc_vm *vm)
 {
   FILE *f = jitterc_fopen_w_and_remember_basename (vm, "vm2.c");
   EMIT("//#include <config.h>\n\n");
@@ -3161,7 +3161,7 @@ jitterc_emit_interpreter (const struct jitterc_vm *vm)
   EMIT("#include <jitter/jitter-dispatch.h>\n");
   EMIT("#include <jitter/jitter.h>\n");
   EMIT("#include <jitter/jitter-instruction.h>\n");
-  EMIT("#include <jitter/jitter-interpreter-private.h>\n\n");
+  EMIT("#include <jitter/jitter-executor.h>\n\n");
 
   EMIT("#ifdef JITTER_HAS_ASSEMBLY\n");
   EMIT("#include <jitter/jitter-machine-common.h>\n");
@@ -3197,26 +3197,26 @@ jitterc_emit_interpreter (const struct jitterc_vm *vm)
   jitterc_emit_vm_name_macros (f, vm);
 
   /* Emit register-access macros. */
-  jitterc_emit_interpreter_register_access_macros (f, vm);
+  jitterc_emit_executor_register_access_macros (f, vm);
 
   /* Emit global register code. */
-  jitterc_emit_interpreter_reserve_registers (f, vm);
+  jitterc_emit_executor_reserve_registers (f, vm);
 
   /* Emit CPP definitions for stack operations. */
   jitterc_emit_stack_operation_definitions (f, vm);
 
   /* Insert C code from the user.  This is supposed to come in late, after CPP
-     includes and definitions, right before the interpreter functions. */
+     includes and definitions, right before the executor functions. */
   EMIT("/* Late C code from the user. */\n");
   EMIT("%s", vm->before_main_c_code);
   EMIT("/* End of the late C code from the user. */\n\n");
 
   /* Generate a few easy wrapper functions calling vmprefix_execute_or_initialize ,
      which are the actual entry points into this compilation unit. */
-  jitterc_emit_interpreter_wrappers (f, vm);
+  jitterc_emit_executor_wrappers (f, vm);
 
-  /* Emit the main interpreter/initialization function. */
-  jitterc_emit_interpreter_main_function (f, vm);
+  /* Emit the main executor/initialization function. */
+  jitterc_emit_executor_main_function (f, vm);
 
   jitterc_fclose (f);
 }
@@ -3502,7 +3502,7 @@ jitterc_generate (struct jitterc_vm *vm,
   jitterc_emit_rewriter (vm);
   jitterc_emit_specializer (vm);
   jitterc_emit_state (vm);
-  jitterc_emit_interpreter (vm);
+  jitterc_emit_executor (vm);
 
   /* Move files from the temporary directory to their actual destination,
      replacing prefixes in the content and also prepending the prefix to

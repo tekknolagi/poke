@@ -52,7 +52,7 @@
 /* Computed goto implemented with inline asm.  See the comments about
    JITTER_ASM_COMPUTED_GOTO_TEMPLATE, and
    JITTER_ASM_COMPUTED_GOTO_INPUT_CONSTRAINT and
-   JITTER_ASM_COMPUTED_GOTO_CLOBBERS in jitter/jitter-interpreter-private.h . */
+   JITTER_ASM_COMPUTED_GOTO_CLOBBERS in jitter/jitter-executor.h . */
 #define JITTER_ASM_COMPUTED_GOTO_TEMPLATE  \
   "jmp %[_jitter_the_target]\n\t"          \
   " nop"  /* Delay slot. */
@@ -413,8 +413,8 @@
 /*     && defined(JITTER_MACHINE_SUPPORTS_PROCEDURE) */
 
 /* /\* The return address is in $31 (and I never need to worry about saving its */
-/*    initial value before starting, since the interpreter has already called C */
-/*    functions at initialization, which means that before the interpreter */
+/*    initial value before starting, since the executor has already called C */
+/*    functions at initialization, which means that before the executor */
 /*    returns it will have to restore its original $31 from the stack anyway); */
 /*    just copy $31 to link_lvalue . *\/ */
 /* #define _JITTER_PROCEDURE_PROLOG(link_lvalue)                                   \ */

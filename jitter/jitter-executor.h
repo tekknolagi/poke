@@ -1,4 +1,4 @@
-/* Jitter: VM-independent header for generated interpreters.
+/* Jitter: runtime VM-independent header for generated executors.
 
    Copyright (C) 2016, 2017, 2019 Luca Saiu
    Written by Luca Saiu
@@ -19,7 +19,7 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-/* This header is used internally by machine-generated interpreters.  It
+/* This header is used internally by machine-generated executors.  It
    is not for the user to see.
 
    For example, some functionality defined here may depend on
@@ -27,8 +27,8 @@
    defined by machine-generated code in a .c file, without polluting the user
    name space. */
 
-#ifndef JITTER_INTERPRETER_PRIVATE_H_
-#define JITTER_INTERPRETER_PRIVATE_H_
+#ifndef JITTER_EXECUTOR_H_
+#define JITTER_EXECUTOR_H_
 
 #include <jitter/jitter-dispatch.h>
 #include <jitter/jitter.h>
@@ -93,7 +93,7 @@
 
 
 
-/* Miscellaneous machinery for the interpreter, possibly to move.
+/* Miscellaneous machinery for the executor, possibly to move.
  * ************************************************************************** */
 
 /* Expand to a line-comment prefix for assembly as a string.  "\n# " is a sensible
@@ -414,7 +414,7 @@
 /* VM routine termination.
  * ************************************************************************** */
 
-/* Exit the "interpreter" function and return to C. */
+/* Exit the executor function and return to C. */
 #ifdef JITTER_REPLICATE
   /* With replication enabled it's important to avoid tail-merging, which is why
      this is a wrapped computed goto rather than a simple goto... */
@@ -473,7 +473,7 @@
    for the opcode or the thread, or not.
    This relies on JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY being defined,
    which is the case when this macro is used as intended, from specialized
-   instruction code within the interpreter. */
+   instruction code within the executor. */
 #if   defined(JITTER_DISPATCH_SWITCH)           \
    || defined(JITTER_DISPATCH_DIRECT_THREADING)
 # define JITTER_SPECIALIZED_INSTRUCTION_WORD_NO \
@@ -492,7 +492,7 @@
    residuals for the current instruction plus the opcode or thread, if any.
    This relies on JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY being defined,
    which is the case when this macro is used as intended, from specialized
-   instruction code within the interpreter.
+   instruction code within the executor.
    FIXME: shall I use the do..while (false) trick here?  This macro is expanded
    a lot of times, and never from user code. */
 #if   defined(JITTER_DISPATCH_SWITCH)            \
@@ -983,4 +983,4 @@ Shall I do it only in exit?  Why should I ever trust this optimization behavior 
   _JITTER_BRANCH_IF(jitter_uint, operand0, <=, operand1, target)
 
 
-#endif // #ifndef JITTER_INTERPRETER_PRIVATE_H_
+#endif // #ifndef JITTER_EXECUTOR_H_
