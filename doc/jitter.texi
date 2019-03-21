@@ -629,8 +629,8 @@ This craziness must stop.
 @cindex bad practice
 @cindex abstraction layer, redundancy of
 @cindex redundant abstraction layer
-As competent programmers with a social conscience we must strive to
-resist and reverse the dumbing down of software, to empower users
+As competent programmers with a social conscience it is our duty to
+oppose and reverse the dumbing down of software, to empower users
 again, and make software architectures more rational and, where possible,
 simpler; I believe that this entails, as a first step, moving
 applications away from the web and back to local computers directly
@@ -836,8 +836,12 @@ possible; a static system compiled with GCC will always win.  But I
 can certainly aim at a different optimum: Jittery programs can be much
 more expressive.  Jittery code will not be faster than native code,
 but it can be usually within a factor of 2 and almost always within a
-factor of 5, with Jitter being 1,000 times smaller than GCC.  I
-believe this is attainable.}
+factor of 5, with Jitter being 1,000 times smaller than GCC, and
+code generation immensely cheaper.}
+
+@fixme{@xref{The price in performance}}
+
+@fixme{@xref{Performance tips}}
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Generality
@@ -919,7 +923,7 @@ instructions explicitly, in particular taking care or register allocation
 for register-based VMs.  A Jittery VM right now is probably easier to
 use than a simple JIT requiring the same explicit register handling by
 the user, but less convenient than JITs which accept high-level
-expressions.
+expressions.  @fixme{but @pxref{Writing code generators}}
 
 @fixme{Some optional facility for compiling higher-level code
 involving expressions (with jumps) can be added to Jitter in the
@@ -941,7 +945,7 @@ indirect threading in the future, for fun}
 I don't believe in it and I never use it; you can build OO
 functionalities with a Jittery VM, but OO should not be a fundamental
 mechanism embedded in all data.  Procedures are immensely more
-important than methods.}
+important than methods. @fixme{but @pxref{Late binding}}}
 
 @fixme{closures, function objects.  I don't dislike those, but again
 they are not fundamental and can be implemented on top of other
@@ -950,16 +954,23 @@ important than closures.}
 
 @fixme{type tagging for all data: absolutely not.  That is a recipe
 for destroying performance.  It can be implemented, if needed, within
-some VM instructions.  Doing that systematically would be a mistake}
+some VM instructions.  Doing that systematically would be a mistake.
+In a future
+version of Jitter I plan to provide (optional) generation of tagging and
+untagging C macros, relying on data specification as provided by the user; the
+exact data representation will be chosen by Jitter at generation time.
+Of course a user will still be free to do it in her own different way.}
 
 @fixme{exceptions: no, not a fundamental mechanism and way too dependent
 on the execution model (but I'm not against them).  They can be implemented.}
 
 @fixme{garbage collection: no, for the same reason.  But a GC must be easy to
-interface to the system.  Even one with precise pointer finding.}
+interface to the system.  Even one with precise pointer finding.  In a future
+version of Jitter I plan to provide an optional precise GC, relying on data
+specification as provided by the user.}
 
 @fixme{safety features: static code verification, sandboxing: no,
-these kill either expressivity or performance.  Static checks can be
+these kill expressivity, performance, or both.  Static checks can be
 added to the VM code generator, and dynamic checks to instructions.
 Personally I'd make them optional, but you're free to make things
 different.  Running code downloaded from who knows where should be
@@ -985,15 +996,40 @@ after initialization.  Again, this may complicate the C API.}
 @section Comparison with other systems
 
 @menu
+* The price in performance::                 Jittery code is fast but not always optimal.
 * Comparison with ahead-of-time compilers::  Jittery VMs versus traditional compilers.
 * Comparison with JITs::                     Jittery VMs versus Just In Time compilers.
 * Comparison with Vmgen and GForth::         Jitter versus Vmgen, another VM generator.
 @end menu
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
+@node The price in performance
+@subsection The price in performance
+
+@itemize @bullet
+@item Register availability
+@fixme{write}
+@item Calling conventions
+@fixme{write}
+@item Machine idioms
+@fixme{write; delay slots, VLIW.  The SH case, which may be an extreme unsolvable case}
+@item Instruction scheduling
+@fixme{write}
+@item Memory usage
+@fixme{write; modest impact.  Portability lost only with respect to very small machines, 16-bit
+and below: a few megabytes are enough for running a Jittery VM.}
+@end itemize
+
+@fixme{A compromise involving some loss of low-level control, in
+exchange for portability and flexibility.}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Comparison with ahead-of-time compilers
 @subsection Comparison with ahead-of-time compilers
 @fixme{something}
+
+@cindex vectorization
+@fixme{No very sophisticated compiler to reuse; vectorization is a good example}
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Comparison with JITs
@@ -1834,8 +1870,24 @@ The specific macro generates faster code. @fixme{show the two disassemblies}}
 
 
 @menu
-* Performance tips for VM routines:: Generating fast routines for a fast VM.
+* Preventing VM instruction defects:: Decouple state updates from control.
+* Performance tips for VM routines::  Generating fast routines for a fast VM.
 @end menu
+
+@c @@@@@@@
+@node Preventing VM instruction defects
+@subsection Preventing VM instruction defects
+
+@cindex defective, VM instruction
+@cindex VM instruction, defect
+@cindex instruction, VM, defect
+@fixme{@xref{Defective VM instructions}.
+write this: introduction to the problem, examples}
+
+@cindex state update, decoupling from control
+@cindex control, decoupling from state updates
+@cindex decoupling, control from state updates
+@fixme{decouple control from state updates, examples}
 
 @c @@@@@@@
 @node Performance tips for VM routines
@@ -1968,6 +2020,65 @@ user code, but it should be easy to avoid that.}
 @cindex code generator
 @cindex generator, code
 
+@menu
+* Code generation tips::       Suggestions about how to organize your generator and VM.
+* Stack code generation::      Generating code for a stack VM is trivial.
+* Register code generation::   Generating code for register VMs can still be easy.
+* Specific language features:: Suggestions for how to compile some language forms.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Code generation tips
+@section Code generation tips
+
+@fixme{two stacks}
+
+@fixme{compile the uncommon or error path out of line}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Stack code generation
+@section Stack code generation
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Register code generation
+@section Register code generation
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Specific language features
+@section Specific language features
+
+@menu
+* Conditionals and Boolean expressions:: Avoid materializing Booleans for conditionals.
+* Procedural abstraction::               Compiling procedures, functions, or methods.
+* Closures::                             Accessing variables from outer scopes.
+* Dynamic tag checking::                 Checking for types at run time (or fail).
+* Late binding::                         Choosing what to execute based on run-time types.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Conditionals and Boolean expressions
+@subsection Conditionals and Boolean expressions
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Dynamic tag checking
+@subsection Dynamic tag checking
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Procedural abstraction
+@subsection Procedural abstraction
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Closures
+@subsection Closures
+
+@fixme{Closures with known code}
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Late binding
+@subsection Late binding
+
+@fixme{Sometimes called dynamic dispatch, but nothing to do with VM dispatches}
+
 
 @c Internals
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -1981,6 +2092,7 @@ user code, but it should be easy to avoid that.}
 * Patch-ins::                     Patching assembly into copies of compiled C code.
 * Rewriting internals::           How rewriting works.
 * Dispatch models::               How code jumps from one VM instruction to the next.
+* Defective VM instructions::     Automatically working around some unreplicatable code.
 * Architecture-specific notes::   Details on how Jittery VMs work on each supported CPU.
 * Porting::                       Adding support for more CPU architectures.
 @end menu
@@ -2027,6 +2139,13 @@ generator.  The distinction is immaterial to the user.}
 @node Dispatch models
 @section Dispatch models
 @cindex dispatch
+
+@c @@@@@@@
+@node Defective VM instructions
+@section Defective VM instructions
+@cindex defective, VM instruction
+@cindex VM instruction, defect
+@cindex instruction, VM, defect
 
 @c @@@
 @subsection @code{switch} dispatching
