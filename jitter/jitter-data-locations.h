@@ -25,8 +25,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include <jitter/jitter.h>
 #include <jitter/jitter-sections.h>
-#include <jitter/jitter-cpp.h>
 #include <jitter/jitter-vm.h>
 
 
