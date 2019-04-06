@@ -41,6 +41,13 @@
   "xori %%r0, %%r0, " integer_literal_as_string "\n\t"        \
   "xori %%r0, %%r0, " integer_literal_as_string "\n\t"
 
+/* Expand to a native machine code snippet causing a trap, as a string literal
+   in a syntax suitable for extended inline asm. */
+#define _JITTER_ASM_CRASH                                                   \
+  /* Return from interrupt.  This will cause an exception in user mode, of  \
+     a kind not usually seen. */                                            \
+  "rfi"
+
 
 
 
