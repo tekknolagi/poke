@@ -180,9 +180,16 @@ JITTER_NON_GENERATED_FILES =
 # incrementally as well.
 JITTER_GENERATED_FILES =
 
-# We want to distribute both Jitter VM specifications and their generated files.
-# This is just like the frontend files in the previous section...
-EXTRA_DIST += $(JITTER_NON_GENERATED_FILES) $(JITTER_GENERATED_FILES)
+# We want to distribute Jitter VM specifications, but not their generated files.
+#
+# Rationale:
+# In an ordinary application it would make sense to distribute generated files
+# as well, as per the ordinary GNU convention; but here we are in the build
+# system of Jitter itself, which allows to rebuild those files.  And they are
+# only examples, so they are not crucial to build, nor indeed built by default.
+# If the user is able to run the examples or the testsuite, then there is some
+# emulator allowing her to regenerate the files as well.
+EXTRA_DIST += $(JITTER_NON_GENERATED_FILES)
 
 # ...But in this case we can't use BUILT_SOURCES.  We will use regular
 # dependencies.
