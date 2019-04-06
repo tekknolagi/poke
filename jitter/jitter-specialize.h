@@ -124,7 +124,7 @@ jitter_destroy_executable_routine (struct jitter_executable_routine *p)
      instruction -- from C, it's what a goto * statement accepts.  I don't
      need to worry about non-GCC compilers, since no-threading relies on GCC
      extensions. */
-  typedef void *
+  typedef const void *
   jitter_program_point;
 #else
   /* On every other dispatching model a program point is a pointer to a word
