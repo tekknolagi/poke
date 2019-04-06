@@ -58,8 +58,6 @@ wrapped-functions
 
   # Temporary/debugging stuff.
   debug_pointer
-  log_
-  putchar
 #  printf
   jitterlisp_print_to_stream
 
@@ -276,14 +274,6 @@ static void
 jitterlisp_fail_from_vm (void)
 {
   jitterlisp_error_cloned ("unspecified error raised by VM code");
-}
-
-/* This is convenient for testing.  FIXME: remove. */
-__attribute__ ((unused))
-static void
-log_ (long n)
-{
-  printf ("Log: %li\n", n);
 }
 
     static const char *stack_printf_format_string __attribute__ ((unused))
@@ -1426,10 +1416,8 @@ instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
           = (& JITTER_UNDER_TOP_MAINSTACK()) - in_arity + 1;
 
         /* Call the interpreter. */
-//putchar ('['); putchar ('i');
         jitterlisp_object interpretation_result
           = jitterlisp_call_interpreted (ic, actuals, in_arity);
-//putchar (']');
 
         /* Remove as many elements as the in-arity plus one (the callee) from
            the stack, without affecting the top.  Unless JITTER_ARGN0 is
@@ -1513,10 +1501,8 @@ instruction tail-call (?n 0 1 2 3 4 5 6 7 8 9 10)
           = (& JITTER_UNDER_TOP_MAINSTACK()) - in_arity + 1;
 
         /* Call the interpreter. */
-//putchar ('['); putchar ('i');
         jitterlisp_object interpretation_result
           = jitterlisp_call_interpreted (ic, actuals, in_arity);
-//putchar (']');
 
         /* Remove as many elements as the in-arity plus one (the callee) from
            the stack, without affecting the top.  Unless JITTER_ARGN0 is
