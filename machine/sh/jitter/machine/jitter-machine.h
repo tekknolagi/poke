@@ -79,10 +79,11 @@
  * ************************************************************************** */
 
 /* On SH I seem to be able to reserve the following callee-save registers:
-     r8 r9 r10 r11 r12 r13 r14 r15
+     r8 r9 r10 r11 r12 r13 r14
    I don't want to reserve r0, and I'm not even sure if I could, as it is
    the only valid target for some operations and the only register usable
-   for certain addressing modes. */
+   for certain addressing modes.
+   r15 is the stack pointer. */
 
 /* Register pointing to The Array base. */
 #define JITTER_BASE_REGISTER          r8
