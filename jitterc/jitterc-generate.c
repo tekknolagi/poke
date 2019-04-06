@@ -2576,6 +2576,7 @@ jitterc_emit_patch_in_header (FILE *f, const struct jitterc_vm *vm)
   EMIT("     will add to the same global.  Do the same for defects. */\n");
   EMIT("  JITTER_DEFECT_HEADER(vmprefix);\n");
   EMIT("  JITTER_PATCH_IN_HEADER(vmprefix);\n");
+  EMIT("  JITTER_DATA_LOCATION_HEADER(vmprefix);\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
   EMIT("\n");
 }
@@ -2587,6 +2588,7 @@ jitterc_emit_patch_in_footer (FILE *f, const struct jitterc_vm *vm)
   /* Generate the patch-in footer.  See the comment in
      jitterc_emit_patch_in_header . */
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
+  EMIT("  JITTER_DATA_LOCATION_FOOTER(vmprefix);\n");
   EMIT("  /* Close the patch-in global definition for this executor.  This defines a\n");
   EMIT("     new global in the patch-in subsection, holding the descriptor number.\n");
   EMIT("     This is a global asm statement.  Same for defects.  See the comment before\n");
@@ -2594,6 +2596,46 @@ jitterc_emit_patch_in_footer (FILE *f, const struct jitterc_vm *vm)
   EMIT("  JITTER_PATCH_IN_FOOTER(vmprefix);\n");
   EMIT("  JITTER_DEFECT_FOOTER(vmprefix);\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
+}
+
+/* Emit the beginning of the case for a special specialized instruction in the
+   executor.  The C code for the instruction body must be emitted right after
+   this. */
+static void
+jitterc_emit_executor_special_specialized_instruction_beginning
+   (FILE *f, const struct jitterc_vm *vm,
+    const char *name,
+    enum jitter_specialized_instruction_opcode opcode,
+    const char *hotness, int residual_arity)
+{
+  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, %s)\n",
+       name, jitterc_mangle (name), hotness);
+  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY %i\n",
+       residual_arity);
+  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_OPCODE  %i\n", opcode);
+  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_NAME  %s\n", name);
+  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_MANGLED_NAME  %s\n",
+       jitterc_mangle (name));
+  EMIT("{\n");
+}
+
+/* Emit the end of the case for a special specialized instruction in the
+   executor.  This must follow the emission of the C instruction body. */
+static void
+jitterc_emit_executor_special_specialized_instruction_end
+   (FILE *f, const struct jitterc_vm *vm,
+    const char *name,
+    enum jitter_specialized_instruction_opcode opcode,
+    const char *hotness, int residual_arity)
+{
+  EMIT("}\n");
+  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, %i)\n",
+       name, jitterc_mangle (name), residual_arity);
+  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_OPCODE\n");
+  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_NAME\n");
+  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_MANGLED_NAME\n");
+  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
+  EMIT("\n");
 }
 
 /* Emit the case for a special specialized instruction in the executor. */
@@ -2605,22 +2647,75 @@ jitterc_emit_executor_special_specialized_instruction
     const char *hotness, int residual_arity,
     const char *c_code)
 {
-  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, %s)\n",
-       name, jitterc_mangle (name), hotness);
-  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY %i\n",
-       residual_arity);
-  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_OPCODE  %i\n", opcode);
-  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_NAME  %s\n", name);
-  EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_MANGLED_NAME  %s\n",
-       jitterc_mangle (name));
-  EMIT("{\n%s\n}\n", c_code);
-  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, %i)\n",
-       name, jitterc_mangle (name), residual_arity);
-  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_OPCODE\n");
-  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_NAME\n");
-  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_MANGLED_NAME\n");
-  EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY\n");
-  EMIT("\n");
+  jitterc_emit_executor_special_specialized_instruction_beginning
+     (f, vm, name, opcode, hotness, residual_arity);
+  EMIT("\n%s\n", c_code);
+  jitterc_emit_executor_special_specialized_instruction_end
+     (f, vm, name, opcode, hotness, residual_arity);
+}
+
+/* Emit macro calls to generate data locations in a separate subsection.  This
+   needs to be called as the body of the special specialized instruction
+   !DATALOCATIONS . */
+static void
+jitterc_emit_executor_data_locations (FILE *f, const struct jitterc_vm *vm)
+{
+  int i, j; char *comma __attribute__ ((unused));
+  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
+
+  /* First emit reserved registers: these are in fact guaranteed to be
+     registers. */
+
+  /* Base. */
+  EMIT("  JITTER_DATA_LOCATION_DATUM (\"base\", jitter_array_base);\n");
+
+  /* Scratch, if any. */
+  EMIT("#ifdef JITTER_SCRATCH_REGISTER\n");
+  EMIT("  JITTER_DATA_LOCATION_DATUM (\"scratch\", jitter_residual_argument_scratch_register_variable);\n");
+  EMIT("#endif // #ifdef JITTER_SCRATCH_REGISTER\n\n");
+
+  /* Residuals. */
+  for (i = 0; i < vm->max_residual_arity; i ++)
+    {
+      EMIT("#if (%i < JITTER_RESIDUAL_REGISTER_NO)\n", i);
+      EMIT("  JITTER_DATA_LOCATION_DATUM (\"residual %i\", jitter_residual_argument_%i_register_variable);\n", i, i);
+      EMIT("#endif // #if (%i < JITTER_RESIDUAL_REGISTER_NO)\n", i);
+    }
+
+  /* For each stack... */
+  FOR_LIST(i, comma, vm->stacks)
+    {
+      const struct jitterc_stack *stack = gl_list_get_at (vm->stacks, i);
+      const char * stack_name = stack->lower_case_name;
+      if (stack->optimization == jitterc_stack_optimization_tos)
+        {
+          EMIT("  JITTER_DATA_LOCATION_DATUM (\"%s top\", \n", stack_name);
+          EMIT("     JITTER_STACK_TOS_TOP_NAME (whatever, jitter_state_runtime., %s));\n",
+               stack_name);
+          EMIT("  JITTER_DATA_LOCATION_DATUM (\"%s undertop ptr\", \n", stack_name);
+          EMIT("     JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME (whatever, jitter_state_runtime., %s));\n",
+               stack_name);
+        }
+      else
+        {
+          EMIT("  JITTER_DATA_LOCATION_DATUM (\"%s top ptr\", \n", stack_name);
+          EMIT("     JITTER_STACK_NTOS_TOP_POINTER_NAME (whatever, jitter_state_runtime., %s));\n",
+               stack_name);
+        }
+    }
+
+  /* For each register class... */
+  FOR_LIST(i, comma, vm->register_classes)
+    {
+      const struct jitterc_register_class *c
+        = (gl_list_get_at (vm->register_classes, i));
+      /* Emit each fast register as a datum. */
+      for (j = 0; j < c->fast_register_no; j ++)
+        EMIT("JITTER_DATA_LOCATION_DATUM(\"%%%%%c%i\", JITTER_REGISTER_%c_%i);\n",
+             c->character, j, c->character, j);
+    }
+        //"  JITTER_DATA_LOCATION_DATUM(\"r3\", JITTER_REGISTER_r_3);\n"
+  EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n");
 }
 
 static void
@@ -2636,7 +2731,7 @@ jitterc_emit_executor_main_function
 
   /* Emit debugging prints.  FIXME: implement something like this, cleanly, in a
      different function. */
-  /*
+/*
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("  printf (\"JITTER_RESIDUAL_REGISTER_NO is %%i\\n\", (int)JITTER_RESIDUAL_REGISTER_NO);\n");
   EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n");
@@ -2651,9 +2746,15 @@ jitterc_emit_executor_main_function
   EMIT("  for (q = VMPREFIX_REGISTER_r_FAST_REGISTER_NO; q < (VMPREFIX_REGISTER_r_FAST_REGISTER_NO + 10); q ++)\n");
   EMIT("    printf (\"VMPREFIX_SLOW_REGISTER_OFFSET(r, %%i) is %%i or 0x%%x\\n\", q, (int)VMPREFIX_SLOW_REGISTER_OFFSET(r, q), (int)VMPREFIX_SLOW_REGISTER_OFFSET(r, q));\n");
   EMIT("  }\n");
+  EMIT("  asm volatile (\"\\n.pushsection .rodata\\n\"\n");
+  EMIT("                \"\\nFOO:\\n\"\n");
+  EMIT("                \"\\n.asciz \\\"" JITTER_STRINGIFY(jitter_initial_program_point) " is at %%[thing]\\\"\\n\"\n");
+  EMIT("                \"\\n.popsection\\n\"\n");
+  EMIT("                :\n");
+  EMIT("                : [thing] \"X\" (jitter_initial_program_point)\n");
+  EMIT("               );\n");
   EMIT("\n\n");
-  */
-
+*/
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("  /* Save the values in the registers we reserved as global variables,\n");
   EMIT("     since from the point of view of the other C compilation units such\n");
@@ -2964,6 +3065,19 @@ jitterc_emit_executor_main_function
      (f, vm, "!EXITVM",
       jitter_specialized_instruction_opcode_EXITVM,
       "cold", 0, "JITTER_EXIT();");
+  jitterc_emit_executor_special_specialized_instruction_beginning
+     (f, vm, "!DATALOCATIONS",
+      jitter_specialized_instruction_opcode_DATALOCATIONS,
+      "cold", 0);
+  jitterc_emit_executor_data_locations (f, vm);
+  jitterc_emit_executor_special_specialized_instruction_end
+     (f, vm, "!DATALOCATIONS",
+      jitter_specialized_instruction_opcode_DATALOCATIONS,
+      "cold", 0);
+  jitterc_emit_executor_special_specialized_instruction
+     (f, vm, "!NOP",
+      jitter_specialized_instruction_opcode_NOP,
+      "cold", 0, "  /* Do nothing. */;");
   jitterc_emit_executor_special_specialized_instruction
      (f, vm, "!UNREACHABLE0",
       jitter_specialized_instruction_opcode_UNREACHABLE0,
@@ -2973,12 +3087,12 @@ jitterc_emit_executor_main_function
      (f, vm, "!UNREACHABLE1",
       jitter_specialized_instruction_opcode_UNREACHABLE1,
       "cold", 0,
-      "jitter_fatal (\"reached the !UNREACHABLE0 instruction\");");
+      "jitter_fatal (\"reached the !UNREACHABLE1 instruction\");");
   jitterc_emit_executor_special_specialized_instruction
      (f, vm, "!UNREACHABLE2",
       jitter_specialized_instruction_opcode_UNREACHABLE2,
       "cold", 0,
-      "jitter_fatal (\"reached the !UNREACHABLE0 instruction\");");
+      "jitter_fatal (\"reached the !UNREACHABLE2 instruction\");");
 
   /* Generate code for the ordinary specialized instructions as specified in
      user code. */
