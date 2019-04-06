@@ -1569,7 +1569,6 @@ EXTRA_DIST += \
 
 TEXIINFO_OPTIONS = -I $(abs_top_builddir)/doc
 AM_MAKEINFOHTMLFLAGS = $(AM_MAKEINFOFLAGS) --number-sections --fill-column=100
-TEXI2PDF = $(JITTER_TEXI2DVI) --pdf --batch $(TEXIINFO_OPTIONS)
 
 info_TEXINFOS += \
   doc/jitter.texi
