@@ -2575,8 +2575,10 @@ jitterc_emit_patch_in_header (FILE *f, const struct jitterc_vm *vm)
   EMIT("     will add to the same global.  Do the same for defects. */\n");
   EMIT("  JITTER_DEFECT_HEADER(vmprefix);\n");
   EMIT("  JITTER_PATCH_IN_HEADER(vmprefix);\n");
-  EMIT("  JITTER_DATA_LOCATION_HEADER(vmprefix);\n");
   EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n\n");
+  EMIT("#ifndef JITTER_DISPATCH_SWITCH\n");
+  EMIT("  JITTER_DATA_LOCATION_HEADER(vmprefix);\n");
+  EMIT("#endif // #ifndef JITTER_DISPATCH_SWITCH\n");
   EMIT("\n");
 }
 
@@ -2586,8 +2588,10 @@ jitterc_emit_patch_in_footer (FILE *f, const struct jitterc_vm *vm)
 {
   /* Generate the patch-in footer.  See the comment in
      jitterc_emit_patch_in_header . */
-  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
+  EMIT("#ifndef JITTER_DISPATCH_SWITCH\n");
   EMIT("  JITTER_DATA_LOCATION_FOOTER(vmprefix);\n");
+  EMIT("#endif // #ifndef JITTER_DISPATCH_SWITCH\n");
+  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("  /* Close the patch-in global definition for this executor.  This defines a\n");
   EMIT("     new global in the patch-in subsection, holding the descriptor number.\n");
   EMIT("     This is a global asm statement.  Same for defects.  See the comment before\n");
@@ -2660,7 +2664,7 @@ static void
 jitterc_emit_executor_data_locations (FILE *f, const struct jitterc_vm *vm)
 {
   int i, j; char *comma __attribute__ ((unused));
-  EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
+  EMIT("#ifndef JITTER_DISPATCH_SWITCH\n");
 
   /* First emit reserved registers: these are in fact guaranteed to be
      registers. */
@@ -2674,17 +2678,21 @@ jitterc_emit_executor_data_locations (FILE *f, const struct jitterc_vm *vm)
   EMIT("  JITTER_DATA_LOCATION_DATUM (\"base\", jitter_array_base);\n");
 
   /* Scratch, if any. */
+  EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("#ifdef JITTER_SCRATCH_REGISTER\n");
   EMIT("  JITTER_DATA_LOCATION_DATUM (\"scratch\", jitter_residual_argument_scratch_register_variable);\n");
   EMIT("#endif // #ifdef JITTER_SCRATCH_REGISTER\n\n");
+  EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n");
 
-  /* Residuals. */
+  /* Residual registers, if any. */
+  EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   for (i = 0; i < vm->max_residual_arity; i ++)
     {
       EMIT("#if (%i < JITTER_RESIDUAL_REGISTER_NO)\n", i);
       EMIT("  JITTER_DATA_LOCATION_DATUM (\"residual %i\", jitter_residual_argument_%i_register_variable);\n", i, i);
       EMIT("#endif // #if (%i < JITTER_RESIDUAL_REGISTER_NO)\n", i);
     }
+  EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n");
 
   /* For each stack... */
   FOR_LIST(i, comma, vm->stacks)
@@ -2718,8 +2726,7 @@ jitterc_emit_executor_data_locations (FILE *f, const struct jitterc_vm *vm)
         EMIT("JITTER_DATA_LOCATION_DATUM(\"%%%%%c%i\", JITTER_REGISTER_%c_%i);\n",
              c->character, j, c->character, j);
     }
-        //"  JITTER_DATA_LOCATION_DATUM(\"r3\", JITTER_REGISTER_r_3);\n"
-  EMIT("#endif // #ifdef JITTER_HAVE_PATCH_IN\n");
+  EMIT("#endif // #ifndef JITTER_DISPATCH_SWITCH\n");
 }
 
 static void

@@ -407,8 +407,10 @@ vmprefix_initialize (void)
 
 #ifdef JITTER_HAVE_PATCH_IN
   jitter_dump_defect_table (stderr, vmprefix_defect_table, & the_vmprefix_vm);
-  jitter_dump_data_locations (stderr, & the_vmprefix_vm);
 #endif // #ifdef JITTER_HAVE_PATCH_IN
+#ifndef JITTER_DISPATCH_SWITCH
+  jitter_dump_data_locations (stderr, & the_vmprefix_vm);
+#endif // #ifndef JITTER_DISPATCH_SWITCH
 }
 
 void
