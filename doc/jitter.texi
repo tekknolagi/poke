@@ -720,13 +720,14 @@ concrete ambition of competing in speed with low-level designs.
 @cindex SPARC
 The details of course will depend on the VM language, and the established
 practice we are competing against.
-An @emph{untyped} VM will probably beat a more sophisticated system for a
-dynamically typed language where each primitive operation requires
-runtime type checks.  Intelligent VM designs will win against naïve
-versions: if any check can be moved from run time to VM code
-generation the resulting speedup is almost always worth the trouble:
-translating variable names into register numbers, stack slot indices
-or static chain distances is a good idea, and simpler systems performing
+A VM for an @emph{untyped} system will probably beat even a more
+sophisticated VM for a dynamically-typed language where every primitive
+operation requires run-time type checks.
+Intelligent VM designs will win against naïve versions: if any
+conditional can be moved from run time to VM code generation the
+resulting speedup is almost always worth the trouble: translating
+variable names into register numbers, stack slot indices or static
+chain distances is a good idea, and simpler systems performing
 run-time searches on variable names will be easily outperformed.
 @ignore
 FIXME: Compute some numbers and compare against pypy and luajit
@@ -743,8 +744,8 @@ No, I don't think it's clear: I should say this.}
 As stated above in my discussion of decoupling it is important
 that a VM be specifically designed for the system it supports, to execute its
 code in the most efficient possible way; for this reason the VM
-language should ideally not be a specified public API declared stable,
-but should instead be subject to change in any future version of the
+language should ideally not be an API to be published as stable and set
+in stone, but should rather be subject to change in any future version of the
 software, to allow for performance tuning.  Many details will depend on the
 language being interpreted, and the performance tradeoff of some
 choices may not be obvious; for example parameter passing in a VM can
@@ -779,13 +780,15 @@ attention to efficiency requires some effort.  The idea of
 replication, which I have come to regard as essential, entails in
 practice automatic code generation techniques which, if conceptually
 simple, take time to implement.  The patch-ins infrastructure, if
-again intuitive to understand, is almost as laborious to
-implement correctly.  Some other code related to replication is
-also very fragile to handle.  Even worse a few features, technically
+again intuitive to understand, is laborious to implement
+and requires very subtle mechanisms
+(@pxref{Defective VM instructions}) to guarantee correctness in
+every case.
+Several features, technically
 optional but very beneficial for performance, rely on a small amount
-of assembly code.  Interestingly such code is specific to the
+of hand-written assembly code.  Interestingly such code is specific to the
 architecture but completely independent from the VM.  All these
-reasons make @emph{the VM generation infrastructure}, rather than VMs,
+reasons make @emph{the VM construction infrastructure}, rather than VMs,
 worth sharing.
 @*
 Jitter is a solution for such reuse.
