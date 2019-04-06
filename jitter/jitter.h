@@ -299,9 +299,21 @@ union jitter_word
    dispatching mode or the architecture.
    It is convenient to define them here in a centralized way, rather than in
    individual headers which the user may forget to include before testing
-   whether some feature macro is defined. */
+   whether some feature macro is defined.
 
-/* Expand to a (currently non-constant) Boolean expression evaluating to
+   Naming convention:
+   - Feature macros defining whether a functionality could be used have names
+     starting with "JITTER_HAVE_" .
+   - Feature macros defining whether a functionality is actually used (in the
+     current dispatching mode, for the program which is being compiled) have
+     names starting with "JITTER_USE_" .
+   Notice that the feature macros defined in jitter/jitter-config.h are also
+   visible from here. */
+
+
+/* This is not a feature macro in the sense of the other macros defined in
+   this section, but it still belongs here because of its practical role.
+   Expand to a (currently non-constant) Boolean expression evaluating to
    non-false iff the architecture name, as per JITTER_ASSEMBLY_SUBDIRECTORY,
    is the given one.
    If the architecture name is unknown then the expansion evaluates to false

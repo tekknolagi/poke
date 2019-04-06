@@ -96,7 +96,7 @@
 /* Here we rely on system-specific sections as defined by the assembler and
    linker; currently the system must be ELF. */
 #if defined(JITTER_HOST_OS_IS_ELF) || defined(JITTER_HOST_ASSEMBLER_IS_GNU)
-# define JITTER_HAS_SECTIONS 1
+# define JITTER_HAVE_SECTIONS 1
 #endif // enough functionality for Jitter's sections mechanism
 
 

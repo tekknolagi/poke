@@ -3275,15 +3275,14 @@ jitterc_emit_executor (const struct jitterc_vm *vm)
   EMIT("%s", vm->early_c_code);
   EMIT("/* End of the early C code from the user. */\n\n");
 
-  EMIT("#include <jitter/jitter-config.h>\n");
   EMIT("#include <jitter/jitter.h>\n");
   EMIT("#include <jitter/jitter-instruction.h>\n");
   EMIT("#include <jitter/jitter-executor.h>\n\n");
 
-  EMIT("#ifdef JITTER_HAS_ASSEMBLY\n");
+  EMIT("#ifdef JITTER_HAVE_ASSEMBLY\n");
   EMIT("#include <jitter/jitter-machine-common.h>\n");
   EMIT("#include <jitter/machine/jitter-machine.h>\n");
-  EMIT("#endif // #ifdef JITTER_HAS_ASSEMBLY\n");
+  EMIT("#endif // #ifdef JITTER_HAVE_ASSEMBLY\n");
 
   EMIT("#include <jitter/jitter-fatal.h>\n");
   EMIT("#include <jitter/jitter-malloc.h>\n\n");

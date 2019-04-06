@@ -22,10 +22,10 @@
 /* Ignore the rest of this file if we have no host assembly support.
  * ************************************************************************** */
 
-#include <jitter/jitter-config.h>
+#include <jitter/jitter.h>
 
 /* If there is no assembly support ignore the rest of this file. */
-#ifdef JITTER_HAS_ASSEMBLY
+#ifdef JITTER_HAVE_ASSEMBLY
 
 
 
@@ -33,7 +33,6 @@
 /* Include headers.
  * ************************************************************************** */
 
-#include <jitter/jitter.h>
 #include <jitter/jitter-patch.h>
 #include <string.h>
 #include <limits.h>
@@ -175,4 +174,4 @@ jitter_fits_in_bits_sign_extended (uint64_t original, unsigned bit_no)
   return sign_extended == original;
 }
 
-#endif // #ifdef JITTER_HAS_ASSEMBLY
+#endif // #ifdef JITTER_HAVE_ASSEMBLY

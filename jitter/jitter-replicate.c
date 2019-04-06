@@ -38,6 +38,12 @@
 #include <assert.h>
 #include <string.h> /* for memcpy */
 
+#include <jitter/jitter.h>
+/* Including jitter/jitter.h indirectly causes the inclusion of
+   jitter/jitter-config.h , which is useful to know whether
+   JITTER_MACHINE_SUPPORTS_PROCEDURE is defined: in this way we can avoid
+   generating code for loading the implicit return address residual argument. */
+
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-mmap.h>
 #include <jitter/jitter-fatal.h>
@@ -50,15 +56,10 @@
 #include <jitter/jitter-fast-branch.h>
 
 
-#ifdef JITTER_HAS_ASSEMBLY
+#ifdef JITTER_HAVE_ASSEMBLY
   /* Include architecture-specific icache flushing code. */
 # include <jitter/jitter-machine-common.h>
-
-/* Also include machine-specific definitions.  This is useful to know if
-   JITTER_MACHINE_SUPPORTS_PROCEDURE is defined: if so we can avoid generating
-   code for loading the implicit return address residual argument. */
-# include <jitter/machine/jitter-machine.h>
-#endif // #ifdef JITTER_HAS_ASSEMBLY
+#endif // #ifdef JITTER_HAVE_ASSEMBLY
 
 
 

@@ -41,13 +41,13 @@
 
 #undef WORDS_BIGENDIAN
 
-#undef JITTER_HAS_ASSEMBLY
+#undef JITTER_HAVE_ASSEMBLY
 
 /* Optional system functionality. */
 #undef HAVE_MAP_ANONYMOUS
 
 /* Optional libraries. */
-#undef JITTER_HAS_GNU_READLINE
+#undef JITTER_HAVE_GNU_READLINE
 
 /* It is convenient to let C code access the architecture name. */
 #undef JITTER_ASSEMBLY_SUBDIRECTORY

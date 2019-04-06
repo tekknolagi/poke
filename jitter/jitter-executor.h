@@ -32,11 +32,6 @@
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-cpp.h>
-
-#ifdef JITTER_HAS_ASSEMBLY
-#include <jitter/machine/jitter-machine.h>
-#endif // #ifdef JITTER_HAS_ASSEMBLY
-
 #include <jitter/jitter-fast-branch.h>
 #include <jitter/jitter-sections.h>
 

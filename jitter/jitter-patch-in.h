@@ -28,7 +28,6 @@
 
 /* Include macro definitions about whether we have a machine file, and about the
    dispatching model. */
-#include <jitter/jitter-config.h>
 #include <jitter/jitter.h>
 
 /* Include sectioning macros. */
@@ -42,16 +41,16 @@
 
 /* First include the machine header which may contain a CPP definition of
    JITTER_MACHINE_SUPPORTS_PATCH_IN ; if we don't even have a machine header or
-   it's disabled (which is to say if JITTER_HAS_ASSEMBLY is not defined), or if
+   it's disabled (which is to say if JITTER_HAVE_ASSEMBLY is not defined), or if
    the dispatching model is different from no-threading then patch-ins are
    always disabled. */
-#if defined(JITTER_HAS_ASSEMBLY) && defined(JITTER_DISPATCH_NO_THREADING)
+#if defined(JITTER_HAVE_ASSEMBLY) && defined(JITTER_DISPATCH_NO_THREADING)
 # include <jitter/jitter-machine-common.h>
 # include <jitter/machine/jitter-machine.h>
 # ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN
 #   define JITTER_HAVE_PATCH_IN 1
 # endif // #ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN
-#endif //#if defined(JITTER_HAS_ASSEMBLY) && defined(JITTER_DISPATCH_NO_THREADING)
+#endif //#if defined(JITTER_HAVE_ASSEMBLY) && defined(JITTER_DISPATCH_NO_THREADING)
 
 /* The rest of this header expands to nothing if patch-ins are not supported in
    this configuration. */

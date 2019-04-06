@@ -48,18 +48,18 @@
 /////////////////////////////////////////////////////
 /* FIXME: this whole idea will not work here, with separate compilation.  But I
    can uncomment the #undef below and look at the generated code. */
-#undef JITTER_HAS_ASSEMBLY
+#undef JITTER_HAVE_ASSEMBLY
 
-#ifdef JITTER_HAS_ASSEMBLY
+#ifdef JITTER_HAVE_ASSEMBLY
   /* We need architecture-specific register names. */
 # include <jitter/machine/jitter-machine.h>
-#endif // #ifdef JITTER_HAS_ASSEMBLY
+#endif // #ifdef JITTER_HAVE_ASSEMBLY
 
 /* Expand to a global variable declaration -- a global *register* variable
    if we have machine support.  This doesn't currently run in a Jittery VM,
    so it doesn't matter if we choose registers which are already reserved
    for other purposes. */
-#if defined(JITTERLISP_LITTER) && defined(JITTER_HAS_ASSEMBLY)
+#if defined(JITTERLISP_LITTER) && defined(JITTER_HAVE_ASSEMBLY)
 # define JITTERLISP_GLOBAL_REGISTER_VARIABLE_(_jitterlisp_type,            \
                                               _jitterlisp_name,            \
                                               _jitterlisp_register_index)  \
@@ -72,7 +72,7 @@
                                               _jitterlisp_name,            \
                                               _jitterlisp_register_index)  \
   static _jitterlisp_type _jitterlisp_name
-#endif // #if defined(JITTERLISP_LITTER) && defined(JITTER_HAS_ASSEMBLY)
+#endif // #if defined(JITTERLISP_LITTER) && defined(JITTER_HAVE_ASSEMBLY)
 
 
 

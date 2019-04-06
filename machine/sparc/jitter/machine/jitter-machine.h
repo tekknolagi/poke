@@ -508,8 +508,7 @@
 
 #ifndef __ASSEMBLER__
 
-#include <jitter/jitter-cpp.h>
-#include <jitter/jitter-config.h>
+#include <jitter/jitter.h>
 
 /* Notice that the order matters, and these shouldn't be rearranged without also
    changing the order of definitions in machine.S .  We also rely on the first
