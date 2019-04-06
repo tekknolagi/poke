@@ -26,7 +26,11 @@
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-fatal.h>
 
-#include <jitter/machine/jitter-machine.h>
+/* Include the machine-specific header, if one exists for the host machine. */
+#include <jitter/jitter-config.h>
+#ifdef JITTER_ASSEMBLY_SUBDIRECTORY
+# include <jitter/machine/jitter-machine.h>
+#endif // #ifdef JITTER_ASSEMBLY_SUBDIRECTORY
 
 
 /* Low-level debugging features relying on assembly: data locations.
