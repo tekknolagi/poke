@@ -1150,6 +1150,8 @@ jitterc_make_special_specialized_instructions (struct jitterc_vm *vm)
 
   jitterc_make_special_specialized_instruction (vm, "!BEGINBASICBLOCK", nR_arguments);
   jitterc_make_special_specialized_instruction (vm, "!EXITVM", no_arguments);
+  jitterc_make_special_specialized_instruction (vm, "!DATALOCATIONS", no_arguments);
+  jitterc_make_special_specialized_instruction (vm, "!NOP", no_arguments);
   jitterc_make_special_specialized_instruction (vm, "!UNREACHABLE0", no_arguments);
   jitterc_make_special_specialized_instruction (vm, "!UNREACHABLE1", no_arguments);
   jitterc_make_special_specialized_instruction (vm, "!UNREACHABLE2", no_arguments);

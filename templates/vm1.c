@@ -43,6 +43,7 @@
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-defect.h>
 #include <jitter/jitter-patch-in.h>
+#include <jitter/jitter-executor.h>
 
 #include "vmprefix-vm.h"
 //#include "vmprefix-specialized-instructions.h"
@@ -87,12 +88,30 @@ vmprefix_check_specialized_instruction_opcode_once (void)
   if (already_checked)
     return;
 
-  assert (vmprefix_specialized_instruction_opcode__eINVALID == 0);
-  assert (vmprefix_specialized_instruction_opcode__eBEGINBASICBLOCK == 1);
-  assert (vmprefix_specialized_instruction_opcode__eEXITVM == 2);
-  assert (vmprefix_specialized_instruction_opcode__eUNREACHABLE0 == 3);
-  assert (vmprefix_specialized_instruction_opcode__eUNREACHABLE1 == 4);
-  assert (vmprefix_specialized_instruction_opcode__eUNREACHABLE2 == 5);
+  assert (((enum jitter_specialized_instruction_opcode)
+           vmprefix_specialized_instruction_opcode__eINVALID)
+          == jitter_specialized_instruction_opcode_INVALID);
+  assert (((enum jitter_specialized_instruction_opcode)
+           vmprefix_specialized_instruction_opcode__eBEGINBASICBLOCK)
+          == jitter_specialized_instruction_opcode_BEGINBASICBLOCK);
+  assert (((enum jitter_specialized_instruction_opcode)
+           vmprefix_specialized_instruction_opcode__eEXITVM)
+          == jitter_specialized_instruction_opcode_EXITVM);
+  assert (((enum jitter_specialized_instruction_opcode)
+           vmprefix_specialized_instruction_opcode__eDATALOCATIONS)
+          == jitter_specialized_instruction_opcode_DATALOCATIONS);
+  assert (((enum jitter_specialized_instruction_opcode)
+           vmprefix_specialized_instruction_opcode__eNOP)
+          == jitter_specialized_instruction_opcode_NOP);
+  assert (((enum jitter_specialized_instruction_opcode)
+           vmprefix_specialized_instruction_opcode__eUNREACHABLE0)
+          == jitter_specialized_instruction_opcode_UNREACHABLE0);
+  assert (((enum jitter_specialized_instruction_opcode)
+           vmprefix_specialized_instruction_opcode__eUNREACHABLE1)
+          == jitter_specialized_instruction_opcode_UNREACHABLE1);
+  assert (((enum jitter_specialized_instruction_opcode)
+           vmprefix_specialized_instruction_opcode__eUNREACHABLE2)
+          == jitter_specialized_instruction_opcode_UNREACHABLE2);
 
   already_checked = true;
 }
@@ -120,6 +139,53 @@ vmprefix_initialize_vm_configuration (struct jitter_vm_configuration *c);
    mistakes very early, by causing a link-time failure in case of mismatch. */
 extern volatile const bool
 JITTER_DISPATCH_DEPENDENT_GLOBAL_NAME;
+
+
+
+
+/* Low-level debugging features relying on assembly: data locations.
+ * ************************************************************************** */
+
+#ifdef JITTER_HAVE_PATCH_IN
+/* A declaration for data locations, as visible from C.  The global, defined in
+   assembly in its own separate section thru the machinery in
+   jitter/jitter-sections.h , is a single contiguous area of memory containing
+   non-empty ASCII strings separated by '\0' bytes, and terminated by a further
+   '\0' byte. */
+extern const char
+JITTER_DATA_LOCATION_NAME(vmprefix) [];
+
+// FIXME: remove after testing.
+void
+dump_locations (FILE *out)
+{
+  struct jitter_data_locations *locations
+    = jitter_make_data_locations (JITTER_DATA_LOCATION_NAME(vmprefix));
+  int i;
+  size_t register_no = 0;
+  for (i = 0; i < locations->data_location_no; i ++)
+    {
+      fprintf (out, "%2i. %24s: %-12s (%s)\n",
+               i,
+               locations->data_locations [i].name,
+               locations->data_locations [i].location,
+               locations->data_locations [i].register_ ? "register" : "memory");
+      if (locations->data_locations [i].register_)
+        register_no ++;
+    }
+  if (locations->data_location_no > 0)
+    {
+      int register_percentage
+        = (register_no * 100) / locations->data_location_no;
+      fprintf (out, "Register ratio: %i%%\n", register_percentage);
+    }
+  else
+    fprintf (out, "Register ratio: undefined\n");
+  fprintf (out, "\n");
+  fflush (stderr);
+  jitter_destroy_data_locations (locations);
+}
+#endif // #ifdef JITTER_HAVE_PATCH_IN
 
 
 
@@ -373,6 +439,7 @@ vmprefix_initialize (void)
 
 #ifdef JITTER_HAVE_PATCH_IN
   jitter_dump_defect_table (stderr, vmprefix_defect_table, & the_vmprefix_vm);
+  dump_locations (stderr);
 #endif // #ifdef JITTER_HAVE_PATCH_IN
 }
 

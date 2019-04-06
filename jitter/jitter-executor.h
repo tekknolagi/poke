@@ -39,6 +39,7 @@
 #endif // #ifdef JITTER_HAS_ASSEMBLY
 
 #include <jitter/jitter-fast-branch.h>
+#include <jitter/jitter-sections.h>
 
 
 /* Consistency check.
@@ -130,6 +131,14 @@
    different expansions with the same argument. */
 #define JITTER_COMMENT_IN_ASM_UNIQUE(_jitter_string_literal)        \
   asm volatile (JITTER_ASM_COMMENT_UNIQUE(_jitter_string_literal))
+
+
+
+
+/* Debugging features to be used with disassembly.
+ * ************************************************************************** */
+
+// FIXME: I should move this section to a different header.
 
 /* "Debugging nops" serve to generate nop instructions containing recognizable
    integer arguments, to be read back by humans disassembling compiled code.

@@ -170,15 +170,17 @@ jitter_destroy_executable_routine (struct jitter_executable_routine *p)
 
 /* Some specialized instruction opcodes whose values must always be valid,
    independently from the VM.  This is checked with assertions at the first
-   run of the specializer. */
+   run of the specializer -- see templates/vm1.c . */
 enum jitter_specialized_instruction_opcode
   {
     jitter_specialized_instruction_opcode_INVALID = 0,
     jitter_specialized_instruction_opcode_BEGINBASICBLOCK = 1,
     jitter_specialized_instruction_opcode_EXITVM = 2,
-    jitter_specialized_instruction_opcode_UNREACHABLE0 = 3,
-    jitter_specialized_instruction_opcode_UNREACHABLE1 = 4,
-    jitter_specialized_instruction_opcode_UNREACHABLE2 = 5,
+    jitter_specialized_instruction_opcode_DATALOCATIONS = 3,
+    jitter_specialized_instruction_opcode_NOP = 4,
+    jitter_specialized_instruction_opcode_UNREACHABLE0 = 5,
+    jitter_specialized_instruction_opcode_UNREACHABLE1 = 6,
+    jitter_specialized_instruction_opcode_UNREACHABLE2 = 7,
   };
 
 /* Add an opcode to the specialized program which is being built.  This is an

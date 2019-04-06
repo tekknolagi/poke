@@ -443,6 +443,7 @@ SOURCES_FOR_LIBJITTER = \
   jitter/jitter-machine-common.S jitter/jitter-machine-common.h \
   jitter/jitter-patch.c jitter/jitter-patch.h \
   jitter/jitter-sections.c jitter/jitter-sections.h \
+  jitter/jitter-data-locations.c jitter/jitter-data-locations.h \
   jitter/jitter-patch-in.c jitter/jitter-patch-in.h \
   jitter/jitter-defect.c jitter/jitter-defect.h \
   jitter/jitter-stack.c jitter/jitter-stack.h
@@ -455,6 +456,7 @@ SOURCES_FOR_LIBJITTER = \
 jitterinclude_HEADERS += \
   jitter/jitter.h \
   jitter/jitter-config.h \
+  jitter/jitter-data-locations.h \
   jitter/jitter-defect.h \
   jitter/jitter-dispatch.h \
   jitter/jitter-fast-branch.h \

@@ -51,6 +51,7 @@
 #include <jitter/jitter-specialize.h> // FIXME: what about only declaring jitter_specialize in another header, and not including this?
 #include <jitter/jitter-disassemble.h>
 #include <jitter/jitter-vm.h>
+#include <jitter/jitter-data-locations.h>
 
 
 
@@ -662,6 +663,14 @@ void
 vmprefix_execute_executable_routine (const struct jitter_executable_routine *er,
                                      struct vmprefix_state *s)
   __attribute__ ((nonnull (1, 2)));
+
+
+
+
+/* Low-level debugging features relying on assembly: data locations.
+ * ************************************************************************** */
+
+// FIXME: add prototypes for user functions.
 
 
 
