@@ -158,7 +158,8 @@
          inputs; the actual input is pr , which is not visible from C.         \
          If this is not volatile GCC can move it somewhere else where it is    \
          exectued only once, with the result saved on the stack.  Of course I  \
-         don't want that. */                                                   \
+         don't want that.  VM instructions begin and and with volatile asm     \
+         statements, so this cannot be moved across them. */                   \
       asm volatile ("sts pr, %[return_address]"                                \
                     : [return_address] "=r" (jitter_the_return_address)        \
                       /* outputs */);                                          \
