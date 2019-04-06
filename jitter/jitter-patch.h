@@ -1,6 +1,7 @@
 /* VM library: native code patching, machine-independent header file.
 
    Copyright (C) 2017 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -239,14 +240,16 @@ jitter_is_negative (int64_t word);
 
 /* Return true iff the given argument, taken as a word-sized unsigned integer,
    fits within the specified number of bits.  For example 0, 4, 45 or 255 fit
-   in 8 bits, but 256 does not.  The number of bits does not need to be a power
-   of two. */
+   in 8 bits, but 256 does not.
+   The number of bits does not need to be a power of two, and can even be
+   greater than 64. */
 bool
 jitter_fits_in_bits_zero_extended (uint64_t word, unsigned bit_no);
 
-/* Return true iff the given two's complement word can be represented in the
-   given number of bits and sign-extended back to a word without loss of
-   information. */
+/* Return true iff the given two's complement word can be truncated to the given
+   number of (low) bits and sign-extended back to a word without loss of
+   information.
+   The given number of bits must be between 0 and 64, included. */
 bool
 jitter_fits_in_bits_sign_extended (uint64_t word, unsigned bit_no);
 
