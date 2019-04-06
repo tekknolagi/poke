@@ -56,7 +56,7 @@ jitter_timeout=1
 # The additional time required can be considerable in some cases, so I will
 # play it safe here.
 if test "x@JITTER_EMULATOR@" != 'x'; then
-    jitter_timeout=$(( "$jitter_timeout" + 3 ))
+    jitter_timeout=$(( "$jitter_timeout" * 3 + 5 ))
 fi
 
 # If we have the GNU coreutils we can use timeout to avoid running a test case
