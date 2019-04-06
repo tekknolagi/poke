@@ -40,8 +40,8 @@
 
 /* Expand to an inline assembly template generating a nop instruction containing
    the given literal as an argument. */ // FIXME: define this for this architecture.
-#define _JITTER_ASM_DEBUGGING_NOP(integer_literal_as_string)      \
-  "addi %%g0, " JITTER_STRINGIFY(integer_literal_as_string) ", %%g0"
+#define _JITTER_ASM_DEBUGGING_NOP(integer_literal_as_string)         \
+  "add %%g0, " JITTER_STRINGIFY(integer_literal_as_string) ", %%g0"
 
 
 
