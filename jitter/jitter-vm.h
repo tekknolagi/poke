@@ -1,6 +1,6 @@
 /* Jitter: VM-specific configuration and internal implementation header.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -86,6 +86,10 @@ struct jitter_vm
   // FIXME: add a comment per field.
   jitter_thread *threads;
   long *thread_sizes;
+
+  /* The address of the symbol defined in the data location subsection as
+     a const char * global.  See jitter-data-locations.h . */
+  const char *data_locations;
 #endif // #ifndef JITTER_DISPATCH_SWITCH
 
   const size_t *specialized_instruction_residual_arities;

@@ -43,7 +43,6 @@
 #include <stdbool.h>
 
 #include <jitter/jitter.h>
-#include <jitter/jitter-dispatch.h>
 #include <jitter/jitter-hash.h>
 #include <jitter/jitter-stack.h>
 #include <jitter/jitter-instruction.h>

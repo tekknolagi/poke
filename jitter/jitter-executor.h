@@ -30,7 +30,6 @@
 #ifndef JITTER_EXECUTOR_H_
 #define JITTER_EXECUTOR_H_
 
-#include <jitter/jitter-dispatch.h>
 #include <jitter/jitter.h>
 #include <jitter/jitter-cpp.h>
 

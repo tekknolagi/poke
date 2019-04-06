@@ -25,7 +25,6 @@
 /* The functionality in this header is used internally, and is not meant for the
    user. */
 
-#include <jitter/jitter-dispatch.h>
 #include <jitter/jitter.h>
 
 

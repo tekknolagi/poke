@@ -313,7 +313,7 @@ bin_jitter_LDADD = \
   lib/libjitterutility--convenience.la \
   $(LDADD_FOR_GNULIB)
 bin_jitter_CPPFLAGS = \
-  $(CPPFLAGS_FOR_GNULIB) $(CPPFLAGS_FOR_PATHS)
+  $(CPPFLAGS_FOR_GNULIB) $(AM_CPPFLAGS) $(CPPFLAGS_FOR_PATHS)
 
 
 # jitter configuration utility.
@@ -433,7 +433,6 @@ EXTRA_DIST += $(JITTER_TEMPLATES)
 SOURCES_FOR_LIBJITTER = \
   jitter/jitter.c jitter/jitter.h \
   jitter/jitter-config.h \
-  jitter/jitter-dispatch.h \
   jitter/jitter-instruction.c jitter/jitter-instruction.h \
   jitter/jitter-routine.c jitter/jitter-routine.h \
   jitter/jitter-rewrite.c jitter/jitter-rewrite.h \
@@ -465,7 +464,6 @@ jitterinclude_HEADERS += \
   jitter/jitter-config.h \
   jitter/jitter-data-locations.h \
   jitter/jitter-defect.h \
-  jitter/jitter-dispatch.h \
   jitter/jitter-fast-branch.h \
   jitter/jitter-instruction.h \
   jitter/jitter-machine-common.h \

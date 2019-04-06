@@ -30,7 +30,6 @@
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-fatal.h>
 
-#include <jitter/jitter-dispatch.h>
 #include <jitter/jitter-instruction.h>
 #include <jitter/jitter-routine.h>
 #include <jitter/jitter-specialize.h>

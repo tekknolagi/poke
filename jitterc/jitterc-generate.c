@@ -1127,7 +1127,6 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
   FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
   EMIT("//#include <jitter/jitter-fatal.h>\n");
   EMIT("\n");
-  EMIT("//#include <jitter/jitter-dispatch.h>\n");
   EMIT("//#include <jitter/jitter.h>\n");
   EMIT("//#include <jitter/jitter-instruction.h>\n");
   EMIT("//#include <jitter/jitter-specialize.h>\n");
@@ -2666,6 +2665,11 @@ jitterc_emit_executor_data_locations (FILE *f, const struct jitterc_vm *vm)
   /* First emit reserved registers: these are in fact guaranteed to be
      registers. */
 
+  /* Instruction pointer, if any. */
+  EMIT("#ifndef JITTER_DISPATCH_NO_THREADING\n");
+  EMIT("  JITTER_DATA_LOCATION_DATUM (\"instruction pointer\", jitter_ip);\n");
+  EMIT("#endif // #ifndef JITTER_DISPATCH_NO_THREADING\n");
+
   /* Base. */
   EMIT("  JITTER_DATA_LOCATION_DATUM (\"base\", jitter_array_base);\n");
 
@@ -3272,7 +3276,6 @@ jitterc_emit_executor (const struct jitterc_vm *vm)
   EMIT("/* End of the early C code from the user. */\n\n");
 
   EMIT("#include <jitter/jitter-config.h>\n");
-  EMIT("#include <jitter/jitter-dispatch.h>\n");
   EMIT("#include <jitter/jitter.h>\n");
   EMIT("#include <jitter/jitter-instruction.h>\n");
   EMIT("#include <jitter/jitter-executor.h>\n\n");

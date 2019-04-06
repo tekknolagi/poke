@@ -22,7 +22,6 @@
 #ifndef JITTER_SPECIALIZE_H_
 #define JITTER_SPECIALIZE_H_
 
-#include <jitter/jitter-dispatch.h>
 #include <jitter/jitter.h>
 #include <jitter/jitter-routine.h>
 #include <jitter/jitter-instruction.h>
