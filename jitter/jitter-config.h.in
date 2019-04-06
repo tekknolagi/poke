@@ -60,6 +60,7 @@
    compiled as a template. */
 #undef HAVE_SETRLIMIT
 #undef HAVE_ALARM
+#undef JITTER_HOST_ASSEMBLER_IS_GNU
 #undef JITTER_HOST_OS_IS_GNU
 #undef JITTER_HOST_OS_IS_ELF
 #undef JITTER_OBJDUMP

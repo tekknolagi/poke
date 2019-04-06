@@ -96,9 +96,9 @@
 
 /* Here we rely on system-specific sections as defined by the assembler and
    linker; currently the system must be ELF. */
-#ifdef JITTER_HOST_OS_IS_ELF
+#if defined(JITTER_HOST_OS_IS_ELF) || defined(JITTER_HOST_ASSEMBLER_IS_GNU)
 # define JITTER_HAS_SECTIONS 1
-#endif // #ifdef JITTER_HOST_OS_IS_ELF
+#endif // enough functionality for Jitter's sections mechanism
 
 
 
@@ -107,8 +107,20 @@
  * ************************************************************************** */
 
 /* The macros provide a way of entering a given subsection, and exiting back to
-   the previous one, in a LIFO way.  This is a trivial wrapper over assembly
-   functionality. */
+   .text .  This is a trivial wrapper over assembly functionality.
+   ELF systems provide a very simple and elegant functionality based on LIFO
+   logic, where a subsection can be entered and just exited; at exit, the current
+   subsection reverts to the one which was active before entering.
+   This functionality is simple and elegant, but unfortunately not portable
+   to non-ELF systems.  However, since we don't really need our temporary
+   subsection switches to nest, we can use a crude but more portable support
+   from Gas on non-ELF systems. */
+
+
+
+
+/* Section-changing macros: the ELF solution.
+ * ************************************************************************** */
 
 /* Macros to enter and exit a subsection, expanding to literal assembly
    templates.  This is the solution relying on ELF.  The given section name must
@@ -118,13 +130,51 @@
 #define JITTER_ASM_EXIT_SUBSECTION_ELF  \
   "\n.popsection\n\t"
 
+
+
+
+/* Section-changing macros: the GNU assembler solution.
+ * ************************************************************************** */
+
+/* Macros to enter and exit a subsection, expanding to literal assembly
+   templates.  This is the solution just relying on the GNU assembler.  The
+   given section name must expand to a literal string.
+
+   In order for this to work I have to prevent GCC from generating CFI
+   directives, which don't play well with subsections, and avoid
+   -freorder-functions , which would .text into .text.hot and .text.unlikely
+   and therefore break JITTER_ASM_EXIT_SUBSECTION_GAS preventing a simple
+     .text 0
+   from returning to the previous subsection. */
+#define JITTER_ASM_ENTER_SUBSECTION_GAS(_jitter_section_name)       \
+  /* Temporarily switch to a .text subsection.  The generated data  \
+     will be executable, which is not needed, but will still be     \
+     read-only, which is good. */                                   \
+  "\n.data " _jitter_section_name "\n\t"
+#define JITTER_ASM_EXIT_SUBSECTION_GAS  \
+  /* Go back to the subsection 0 . */   \
+  "\n.text 0\n\t"
+
+
+
+
+/* Section-changing macros: generic wrapper.
+ * ************************************************************************** */
+
 /* Macros to enter and exit a subsection, expanding to literal assembly
    templates.  The section name must expand to a literal string. */
-#ifdef JITTER_HOST_OS_IS_ELF
+#if defined(JITTER_HOST_OS_IS_ELF)
 # define JITTER_ASM_ENTER_SUBSECTION(_jitter_section_name)  \
     JITTER_ASM_ENTER_SUBSECTION_ELF(_jitter_section_name)
 # define JITTER_ASM_EXIT_SUBSECTION  \
     JITTER_ASM_EXIT_SUBSECTION_ELF
+#elif defined(JITTER_HOST_ASSEMBLER_IS_GNU)
+# define JITTER_ASM_ENTER_SUBSECTION(_jitter_section_name)  \
+    JITTER_ASM_ENTER_SUBSECTION_GAS(_jitter_section_name)
+# define JITTER_ASM_EXIT_SUBSECTION  \
+    JITTER_ASM_EXIT_SUBSECTION_GAS
+#else
+  /* This case is not really supported. */
 #endif // #ifdef JITTER_HOST_OS_IS_ELF
 
 
@@ -137,7 +187,7 @@
    global definition. */
 
 /* Expand to a literal assembly template string opening and closing a definition
-   in the current section.  
+   in the current section.
    Such a definition will generate two globally visible symbols: one main symbol
    with the given name, and another with the given name suffixed by
    "_size_in_bytes", a memory global containing the size in bytes of the main
