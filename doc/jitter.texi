@@ -2645,10 +2645,13 @@ on esthetic merit alone.
 @subsection SPARC
 @cindex SPARC
 
-Minimal-threading works well on both 32 and 64-bit SPARCs, as long as
-the GCC builtin for icache invalidation is sufficient.  I should
-implement no-threading as well; it seems easy.  VM procedures will use
-the flat model, without register windows.
+No-threading works well on both 32 and 64-bit SPARCs, as long as the
+GCC builtin for icache invalidation is sufficient, which it should be.
+
+There is no support yet for conditionals, but that seems easy to add.
+VM procedures use the flat model and never change register windows,
+which is probably more efficient and certainly leaves a high number of
+general registers available.
 
 @fixme{As a CPU with free-hardware implementations this architecture
 should be high-priority; are ASIC implementations actually available?}
