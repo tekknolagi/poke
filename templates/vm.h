@@ -51,6 +51,7 @@
 #include <jitter/jitter-disassemble.h>
 #include <jitter/jitter-vm.h>
 #include <jitter/jitter-data-locations.h>
+#include <jitter/jitter-bitwise.h> // for JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO
 
 
 
@@ -199,51 +200,39 @@ vmprefix_make_routine (void)
    here, in case the definition is missing on some architecture. */
 #define JITTER_ARRAY_BIAS 0
 
-/* Transfer registers are not implemented yet.  For the purpose of computing
-   Array offsets I will say they are zero. */
-#define VMPREFIX_TRANSFER_REGISTER_NO 0
-
 /* Array-based globals are not implemented yet.  For the purpose of computing
    Array offsets I will say they are zero. */
 #define VMPREFIX_GLOBAL_NO 0
 
-#ifdef JITTER_DISPATCH_NO_THREADING
-/* Expand to the offset from the base, in bytes, of the i-th residual.  The
-   given index must be greater than or equal to JITTER_RESIDUAL_REGISTER_NO;
-   residuals with indices lower than that number are not stored in The Array
-   at all.
-   This is not useful with any of the other dispatching modes, where residuals
-   directly follow each VM instruction opcode or thread.  For good performance i
-   should always be a compile-time constant, as it is in machine-generated
-   code. */
-/* FIXME: if later I use a different policy than simply checking
-   JITTER_RESIDUAL_REGISTER_NO to decide how many residuals to keep in
-   registers, then I have to change this or meet very nasty bugs. */
-# define VMPREFIX_RESIDUAL_UNBIASED_OFFSET(i)  \
-    (sizeof (union vmprefix_any_register) *    \
-     (i - JITTER_RESIDUAL_REGISTER_NO))
-# define VMPREFIX_RESIDUAL_OFFSET(i)  \
-    (VMPREFIX_RESIDUAL_UNBIASED_OFFSET(i) - JITTER_ARRAY_BIAS)
-#endif // #ifdef JITTER_DISPATCH_NO_THREADING
+/* Transfer registers are not implemented yet.  For the purpose of computing
+   Array offsets I will say they are zero. */
+#define VMPREFIX_TRANSFER_REGISTER_NO 0
 
-/* Define a macro holding the first slow register offset in bytes from an
-   initial Array pointer. */
-#ifdef JITTER_DISPATCH_NO_THREADING
-  /* With no-threading dispatch we have to keep into account residuals and
-     transfer registers, which come before slow registers.  [FIXME: and more in
-     the future].  This relies on VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY ,
-     defined below, which in its turn depends on VMPREFIX_MAX_RESIDUAL_ARITY,
-     which is machine-generated. */
-# define VMPREFIX_FIRST_SLOW_REGISTER_UNBIASED_OFFSET  \
-  (sizeof (union vmprefix_any_register)                \
-   * (  VMPREFIX_GLOBAL_NO                             \
-      + VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY             \
-      + VMPREFIX_TRANSFER_REGISTER_NO))
-#else
-  /* With any dispatching model different from no-threading the Array begins
-     with slow registers. */
-# define VMPREFIX_FIRST_SLOW_REGISTER_UNBIASED_OFFSET  0
-#endif // #ifdef JITTER_DISPATCH_NO_THREADING
+/* Define macros holding offsets in bytes for the first global, memory residual
+   and transfer register, from an initial Array pointer.
+   In general we have to keep into account:
+   - globals (word-sized);
+   - memory residuals (word-sized);
+   - transfer registers (word-sized);
+   - slow registers (vmprefix_any_register-sized and aligned).
+   Notice that memory
+   residuals (meaning residuals stored in The Array) are zero on dispatching
+   modes different from no-threading.  This relies on
+   VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY , defined below, which in its turn depends
+   on VMPREFIX_MAX_RESIDUAL_ARITY, which is machine-generated. */
+#define VMPREFIX_FIRST_GLOBAL_UNBIASED_OFFSET  \
+  0
+#define VMPREFIX_FIRST_MEMORY_RESIDUAL_UNBIASED_OFFSET  \
+  (VMPREFIX_FIRST_GLOBAL_UNBIASED_OFFSET                \
+   + sizeof (jitter_int) * VMPREFIX_GLOBAL_NO)
+#define VMPREFIX_FIRST_TRANSFER_REGISTER_UNBIASED_OFFSET        \
+  (VMPREFIX_FIRST_MEMORY_RESIDUAL_UNBIASED_OFFSET               \
+   + sizeof (jitter_int) * VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY)
+#define VMPREFIX_FIRST_SLOW_REGISTER_UNBIASED_OFFSET          \
+  JITTER_NEXT_MULTIPLE_OF_POSITIVE                            \
+     (VMPREFIX_FIRST_TRANSFER_REGISTER_UNBIASED_OFFSET        \
+      + sizeof (jitter_int) * VMPREFIX_TRANSFER_REGISTER_NO,  \
+      sizeof (union vmprefix_any_register))
 
 /* Expand to the offset of the i-th register of class c in bytes from the Array
    beginning.
@@ -310,13 +299,34 @@ vmprefix_make_routine (void)
     ((VMPREFIX_MAX_RESIDUAL_ARITY <= JITTER_RESIDUAL_REGISTER_NO)    \
      ? 0                                                             \
      : (VMPREFIX_MAX_RESIDUAL_ARITY - JITTER_RESIDUAL_REGISTER_NO))
-#else
-  /* No registers are reserved for residuals in this dispatching mode, so
-     every residual is a memory residual. */
+#else // Not no-threading.
+  /* No registers are reserved for residuals in this dispatching mode; even if
+     in fact all residuals are memory residuals they don't count here, since
+     residuals are not held in The Array in this dispatching mode. */
 # define VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY  \
-  VMPREFIX_MAX_RESIDUAL_ARITY
+  0
 #endif // #ifdef JITTER_DISPATCH_NO_THREADING
 
+#ifdef JITTER_DISPATCH_NO_THREADING
+/* Expand to the offset from the base, in bytes, of the i-th residual.  The
+   given index must be greater than or equal to JITTER_RESIDUAL_REGISTER_NO;
+   residuals with indices lower than that number are not stored in The Array
+   at all.
+   This is not useful with any of the other dispatching modes, where residuals
+   directly follow each VM instruction opcode or thread.  For good performance i
+   should always be a compile-time constant, as it is in machine-generated
+   code.
+   Residuals always have the size of a jitter word, even if some register class
+   may be wider. */
+/* FIXME: if later I use a different policy than simply checking
+   JITTER_RESIDUAL_REGISTER_NO to decide how many residuals to keep in
+   registers, then I have to change this or meet very nasty bugs. */
+# define VMPREFIX_RESIDUAL_UNBIASED_OFFSET(i)                      \
+    (VMPREFIX_FIRST_MEMORY_RESIDUAL_UNBIASED_OFFSET                \
+     + (sizeof (jitter_int) * (i - JITTER_RESIDUAL_REGISTER_NO)))
+# define VMPREFIX_RESIDUAL_OFFSET(i)  \
+    (VMPREFIX_RESIDUAL_UNBIASED_OFFSET(i) - JITTER_ARRAY_BIAS)
+#endif // #ifdef JITTER_DISPATCH_NO_THREADING
 
 
 
