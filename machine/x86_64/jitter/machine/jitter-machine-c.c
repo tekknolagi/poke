@@ -97,13 +97,17 @@ jitter_routine_for_loading_memory (const char *immediate_pointer,
                                    unsigned int index,
                                    const char *loading_code_to_write)
 {
-  if (index >= 16)
+  if (index >= 15)
     jitter_fatal ("you have an awful lot of memory residuals: not implemented yet");
+  /* FIXME: check elsewhere, at machine initialization time, that we don't have
+     enough memory residuals to potentially fail here.  The check is safe to
+     perform only once. */
 
-  /* FIXME: support the other cases as well.  This is good as a fallback case,
-     as an inefficient but quite general routine.  The only case it doesn't
-     cover is index >= 16 . */
-  return jitter_routine_set_64bit_residual_memory_small_offset;
+  int64_t immediate = * (int64_t*) immediate_pointer;
+  if (jitter_fits_in_bits_sign_extended (immediate, 32))
+    return jitter_routine_set_32bit_sign_extended_residual_memory;
+  else
+    return jitter_routine_set_64bit_residual_memory_two_32bit_stores;
 }
 
 void
@@ -162,28 +166,54 @@ jitter_patch_load_immediate_to_memory (char *native_code,
 {
   switch (routine)
     {
-    case jitter_routine_set_64bit_residual_memory_small_offset:
+    case jitter_routine_set_64bit_residual_memory_two_32bit_stores:
       {
-        char *first_zero = memchr (native_code, 0x0, native_code_size);
-        /* Just to be sure that I'm patching the first instruction at the right
-           place, since its encoding is complicated, check:
-           - that I actually found a 0x0 byte;
-           - that the 8 bytes I'm about to overwrite are actually all 0x0;
-           - and that the byte right after those (where the next instruction
-             begins) is not. */
-        uint64_t zeroes = * (uint64_t*) first_zero;
-        assert (first_zero != NULL);
-        assert (zeroes == 0L);
-        assert (first_zero [8] != 0);
+        /* I have to patch two consecutive instructions with the same identical
+           format; I don't want to make assumption on their size. */
+        assert ((native_code_size & 1) == 0);
+        size_t each_instruction_size = native_code_size / 2;
 
-        /* Patch the literal in. */
-        memcpy (first_zero, immediate_pointer, 8);
+        /* Each of the two instructions has two immediates at the end: the last
+           four bytes (little-endian) are the 32-bit value immediate to be stored;
+           before them comes the offset from the register, as one byte, signed. */
+        off_t value_offset = each_instruction_size - 4;
+        off_t offset_offset = each_instruction_size - 5;
 
-        /* Patch the memory offset in. */
-        unsigned char offset = memory_index * 8;
-        memcpy (native_code + native_code_size - 1, &offset, 1);
+        /* This is a little-endian architecture: the low half comes first, and
+           has a smaller offset from the base. */
+        int8_t low_half_offset = memory_index * 8;
+        int8_t high_half_offset = low_half_offset + 4;
+        uint32_t low_half_value = * (uint32_t *) immediate_pointer;
+        uint32_t high_half_value = * (uint32_t *) (immediate_pointer + 4);
+
+        /* Patch immediates first for the low half, then for the high half. */
+        memcpy (native_code + value_offset,
+                & low_half_value, 4);
+        memcpy (native_code + offset_offset,
+                & low_half_offset, 1);
+        memcpy (native_code + value_offset + each_instruction_size,
+                & high_half_value, 4);
+        memcpy (native_code + offset_offset + each_instruction_size,
+                & high_half_offset, 1);
         break;
       }
+
+    case jitter_routine_set_32bit_sign_extended_residual_memory:
+      {
+        /* Similar to the previous case.  [FIXME: factor?].  Patch two
+           immediates into the end of the instruction.  Here I am generating
+           an instruction storing a 64-bit value, but in effect only mentioning
+           its low half -- this depends on endianness -- in terms of offset, and
+           of the value to be stored. */
+        int8_t low_half_offset = memory_index * 8;
+        uint32_t low_half_value = * (uint32_t *) immediate_pointer;
+        off_t offset_offset = native_code_size - 5;
+        off_t value_offset = native_code_size - 4;
+        memcpy (native_code + offset_offset, & low_half_offset, 1);
+        memcpy (native_code + value_offset, & low_half_value, 4);
+        break;
+      }
+
     default:
       jitter_unimplemented ("jitter_patch_load_immediate_to_memory");
     }
