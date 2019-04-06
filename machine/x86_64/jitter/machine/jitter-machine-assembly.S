@@ -64,7 +64,12 @@ jitter_routine load_minus_1_to_64bit_residual_register_3, \
      48 bb 00 00 00 00 00 00 00 00   # movabsq $0x0, %rbx
    , where the zeroes are the literal constant to patch over.  The literal
    to be patched over is always at the same offset from the end, independently
-   from the destination register. */
+   from the destination register.
+   It goes without saying that these instructions are huge.  Even if on modern
+   CPUs they don't take long to execute, according to Agner Fog they can become
+   a bottleneck at decoding time, so they are better avoided.  Whenever the
+   literal fits in 32 bits, either zero-extended or sign-extended, there is
+   a better solution. */
 jitter_routine set_64bit_residual_register_0,       \
            <movabsq $0, JITTER_RESIDUAL_REGISTER_0>
 jitter_routine set_64bit_residual_register_1,       \
@@ -111,8 +116,10 @@ jitter_routine set_64bit_residual_memory_big_offset,                   \
            <movabsq $0, JITTER_SCRATCH_REGISTER>,                      \
            <movq JITTER_SCRATCH_REGISTER, 0xff(JITTER_BASE_REGISTER)>
 
-/* Load a 32-bit literal into a register.  These assemble to something
-   like
+/* Load a 32-bit literal (or a 64-bit literal which fits zero-extended in
+   32 bits -- when writing to the low half of a 64-bit register x86_64 zeroes
+   its high half) into a register.
+   These assemble to something like
      bb 00 00 00 00   # movl $0x0, %ebx
    , where the zeroes are the literal constant to patch over.  The literal
    to be patched over is always at the same offset *from the end*,
@@ -129,6 +136,21 @@ jitter_routine set_32bit_residual_register_2,           \
            <movl $0, JITTER_RESIDUAL_REGISTER_2_32BIT>
 jitter_routine set_32bit_residual_register_3,           \
            <movl $0, JITTER_RESIDUAL_REGISTER_3_32BIT>
+
+/* Sign-extend a 32-bit literal into a 64-bit register.
+   These assemble to something like
+     48 c7 c0 00 00 00 00  # movq $0x0,%rax
+   , where the zeroes are the literal constant to patch over.  The literal
+   to be patched over is always at the same offset *from the end*; see the
+   comment above. */
+jitter_routine set_64bit_sign_extended_residual_register_0,  \
+           <movq $0, JITTER_RESIDUAL_REGISTER_0>
+jitter_routine set_64bit_sign_extended_residual_register_1,  \
+           <movq $0, JITTER_RESIDUAL_REGISTER_1>
+jitter_routine set_64bit_sign_extended_residual_register_2,  \
+           <movq $0, JITTER_RESIDUAL_REGISTER_2>
+jitter_routine set_64bit_sign_extended_residual_register_3,  \
+           <movq $0, JITTER_RESIDUAL_REGISTER_3>
 
 /* Load a 32-bit literal (zero-extended) into residual argument memory at
    a fixed offset.  This assembles to something like:
