@@ -143,13 +143,13 @@ jitter_routine set_32bit_residual_register_3,           \
    , where the zeroes are the literal constant to patch over.  The literal
    to be patched over is always at the same offset *from the end*; see the
    comment above. */
-jitter_routine set_64bit_sign_extended_residual_register_0,  \
+jitter_routine set_32bit_sign_extended_residual_register_0,  \
            <movq $0, JITTER_RESIDUAL_REGISTER_0>
-jitter_routine set_64bit_sign_extended_residual_register_1,  \
+jitter_routine set_32bit_sign_extended_residual_register_1,  \
            <movq $0, JITTER_RESIDUAL_REGISTER_1>
-jitter_routine set_64bit_sign_extended_residual_register_2,  \
+jitter_routine set_32bit_sign_extended_residual_register_2,  \
            <movq $0, JITTER_RESIDUAL_REGISTER_2>
-jitter_routine set_64bit_sign_extended_residual_register_3,  \
+jitter_routine set_32bit_sign_extended_residual_register_3,  \
            <movq $0, JITTER_RESIDUAL_REGISTER_3>
 
 /* Load a 32-bit literal (zero-extended) into residual argument memory at

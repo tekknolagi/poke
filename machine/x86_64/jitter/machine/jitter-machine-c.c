@@ -75,10 +75,10 @@ jitter_routine_for_loading_register (const char *immediate_pointer,
   else if (jitter_fits_in_bits_sign_extended (immediate, 32))
     switch (residual_register_index)
       {
-      case 0:  return jitter_routine_set_64bit_sign_extended_residual_register_0;
-      case 1:  return jitter_routine_set_64bit_sign_extended_residual_register_1;
-      case 2:  return jitter_routine_set_64bit_sign_extended_residual_register_2;
-      case 3:  return jitter_routine_set_64bit_sign_extended_residual_register_3;
+      case 0:  return jitter_routine_set_32bit_sign_extended_residual_register_0;
+      case 1:  return jitter_routine_set_32bit_sign_extended_residual_register_1;
+      case 2:  return jitter_routine_set_32bit_sign_extended_residual_register_2;
+      case 3:  return jitter_routine_set_32bit_sign_extended_residual_register_3;
       default: jitter_fatal ("impossible C");
       }
   else
@@ -130,10 +130,10 @@ jitter_patch_load_immediate_to_register (char *native_code,
     case jitter_routine_set_32bit_residual_register_1:
     case jitter_routine_set_32bit_residual_register_2:
     case jitter_routine_set_32bit_residual_register_3:
-    case jitter_routine_set_64bit_sign_extended_residual_register_0:
-    case jitter_routine_set_64bit_sign_extended_residual_register_1:
-    case jitter_routine_set_64bit_sign_extended_residual_register_2:
-    case jitter_routine_set_64bit_sign_extended_residual_register_3:
+    case jitter_routine_set_32bit_sign_extended_residual_register_0:
+    case jitter_routine_set_32bit_sign_extended_residual_register_1:
+    case jitter_routine_set_32bit_sign_extended_residual_register_2:
+    case jitter_routine_set_32bit_sign_extended_residual_register_3:
       /* Since x86_64 is little-endian I can truncate a 64-bit value to its
          lower 32 bits by just taking its *first* four bytes.
          The immediate is 32-bit, coming at the end of the instruction, for
