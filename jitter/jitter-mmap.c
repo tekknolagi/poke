@@ -21,7 +21,7 @@
 
 /* Everything below expands to nothing where replication is disabled.  This is
    enough not to use mmap where it doesn't exist. */
-#include <jitter/jitter-dispatch.h>
+#include <jitter/jitter.h>
 #ifdef JITTER_REPLICATE
 
 

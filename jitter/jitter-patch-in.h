@@ -29,7 +29,7 @@
 /* Include macro definitions about whether we have a machine file, and about the
    dispatching model. */
 #include <jitter/jitter-config.h>
-#include <jitter/jitter-dispatch.h>
+#include <jitter/jitter.h>
 
 /* Include sectioning macros. */
 #include <jitter/jitter-sections.h>

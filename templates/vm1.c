@@ -33,7 +33,6 @@
 #include <string.h>
 
 #include <jitter/jitter.h>
-#include <jitter/jitter-dispatch.h>
 #include <jitter/jitter-hash.h>
 #include <jitter/jitter-instruction.h>
 #include <jitter/jitter-mmap.h>
@@ -147,44 +146,11 @@ JITTER_DISPATCH_DEPENDENT_GLOBAL_NAME;
  * ************************************************************************** */
 
 #ifdef JITTER_HAVE_PATCH_IN
-/* A declaration for data locations, as visible from C.  The global, defined in
+/* A declaration for data locations, as visible from C.  The global is defined in
    assembly in its own separate section thru the machinery in
-   jitter/jitter-sections.h , is a single contiguous area of memory containing
-   non-empty ASCII strings separated by '\0' bytes, and terminated by a further
-   '\0' byte. */
+   jitter/jitter-sections.h . */
 extern const char
 JITTER_DATA_LOCATION_NAME(vmprefix) [];
-
-// FIXME: remove after testing.
-void
-dump_locations (FILE *out)
-{
-  struct jitter_data_locations *locations
-    = jitter_make_data_locations (JITTER_DATA_LOCATION_NAME(vmprefix));
-  int i;
-  size_t register_no = 0;
-  for (i = 0; i < locations->data_location_no; i ++)
-    {
-      fprintf (out, "%2i. %24s: %-12s (%s)\n",
-               i,
-               locations->data_locations [i].name,
-               locations->data_locations [i].location,
-               locations->data_locations [i].register_ ? "register" : "memory");
-      if (locations->data_locations [i].register_)
-        register_no ++;
-    }
-  if (locations->data_location_no > 0)
-    {
-      int register_percentage
-        = (register_no * 100) / locations->data_location_no;
-      fprintf (out, "Register ratio: %i%%\n", register_percentage);
-    }
-  else
-    fprintf (out, "Register ratio: undefined\n");
-  fprintf (out, "\n");
-  fflush (stderr);
-  jitter_destroy_data_locations (locations);
-}
 #endif // #ifdef JITTER_HAVE_PATCH_IN
 
 
@@ -361,6 +327,7 @@ vmprefix_initialize (void)
       the_vmprefix_vm.threads = (jitter_thread *)vmprefix_threads;
       the_vmprefix_vm.thread_sizes = (long *) vmprefix_thread_sizes;
       the_vmprefix_vm.threads_validated = vmprefix_threads_validated;
+      the_vmprefix_vm.data_locations = JITTER_DATA_LOCATION_NAME(vmprefix);
 #endif // #ifndef JITTER_DISPATCH_SWITCH
 
       the_vmprefix_vm.specialized_instruction_residual_arities
@@ -439,7 +406,7 @@ vmprefix_initialize (void)
 
 #ifdef JITTER_HAVE_PATCH_IN
   jitter_dump_defect_table (stderr, vmprefix_defect_table, & the_vmprefix_vm);
-  dump_locations (stderr);
+  jitter_dump_data_locations (stderr, & the_vmprefix_vm);
 #endif // #ifdef JITTER_HAVE_PATCH_IN
 }
 

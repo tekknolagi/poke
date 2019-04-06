@@ -28,8 +28,7 @@
  * ************************************************************************** */
 
 /* Include macro definitions about the dispatching model and about the machine. */
-#include <jitter/jitter-config.h>
-#include <jitter/jitter-dispatch.h>
+#include <jitter/jitter.h>
 
 
 

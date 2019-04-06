@@ -29,7 +29,6 @@
    dispatching model. */
 #include <jitter/jitter.h>
 #include <jitter/jitter-config.h>
-#include <jitter/jitter-dispatch.h>
 
 /* Include sectioning macros. */
 #include <jitter/jitter-sections.h>

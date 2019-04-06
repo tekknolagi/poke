@@ -22,7 +22,6 @@
 #include <stdbool.h>
 
 #include "jitter/jitter.h"
-#include "jitter/jitter-dispatch.h"
 
 
 /* Make sure that we provide the expected dispatching model.

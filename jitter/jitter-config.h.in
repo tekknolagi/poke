@@ -49,7 +49,10 @@
 /* Optional libraries. */
 #undef JITTER_HAS_GNU_READLINE
 
-/* These are needed by jitter-dispatch.h when no dispatching-model CPP macros
+/* It is convenient to let C code access the architecture name. */
+#undef JITTER_ASSEMBLY_SUBDIRECTORY
+
+/* These are needed by jitter.h when no dispatching-model CPP macros
    are defined from the command line. */
 #undef JITTER_BEST_DISPATCHING_MODEL_IS_SWITCH
 #undef JITTER_BEST_DISPATCHING_MODEL_IS_DIRECT_THREADING
