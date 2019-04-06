@@ -78,7 +78,11 @@
    therefore are suitable to reserve:
      %rbx %rbp %r12 %r13 %r14 %r15 .
    I've seen GCC complain ("error: frame pointer required, but reserved")
-   in some cases if I reserve %rbp, so that is better avoided. */
+   in some cases if I reserve %rbp, so that is better avoided.  Moreover
+   the frame pointer seems to be required for vectorized code with some
+   SSE varaitn, even if I don't understand the details.
+   // FIXME: avoid reserving %rbp?
+*/
 
 /* Register pointing to the base of The Array.  This is always used as a
    64-bit register, so no _32BIT version is needed. */
