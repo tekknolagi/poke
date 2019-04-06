@@ -567,7 +567,7 @@ vmprefix_regiter_classes [];
    of fast 'r' or 'f' registers.
    Any new elements allocated in the Array are left uninitialized, but its old
    content remains valid. */
-volatile union vmprefix_any_register *
+char *
 vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
                                         size_t slow_register_no_per_class)
   __attribute__ ((noinline));
