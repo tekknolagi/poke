@@ -83,24 +83,32 @@
 
 /* On x86_64 the following registers should not be clobbered by calls, and
    therefore are suitable to reserve:
-     %rbx %rbp %r12 %r13 %r14 %r15 .
-   I've seen GCC complain ("error: frame pointer required, but reserved")
-   in some cases if I reserve %rbp, so that is better avoided.  Moreover
-   the frame pointer seems to be required for vectorized code with some
-   SSE varaitn, even if I don't understand the details.
-   // FIXME: avoid reserving %rbp?
-*/
+     %rbx %r12 %r13 %r14 %r15 .
+   In theory I would like to reserve
+     %rbp
+   as well, but I've seen GCC complain
+     ("error: bp cannot be used in asm here", and
+      "error: frame pointer required, but reserved")
+   in some cases if I reserve %rbp with vector code, so that is better avoided.
+   The frame pointer seems to be required for vectorized code with some AVX or
+   SSE variant, even if I don't understand the details. */
 
 /* Register pointing to the base of The Array.  This is always used as a
    64-bit register, so no _32BIT version is needed. */
 #define JITTER_BASE_REGISTER                %rbx
 
-/* How many registers we can use to hold residual arguments. */
+/* How many registers we can use to hold residual arguments.  In the
+   (experimental) JITTER_BRANCH_AND_LINK_NO_CALL mode I reserve one register as
+   scratch instead of as residual.  See the comment below.  It is harmless to
+   still unconditionally define all the residual register names; only as many
+   as the expansion of this macro will actually be reserved, at most. */
 /* FIXME: redefine this as 4, but reserve fewer register by default on
    register-starved architectures like this one. */
-#define JITTER_RESIDUAL_REGISTER_NO         1 // 2 // 4
-
-//#define JITTER_RESIDUAL_REGISTER_NO   0 // this is good for testing memory literals
+#ifdef JITTER_BRANCH_AND_LINK_NO_CALL
+# define JITTER_RESIDUAL_REGISTER_NO        3
+#else /* Ordinary procedures, based on callq and retq . */
+# define JITTER_RESIDUAL_REGISTER_NO        4
+#endif // #ifdef JITTER_BRANCH_AND_LINK_NO_CALL
 
 /* Registers holding residual arguments, with 0-based suffixes.  These have to
    be as many as JITTER_RESIDUAL_REGISTER_NO .  On x86_64 I also need to use the low
@@ -109,14 +117,16 @@
    either Gas or CPP macros due to the irregularity of the syntax (%eax<->%rax
    vs. %r12<->%r12d), the different definitions need to be kept synchronized by
    hand. */
-#define JITTER_RESIDUAL_REGISTER_0          %rbp
-#define JITTER_RESIDUAL_REGISTER_0_32BIT    %ebp
-#define JITTER_RESIDUAL_REGISTER_1          %r12
-#define JITTER_RESIDUAL_REGISTER_1_32BIT    %r12d
-#define JITTER_RESIDUAL_REGISTER_2          %r13
-#define JITTER_RESIDUAL_REGISTER_2_32BIT    %r13d
-#define JITTER_RESIDUAL_REGISTER_3          %r14
-#define JITTER_RESIDUAL_REGISTER_3_32BIT    %r14d
+#define JITTER_RESIDUAL_REGISTER_0          %r12
+#define JITTER_RESIDUAL_REGISTER_0_32BIT    %r12d
+#define JITTER_RESIDUAL_REGISTER_1          %r13
+#define JITTER_RESIDUAL_REGISTER_1_32BIT    %r13d
+#define JITTER_RESIDUAL_REGISTER_2          %r14
+#define JITTER_RESIDUAL_REGISTER_2_32BIT    %r14d
+/* This last register is only used when JITTER_BRANCH_AND_LINK_NO_CALL is
+   undefined. */
+#define JITTER_RESIDUAL_REGISTER_3          %r15
+#define JITTER_RESIDUAL_REGISTER_3_32BIT    %r15d
 
 /* This architecture does not need a scratch register to materialize immediates.
    (Search for "scratch register" in the jitter-machine.S comments); however
@@ -127,8 +137,8 @@
    stack for procedures does not need a scratch register, which is quite
    important to reduce register pressure on an architecture like this. */
 #ifdef JITTER_BRANCH_AND_LINK_NO_CALL
-#define JITTER_SCRATCH_REGISTER             %r15
-#define JITTER_SCRATCH_REGISTER_32BIT       %r15d
+# define JITTER_SCRATCH_REGISTER            JITTER_RESIDUAL_REGISTER_3
+# define JITTER_SCRATCH_REGISTER_32BIT      JITTER_RESIDUAL_REGISTER_3_32BIT
 #endif // #ifdef JITTER_BRANCH_AND_LINK_NO_CALL
 
 

@@ -40,6 +40,13 @@
 #define _JITTER_ASM_DEBUGGING_NOP(integer_literal_as_string)  \
   "addi $0, $0, " integer_literal_as_string
 
+/* Expand to a native machine code snippet causing a trap, as a string literal
+   in a syntax suitable for extended inline asm. */
+#define _JITTER_ASM_CRASH                                                   \
+  /* Return from exception.  This will cause an exception in user mode, of  \
+     a kind not usually seen. */                                            \
+  "rfe"
+
 
 
 
@@ -468,7 +475,7 @@
                 : /* outputs. */                                              \
                 : [destination] "r" (jitter_destination) /* inputs. */        \
                 : "$31" /* clobbers. */                                       \
-                : jitter_dispatch_label /* gotolabels. */);              \
+                : jitter_dispatch_label /* gotolabels. */);                   \
       /* Skip the rest of the specialized instruction, for compatibility */   \
       /* with more limited dispatches. */                                     \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                             \
@@ -522,10 +529,11 @@
                 : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                       \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */           \
                 : /* clobbers. */                                              \
-                : jitter_dispatch_label /* gotolabels. */);               \
-      /* Skip the rest of the specialized instruction, for compatibility */    \
-      /* with more limited dispatches. */                                      \
-      JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                              \
+                : jitter_dispatch_label /* gotolabels. */);                    \
+      /* The rest of this specialized instruction is unreachable.  This        \
+         implementation is not based on hardware call and return, so there     \
+         is no need to generate a hardware jump either. */                     \
+      __builtin_unreachable ();                                                \
     }                                                                          \
   while (false)
 #endif // #ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN

@@ -43,6 +43,13 @@
 #define _JITTER_ASM_DEBUGGING_NOP(integer_literal_as_string)  \
   "add %%g0, " integer_literal_as_string ", %%g0"
 
+/* Expand to a native machine code snippet causing a trap, as a string literal
+   in a syntax suitable for extended inline asm. */
+#define _JITTER_ASM_CRASH                                                  \
+  /* Return from a trap in privileged mode.  This will cause an exception  \
+     in user mode, of a kind not usually seen. */                          \
+  "done"
+
 
 
 
