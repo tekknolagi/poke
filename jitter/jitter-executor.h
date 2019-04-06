@@ -31,7 +31,6 @@
 #define JITTER_EXECUTOR_H_
 
 #include <jitter/jitter.h>
-#include <jitter/jitter-cpp.h>
 #include <jitter/jitter-fast-branch.h>
 #include <jitter/jitter-sections.h>
 
@@ -117,13 +116,13 @@
 
 /* Expand to an inline asm C statement containing the given comment, and a
    terminating "\n\t" sequence. */
-#define JITTER_COMMENT_IN_ASM(_jitter_string_literal)        \
+#define JITTER_COMMENT_IN_ASM_(_jitter_string_literal)       \
   asm volatile (JITTER_ASM_COMMENT(_jitter_string_literal))
 
 /* Expand to a string literal containing an asm comment, including containing
    the given text and a unique identifier which will prevent GCC from merging
    different expansions with the same argument. */
-#define JITTER_COMMENT_IN_ASM_UNIQUE(_jitter_string_literal)        \
+#define JITTER_COMMENT_IN_ASM_UNIQUE_(_jitter_string_literal)       \
   asm volatile (JITTER_ASM_COMMENT_UNIQUE(_jitter_string_literal))
 
 
@@ -148,6 +147,9 @@
    The argument must be an integer literal in Gas syntax, with no surrounding
    quotes.  The machine-specific macro will emit the appropriate prefix to
    interpret the digit sequence as a hexadecimal constant.
+   The expansion of this macro should be used in an *extended* asm statement,
+   since '%' characters appearing, for example, as register prefixes, will
+   appear escaped as "%%".
    For portability with respect to architectures only supporting small operands,
    the arguments should be non-negative and representable in 7 bits (Rationale:
    one way to implement a "nop" is by adding a short immediate to a register,
@@ -158,6 +160,28 @@
                              JITTER_STRINGIFY (integer_literal))  \
   _JITTER_ASM_DEBUGGING_NOP(JITTER_STRINGIFY (integer_literal))   \
   "\n\t"
+
+/* A machine code snipped causing a trap, written in text form in a syntax
+   suitable for extended inline asm.  If no machine-specific definition exists,
+   define a stub here. */
+#ifndef _JITTER_ASM_CRASH
+# define _JITTER_ASM_CRASH                                      \
+    JITTER_ASM_COMMENT_PREFIX "unimplemented for this machine"
+#endif // #ifndef _JITTER_ASM_DEBUGGING_NOP
+
+/* Expand to a C statement causing a trap.
+   This is meant to catch bugs, by delimiting code past the end of VM
+   specialized instruction which is not supposed to be replicated.  If such
+   code is ever executed it is useful to make the failure well visible.
+   It is important that this does not use __builtin_unreachable .  The
+   code this is used in is in fact unreachable, but GCC must not be
+   informed about the fact, as the code serves to keep the register
+   assignment compatible across different program points: the compiler
+   must see some impossible control transfers as possible. */
+#define JITTER_CRASH_                                        \
+  asm volatile (JITTER_ASM_COMMENT_UNIQUE ("Cause a crash")  \
+                _JITTER_ASM_CRASH "\n\t"                     \
+                : /* outputs */)
 
 
 
@@ -176,47 +200,54 @@
        : [the_jitter_lvalue] _jitter_constraint (_jitter_lvalue))
 
 // FIXME: comment
-#define JITTER_MARK_RVALUE_AS_READ_BY_ASSEMBLY(variable)                   \
-  asm volatile (JITTER_ASM_COMMENT_UNIQUE("Pretend to read the register or memory variable " \
-                                   JITTER_STRINGIFY(variable) " in "          \
-                                   "%[_variable]")                            \
-                : \
-                : [_variable] "X" (variable) \
-                : "memory")
-#define JITTER_MARK_LVALUE_AS_DEFINED_BY_ASSEMBLY(variable)                   \
-  asm volatile (JITTER_ASM_COMMENT_UNIQUE("Pretend to write the register or memory variable " \
-                                   JITTER_STRINGIFY(variable) " in "          \
-                                   "%[_variable]")                            \
+#define JITTER_MARK_RVALUE_AS_READ_BY_ASSEMBLY(variable)               \
+  asm volatile (JITTER_ASM_COMMENT_UNIQUE(                             \
+                   "Pretend to read the register or memory variable "  \
+                   JITTER_STRINGIFY(variable) " in "                   \
+                   "%[_variable]")                                     \
+                :                                                      \
+                : [_variable] "X" (variable))
+#define JITTER_MARK_LVALUE_AS_DEFINED_BY_ASSEMBLY(variable)             \
+  asm volatile (JITTER_ASM_COMMENT_UNIQUE(                              \
+                   "Pretend to write the register or memory variable "  \
+                   JITTER_STRINGIFY(variable) " in "                    \
+                   "%[_variable]")                                      \
                 : [_variable] "=X" (variable))
-#define JITTER_MARK_LVALUE_AS_SET_BY_ASSEMBLY(variable)                       \
-  asm volatile (JITTER_ASM_COMMENT_UNIQUE("Pretend to read and write the register or memory variable " \
-                                   JITTER_STRINGIFY(variable) " in "          \
-                                   "%[_variable]")                            \
+#define JITTER_MARK_LVALUE_AS_SET_BY_ASSEMBLY(variable)                \
+  asm volatile (JITTER_ASM_COMMENT_UNIQUE(                             \
+                  "Pretend to read and write the register or memory "  \
+                  "variable " JITTER_STRINGIFY(variable) " in "        \
+                  "%[_variable]")                                      \
                 : [_variable] "+g" (variable))
 
-#define JITTER_MARK_REGISTER_AS_DEFINED_BY_ASSEMBLY(variable)                     \
-  asm volatile (JITTER_ASM_COMMENT_UNIQUE("Pretend to write the register variable " \
-                                   JITTER_STRINGIFY(variable) " in "          \
-                                   "%[register_variable]")                    \
+#define JITTER_MARK_REGISTER_AS_DEFINED_BY_ASSEMBLY(variable)  \
+  asm volatile (JITTER_ASM_COMMENT_UNIQUE(                     \
+                   "Pretend to write the register variable "   \
+                   JITTER_STRINGIFY(variable) " in "           \
+                   "%[register_variable]")                     \
                 : [register_variable] "=r" (variable))
-#define JITTER_MARK_REGISTER_AS_SET_BY_ASSEMBLY(variable)                     \
-  asm volatile (JITTER_ASM_COMMENT_UNIQUE("Pretend to read and write the register variable " \
-                                   JITTER_STRINGIFY(variable) " in "          \
-                                   "%[register_variable]")                    \
+#define JITTER_MARK_REGISTER_AS_SET_BY_ASSEMBLY(variable)              \
+  asm volatile (JITTER_ASM_COMMENT_UNIQUE(                             \
+                   "Pretend to read and write the register variable "  \
+                                   JITTER_STRINGIFY(variable) " in "   \
+                                   "%[register_variable]")             \
                 : [register_variable] "+r" (variable))
 
-#define JITTER_MARK_MEMORY_AS_DEFINED_BY_ASSEMBLY(variable)   \
-  asm volatile (JITTER_ASM_COMMENT_UNIQUE("Pretend to write the memory variable "  \
-                                   JITTER_STRINGIFY(variable))               \
+#define JITTER_MARK_MEMORY_AS_DEFINED_BY_ASSEMBLY(variable)  \
+  asm volatile (JITTER_ASM_COMMENT_UNIQUE(                   \
+                   "Pretend to write the memory variable "   \
+                     JITTER_STRINGIFY(variable))             \
                 : "=m" (variable))
-#define JITTER_MARK_MEMORY_AS_SET_BY_ASSEMBLY(variable)   \
-  asm volatile (JITTER_ASM_COMMENT_UNIQUE("Pretend to read and write the memory variable "  \
-                                   JITTER_STRINGIFY(variable))               \
+#define JITTER_MARK_MEMORY_AS_SET_BY_ASSEMBLY(variable)              \
+  asm volatile (JITTER_ASM_COMMENT_UNIQUE(                           \
+                   "Pretend to read and write the memory variable "  \
+                   JITTER_STRINGIFY(variable))                       \
                 : "+m" (variable))
-#define JITTER_MARK_ARRAY_ELEMENT_AS_SET_BY_ASSEMBLY(variable, offset)      \
-  asm volatile (JITTER_ASM_COMMENT_UNIQUE("Pretend to read and write a memory word from "  \
-                                   JITTER_STRINGIFY(variable)               \
-                                   " at offset " JITTER_STRINGIFY(offset))  \
+#define JITTER_MARK_ARRAY_ELEMENT_AS_SET_BY_ASSEMBLY(variable, offset)     \
+  asm volatile (JITTER_ASM_COMMENT_UNIQUE(                                 \
+                   "Pretend to read and write a memory word from "         \
+                   JITTER_STRINGIFY(variable)                              \
+                   " at offset " JITTER_STRINGIFY(offset))                 \
                 : "+m" (* (jitter_int*) ((char*) (variable) + (offset))))
 
 
@@ -238,11 +269,7 @@
  * ************************************************************************** */
 
 // FIXME: comment.
-#ifdef JITTER_DISPATCH_NO_THREADING
-# define JITTER_IP_INPUT_CONSTRAINT "m" //"g"
-#else
-# define JITTER_IP_INPUT_CONSTRAINT "r"
-#endif
+#define JITTER_IP_INPUT_CONSTRAINT "r"
 
 // FIXME: comment.
 // FIXME: remove.  Fake-jumping to an arbitrary label different from
@@ -447,28 +474,16 @@
 /* VM instruction prolog. */
 #if   defined(JITTER_DISPATCH_SWITCH)
   /* VM instruction prolog: switch dispatching. */
-# define JITTER_INSTRUCTION_PROLOG(name, mangled_name, residual_arity)  \
-  case JITTER_CONCATENATE_THREE(JITTER_VM_PREFIX_LOWER_CASE,            \
-                                _specialized_instruction_opcode_,       \
-                                mangled_name):                          \
-    JITTER_COMMENT_IN_ASM_UNIQUE("Specialized instruction "             \
-                                 JITTER_STRINGIFY(name)                 \
-                                 ": begin");
+# define JITTER_INSTRUCTION_PROLOG_(name, mangled_name, residual_arity)  \
+  case JITTER_CONCATENATE_THREE(JITTER_VM_PREFIX_LOWER_CASE,             \
+                                _specialized_instruction_opcode_,        \
+                                mangled_name):
 #else
   /* VM instruction prolog: every non-switch dispatches. */
-# define JITTER_INSTRUCTION_PROLOG(name, mangled_name, hotness_attribute)   \
-{ \
-  JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL_OF(mangled_name):             \
-    __attribute__ ((hotness_attribute));                                   \
-  JITTER_COMMENT_IN_ASM("Specialized instruction " JITTER_STRINGIFY(name) ": begin"); \
-  /*
-  asm volatile (JITTER_ASM_DEBUGGING_NOP(0x1) \
-                : [foo] "+m" (jitter_ip));*/ \
-  JITTER_PRETEND_TO_UPDATE_IP_; \
-/* NEW*/\
- /*JITTER_PRETEND_TO_UPDATE_IP_;*/\
- /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name))*/;
-
+# define JITTER_INSTRUCTION_PROLOG_(name, mangled_name, hotness_attribute)  \
+{                                                                           \
+  JITTER_SPECIALIZED_INSTRUCTION_BEGIN_LABEL_OF(mangled_name):              \
+    __attribute__ ((hotness_attribute));
 #endif // defined(JITTER_DISPATCH_SWITCH)
 
 /* How many words are used to encode the current specialized instruction, given
@@ -477,15 +492,15 @@
    This relies on JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY being defined,
    which is the case when this macro is used as intended, from specialized
    instruction code within the executor. */
-#if   defined(JITTER_DISPATCH_SWITCH)           \
+#if   defined(JITTER_DISPATCH_SWITCH)            \
    || defined(JITTER_DISPATCH_DIRECT_THREADING)
-# define JITTER_SPECIALIZED_INSTRUCTION_WORD_NO \
+# define JITTER_SPECIALIZED_INSTRUCTION_WORD_NO          \
     (1 + JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY)
 #elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define JITTER_SPECIALIZED_INSTRUCTION_WORD_NO \
+# define JITTER_SPECIALIZED_INSTRUCTION_WORD_NO    \
     JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY
 #elif defined(JITTER_DISPATCH_NO_THREADING)
-# define JITTER_SPECIALIZED_INSTRUCTION_WORD_NO \
+# define JITTER_SPECIALIZED_INSTRUCTION_WORD_NO    \
     JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY
 #else
 # error "unknown dispatching model"
@@ -498,15 +513,17 @@
    instruction code within the executor.
    FIXME: shall I use the do..while (false) trick here?  This macro is expanded
    a lot of times, and never from user code. */
+// FIXME: add a _ suffix to the name.
+// FIXME: do not define for no-threading.
 #if   defined(JITTER_DISPATCH_SWITCH)            \
    || defined(JITTER_DISPATCH_DIRECT_THREADING)
-# define JITTER_SKIP_RESIDUALS                                        \
+# define JITTER_SKIP_RESIDUALS_                                       \
   JITTER_SET_IP(jitter_ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
 #elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define JITTER_SKIP_RESIDUALS                                        \
+# define JITTER_SKIP_RESIDUALS_                                       \
   JITTER_SET_IP(jitter_ip + JITTER_SPECIALIZED_INSTRUCTION_WORD_NO);
 #elif defined(JITTER_DISPATCH_NO_THREADING)
-# define JITTER_SKIP_RESIDUALS  \
+# define JITTER_SKIP_RESIDUALS_  \
   /* do nothing. */
 #else
 # error "unknown dispatching model"
@@ -514,64 +531,38 @@
 
 /* A VM instruction epilog. */
 #if   defined(JITTER_DISPATCH_SWITCH)
-# define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
-    JITTER_SKIP_RESIDUALS;                                              \
+# define JITTER_INSTRUCTION_EPILOG_(name, mangled_name, residual_arity)  \
+    JITTER_SKIP_RESIDUALS_;                                              \
     JITTER_BRANCH_TO_IP();
 #elif defined(JITTER_DISPATCH_DIRECT_THREADING)
-# define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
-      JITTER_SKIP_RESIDUALS;                                            \
-      JITTER_BRANCH_TO_IP();                                            \
-    }                                                                   \
-   JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):           \
+# define JITTER_INSTRUCTION_EPILOG_(name, mangled_name, residual_arity)  \
+      JITTER_SKIP_RESIDUALS_;                                            \
+      JITTER_BRANCH_TO_IP();                                             \
+    }                                                                    \
+   JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):            \
      __builtin_unreachable ();
-#elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
-      JITTER_SKIP_RESIDUALS;                                            \
-    } \
-    /*asm volatile ("nopl (0xaa)");*/ \
-    /*JITTER_PRETEND_TO_UPDATE_IP_;*/ \
-    JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label); \
-    /*asm volatile ("nopl (0xbb)");*/ \
-    /*asm volatile ("nop");*/\
-   JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):          \
-   /*asm volatile ("nop");*/\
-   /*asm volatile ("nopl (0xcc)");*/ \
-    JITTER_PRETEND_TO_UPDATE_IP_; \
-    JITTER_PRETEND_TO_JUMP_TO_(jitter_dispatch_label);
-#elif defined(JITTER_DISPATCH_NO_THREADING)
-# define JITTER_INSTRUCTION_EPILOG(name, mangled_name, residual_arity)  \
-    } \
-    /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label); \
-    asm volatile (JITTER_ASM_COMMENT_UNIQUE("blah") \
-                  JITTER_ASM_DEBUGGING_NOP(0x2) \
-                  : [foo] "+m" (jitter_ip));*/ \
-    /*goto *((void*)jitter_ip);*/ \
-    /*asm volatile ("addi $0, $0, 1");*/\
-    /*JITTER_PRETEND_TO_UPDATE_IP_;*/ \
-      /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label);*/ \
-         /*JITTER_PRETEND_TO_UPDATE_IP_;*/ \
-    /* asm volatile (JITTER_ASM_COMMENT_UNIQUE("blah") \
-                  JITTER_ASM_DEBUGGING_NOP(0x2) \
-                  : [foo] "+m" (jitter_ip)); */\
-    /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label);*/ \
-    JITTER_PRETEND_TO_UPDATE_IP_; \
-    /*asm volatile ("addi $0, $0, 2");*/\
-   JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):          \
-    JITTER_PRETEND_TO_UPDATE_IP_; \
-   /*asm volatile (JITTER_ASM_COMMENT_UNIQUE("blah") \
-                  JITTER_ASM_DEBUGGING_NOP(0x3) \
-                  : [foo] "+m" (jitter_ip));*/ \
-    /*goto jitter_dispatch_label;*/\
-    /*asm volatile ("addi $0, $0, 3");*/\
-    /*JITTER_PRETEND_TO_UPDATE_IP_;*/ \
-    /*JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label);*/ \
- goto *((void*)jitter_ip); \
-    /*JITTER_PRETEND_TO_JUMP_TO_(jitter_dispatch_label);*/ \
-    /*JITTER_BRANCH_TO_IP();*/
-    /*JITTER_PRETEND_TO_JUMP_TO_(jitter_dispatch_label); */
+#elif defined(JITTER_DISPATCH_MINIMAL_THREADING) || defined(JITTER_DISPATCH_NO_THREADING)
+# define JITTER_INSTRUCTION_EPILOG_(name, mangled_name, residual_arity)  \
+       JITTER_SKIP_RESIDUALS_;                                           \
+     }                                                                   \
+     JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label);         \
+    JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):           \
+     /* What follows is unreachable, but serves to prevent GCC from      \
+        reordering code across labels.  The final indirect branch,       \
+        which of course would not branch anywhere correct if it were     \
+        actually executed, serves to force the compiler to keep the      \
+        register assignment compatible between this program point,       \
+        at the end of VM instructions, with the register assignment      \
+        at the beginning of every VM instruction, or even at their end.  \
+        From GCC's point of view, this goto * statement may reach any    \
+        label in the function whose address I have taken. */             \
+     JITTER_PRETEND_TO_UPDATE_IP_;                                       \
+     JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label);         \
+     JITTER_CRASH_;                                                      \
+     goto * jitter_ip;
 #else
 # error "unknown dispatching model"
-#endif // #if   defined(JITTER_DISPATCH_DIRECT_THREADING)
+#endif // #if defined(JITTER_DISPATCH_SWITCH)
 
 
 
@@ -691,10 +682,8 @@
                   : [_jitter_the_target]                                       \
                     JITTER_ASM_COMPUTED_GOTO_INPUT_CONSTRAINT                  \
                        (_jitter_the_target)                                    \
-/*, [runtime] "X" (jitter_state_runtime)*/                 \
                     /* inputs */                                               \
                   : JITTER_ASM_COMPUTED_GOTO_CLOBBERS /* clobbers */           \
-/*, "memory" */                                            \
                   : jitter_dispatch_label /* gotolabels */);                   \
         /* This is an unconditional branch: the following statement in the     \
            same block is unreachable. */                                       \
@@ -722,30 +711,6 @@
     JITTER_COMPUTED_GOTO_TRIVIAL(target)
 #endif // #ifdef JITTER_REPLICATE
 
-////////////////
-/*
-  This is better on PowerPC: switching to this brought testsuite failures from 2 to 0.
-  Sparc32: from 4 or 2 to a few, or 0.
-    Some cases fail nondeterministically on Sparc32, independently from this; I suspect
-    it's due to qemu.  No test case fails deterministically.
-  MIPS: from 0 to 0.
-  x86_64 GCC 7: from 0 to 0.
-  x86_64 GCC 6: from 0 to 0.
-  x86_64 GCC 5: from 0 to 0.
-  But here is the problem:
-  x86_64 GCC 8: from 0 to 153, deterministically (!!).
-    every single no-threading case fails.  I can't see any obvious reason, even by
-    disassembling.
-      Found it: it's exitvm.  A stupid tail-merging.  It jumps to a jump within !INVALID,
-      possibly because !INVALID is cold.
-Shall I do it only in exit?  Why should I ever trust this optimization behavior to be consistent?
-*/
-/*
-#undef JITTER_COMPUTED_GOTO
-#   define JITTER_COMPUTED_GOTO(target)     \
-      JITTER_COMPUTED_GOTO_TRIVIAL(target)
-*/
-////////////////
 
 
 

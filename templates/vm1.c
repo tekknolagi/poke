@@ -451,7 +451,7 @@ vmprefix_make_routine (void)
 /* Array re-allocation.
  * ************************************************************************** */
 
-volatile union vmprefix_any_register *
+char *
 vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
                                         size_t slow_register_no_per_class)
 {
@@ -468,16 +468,13 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
       s->vmprefix_state_backing.jitter_slow_register_no_per_class
         = slow_register_no_per_class;
       s->vmprefix_state_backing.jitter_array
-        = (jitter_xrealloc ((void *) s->vmprefix_state_backing.jitter_array,
-                            VMPREFIX_ARRAY_SIZE(slow_register_no_per_class)));
+        = jitter_xrealloc ((void *) s->vmprefix_state_backing.jitter_array,
+                           VMPREFIX_ARRAY_SIZE(slow_register_no_per_class));
     }
 
   /* Return the new (or unchanged) base, by simply adding the bias to the
      Array as it is now. */
-  volatile char *res
-    = (((volatile char*) s->vmprefix_state_backing.jitter_array)
-       + JITTER_ARRAY_BIAS);
-  return (volatile union vmprefix_any_register *) res;
+  return s->vmprefix_state_backing.jitter_array + JITTER_ARRAY_BIAS;
 }
 
 void

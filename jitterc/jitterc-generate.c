@@ -1510,7 +1510,7 @@ jitterc_emit_state_h (const struct jitterc_vm *vm)
   EMIT("  /* The Array.  This initial pointer is kept in the backing, since it is\n");
   EMIT("     not normally needed at run time.  By subtracting JITTER_ARRAY_BIAS from\n");
   EMIT("     it (as a pointer to char) we get the base pointer. */\n");
-  EMIT("  volatile union vmprefix_any_register *jitter_array;\n");
+  EMIT("  char *jitter_array;\n");
   EMIT("\n");
   EMIT("  /* How many slow registers per class the Array can hold, without being\n");
   EMIT("     reallocated.  This number is always the same for evey class. */\n");
@@ -1605,9 +1605,8 @@ jitterc_emit_state (const struct jitterc_vm *vm)
   EMIT("  /* Initialize the Array. */\n");
   EMIT("  jitter_state_backing->jitter_slow_register_no_per_class = 0; // FIXME: raise?\n");
   EMIT("  jitter_state_backing->jitter_array\n");
-  EMIT("    = ((volatile union vmprefix_any_register *)\n");
-  EMIT("       jitter_xmalloc (VMPREFIX_ARRAY_SIZE(jitter_state_backing\n");
-  EMIT("          ->jitter_slow_register_no_per_class)));\n");
+  EMIT("    = jitter_xmalloc (VMPREFIX_ARRAY_SIZE(jitter_state_backing\n");
+  EMIT("                         ->jitter_slow_register_no_per_class));\n");
   EMIT("\n");
 
   /* Emit initialization for stacks. */
@@ -1900,7 +1899,6 @@ jitterc_emit_executor_reserve_registers (FILE *f,
   EMIT("#ifndef JITTER_BASE_REGISTER\n");
   EMIT("# error \"the machine does not define JITTER_BASE_REGISTER\"\n");
   EMIT("#else\n");
-  EMIT("//register volatile union jitter_word * restrict\n");
   EMIT("register char * restrict\n");
   EMIT("vmprefix_array_base_register_variable asm (JITTER_STRINGIFY(JITTER_BASE_REGISTER));\n");
   EMIT("#endif // #ifndef JITTER_BASE_REGISTER\n\n");
@@ -2357,7 +2355,7 @@ jitterc_emit_executor_ordinary_specialized_instructions
       bool is_caller = (uins->callerness == jitterc_callerness_caller);
       bool is_callee = (uins->calleeness == jitterc_calleeness_callee);
 
-      EMIT("  JITTER_INSTRUCTION_PROLOG(%s, %s, %s)\n",
+      EMIT("  JITTER_INSTRUCTION_PROLOG_(%s, %s, %s)\n",
            sins->name, sins->mangled_name,
            (sins->hotness == jitterc_hotness_hot)
            ? "hot"
@@ -2447,11 +2445,11 @@ jitterc_emit_executor_ordinary_specialized_instructions
           EMIT("       skip residuals, since we've already jumped and this code is\n");
           EMIT("       unreachable.  The instruction pointer, if any, is advanced\n");
           EMIT("       in the non-relocatable code. */\n");
-          EMIT("    JITTER_INSTRUCTION_EPILOG(%s, %s, 0)\n", sins->name, sins->mangled_name);
+          EMIT("    JITTER_INSTRUCTION_EPILOG_(%s, %s, 0)\n", sins->name, sins->mangled_name);
           EMIT("\n");
           EMIT("    /* Relocated code will jump to this label in non-relocated code. */\n");
           EMIT("  JITTER_SPECIALIZED_INSTRUCTION_NON_RELOCATABLE_CODE_LABEL:\n");
-          EMIT("    JITTER_COMMENT_IN_ASM(\"%s non-relocatable code\");\n", sins->name);
+          EMIT("    JITTER_COMMENT_IN_ASM_(\"%s non-relocatable code\");\n", sins->name);
           EMIT("#endif // #ifdef JITTER_REPLICATE\n");
         }
 
@@ -2491,7 +2489,7 @@ jitterc_emit_executor_ordinary_specialized_instructions
           EMIT("       then jump back to replicated code. */\n");
           EMIT("    const void *_jitter_back_to_replicated_code_pointer = JITTER_ARGP%i;\n",
                (int) (gl_list_size (sins->specialized_arguments) - 1));
-          EMIT("    JITTER_SKIP_RESIDUALS;\n");
+          EMIT("    JITTER_SKIP_RESIDUALS_;\n");
           EMIT("    goto * _jitter_back_to_replicated_code_pointer;\n");
           EMIT("#endif // #ifdef JITTER_REPLICATE\n\n");
         }
@@ -2550,7 +2548,7 @@ jitterc_emit_executor_ordinary_specialized_instructions
          when replication is disabled. */
       if (! is_relocatable)
         EMIT("#ifndef JITTER_REPLICATE\n");
-      EMIT(" JITTER_INSTRUCTION_EPILOG(%s, %s, JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY)\n",
+      EMIT(" JITTER_INSTRUCTION_EPILOG_(%s, %s, JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY)\n",
            sins->name, sins->mangled_name);
       if (! is_relocatable)
         EMIT("#endif // #ifndef JITTER_REPLICATE\n");
@@ -2611,7 +2609,7 @@ jitterc_emit_executor_special_specialized_instruction_beginning
     enum jitter_specialized_instruction_opcode opcode,
     const char *hotness, int residual_arity)
 {
-  EMIT("JITTER_INSTRUCTION_PROLOG(%s, %s, %s)\n",
+  EMIT("JITTER_INSTRUCTION_PROLOG_(%s, %s, %s)\n",
        name, jitterc_mangle (name), hotness);
   EMIT("#define JITTER_SPECIALIZED_INSTRUCTION_RESIDUAL_ARITY %i\n",
        residual_arity);
@@ -2632,7 +2630,7 @@ jitterc_emit_executor_special_specialized_instruction_end
     const char *hotness, int residual_arity)
 {
   EMIT("}\n");
-  EMIT("JITTER_INSTRUCTION_EPILOG(%s, %s, %i)\n",
+  EMIT("JITTER_INSTRUCTION_EPILOG_(%s, %s, %i)\n",
        name, jitterc_mangle (name), residual_arity);
   EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_OPCODE\n");
   EMIT("#undef JITTER_SPECIALIZED_INSTRUCTION_NAME\n");
@@ -2693,6 +2691,16 @@ jitterc_emit_executor_data_locations (FILE *f, const struct jitterc_vm *vm)
       EMIT("#endif // #if (%i < JITTER_RESIDUAL_REGISTER_NO)\n", i);
     }
   EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n");
+
+  /* Link register, if any. */
+  EMIT("#if    defined(JITTER_DISPATCH_SWITCH)                    \\\n");
+  EMIT("    || defined(JITTER_DISPATCH_DIRECT_THREADING)          \\\n");
+  EMIT("    || defined(JITTER_DISPATCH_MINIMAL_THREADING)         \\\n");
+  EMIT("    || (   defined(JITTER_DISPATCH_NO_THREADING)          \\\n");
+  EMIT("        && ! defined(JITTER_MACHINE_SUPPORTS_PROCEDURE))\n");
+  EMIT("\n");
+  EMIT("  JITTER_DATA_LOCATION_DATUM (\"link register\", jitter_state_runtime._jitter_link);\n");
+  EMIT("#endif // link register\n");
 
   /* For each stack... */
   FOR_LIST(i, comma, vm->stacks)
@@ -2889,7 +2897,8 @@ jitterc_emit_executor_main_function
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("# define jitter_array_base vmprefix_array_base_register_variable\n");
   EMIT("#else\n");
-  EMIT("  char * volatile jitter_array_base;\n");
+  // FIXME: I recently (after finalizing big changes in the executor header) commented-out the volatile qualifier here.  Make sure it was not needed, by re-testing.
+  EMIT("  /*volatile*/ char * restrict jitter_array_base;\n");
   EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("#pragma GCC diagnostic pop\n");
   EMIT("  jitter_array_base\n");
@@ -2982,9 +2991,14 @@ jitterc_emit_executor_main_function
 
   EMIT("#ifdef JITTER_REPLICATE\n");
   EMIT("  /* FIXME: comment: this is the fake dispatch routine. */\n");
-  EMIT("  asm volatile (\"\" : : : \"memory\");\n");
+  // FIXME: Is clobbering memory really needed?  It would be better if I didn't do this.
+  //        I should explicitly mark as set the base and possibly the instruction pointer,
+  //        but nothing more.
+  //EMIT("  asm volatile (\"\" : : : \"memory\");\n");
   EMIT(" jitter_dispatch_label: __attribute__ ((hot))\n");
-  EMIT("  asm volatile (\"\\njitter_dispatch_label_asm:\\n\" : : : \"memory\");\n");
+  // FIXME: same.
+  //EMIT("  asm volatile (\"\\njitter_dispatch_label_asm:\\n\" : : : \"memory\");\n");
+  EMIT("  asm volatile (\"\\njitter_dispatch_label_asm:\\n\" :);\n");
   EMIT("  JITTER_PRETEND_TO_UPDATE_IP_;\n");
   FOR_LIST(i, comma, vm->specialized_instructions)
     {
@@ -3127,7 +3141,7 @@ jitterc_emit_executor_main_function
   EMIT("     jumping here means crossing the boundary from the fragaile replicated\n");
   EMIT("     code back into ordinary compiled C, where PC-relative addressing works. */\n");
   EMIT("  jitter_exit_vm_label: __attribute__ ((cold));\n");
-  EMIT("    JITTER_COMMENT_IN_ASM(\"About to exit the function\");\n");
+  EMIT("    JITTER_COMMENT_IN_ASM_(\"About to exit the function\");\n");
   EMIT("    // fprintf (stderr, \"Restoring the VM state to the struct...\\n\");\n");
   EMIT("    /* Copy the VM state from the local copy we have modified back to\n");
   EMIT("       the structure to which we received a pointer. */\n");
