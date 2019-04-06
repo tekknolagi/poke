@@ -58,7 +58,7 @@ jitterlisp_interactive_banner_text =
 #endif // safety
 "\n"
 "* Line editing:         "
-#if defined (JITTER_HAS_GNU_READLINE)
+#if defined (JITTER_HAVE_GNU_READLINE)
   "GNU Readline"
 #else
   "not available"

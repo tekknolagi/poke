@@ -19,7 +19,7 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Expand to nothing if we don't have mmap. */
-#include <jitter/jitter-config.h>
+#include <jitter/jitter.h>
 #ifdef HAVE_MAP_ANONYMOUS
 
 #include <stdio.h>
@@ -28,8 +28,6 @@
 #include <sys/mman.h>
 //#include <stdbool.h> // FIXME: remove
 
-#include <jitter/jitter.h>
-#include <jitter/jitter.h>
 #include <jitter/jitter-fatal.h>
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-heap.h>

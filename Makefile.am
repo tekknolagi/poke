@@ -336,7 +336,7 @@ SUFFIXES += .in.m4sh .in
 # in the source directory.
 # This cannot work on a machine without autom4te installed (autom4te comes with
 # Autoconf), so we intentionally fail in that case.
-if JITTER_HAS_AUTOM4TE
+if JITTER_HAVE_AUTOM4TE
 .in.m4sh.in: m4-utility/jitter-script.m4sh
 	$(AUTOM4TE) \
           --language=M4sh --prepend-include="$(top_srcdir)/m4-utility" \
@@ -346,7 +346,7 @@ else
 	@echo "cannot rebuild $@ without autom4te"
 	@echo "you need to install autoconf and reconfigure"
 	@exit 1
-endif # if JITTER_HAS_AUTOM4TE
+endif # if JITTER_HAVE_AUTOM4TE
 
 # The final scripts with @-substitution performed are all rebuilt automatically
 # when needed, again thanks to AC_CONFIG_FILES in configure.ac .
@@ -563,7 +563,7 @@ lib_libjitter_la_LIBADD = \
 # Only if the host architecture is supported, as detected by configure, we add
 # architecture-dependent sources from the appropriate directory to libjitter and
 # to the installed headers.
-if JITTER_HAS_ASSEMBLY
+if JITTER_HAVE_ASSEMBLY
   # Search included file in "machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)" , so that
   # including <jitter/machine/FILE> from a source will find
   # machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/FILE .  This is only
@@ -590,7 +590,7 @@ if JITTER_HAS_ASSEMBLY
   # for reserving registers.
   jittermachineinclude_HEADERS += \
     machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/jitter-machine.h
-endif # if JITTER_HAS_ASSEMBLY
+endif # if JITTER_HAVE_ASSEMBLY
 
 # All the source files for every architecture have to be distributed,
 # independently from which ones we use, if any, in the current configuration.

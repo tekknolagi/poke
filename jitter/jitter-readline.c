@@ -1,6 +1,6 @@
 /* Readline: either a GNU readline wrapper or a trivial emulator -- header.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -22,7 +22,7 @@
 #include "jitter-readline.h"
 
 /* Import a macro saying whether we can use the actual GNU readline. */
-#include "jitter-config.h"
+#include <jitter/jitter.h>
 
 
 
@@ -30,7 +30,7 @@
 /* Readline: GNU Readline wrapper.
  * ************************************************************************** */
 
-#ifdef JITTER_HAS_GNU_READLINE
+#ifdef JITTER_HAVE_GNU_READLINE
 /* Include GNU Readline headers. */
 # include <stdio.h>
 # include <readline/readline.h>
@@ -49,7 +49,7 @@ jitter_readline (const char *prompt_or_NULL)
   /* Return the line, either malloc-allocated or NULL. */
   return res;
 }
-#endif // #ifdef JITTER_HAS_GNU_READLINE
+#endif // #ifdef JITTER_HAVE_GNU_READLINE
 
 
 
@@ -57,7 +57,7 @@ jitter_readline (const char *prompt_or_NULL)
 /* Readline: trivial reimplementation with no line-editing.
  * ************************************************************************** */
 
-#ifndef JITTER_HAS_GNU_READLINE
+#ifndef JITTER_HAVE_GNU_READLINE
   /* Include what we need for the crude Readline emulator. */
 # include <stdbool.h>
 # include <stdio.h>
@@ -114,4 +114,4 @@ jitter_readline (const char *prompt_or_NULL)
      space.  When extracting we don't need to finalize. */
   return jitter_dynamic_buffer_extract_trimmed (& db);
 }
-#endif // #ifndef JITTER_HAS_GNU_READLINE
+#endif // #ifndef JITTER_HAVE_GNU_READLINE

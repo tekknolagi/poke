@@ -50,7 +50,7 @@
 
 
 /* Include optional headers. */
-#include <jitter/jitter-config.h>
+#include <jitter/jitter.h>
 #ifdef HAVE_SETRLIMIT
 # include <sys/resource.h> /* For getrlimit and setrlimit . */
 #endif // #ifdef HAVE_SETRLIMIT

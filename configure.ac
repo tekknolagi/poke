@@ -462,7 +462,7 @@ if test "x$jitter_check_readline" != "xno"; then
   # CPP feature macro, so as to use the actual Readline instead of my crude
   # emulation.
   if test "x$did_we_find_readline" != "xno"; then
-    AC_DEFINE_UNQUOTED([JITTER_HAS_GNU_READLINE], [1],
+    AC_DEFINE_UNQUOTED([JITTER_HAVE_GNU_READLINE], [1],
                        [Use the actual GNU Readline library])
   fi
 else
@@ -607,17 +607,17 @@ fi
 # Check if assembly support exists for the host machine.
 ################################################################
 
-# The Automake conditional JITTER_HAS_ASSEMBLY will be true iff there is support for
+# The Automake conditional JITTER_HAVE_ASSEMBLY will be true iff there is support for
 # the host machine.  If so JITTER_ASSEMBLY_SUBDIRECTORY will be AC_SUBST'ed to be
 # the subdirectory holding configuration-specific files.
 if test "x$jitter_has_host_assembly" = "xyes"; then
    AC_SUBST([JITTER_ASSEMBLY_SUBDIRECTORY])
-   AC_DEFINE_UNQUOTED([JITTER_HAS_ASSEMBLY], [yes],
+   AC_DEFINE_UNQUOTED([JITTER_HAVE_ASSEMBLY], [yes],
                       [Define if we have assembly for the host architecture.])
    AC_DEFINE_UNQUOTED([JITTER_ASSEMBLY_SUBDIRECTORY], ["$JITTER_ASSEMBLY_SUBDIRECTORY"],
                       [the subdirectory containing assembly files.])
 fi
-AM_CONDITIONAL([JITTER_HAS_ASSEMBLY],
+AM_CONDITIONAL([JITTER_HAVE_ASSEMBLY],
                [test "x$jitter_has_host_assembly" = "xyes"])
 
 
@@ -665,7 +665,7 @@ if test "x$HAS_AUTOM4TE" != "xyes"; then
                rebuild scripts from their M4sh source])
 fi
 AM_MISSING_PROG(AUTOM4TE, autom4te)
-AM_CONDITIONAL([JITTER_HAS_AUTOM4TE],
+AM_CONDITIONAL([JITTER_HAVE_AUTOM4TE],
                [test "x$HAS_AUTOM4TE" = "xyes"])
 
 
