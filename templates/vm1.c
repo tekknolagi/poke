@@ -43,6 +43,7 @@
 #include <jitter/jitter-defect.h>
 #include <jitter/jitter-patch-in.h>
 #include <jitter/jitter-executor.h>
+#include <jitter/jitter-data-locations.h>
 
 #include "vmprefix-vm.h"
 //#include "vmprefix-specialized-instructions.h"
@@ -145,13 +146,13 @@ JITTER_DISPATCH_DEPENDENT_GLOBAL_NAME;
 /* Low-level debugging features relying on assembly: data locations.
  * ************************************************************************** */
 
-#ifdef JITTER_HAVE_PATCH_IN
+#ifndef JITTER_DISPATCH_SWITCH
 /* A declaration for data locations, as visible from C.  The global is defined in
    assembly in its own separate section thru the machinery in
    jitter/jitter-sections.h . */
 extern const char
 JITTER_DATA_LOCATION_NAME(vmprefix) [];
-#endif // #ifdef JITTER_HAVE_PATCH_IN
+#endif // #ifndef JITTER_DISPATCH_SWITCH
 
 
 
