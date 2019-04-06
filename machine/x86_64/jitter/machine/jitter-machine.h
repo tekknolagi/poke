@@ -40,6 +40,13 @@
 #define _JITTER_ASM_DEBUGGING_NOP(integer_literal_as_string)  \
   "nopl " integer_literal_as_string "(%%eax)"
 
+/* Expand to a native machine code snippet causing a trap, as a string literal
+   in a syntax suitable for extended inline asm. */
+#define _JITTER_ASM_CRASH                                                   \
+  /* Return from interrupt.  This will cause an exception in user mode, of  \
+     a kind not usually seen. */                                            \
+  "iret"
+
 
 
 
@@ -111,9 +118,18 @@
 #define JITTER_RESIDUAL_REGISTER_3          %r14
 #define JITTER_RESIDUAL_REGISTER_3_32BIT    %r14d
 
-/* The scratch register. */
+/* This architecture does not need a scratch register to materialize immediates.
+   (Search for "scratch register" in the jitter-machine.S comments); however
+   a further register to reserve will be useful for the mostly experimental
+   JITTER_BRANCH_AND_LINK_NO_CALL mode, as a link register.
+
+   The ordinary mode relying on native callq/retq instructions and the hardware
+   stack for procedures does not need a scratch register, which is quite
+   important to reduce register pressure on an architecture like this. */
+#ifdef JITTER_BRANCH_AND_LINK_NO_CALL
 #define JITTER_SCRATCH_REGISTER             %r15
 #define JITTER_SCRATCH_REGISTER_32BIT       %r15d
+#endif // #ifdef JITTER_BRANCH_AND_LINK_NO_CALL
 
 
 
@@ -300,7 +316,7 @@
                 : /* clobbers. */                                     \
                 : jitter_dispatch_label /* gotolabels. */);           \
       /* The rest of the VM instruction is unreachable. */            \
-      /*__builtin_unreachable (); */                                      \
+      __builtin_unreachable ();                                       \
     }                                                                 \
   while (false)
 
@@ -317,9 +333,10 @@
                 : [the_callee_rvalue] "rm" (callee_rvalue) /* inputs. */     \
                 : /* clobbers. */                                            \
                 : jitter_dispatch_label /* gotolabels. */);                  \
-      /* Skip the rest of the specialized instruction, for compatibility */  \
-      /* with more limited dispatches. */                                    \
-      JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                            \
+      /* The rest of this specialized instruction is unreachable.  This      \
+         implementation is not based on hardware call and return, so there   \
+         is no need to generate a hardware jump either. */                   \
+      __builtin_unreachable ();                                              \
     }                                                                        \
   while (false)
 
@@ -341,10 +358,9 @@
                 : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                        \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
                 : /* clobbers. */                                               \
-                : jitter_dispatch_label /* gotolabels. */);                \
-      /* Skip the rest of the specialized instruction, for compatibility */     \
-      /* with more limited dispatches. */                                       \
-      JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                               \
+                : jitter_dispatch_label /* gotolabels. */);                     \
+      /* See the comment for JITTER_BRANCH_AND_LINK_INTERNAL . */               \
+      __builtin_unreachable ();                                                 \
     }                                                                           \
   while (false)
 
@@ -368,7 +384,7 @@
                 : jitter_dispatch_label /* goto labels */);                     \
       /* This is a tail call: the next statement within this VM instruction is  \
          not reachable. */                                                      \
-      /* __builtin_unreachable (); */                                                \
+      __builtin_unreachable ();                                                 \
     }                                                                           \
   while (false)
 #endif // #ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN
@@ -420,26 +436,9 @@
                 : /* clobbers. */                                     \
                 : jitter_dispatch_label /* gotolabels. */);           \
       /* The rest of the VM instruction is unreachable. */            \
-      /* __builtin_unreachable (); */                                      \
+      __builtin_unreachable ();                                       \
     }                                                                 \
   while (false)
-
-/* /\* Branch-and-link, the version relying on callq / retq . *\/ */
-/* #define JITTER_BRANCH_AND_LINK_INTERNAL(callee_rvalue)                              \ */
-/*   do                                                                        \ */
-/*     {                                                                       \ */
-/*       const void * restrict jitter_call_indirect_target = (callee_rvalue);  \ */
-/*       asm goto (JITTER_ASM_DEFECT_DESCRIPTOR "# Do a real call, pretending to go to\n\t"                 \ */
-/*                 "# %l[jitter_dispatch_label]\n\t"                      \ */
-/*                 "callq *%[target]\n"                                        \ */
-/*                 : /\* outputs *\/                                             \ */
-/*                 : [target] "rm" (jitter_call_indirect_target) /\* inputs *\/  \ */
-/*                 : /\* clobbers *\/                                            \ */
-/*                 : jitter_dispatch_label /\* goto labels *\/);            \ */
-/*       /\* Make the rest of the VM instruction unreachable. *\/                \ */
-/*       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                           \ */
-/*     }                                                                       \ */
-/*   while (false) */
 
 /* Branch-and-link, the version relying on callq / retq . */
 #define JITTER_BRANCH_AND_LINK_INTERNAL(callee_rvalue)                      \
@@ -450,28 +449,20 @@
                 "# Do a real call, pretending to go to\n\t"                 \
                 "# %l[jitter_dispatch_label]\n\t"                           \
                 "callq *%[target]\n"                                        \
-                /* \
-"#.ifgt (%l[" JITTER_STRINGIFY(JITTER_SPECIALIZED_INSTRUCTION_END_LABEL) "] - .Lfoo)\n\t"\
-"jmp %l[" JITTER_STRINGIFY(JITTER_SPECIALIZED_INSTRUCTION_END_LABEL) "]\n"\
-"#.endif\n" \
-".Lfoo%=:\n"\ */ \
                 : /* outputs */                                             \
                 : [target] "rm" (jitter_call_indirect_target) /* inputs */  \
-, "X"(jitter_ip)\
-/*, "X"(jitter_state_runtime)*/\
+                  , "X"(jitter_ip)                                          \
                 : /* clobbers */                                            \
-                : jitter_dispatch_label/*, \
- JITTER_SPECIALIZED_INSTRUCTION_END_LABEL*/ /* goto labels */\
-                    );            \
-      /* Skip the rest of the specialized instruction, for compatibility */  \
-      /* with more limited dispatches. */                                    \
-      JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END; \
+                : jitter_dispatch_label /* goto labels */);                 \
+      /* Skip the rest of the specialized instruction, for compatibility    \
+         with more limited dispatches. */                                   \
+      JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                           \
     }                                                                       \
   while (false)
 
 #ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN
 /* Branch-and-link to a fast label, the version relying on callq / retq . */
-#define _JITTER_BRANCH_FAST_AND_LINK_INTERNAL(target_index)                              \
+#define _JITTER_BRANCH_FAST_AND_LINK_INTERNAL(target_index)                     \
   do                                                                            \
     {                                                                           \
       asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                    \
@@ -484,9 +475,9 @@
                 : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                        \
                   JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
                 : /* clobbers */                                                \
-                : jitter_dispatch_label /* goto labels */);                \
-      /* Skip the rest of the specialized instruction, for compatibility */  \
-      /* with more limited dispatches. */                                    \
+                : jitter_dispatch_label /* goto labels */);                     \
+      /* Skip the rest of the specialized instruction, for compatibility */     \
+      /* with more limited dispatches. */                                       \
       JITTER_JUMP_TO_SPECIALIZED_INSTRUCTION_END;                               \
     }                                                                           \
   while (false)
@@ -511,7 +502,7 @@
                 : jitter_dispatch_label /* goto labels */);                     \
       /* This is a tail call: the next statement within this VM instruction is  \
          not reachable. */                                                      \
-      /* __builtin_unreachable (); */                                                \
+      __builtin_unreachable ();                                                 \
     }                                                                           \
   while (false)
 
@@ -578,9 +569,6 @@ enum jitter_routine_to_patch
     jitter_routine_set_64bit_residual_register_1,
     jitter_routine_set_64bit_residual_register_2,
     jitter_routine_set_64bit_residual_register_3,
-    jitter_routine_set_64bit_residual_memory_small_offset,
-    jitter_routine_set_64bit_residual_memory_zero_offset,
-    jitter_routine_set_64bit_residual_memory_big_offset,
     jitter_routine_set_32bit_residual_register_0,
     jitter_routine_set_32bit_residual_register_1,
     jitter_routine_set_32bit_residual_register_2,
@@ -589,9 +577,8 @@ enum jitter_routine_to_patch
     jitter_routine_set_32bit_sign_extended_residual_register_1,
     jitter_routine_set_32bit_sign_extended_residual_register_2,
     jitter_routine_set_32bit_sign_extended_residual_register_3,
-    jitter_routine_set_32bit_residual_memory_small_offset,
-    jitter_routine_set_32bit_residual_memory_zero_offset,
-    jitter_routine_set_32bit_residual_memory_big_offset,
+    jitter_routine_set_64bit_residual_memory_two_32bit_stores,
+    jitter_routine_set_32bit_sign_extended_residual_memory,
     jitter_routine_jump_unconditional_32bit_offset,
     jitter_routine_jump_on_zero_32bit_offset,
     jitter_routine_jump_on_nonzero_32bit_offset,
