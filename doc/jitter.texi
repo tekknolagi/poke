@@ -1944,7 +1944,8 @@ write this: introduction to the problem, examples}
 * Routine structure::       What VM routines are made of.
 * Adding labels::           How to name VM routine points.
 * Adding instructions::     How to add VM instructions to a routine.
-* Specialization::          Making a VM routine ready for execution.
+* Executable routines::     Converting routines into an executable format.
+* Code execution::          There are several ways of calling VM code from C.
 * Multiple routines::       Making VM routines jump to one another.
 @end menu
 
@@ -1967,9 +1968,15 @@ write this: introduction to the problem, examples}
 @cindex VM instruction, C API
 
 @c @@@
-@node Specialization
-@subsection Specialization
-@cindex specialization
+@node Executable routines
+@subsection Executable routines
+@cindex executable routine
+@cindex routine, executable
+
+@c @@@
+@node Code execution
+@subsection Code execution
+@cindex execution, VM code
 
 @c @@@
 @node Multiple routines
@@ -2052,24 +2059,29 @@ user code, but it should be easy to avoid that.}
 @section Specific language features
 
 @menu
+* Primitive operations::                 Make primitives, even if inefficient easy to add.
 * Conditionals and Boolean expressions:: Avoid materializing Booleans for conditionals.
 * Procedural abstraction::               Compiling procedures, functions, or methods.
-* Closures::                             Accessing variables from outer scopes.
 * Dynamic tag checking::                 Checking for types at run time (or fail).
+* Closures::                             Accessing variables from outer scopes.
 * Late binding::                         Choosing what to execute based on run-time types.
 @end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Primitive operations
+@subsection Primitive operations
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@
 @node Conditionals and Boolean expressions
 @subsection Conditionals and Boolean expressions
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@
-@node Dynamic tag checking
-@subsection Dynamic tag checking
-
-@c @@@@@@@@@@@@@@@@@@@@@@@@
 @node Procedural abstraction
 @subsection Procedural abstraction
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Dynamic tag checking
+@subsection Dynamic tag checking
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@
 @node Closures
