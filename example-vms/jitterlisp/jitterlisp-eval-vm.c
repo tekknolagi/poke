@@ -168,31 +168,20 @@ jitterlisp_jump_to_driver_and_return_result (void)
       d = true;
       fprintf (stderr, "Driver:\n");
       if (jitterlisp_settings.cross_disassembler)
-        jitterlispvm_disassemble_routine_to (stderr, jitterlisp_driver_vm_routine, true, JITTER_CROSS_OBJDUMP, NULL);
+        jitterlispvm_disassemble_executable_routine_to (stderr, jitterlisp_driver_vm_executable_routine, true, JITTER_CROSS_OBJDUMP, NULL);
       else
-        jitterlispvm_disassemble_routine_to (stderr, jitterlisp_driver_vm_routine, true, JITTER_OBJDUMP, NULL);
+        jitterlispvm_disassemble_executable_routine_to (stderr, jitterlisp_driver_vm_executable_routine, true, JITTER_OBJDUMP, NULL);
       fprintf (stderr, "\n");
     }
   */
-  /*
-printf ("E: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
-printf ("R: %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());
-fputs ("{c", stdout); fflush (stdout);
-  */
+
   /* Run the driver which will immediately call the closure, leaving only
      the result on the stack. */
   jitterlispvm_execute_executable_routine
      (jitterlisp_driver_vm_executable_routine, & jitterlispvm_state);
-  /*
-fputs ("} --> ", stdout); fflush (stdout);
-  */
 
   /* Pop the result off the stack and return it. */
   jitterlisp_object res = JITTERLISPVM_TOP_MAINSTACK();
-  /*
-printf ("%p", (void*) res); fflush (stdout);
-fputs ("\n", stdout); fflush (stdout);
-  */
   JITTERLISPVM_DROP_MAINSTACK();
   return res;
 }
@@ -205,14 +194,7 @@ jitterlisp_call_compiled (jitterlisp_object rator_value,
 {
   /* Here I can be sure that operator_value is a compiled closure. */
   const struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(rator_value);
-  /*
-printf ("The encoded rator is %p\n", (void*)rator_value);
-printf ("The decoded rator is %p\n", c);
-printf ("The decoded cc is at %p\n", cc);
-printf ("The cc routine is at %p\n", cc->routine);
-printf ("The cc executable routine is at %p\n", cc->executable_routine);
-printf ("The cc first program point is at %p\n", cc->first_program_point);
-  */
+
   // FIXME: shall I check the arity *before* evaluating actuals or after?
   // Here I do it before, but it's easy to change.
   // In either case compiled code must have the same semantics.  Do whatever
@@ -239,10 +221,7 @@ printf ("The cc first program point is at %p\n", cc->first_program_point);
      programs expects this last operand on the top of the stack, to be able to
      find the closure below. */
   JITTERLISPVM_PUSH_MAINSTACK(rand_ast_no + 1);
-  /*
-printf ("Q: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
-printf ("W: %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());
-  */
+
   /* Pass control to VM code. */
   return jitterlisp_jump_to_driver_and_return_result ();
 }
