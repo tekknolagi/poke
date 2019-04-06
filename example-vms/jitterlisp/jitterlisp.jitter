@@ -62,8 +62,6 @@ wrapped-functions
   putchar
 #  printf
   jitterlisp_print_to_stream
-  dump_stacks
-  jitter_log_instruction
 
   # Calling interpreted closures from compiled code.
   jitterlisp_call_interpreted
@@ -98,18 +96,11 @@ end
 
 initialization-c
   code
-    //printf ("Hello from the Jittery per-run initialization...\n");
-    //jitter_log_instruction (BEFORE, 0, NULL/*& jitter_state_runtime*/, jitter_state_runtime, & jitter_original_state->vmprefix_state_backing);
-    //printf ("Done with the Jittery per-run initialization\n");
-//printf ("TOP: %p\n", (void*)JITTERLISPVM_TOP_MAINSTACK());
-//printf ("UT:  %p\n", (void*)JITTERLISPVM_UNDER_TOP_MAINSTACK());
-    //printf ("...Now running the code.\n");
   end
 end
 
 finalization-c
   code
-    //printf ("Goodbye from the Jittery run\n");
   end
 end
 
@@ -138,120 +129,6 @@ debug_pointer (jitter_int index, const void *pointer)
   return;
   printf ("[DEBUG: %lli %p]\n", (long long) index, pointer);
   fflush (stdout);
-}
-
-// FIXME: move this functionality into Jitter.
-__attribute__ ((unused))
-static void
-jitter_log_instruction (int order,
-                        jitter_int specialized_opcode,
-                        //const struct jitterlispvm_state_runtime *rp,
-                        const struct jitterlispvm_state_runtime r,
-                        const struct jitterlispvm_state_backing *b
-                        )
-{
-  static int counter = 0;
-  char *order_string;
-  switch (order)
-    {
-    case BEFORE: order_string = "Before"; break;
-    case BEGINNING: order_string = "At the beginning of"; break;
-    case END_OF: order_string = "At the end of"; break;
-    case AFTER:  order_string = "After"; break;
-    default:
-      jitter_fatal ("unknown order %i", (int) order);
-    }
-  //const struct jitterlispvm_state_runtime r = *rp;
-  printf ("%i.  %s specialized instruction %s (specialized opcode %i)\n",
-          counter ++,
-          order_string,
-          jitterlispvm_specialized_instruction_names [specialized_opcode],
-          (int) specialized_opcode);
-
-  const struct jitter_stack_backing *mainstack_backing
-    = & b->jitter_stack_mainstack_backing;
-  const jitterlisp_object *mainstack_memory
-    = (const jitterlisp_object *) mainstack_backing->memory;
-  jitterlisp_object mainstack_top
-    = r.jitter_tos_optimized_stack_mainstack_top;
-  const jitterlisp_object *mainstack_undertop_p
-    = r.jitter_tos_optimized_stack_mainstack_under_top_p;
-
-  const struct jitter_stack_backing *returnstack_backing
-    = & b->jitter_stack_returnstack_backing;
-  const jitterlisp_object *returnstack_memory
-    = (const jitterlisp_object *) returnstack_backing->memory;
-  const jitterlisp_object *returnstack_top_p
-    = r.jitter_non_tos_optimized_stack_returnstack_top_p;
-
-  const jitterlisp_object *p;
-
-  printf ("  Main stack (height %li + 1):\n", (long int) (mainstack_undertop_p - mainstack_memory) + 1);
-  printf ("    %18s: %p\n", "Top", (void*) mainstack_top);
-  for (p = mainstack_undertop_p; p >= mainstack_memory; p --)
-    printf ("    %18p: %p\n", p, (void*) *p);
-
-  printf ("  Return stack (height %li):\n", (long int) (returnstack_top_p - returnstack_memory) + 1);
-  for (p = returnstack_top_p; p >= returnstack_memory; p --)
-    printf ("    %18p: %p\n", p, (void*) *p);
-  printf ("%%r0: %p\n", (void*) r.jitter_fast_register_r_0);
-  //printf ("%%r1: %p\n", (void*) r.jitter_fast_register_r_1);
-
-  printf ("\n");
-  fflush (stdout);
-}
-
-__attribute__ ((unused))
-static void
-dump_stacks (int where, the_jitter_state_runtime_type state_runtime)
-{
-return;
-/*
-  printf ("In ");
-  switch (where)
-    {
-    case 0:
-      printf ("prolog");
-      break;
-    case 1:
-      printf ("return before popping");
-      break;
-    case 2:
-      printf ("return after popping");
-      break;
-    case 3:
-      printf ("call before making place");
-      break;
-    case 4:
-      printf ("call after making place");
-      break;
-    default:
-      printf ("unknown");
-    }
-  printf (":\n");
-  jitter_uint mainstack_top
-    = JITTER_STACK_TOS_TOP(jitterlisp_object,
-                           state_runtime state_runtime_selector,
-                           mainstack);
-  jitter_uint mainstack_undertop
-    = JITTER_STACK_TOS_UNDER_TOP(jitterlisp_object,
-                                 state_runtime state_runtime_selector,
-                                 mainstack);
-  jitter_uint returnstack_top
-    = JITTER_STACK_NTOS_TOP(jitterlisp_object,
-                            state_runtime state_runtime_selector,
-                            returnstack);
-  jitter_uint returnstack_undertop
-    = JITTER_STACK_NTOS_UNDER_TOP(jitterlisp_object,
-                                  state_runtime state_runtime_selector,
-                                  returnstack);
-  printf ("* Main:     %p %p\n",
-           (void*) mainstack_undertop, (void*) mainstack_top);
-  printf ("  Return:   %p %p\n",
-          (void*) returnstack_undertop, (void*) returnstack_top);
-
-  printf ("\n");
-  */
 }
 
 /* Open an argument-type-checking sequence, for the given number of arguments
@@ -440,116 +317,22 @@ end
 
 early-c
   code
-#define BEFORE    1
-#define BEGINNING 2
-#define AFTER     3
-#define END_OF    4
   end
 end
 
 late-c
 #initialization-c
   code
-    //static
-jitter_uint last_specialized_opcode __attribute__ ((unused))
-  = -1;
   end
 end
 
 instruction-beginning-c
   code
-    if (JITTER_SPECIALIZED_INSTRUCTION_OPCODE
-        != jitterlispvm_specialized_instruction_opcode_debug
-        )
-      {
-        //last_specialized_opcode = JITTER_SPECIALIZED_INSTRUCTION_OPCODE;
-  //      asm volatile ("sw $0, %[opcode]" : [opcode] "+o" (last_specialized_opcode));
-  /*
-        jitter_log_instruction (BEGINNING,
-                                last_specialized_opcode,
-                                ((const struct jitterlispvm_state_runtime)
-                                 jitter_state_runtime),
-                                ((const struct jitterlispvm_state_backing *)
-                                 & jitter_original_state->vmprefix_state_backing));
-        asm volatile ("nop" : "+X" (last_specialized_opcode));
-  */
-      }
-//putchar ('[');
   end
 end
 
 instruction-end-c
   code
-  //    putchar (']');
-  /*
-    asm volatile ("nop");
-    asm volatile ("nop");
-    jitter_log_instruction (END_OF,
-                            last_specialized_opcode,
-                            ((const struct jitterlispvm_state_runtime)
-                             jitter_state_runtime),
-                            ((const struct jitterlispvm_state_backing *)
-                             & jitter_original_state->vmprefix_state_backing));
-  */
-  end
-end
-
-instruction debug ()
-  # non-relocatable
-  cold
-  code
-    jitter_int opcode;
-opcode = last_specialized_opcode;
-//    opcode = 0;
-    // putchar ('*'); putchar ('\n');
-    jitter_log_instruction (AFTER,
-                            opcode,
-                            ((const struct jitterlispvm_state_runtime)
-                             jitter_state_runtime),
-                            ((const struct jitterlispvm_state_backing *)
-                             & jitter_original_state->vmprefix_state_backing));
-
-/*
-*/
-  //(void)previous_specialized_opcode;
-  /*
-  static int i = 0;
-  printf ("%i. After specialized instruction %s (specialized opcode %i)\n", i ++,
-          jitterlispvm_specialized_instruction_names [previous_specialized_opcode],
-          (int) previous_specialized_opcode);
-  struct jitterlispvm_state_backing * const b
-    = & jitter_original_state->vmprefix_state_backing;
-
-  const struct jitter_stack_backing *mainstack_backing
-    = & b->jitter_stack_mainstack_backing;
-  const jitterlisp_object *mainstack_memory
-    = (const jitterlisp_object *) mainstack_backing->memory;
-  jitterlisp_object mainstack_top
-    = jitter_state_runtime.jitter_tos_optimized_stack_mainstack_top;
-  const jitterlisp_object *mainstack_undertop_p
-    = jitter_state_runtime.jitter_tos_optimized_stack_mainstack_under_top_p;
-
-  const struct jitter_stack_backing *returnstack_backing
-    = & b->jitter_stack_returnstack_backing;
-  const jitterlisp_object *returnstack_memory
-    = (const jitterlisp_object *) returnstack_backing->memory;
-  const jitterlisp_object *returnstack_top_p
-    = jitter_state_runtime.jitter_non_tos_optimized_stack_returnstack_top_p;
-
-  const jitterlisp_object *p;
-
-  printf ("  Main stack (height %li + 1):\n", (long int) (mainstack_undertop_p - mainstack_memory) + 1);
-  printf ("    %18s: %p\n", "Top", (void*) mainstack_top);
-  for (p = mainstack_undertop_p; p >= mainstack_memory; p --)
-    printf ("    %18p: %p\n", p, (void*) *p);
-
-  printf ("  Return stack (height %li):\n", (long int) (returnstack_top_p - returnstack_memory) + 1);
-  for (p = returnstack_top_p; p >= returnstack_memory; p --)
-    printf ("    %18p: %p\n", p, (void*) *p);
-
-  printf ("\n");
-  fflush (stdout);
-*/
   end
 end
 
@@ -1566,40 +1349,15 @@ end
 instruction call-from-c ()
   caller
   code
-  /*
-    jitter_log_instruction (0,
-                            //0,//JITTER_SPECIALIZED_INSTRUCTION_OPCODE,
-                            ((const struct jitterlispvm_state_runtime)
-                             jitter_state_runtime),
-                            ((const struct jitterlispvm_state_backing *)
-                             & jitter_original_state->vmprefix_state_backing));
-  */
-  /*
-debug_pointer (-100, (const void*) JITTER_TOP_MAINSTACK());
-debug_pointer (-101, (const void*) JITTER_UNDER_TOP_MAINSTACK());
-debug_pointer (0, NULL);
-debug_pointer (0, NULL);*/
-
     /* Pop a number (untagged) off the stack, so that I know at which
        depth to find the closure.  The arity check must have been
        performed already on the interpreter side. */
     const jitter_uint in_arity_plus_one = JITTER_TOP_MAINSTACK();
 
-/*
-debug_pointer (-200, (const void*) JITTER_TOP_MAINSTACK());
-debug_pointer (-201, (const void*) JITTER_UNDER_TOP_MAINSTACK());
-debug_pointer (0, NULL);
-debug_pointer (0, NULL);*/
     /* What follows is similar to the call instruction in the case of a compiled
        callee.  Shall I factor the common code with a macro? */
 
     /* Decode the closure. */
-/*
-debug_pointer (in_arity, NULL);
-debug_pointer (-2, & JITTER_UNDER_TOP_MAINSTACK());
-    jitterlisp_object * callee_p
-      = (& JITTER_UNDER_TOP_MAINSTACK()) - (in_arity - 1);
-      debug_pointer (-1, callee_p); */
 //#define STRESS
 #ifndef STRESS
     // FIXME: This is correct, and faster ...
@@ -1612,24 +1370,12 @@ debug_pointer (-2, & JITTER_UNDER_TOP_MAINSTACK());
     jitterlisp_object callee
       = JITTER_AT_DEPTH_MAINSTACK(in_arity_plus_one - 1);
 #endif // #ifndef STRESS
-/*asm ("# %[q]" : [q] "+rm" (callee));
-  debug_pointer (0, (const void*)callee);*/
     struct jitterlisp_closure *c = JITTERLISP_CLOSURE_DECODE(callee);
-/*asm ("# %[q]" : [q]"+rm" (c));
-  debug_pointer (1, (const void*)c);*/
     struct jitterlisp_compiled_closure *cc = & c->compiled;
-/*asm ("# %[q]" : [q]"+rm" (cc));
-debug_pointer (2, (const void*)cc);
-asm ("# %[q]" : [q]"+rm" (cc));
-debug_pointer (4, cc->first_program_point);*/
 
     /* Make place for the return address in the return stack.  The
        actual value will be written by the callee. */
-//asm volatile ("nopl (0xaa)");
     JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
-//asm volatile ("nopl (0xbb)");
-//    JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
-//asm volatile ("nopl (0xcc)");
 
     /* Branch-and-link.  This follows the ordinary calling convention,
        with the main stack containing the closure and its actuals, known
@@ -1654,7 +1400,6 @@ instruction call (?n 0 1 2 3 4 5 6 7 8 9 10)
         /* Make place for the return address in the return stack.  The
            actual value will be written by the callee. */
         JITTER_PUSH_UNSPECIFIED_RETURNSTACK();
-//        JITTER_TOP_RETURNSTACK() = 0x4242aaaa; // FIXME: just a test.  Remove.
 
         /* Branch-and-link to the native code, whose first instruction
            will be a prolog. */
