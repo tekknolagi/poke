@@ -153,12 +153,16 @@
 #define _JITTER_PROCEDURE_PROLOG(link_lvalue)                                  \
   do                                                                           \
     {                                                                          \
-      /* Actually this seems to work as well, without inline asm: */           \
-      /*   register const void * jitter_the_return_address asm ("pr"); */      \
       const void * jitter_the_return_address;                                  \
-      asm ("sts pr, %[return_address]"                                         \
-           : [return_address] "=r" (jitter_the_return_address) /* outputs */); \
-      (link_lvalue) = (const void *) jitter_the_return_address;                \
+      /* This inline asm statement must be volatile because it has no explicit \
+         inputs; the actual input is pr , which is not visible from C.         \
+         If this is not volatile GCC can move it somewhere else where it is    \
+         exectued only once, with the result saved on the stack.  Of course I  \
+         don't want that. */                                                   \
+      asm volatile ("sts pr, %[return_address]"                                \
+                    : [return_address] "=r" (jitter_the_return_address)        \
+                      /* outputs */);                                          \
+      (link_lvalue) = jitter_the_return_address;                               \
     }                                                                          \
   while (false)
 
