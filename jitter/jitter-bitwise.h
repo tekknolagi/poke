@@ -1,6 +1,6 @@
 /* Jitter: general-purpose bitwise macro header.
 
-   Copyright (C) 2018 Luca Saiu
+   Copyright (C) 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -90,5 +90,14 @@
    the second addend expresses a displacement from x to y. */
 #define JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO(x, p)  \
   (((x) + ((p) - 1)) & ~ ((p) - 1))
+
+/* Given a positive integer a and a positive integer b, expand to a constant
+   expression evaluating to the smallest integer greater than or equal to a
+   which is a multiple of b.
+   This may evaluate both arguments multiple times.  However, if both arguments
+   are constant expression, the expansion is also a constant expression. */
+#define JITTER_NEXT_MULTIPLE_OF_POSITIVE(a, b)  \
+  (((a) + (b) - 1) / (b) * (b))
+
 
 #endif // #ifndef JITTER_BITWISE_H_
