@@ -1,6 +1,6 @@
 /* VM library: macros to be optionally included in architecture-specific asm.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -27,6 +27,45 @@
    which tracks dependencies in a correct way. */
 #ifndef MACHINE_COMMON_S_
 #define MACHINE_COMMON_S_
+
+
+/* Include feature macros.
+ * ************************************************************************** */
+
+/* The code from this header defines macros but expands to nothing, so it is
+   safe to include from assembly as well. */
+#include <jitter/jitter-config.h>
+
+
+
+
+/* Stack executability not required.
+ * ************************************************************************** */
+
+/* Do not require an executable stack.  Jitter, or a Jittery VM runtime, never
+   directly relies on that.
+
+   Rationale: none of my assembly code relies on executable stacks, even if GCC
+   assumes, by default, that an assembly source file does.  Since this file is
+   included in every assembly source this is a good place to put this.  If some
+   other source linked to the Jitter runtime requires an executable stack then
+   the linked executable will have it, thanks to another
+     .section .note.GNU-stack, "x", @progbits
+   written somewhere else.
+   The Jitter runtime itself, along with every example in the distribution,
+   could easily be compiled and linked with
+     -Wa,--noexecstack -Wl,-z,noexecstack
+   , if there were nothing else. */
+#ifdef JITTER_HOST_OS_IS_ELF
+.section .note.GNU-stack, "", @progbits
+.previous
+#endif /* #ifdef JITTER_HOST_OS_IS_ELF */
+
+
+
+
+/* Global GNU Assembler settings and definitions.
+ * ************************************************************************** */
 
 /* I like the & separator and <> quoting. */
 .altmacro
