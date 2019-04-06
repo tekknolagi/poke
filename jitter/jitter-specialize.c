@@ -320,7 +320,7 @@ jitter_make_executable_routine (struct jitter_routine *p)
      || defined(JITTER_DISPATCH_DIRECT_THREADING)    \
      || defined(JITTER_DISPATCH_MINIMAL_THREADING))
   res->specialized_program
-    = jitter_dynamic_buffer_extract_trimmed (& p->specialized_program);
+    = jitter_dynamic_buffer_extract (& p->specialized_program);
 #elif defined(JITTER_DISPATCH_NO_THREADING)
   /* Nothing. */
 #else
