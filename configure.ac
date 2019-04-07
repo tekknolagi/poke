@@ -521,32 +521,43 @@ AC_C_BIGENDIAN
 
 # Use a command-line option to explicitly disable assembly support.  I've needed
 # this for a version of FreeBSD, which shipped with a very old Gas.
-# This is used to compute the default $jitter_has_host_assembly ; a check below
+# This is used to compute $jitter_enable_host_assembly ; a check below
 # will decide if support for the host machine is actually available.
 AC_MSG_CHECKING([if assembly support is (potentially) enabled])
 AC_ARG_ENABLE([assembly],
-              AS_HELP_STRING([--disable-assembly],
-              [disable assembly, even if available for host machine]),
-              jitter_has_host_assembly="$enableval",
-              jitter_has_host_assembly="yes")
-if    test "x$jitter_has_host_assembly" != "xyes" \
-   && test "x$jitter_has_host_assembly" != "xno"; then
-  AC_MSG_ERROR([wrong option argument: assembly support not enabled or disabled])
-fi
-AC_MSG_RESULT([$jitter_has_host_assembly])
-
+              AS_HELP_STRING([--enable-assembly@<:@=CPU@:>@],
+                 [force the use of the named assembly (as in the first part of
+a GNU-style target triplet), even if not detected.
+With --disable-assembly or --enable-assembly=no, disable assembly support even
+if available for the host machine.
+With --enable-assembly or --enable-assembly=auto, enable assembly support if
+automatically found. (default: auto)]),
+              jitter_enable_host_assembly="$enableval",
+              jitter_enable_host_assembly="auto")
+AC_MSG_RESULT([$jitter_enable_host_assembly])
 
 # Check whether we have assembly support for the host architecture.
 # For the architectures we know, also define sensible options for objdump --
 # some of these are necessary, others a matter of preference.  When the
 # architecture is unknown some default is guessed.
 #
-# At this point jitter_has_host_assembly is already defined to "yes" or
-# "no".  If assembly support is not found a "yes" will turn into a "no" after
-# this check, but a "no" will not turn into a "yes": the option above is
-# conceived to *disable* assembly support when available.
-AC_MSG_CHECKING([if we have assembly support for $host])
-AS_CASE([$host_cpu],
+# At this point jitter_enable_host_assembly is defined to one of "no", "auto",
+# or an architecture name.  If assembly support is not found "auto" will turn
+# into "no" after this check, but "no" will not turn into "auto": the option
+# above is conceived to *disable* assembly support when available.
+#
+# An architecture name given by the user will be used in place of the
+# detected $host_cpu .
+# At the end of the case statement jitter_has_host_assembly will be defined.
+if test "x$jitter_enable_host_assembly" = "xno"; then \
+  default_host_cpu="no-assembly"
+elif test "x$jitter_enable_host_assembly" = "xauto"; then
+  default_host_cpu="$host_cpu"
+else
+  default_host_cpu="$jitter_enable_host_assembly"
+fi
+AC_MSG_CHECKING([if we have assembly support for \"$default_host_cpu\"])
+AS_CASE([$default_host_cpu],
         [aarch64*],    [#JITTER_ASSEMBLY_SUBDIRECTORY=aarch64
                         jitter_has_host_assembly=no;
                         jitter_objdump_options="--architecture=aarch64 --disassembler-options=reg-names-raw"],
@@ -557,6 +568,7 @@ AS_CASE([$host_cpu],
                         jitter_has_host_assembly=no;
                         jitter_objdump_options="--architecture=i386 --disassembler-options=att,suffix"],
         [mips|mipsel], [JITTER_ASSEMBLY_SUBDIRECTORY=mips;
+                        jitter_has_host_assembly=yes;
                         jitter_objdump_options="--architecture=mips:isa32 --disassembler-options=no-aliases,reg-names=numeric"],
         [mips64|mips64el],
                        [#JITTER_ASSEMBLY_SUBDIRECTORY=mips;
@@ -567,15 +579,19 @@ AS_CASE([$host_cpu],
                         jitter_has_host_assembly=no;
                         jitter_objdump_options="--architecture=powerpc:common64"],
         [ppc|powerpc|powerpcle],
+                        jitter_has_host_assembly=yes;
                        [JITTER_ASSEMBLY_SUBDIRECTORY=powerpc],
         [riscv*],      [#JITTER_ASSEMBLY_SUBDIRECTORY=riscv;
                         jitter_has_host_assembly=no;
                         jitter_objdump_options="--architecture=riscv:rv64 --disassembler-options=no-aliases,numeric"],
         [sh4*],        [JITTER_ASSEMBLY_SUBDIRECTORY=sh
+                        jitter_has_host_assembly=yes;
                         jitter_objdump_options="--architecture=sh4a --disassembler-options=no-aliases"],
         [sparc*],      [JITTER_ASSEMBLY_SUBDIRECTORY=sparc
+                        jitter_has_host_assembly=yes;
                         jitter_objdump_options="--architecture=sparc:v9b --disassembler-options=no-aliases"],
         [x86_64],      [JITTER_ASSEMBLY_SUBDIRECTORY=x86_64;
+                        jitter_has_host_assembly=yes;
                         jitter_objdump_options="--architecture=i386:x86-64 --disassembler-options=x86-64,att,suffix"],
                        # Default case.  Notice that, as a fallback case, we call
                        # objdump with "--architecture=" , without actually
@@ -594,6 +610,10 @@ AS_CASE([$host_cpu],
 if test "x$jitter_objdump_options" = "x"; then
   jitter_objdump_options="--architecture=$host_cpu"
 fi
+
+# Define objdump options unconditionally, even if the user disabled host
+# assembly.  This is harmless enough, as the code is defensive and will
+# revert to a sensible fallback solution when objdump fails.
 AC_DEFINE_UNQUOTED([JITTER_OBJDUMP_OPTIONS],
                    ["$jitter_objdump_options"],
                    [architecture-specific options for objdump])
@@ -601,6 +621,14 @@ if test "x$jitter_has_host_assembly" = "xno"; then
   AC_MSG_RESULT([no])
 else
   AC_MSG_RESULT([yes: $JITTER_ASSEMBLY_SUBDIRECTORY])
+fi
+
+# If the user explicitly requested support for an architecture but that
+# was not found, fail.
+if test "x$jitter_enable_host_assembly" != "xno" \
+   && test "x$jitter_enable_host_assembly" != "xauto" \
+   && test "x$JITTER_ASSEMBLY_SUBDIRECTORY" = "x"; then
+   AC_MSG_ERROR([could not find assembly for $jitter_enable_host_assembly])
 fi
 
 
@@ -723,7 +751,7 @@ AM_CONDITIONAL([JITTER_CAN_REBUILD_MAN_PAGES],
 # option to override the default.
 AC_MSG_CHECKING([if Valgrind is supported])
 AC_ARG_WITH([valgrind],
-            AS_HELP_STRING([--with-valgrind[=VALGRINDNAME]],
+            AS_HELP_STRING([--with-valgrind@<:@=VALGRINDNAME@:>@],
                            [use Valgrind for the test suite (default:
                             detected)]),
             jitter_with_valgrind="$withval",
@@ -926,12 +954,17 @@ else
   true
 fi
 AC_MSG_RESULT([$jitter_enable_dispatch_no_threading])
+# Fail if no-threading dispatch was enabled without assembly support.
+if test "x$jitter_has_host_assembly" = "xno" \
+   && test "x$jitter_enable_dispatch_no_threading" = "xyes"; then
+   AC_MSG_ERROR([no-threading dispatch requires assembly support])
+fi
 AM_CONDITIONAL([JITTER_ENABLE_DISPATCH_NO_THREADING],
                [test "x$jitter_enable_dispatch_no_threading" = "xyes"])
 # FIXME: remove this warning message when I make defect handling reliable.
 if test "x$jitter_enable_dispatch_no_threading" = "xyes"; then
   AC_MSG_WARN([no-threading dispatch is currently unreliable, and should not be
-  used in production until defective instruction     replacement is fully
+  used in production until defective instruction replacement is fully
   implemented])
 fi
 
