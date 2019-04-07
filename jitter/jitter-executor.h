@@ -545,7 +545,7 @@
 # define JITTER_INSTRUCTION_EPILOG_(name, mangled_name, residual_arity)  \
        JITTER_SKIP_RESIDUALS_;                                           \
      }                                                                   \
-     JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label);         \
+     /* Mark the end of the specialized instruction with a label. */     \
     JITTER_SPECIALIZED_INSTRUCTION_END_LABEL_OF(mangled_name):           \
      /* What follows is unreachable, but serves to prevent GCC from      \
         reordering code across labels.  The final indirect branch,       \
@@ -556,9 +556,8 @@
         at the beginning of every VM instruction, or even at their end.  \
         From GCC's point of view, this goto * statement may reach any    \
         label in the function whose address I have taken. */             \
-     JITTER_PRETEND_TO_UPDATE_IP_;                                       \
-     JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(jitter_dispatch_label);         \
      JITTER_CRASH_;                                                      \
+     JITTER_PRETEND_TO_UPDATE_IP_;                                       \
      goto * jitter_ip;
 #else
 # error "unknown dispatching model"
