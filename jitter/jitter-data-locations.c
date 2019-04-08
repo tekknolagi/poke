@@ -179,7 +179,6 @@ jitter_dump_data_locations (FILE *out, const struct jitter_vm *vm)
     }
   else
     fprintf (out, "Register ratio: undefined\n");
-  fprintf (out, "\n");
-  fflush (stderr);
+  fflush (out);
   jitter_destroy_data_locations (locations);
 }
