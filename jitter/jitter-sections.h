@@ -173,13 +173,13 @@
 # define JITTER_ASM_EXIT_SUBSECTION  \
     JITTER_ASM_EXIT_SUBSECTION_GAS
 #else
-  /* This case is not really supported. */
+# warning "Not using the GNU assembler.  This will probably not work."
 #endif // #ifdef JITTER_HOST_OS_IS_ELF
 
 
 
 
-/* Assembly global definition macros.
+/* Assembly global definition macros: ELF.
  * ************************************************************************** */
 
 /* The macros here provide a way of generating assembly code to open and close a
@@ -192,13 +192,13 @@
    "_size_in_bytes", a memory global containing the size in bytes of the main
    symbol.  The size has as many bytes as a Jitter machine word.
    The given name must expand to an identifier. */
-#define JITTER_ASM_OPEN_DEFINITION_IN_CURRENT_SECTION(_jitter_name)  \
-  "\n"                                                               \
-  ".balign 16\n"                                                     \
-  ".globl " JITTER_STRINGIFY(_jitter_name) "\n"                      \
-  ".type  " JITTER_STRINGIFY(_jitter_name) ", STT_OBJECT\n"          \
+#define JITTER_ASM_OPEN_DEFINITION_IN_CURRENT_SECTION_ELF(_jitter_name)  \
+  "\n"                                                                   \
+  ".balign 16\n"                                                         \
+  ".globl " JITTER_STRINGIFY(_jitter_name) "\n"                          \
+  ".type  " JITTER_STRINGIFY(_jitter_name) ", STT_OBJECT\n"              \
   JITTER_STRINGIFY(_jitter_name) ":\n\t"
-#define JITTER_ASM_CLOSE_DEFINITION_IN_CURRENT_SECTION(_jitter_name)       \
+#define JITTER_ASM_CLOSE_DEFINITION_IN_CURRENT_SECTION_ELF(_jitter_name)   \
   "\n"                                                                     \
   JITTER_STRINGIFY(_jitter_name) "_end:\n"                                 \
   ".balign 16\n"                                                           \
@@ -207,6 +207,72 @@
   JITTER_STRINGIFY(_jitter_name) "_size_in_bytes:\n\t"                     \
   JITTER_ASM_WORD " (" JITTER_STRINGIFY(_jitter_name) "_end"               \
                        " - " JITTER_STRINGIFY(_jitter_name) ")\n\t"
+
+
+
+
+/* Assembly global definition macros: COFF.
+ * ************************************************************************** */
+
+/* This is conceputally identical to the ELF version above. 
+   Implementation note: here the defined global may require an "_" prefix,
+   .def .. .endef , and no .type .
+   About the word size kludge, it may not be very portable.  Still, the only
+   widely used COFF systems are supported this way, and even this effort is
+   more than those systems deserve. */
+#if SIZEOF_VOID_P == 8
+# define JITTER_ASM_COFF_GLOBAL_PREFIX  \
+    ""
+#else
+# define JITTER_ASM_COFF_GLOBAL_PREFIX  \
+    "_"
+#endif // word size
+#define JITTER_ASM_OPEN_DEFINITION_IN_CURRENT_SECTION_COFF(_jitter_name)       \
+  "\n"                                                                         \
+  ".balign 16\n"                                                               \
+  ".globl " JITTER_ASM_COFF_GLOBAL_PREFIX JITTER_STRINGIFY(_jitter_name) "\n"  \
+  ".def " JITTER_ASM_COFF_GLOBAL_PREFIX JITTER_STRINGIFY(_jitter_name)         \
+     "; .scl 2; .type 32; .endef\n"                                            \
+   JITTER_ASM_COFF_GLOBAL_PREFIX JITTER_STRINGIFY(_jitter_name) ":\n\t"
+#define JITTER_ASM_CLOSE_DEFINITION_IN_CURRENT_SECTION_COFF(_jitter_name)      \
+  "\n"                                                                         \
+  JITTER_ASM_COFF_GLOBAL_PREFIX JITTER_STRINGIFY(_jitter_name) "_end:\n"       \
+  ".balign 16\n"                                                               \
+  ".def " JITTER_ASM_COFF_GLOBAL_PREFIX JITTER_STRINGIFY(_jitter_name)         \
+     "_size_in_bytes; .scl 2; .type 32; .endef\n"                              \
+  ".globl _" JITTER_STRINGIFY(_jitter_name) "_size_in_bytes\n"                 \
+  JITTER_ASM_COFF_GLOBAL_PREFIX JITTER_STRINGIFY(_jitter_name)                 \
+     "_size_in_bytes:\n\t"                                                     \
+  JITTER_ASM_WORD                                                              \
+     " (" JITTER_ASM_COFF_GLOBAL_PREFIX JITTER_STRINGIFY(_jitter_name) "_end"  \
+        " - " JITTER_ASM_COFF_GLOBAL_PREFIX JITTER_STRINGIFY(_jitter_name)     \
+        ")\n"
+
+
+
+
+/* Assembly global definition macros: generic wrapper.
+ * ************************************************************************** */
+
+#if defined(JITTER_HOST_OS_IS_ELF)
+# define JITTER_ASM_OPEN_DEFINITION_IN_CURRENT_SECTION(_jitter_name)  \
+    JITTER_ASM_OPEN_DEFINITION_IN_CURRENT_SECTION_ELF (_jitter_name)
+# define JITTER_ASM_CLOSE_DEFINITION_IN_CURRENT_SECTION(_jitter_name)  \
+    JITTER_ASM_CLOSE_DEFINITION_IN_CURRENT_SECTION_ELF (_jitter_name)
+#elif defined(JITTER_HOST_OS_IS_COFF)
+# define JITTER_ASM_OPEN_DEFINITION_IN_CURRENT_SECTION(_jitter_name)  \
+    JITTER_ASM_OPEN_DEFINITION_IN_CURRENT_SECTION_COFF (_jitter_name)
+# define JITTER_ASM_CLOSE_DEFINITION_IN_CURRENT_SECTION(_jitter_name)  \
+    JITTER_ASM_CLOSE_DEFINITION_IN_CURRENT_SECTION_COFF (_jitter_name)
+#else
+# error "Not using ELF or COFF.  This will not work."
+#endif // #ifdef JITTER_HOST_OS_IS_ELF
+
+
+
+
+/* Definitions automatically switching sections: generic wrapper.
+ * ************************************************************************** */
 
 /* Expand to the literal string to be used in a top-level inline asm template as
    a descriptor header or footer.  The generated "code", which contains no
