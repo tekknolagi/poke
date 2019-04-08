@@ -669,11 +669,27 @@ AS_CASE([$host_os],
           [jitter_host_os_is_elf=no])
 AC_MSG_RESULT([$jitter_host_os_is_elf])
 
-# Define a C feature macro telling whether we can rely on the binary format
-# being ELF.
+# Determine whether the host OS uses the COFF binary format.
+
+# Again, this is crude but should suffice.
+AC_MSG_CHECKING([if the host OS uses the COFF binary format])
+AS_CASE([$host_os],
+        [*coff*],
+          [jitter_host_os_is_coff=yes],
+        [*mingw*],
+          [jitter_host_os_is_coff=yes],
+          [jitter_host_os_is_coff=no])
+AC_MSG_RESULT([$jitter_host_os_is_coff])
+
+# Define C feature macros telling whether we can rely on the binary format
+# being ELF, or COFF.
 if test "x$jitter_host_os_is_elf" = "xyes"; then
   AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_ELF], [1],
                      [Define to 1 iff the host OS uses the ELF format])
+fi
+if test "x$jitter_host_os_is_coff" = "xyes"; then
+  AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_COFF], [1],
+                     [Define to 1 iff the host OS uses the COFF format])
 fi
 
 
