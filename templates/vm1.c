@@ -154,6 +154,16 @@ extern const char
 JITTER_DATA_LOCATION_NAME(vmprefix) [];
 #endif // #ifndef JITTER_DISPATCH_SWITCH
 
+void
+vmprefix_dump_data_locations (FILE *output)
+{
+#ifndef JITTER_DISPATCH_SWITCH
+  jitter_dump_data_locations (output, & the_vmprefix_vm);
+#else
+  fprintf (output, "VM data location information unavailable\n");
+#endif // #ifndef JITTER_DISPATCH_SWITCH
+}
+
 
 
 
@@ -408,9 +418,6 @@ vmprefix_initialize (void)
 #ifdef JITTER_HAVE_PATCH_IN
   jitter_dump_defect_table (stderr, vmprefix_defect_table, & the_vmprefix_vm);
 #endif // #ifdef JITTER_HAVE_PATCH_IN
-#ifndef JITTER_DISPATCH_SWITCH
-  jitter_dump_data_locations (stderr, & the_vmprefix_vm);
-#endif // #ifndef JITTER_DISPATCH_SWITCH
 }
 
 void

@@ -71,7 +71,7 @@ struct vmprefix_main_command_line
 {
   bool debug;
   bool progress_on_stderr;
-  bool print_routine, disassemble_routine, run_routine;
+  bool print_locations, print_routine, disassemble_routine, run_routine;
   bool slow_literals_only, slow_registers_only;
   bool optimization_rewriting;
   char *input_file;
@@ -101,20 +101,22 @@ enum vmprefix_vm_negative_option
     vmprefix_vm_negative_option_no_disassemble = -2,
     vmprefix_vm_negative_option_no_debug = -3,
     vmprefix_vm_negative_option_no_dry_run = -4,
-    vmprefix_vm_negative_option_no_print_routine = -5,
-    vmprefix_vm_negative_option_no_progress_on_stderr = -6,
-    vmprefix_vm_negative_option_no_slow_literals_only = -7,
-    vmprefix_vm_negative_option_no_slow_registers_only = -8,
-    vmprefix_vm_negative_option_no_slow_only = -9,
-    vmprefix_vm_negative_option_optimization_rewriting = -10
+    vmprefix_vm_negative_option_no_print_locations = -5,
+    vmprefix_vm_negative_option_no_print_routine = -6,
+    vmprefix_vm_negative_option_no_progress_on_stderr = -7,
+    vmprefix_vm_negative_option_no_slow_literals_only = -8,
+    vmprefix_vm_negative_option_no_slow_registers_only = -9,
+    vmprefix_vm_negative_option_no_slow_only = -10,
+    vmprefix_vm_negative_option_optimization_rewriting = -11
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
    with any value in enum vmprefix_vm_negative_option . */
 enum vmprefix_vm_long_only_option
   {
-    vmprefix_vm_long_only_option_dump_jitter_version = -109,
-    vmprefix_vm_long_only_option_slow_only = -110
+    vmprefix_vm_long_only_option_print_locations = -109,
+    vmprefix_vm_long_only_option_dump_jitter_version = -110,
+    vmprefix_vm_long_only_option_slow_only = -111
   };
 
 /* Update our option state with the information from a single command-line
@@ -131,6 +133,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       /* Set reasonable default values. */
       cl->debug = false;
       cl->progress_on_stderr = false;
+      cl->print_locations = false;
       cl->print_routine = false;
       cl->disassemble_routine = false;
       cl->run_routine = true;
@@ -196,8 +199,14 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case vmprefix_vm_negative_option_no_progress_on_stderr:
       cl->progress_on_stderr = false;
       break;
+    case vmprefix_vm_long_only_option_print_locations:
+      cl->print_locations = true;
+      break;
     case 'p':
       cl->print_routine = true;
+      break;
+    case vmprefix_vm_negative_option_no_print_locations:
+      cl->print_locations = false;
       break;
     case vmprefix_vm_negative_option_no_print_routine:
       cl->print_routine = false;
@@ -328,6 +337,9 @@ static struct argp_option vmprefix_main_option_specification[] =
     " (this option exists for compatibility with cross-compiled builds)"
 #endif // #if defined(JITTER_CROSS_COMPILING) && defined (JITTER_CROSS_OBJDUMP)
    },
+   {"print-locations", vmprefix_vm_long_only_option_print_locations, NULL, 0,
+    "Print data-location information, mapping VM structures to hardware "
+    "resources"},
    /* Disassembly negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 21},
    {"no-disassemble", vmprefix_vm_negative_option_no_disassemble, NULL, 0,
@@ -335,6 +347,8 @@ static struct argp_option vmprefix_main_option_specification[] =
    {"no-cross-disassemble", vmprefix_vm_negative_option_no_cross_disassemble,
     NULL, 0,
     "Don't cross-disassemble the parsed routine (default)"},
+   {"print-locations", vmprefix_vm_negative_option_no_print_locations, NULL, 0,
+    "Don't print data location information (default)"},
 
    /* Debugging, testing and benchmarking options. */
    {NULL, '\0', NULL, OPTION_DOC,
@@ -516,6 +530,13 @@ main (int argc, char **argv)
   struct vmprefix_executable_routine *er
     = vmprefix_make_executable_routine (r);
 
+  if (cl.print_locations)
+    {
+      if (cl.debug)
+        fprintf (progress, "Printing data location information...\n");
+      vmprefix_dump_data_locations (stdout);
+    }
+
   if (cl.print_routine)
     {
       if (cl.debug)
@@ -531,10 +552,11 @@ main (int argc, char **argv)
                                                cl.objdump_options);
     }
 
-  /* If we printed back or disassembled the routine, this run is not performance
-     critical and we afford a couple more syscalls.  Flush the output buffer, so
-     that the routine is visible before running, and possibly crashing. */
-  if (cl.print_routine || cl.disassemble_routine)
+  /* If we dumped data locations or printed back or disassembled the routine,
+     this run is not performance critical and we afford a couple more syscalls.
+     Flush the output buffer, so that the routine is visible before running, and
+     possibly crashing. */
+  if (cl.print_locations || cl.print_routine || cl.disassemble_routine)
     {
       fflush (stdout);
       fflush (stderr);

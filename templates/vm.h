@@ -679,7 +679,12 @@ vmprefix_execute_executable_routine (const struct jitter_executable_routine *er,
 /* Low-level debugging features relying on assembly: data locations.
  * ************************************************************************** */
 
-// FIXME: add prototypes for user functions.
+/* Dump human-readable information about data locations to the pointed stream.
+   This is a trivial VM-dependent wrapper around jitter_dump_data_locations,
+   which does not require a struct jitter_vm pointer as input. */
+void
+vmprefix_dump_data_locations (FILE *output)
+  __attribute__ ((nonnull (1)));
 
 
 
