@@ -1136,8 +1136,7 @@ $(srcdir)/example-vms/jitterlisp/jitterlispvm-vm2.c: example-vms/jitterlisp/jitt
 GENERATED_C_FILES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlispvm-vm.h \
   example-vms/jitterlisp/jitterlispvm-vm1.c \
-  example-vms/jitterlisp/jitterlispvm-vm2.c \
-  example-vms/jitterlisp/jitterlisp-constant-strings.c
+  example-vms/jitterlisp/jitterlispvm-vm2.c
 JITTER_GENERATED_FILES += $(GENERATED_C_FILES_FOR_JITTERLISP)
 
 # A sed script turning an arbitrary text into a C string literal with proper
