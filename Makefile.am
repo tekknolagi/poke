@@ -216,17 +216,6 @@ generated-c-files: $(BUILT_SOURCES)
 	$(MAKE) bin/jitter$(EXEEXT) && \
           $(MAKE) $(JITTER_GENERATED_FILES)
 
-# Remove Jitter-generated C files from a distribution directories.  Those files
-# are huge and inconvenient, and can always be regenerated starting the Jitter
-# sources, at least in a non-cross build.  In any case, those files are only
-# useful for examples and the testsuite, and I should not make tarballs huge
-# because of them.
-# Also remove the JitterLisp string constant file, which can easily be rebuilt;
-# it only relies on sed.
-dist-hook-delete-generated-c-files:
-	cd "$(distdir)"; rm -f $(JITTER_GENERATED_FILES); \
-          rm -f example-vms/jitterlisp/jitterlisp-constant-strings.c
-
 
 # Jitter utility library.
 # ################################################################
@@ -1128,9 +1117,6 @@ SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-main.c \
   $(GENERATED_C_FILES_FOR_JITTERLISP)
 
-BUILT_SOURCES += \
-  example-vms/jitterlisp/jitterlisp-constant-strings.c
-
 # See the comment before the dependency for
 # example-vms/structured/structured-code-generator.c .
 example-vms/jitterlisp/jitterlisp-eval-vm.c: $(GENERATED_C_FILES_FOR_JITTERLISP)
@@ -1150,7 +1136,8 @@ $(srcdir)/example-vms/jitterlisp/jitterlispvm-vm2.c: example-vms/jitterlisp/jitt
 GENERATED_C_FILES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlispvm-vm.h \
   example-vms/jitterlisp/jitterlispvm-vm1.c \
-  example-vms/jitterlisp/jitterlispvm-vm2.c
+  example-vms/jitterlisp/jitterlispvm-vm2.c \
+  example-vms/jitterlisp/jitterlisp-constant-strings.c
 JITTER_GENERATED_FILES += $(GENERATED_C_FILES_FOR_JITTERLISP)
 
 # A sed script turning an arbitrary text into a C string literal with proper
@@ -1714,7 +1701,7 @@ changelog: ChangeLog
 # I like to keep different dist-hook s separate.
 dist-hook: dist-hook-git-versioning \
            dist-hook-changelog \
-           dist-hook-delete-generated-c-files
+           generated-c-files
 
 
 # Test suite.
