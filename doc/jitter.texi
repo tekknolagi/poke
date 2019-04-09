@@ -1251,10 +1251,10 @@ Happy hacking.
 This chapter explains how to build Jitter from its source code,
 recommending a specific directory organization which will also be
 adopted in the following.  It does not cover package systems such as
-the one from the Debian GNU/Linux distribution.  Jitter is still a
-young project and as of Summer 2017 it has not yet been packaged by
-any distribution; anyway building it from the sources is trivial, and
-has the important advantage of giving access to the test suite.
+the one from the Debian GNU/Linux distribution.  As a still young project
+as of Summer 2017 Jitter has not yet been packaged by any distribution;
+anyway building it from the sources is trivial, and has the important
+advantage of providing access to the test suite.
 
 @cindex source code, Jitter
 @cindex Autoconf
@@ -1295,7 +1295,7 @@ only on GNU systems.  Advanced VM dispatching modes require GCC
 @cindex emulator
 @cindex test suite
 @cindex cross compiling
-The way of building Jitter will look very familiar and unsurprising to
+The way of building Jitter will look familiar and unsurprising to
 anyone accustomed to the GNU build system, the only exception being the
 extra provision for running the test suite on cross-compiled programs
 through an emulator.
