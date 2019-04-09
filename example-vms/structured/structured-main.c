@@ -68,11 +68,14 @@ static char *structured_program_name;
  * ************************************************************************** */
 
 /* Print a fatal error message and exit with failure, in response to an
-   incorrect command line. */
+   incorrect command line.  The other_information string is printed right
+   after the error message, with no preceeding space.  It is a crude but
+   convenient way of providing an "argument" to error messages. */
 static void
-structured_usage (char *error_message)
+structured_usage (char *error_message, char *other_information)
 {
-  fprintf (stderr, "%s: %s.\n", structured_program_name, error_message);
+  fprintf (stderr, "%s: %s%s.\n", structured_program_name,
+           error_message, other_information);
   fprintf (stderr, "Try '%s --help' for more information.\n",
            structured_program_name);
 
@@ -100,9 +103,13 @@ structured_help (void)
   printf ("      --cross-disassemble          use the cross-disassembler rather than\n");
   printf ("                                   the native disassembler; also enable\n");
   printf ("                                   disassembly as per --disassemble\n");
+  printf ("      --print-locations            print the mapping between VM structures\n");
+  printf ("                                   and hardware structures, to help humans\n");
+  printf ("                                   read the disassembly\n");
   printf ("      --dry-run                    do not actually run the program\n");
   printf ("      --print                      print VM instructions\n");
   printf ("      --no-dry-run                 run the program (default)\n");
+  printf ("      --no-print-locations         do not print locations (default)\n");
 
   structured_help_section ("Benchmarking options");
   printf ("      --slow-literals-only         disable fast literals\n");
@@ -182,6 +189,9 @@ struct structured_command_line
   /* True iff we should disassemble the VM routine. */
   bool disassemble;
 
+  /* True iff we should print data locations. */
+  bool print_locations;
+
   /* True iff we should not actually run the VM routine. */
   bool dry_run;
 
@@ -210,6 +220,7 @@ structured_initialize_command_line (struct structured_command_line *cl)
   cl->print = false;
   cl->cross_disassemble = false;
   cl->disassemble = false;
+  cl->print_locations = false;
   cl->dry_run = false;
   cl->optimization_rewriting = true;
   cl->slow_literals_only = false;
@@ -225,7 +236,7 @@ structured_set_command_line_program (struct structured_command_line *cl,
                                      char *arg)
 {
   if (cl->program_path != NULL)
-    structured_usage ("program name provided more than once");
+    structured_usage ("more than one program given; the second is ", arg);
   cl->program_path = arg;
 }
 
@@ -265,6 +276,10 @@ structured_parse_command_line (struct structured_command_line *cl,
           cl->cross_disassemble = true;
           cl->disassemble = true;
         }
+      else if (handle_options && ! strcmp (arg, "--print-locations"))
+        cl->print_locations = true;
+      else if (handle_options && ! strcmp (arg, "--no-print-locations"))
+        cl->print_locations = false;
       else if (handle_options && ! strcmp (arg, "--slow-literals-only"))
         cl->slow_literals_only = true;
       else if (handle_options && ! strcmp (arg, "--no-slow-literals-only"))
@@ -298,7 +313,7 @@ structured_parse_command_line (struct structured_command_line *cl,
       else if (handle_options && ! strcmp (arg, "--no-dry-run"))
         cl->dry_run = false;
       else if (handle_options && strlen (arg) > 1 && arg [0] == '-')
-        structured_usage ("unrecognized option");
+        structured_usage ("unrecognized option ", arg);
       else if (handle_options && strlen (arg) > 1 && arg [0] != '-')
         structured_set_command_line_program (cl, arg);
       else
@@ -307,7 +322,7 @@ structured_parse_command_line (struct structured_command_line *cl,
 
   /* Still not having a program name at the end is an error. */
   if (cl->program_path == NULL)
-    structured_usage ("program name missing");
+    structured_usage ("program name missing", "");
 }
 
 
@@ -361,6 +376,8 @@ structured_work (struct structured_command_line *cl)
     structuredvm_print_routine (stdout, vmr);
   if (cl->cross_disassemble)
     cl->disassemble = true;
+  if (cl->print_locations)
+    structuredvm_dump_data_locations (stdout);
   if (cl->disassemble)
     structuredvm_disassemble_executable_routine (vmer, true,
                                                  (cl->cross_disassemble
