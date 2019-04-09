@@ -216,6 +216,17 @@ generated-c-files: $(BUILT_SOURCES)
 	$(MAKE) bin/jitter$(EXEEXT) && \
           $(MAKE) $(JITTER_GENERATED_FILES)
 
+# Remove Jitter-generated C files from a distribution directories.  Those files
+# are huge and inconvenient, and can always be regenerated starting the Jitter
+# sources, at least in a non-cross build.  In any case, those files are only
+# useful for examples and the testsuite, and I should not make tarballs huge
+# because of them.
+# Also remove the JitterLisp string constant file, which can easily be rebuilt;
+# it only relies on sed.
+dist-hook-delete-generated-c-files:
+	cd "$(distdir)"; rm -f $(JITTER_GENERATED_FILES); \
+          rm -f example-vms/jitterlisp/jitterlisp-constant-strings.c
+
 
 # Jitter utility library.
 # ################################################################
@@ -1703,7 +1714,7 @@ changelog: ChangeLog
 # I like to keep different dist-hook s separate.
 dist-hook: dist-hook-git-versioning \
            dist-hook-changelog \
-           generated-c-files
+           dist-hook-delete-generated-c-files
 
 
 # Test suite.
