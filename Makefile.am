@@ -1573,6 +1573,21 @@ doc_jitter_TEXINFOS = \
 EXTRA_DIST += \
   doc/COPYING.DOC
 
+# Fail cleanly when attempting to generate hardcopy documentation by using the
+# format name as a target if configure did not find the necessary tools.
+#
+# It would be too messy to do this for every possible manual target, but the
+# format target should cover most practical cases where users are likely to
+# get surprised.
+if ! JITTER_HAVE_TEXI2DVI
+missinghardcopytools:
+	@echo 'You are missing the tools to generate hardcopy documentation.'
+	@exit 1
+dvi: missinghardcopytools
+ps: missinghardcopytools
+pdf: missinghardcopytools
+endif # ! JITTER_HAVE_TEXI2DVI
+
 
 # Man pages
 # ################################################################
