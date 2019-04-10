@@ -42,7 +42,12 @@
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-defect.h>
 #include <jitter/jitter-patch-in.h>
-#include <jitter/jitter-executor.h>
+
+/* I don't need to include <jitter/jitter-executor.h> here, nor to define
+   JITTER_THIS_CAN_INCLUDE_JITTER_EXECUTOR_H ; doing so carelessly might
+   lead to subtle bugs, that it is better to prevent.
+   Of course I can reconsider this decision in the future. */
+
 #include <jitter/jitter-data-locations.h>
 
 #include "vmprefix-vm.h"
