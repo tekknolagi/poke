@@ -3297,7 +3297,8 @@ jitterc_emit_executor (const struct jitterc_vm *vm)
   EMIT("/* End of the early C code from the user. */\n\n");
 
   EMIT("#include <jitter/jitter.h>\n");
-  EMIT("#include <jitter/jitter-instruction.h>\n");
+  EMIT("#include <jitter/jitter-instruction.h>\n\n");
+  EMIT("#define JITTER_THIS_CAN_INCLUDE_JITTER_EXECUTOR_H\n");
   EMIT("#include <jitter/jitter-executor.h>\n\n");
 
   EMIT("#ifdef JITTER_HAVE_ASSEMBLY\n");
