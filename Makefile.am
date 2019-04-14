@@ -1085,6 +1085,8 @@ SOURCES_FOR_JITTERLISP = \
   example-vms/jitterlisp/jitterlisp-banner.c \
   example-vms/jitterlisp/jitterlisp-code-generator.c \
   example-vms/jitterlisp/jitterlisp-code-generator.h \
+  example-vms/jitterlisp/jitterlisp-constants.h \
+  example-vms/jitterlisp/jitterlisp-constants.c \
   example-vms/jitterlisp/jitterlisp-error.h \
   example-vms/jitterlisp/jitterlisp-error.c \
   example-vms/jitterlisp/jitterlisp-eval-interpreter.h \

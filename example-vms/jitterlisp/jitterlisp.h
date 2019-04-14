@@ -37,6 +37,7 @@
 #include "jitterlisp-ast.h"
 #include "jitterlisp-banner.h"
 #include "jitterlisp-code-generator.h"
+#include "jitterlisp-constants.h"
 #include "jitterlisp-error.h"
 #include "jitterlisp-operations.h"
 #include "jitterlisp-reader.h"

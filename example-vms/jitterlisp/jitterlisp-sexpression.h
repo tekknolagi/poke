@@ -147,6 +147,21 @@ typedef jitter_tagged_object jitterlisp_object;
                                 JITTERLISP_FIXNUM_TAG,         \
                                 JITTERLISP_FIXNUM_TAG_BIT_NO))
 
+/* Expand to a constant expression evaluating to the number of bits used
+   to represent a fixnum, not counting tag bits. */
+#define JITTERLISP_FIXNUM_NON_TAG_BIT_NO  \
+  JITTER_BITS_PER_WORD - JITTERLISP_FIXNUM_TAG_BIT_NO
+
+/* Expand to a constant expression evaluating to the most (respectively)
+   negative or positive fixnum, tagged. */
+#define JITTERLISP_FIXNUM_MOST_NEGATIVE                                 \
+  JITTERLISP_FIXNUM_ENCODE ((jitter_uint) 1                             \
+                            << (JITTERLISP_FIXNUM_NON_TAG_BIT_NO - 1))
+#define JITTERLISP_FIXNUM_MOST_POSITIVE                                       \
+  JITTERLISP_FIXNUM_ENCODE (((jitter_uint) 1                                  \
+                             << (JITTERLISP_FIXNUM_NON_TAG_BIT_NO - 1)) - 1)
+
+
 
 
 

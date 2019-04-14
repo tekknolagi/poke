@@ -38,6 +38,7 @@ jitterlisp_initialize (void)
   /* Initialize every subsystem. */
   jitterlisp_memory_initialize ();
   jitterlisp_sexpression_initialize ();
+  jitterlisp_constants_initialize ();
   jitterlisp_primitives_initialize ();
   jitterlisp_error_initialize ();
   jitterlisp_vm_initialize ();
@@ -57,6 +58,7 @@ jitterlisp_finalize (void)
   jitterlisp_vm_finalize ();
   jitterlisp_error_finalize ();
   jitterlisp_primitives_finalize ();
+  jitterlisp_constants_finalize ();
   jitterlisp_sexpression_finalize ();
   jitterlisp_memory_finalize ();
   jitterlisp_settings_finalize (); /* There's a dynamic buffer to finalize. */

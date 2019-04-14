@@ -3265,6 +3265,16 @@ case, differently from the traditional Lisp implementation of
 @deffn {procedure} square x
 @end deffn
 
+@syindex fixnum-bit-no
+@deffn {fixnum} fixnum-bit-no
+@end deffn
+
+@syindex most-negative-fixnum
+@deffn {fixnum} most-negative-fixnum
+@syindex most-positive-fixnum
+@deffnx {fixnum} most-positive-fixnum
+@end deffn
+
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
 @node Number comparison
