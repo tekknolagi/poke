@@ -38,7 +38,7 @@ end
 #################################################################
 
 # We only need one register class.
-register-class r 2
+register-class r 0
   code
     jitterlisp_object
   end
@@ -109,17 +109,6 @@ early-c
 end
 late-c
   code
-// FIXME: this obviously breaks optimization, and is only for debugging.
-
-//#define the_jitter_state_runtime_pointer (& jitter_state_runtime)
-//#define the_jitter_state_runtime_pointer (jitter_state_runtime)
-#define the_jitter_state_runtime_pointer NULL
-
-#define the_jitter_state_runtime_type typeof (the_jitter_state_runtime_pointer)
-//#define the_jitter_state_runtime_type struct jitterlispvm_state_runtime
-
-#define state_runtime_selector .
-
 __attribute__ ((unused))
 void
 debug_pointer (jitter_int index, const void *pointer)
@@ -337,27 +326,17 @@ early-header-c
 /* If enabled, use my nonworking heap allocation stub.  This is useful to me,
    for playing with the still non-existent Jitter garbage collector and reason
    about its API. */
-#define JITTER_GC_STUB
+//#define JITTER_GC_STUB
   end
 end
 
 late-header-c
   code
-    extern uint32_t
-    foo;
   end
 end
 
 late-c
   code
-    uint32_t
-    foo;
-
-    void
-    boo (uint32_t new_foo)
-    {
-      foo = new_foo;
-    }
   end
 end
 
