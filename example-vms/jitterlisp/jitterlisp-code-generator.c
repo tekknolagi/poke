@@ -365,10 +365,25 @@ jitterlisp_translate_primitive (struct jitterlispvm_routine *p,
     {
       /* This is compiled in a special way, using a VM instruction which doesn't
          nip, followed by a separate nip instruction.  Hopefully the nip may be
-         combined with what follows. */
-      can_fail = false;
+         combined with what follows.
+         Similarly to the can_fail logic, here there is a stub for the slow path
+         of allocation, requiring a minor collection: when the fast path of heap
+         allocation fails because the allocation pointer hits the allocation
+         limit, fast-branch to a program point which in this case is still a
+         stub, the same as the generic error handler.  Jitter's garbage
+         collector is not implemented yet (JitterLisp can use Boehm's collector
+         instead), but this is useful for me to look at the generated code and
+         reason about its performance. */
       JITTERLISPVM_APPEND_INSTRUCTION (p, primitive_mcons_mspecial);
+      jitterlispvm_label slow_path_label = jitterlisp_error_label (p, map);
+      jitterlispvm_append_label_parameter (p, slow_path_label);
       JITTERLISPVM_APPEND_INSTRUCTION (p, nip);
+      /* Here I cannot use the ordinary can_fail logic for the slow path,
+         because the consing instruction is not the last; it is too late to
+         append a label argument after this block ends and the nip instruction
+         has been emitted already.  The label parameter has been handled
+         already. */
+      can_fail = false;
     }
   else if (! strcmp (name, "set-car!")
            || ! strcmp (name, "set-cdr!"))
