@@ -332,6 +332,15 @@ end
 ## User-defined state fields (scratch).
 #################################################################
 
+early-header-c
+  code
+/* If enabled, use my nonworking heap allocation stub.  This is useful to me,
+   for playing with the still non-existent Jitter garbage collector and reason
+   about its API. */
+#define JITTER_GC_STUB
+  end
+end
+
 late-header-c
   code
     extern uint32_t
@@ -354,11 +363,38 @@ end
 
 state-struct-runtime-c
   code
+#ifdef JITTER_GC_STUB
+    /* A pointer to the next free byte in the nursery.  Untagged. */
+    char *allocation_next;
+
+    /* The nursery allocation limit, untagged -- which is to say, the maximum
+       valid address in the nursery plus 1.
+       Notice that it is correct, is slightly conservative, to compare even a
+       tagged pointer against this in an expression like
+          new_tagged_pointer < allocation_limit
+       , since a tagged pointer is always greater than or equal to its untagged
+       counterpart. */
+    char *allocation_limit;
+#endif // #ifdef JITTER_GC_STUB
   end
 end
 
-
+state-initialization-c
+  code
+#ifdef JITTER_GC_STUB
+  /* Initialize the next pointer and the limit pointer to refer to a fixed-size
+     nursery.  There is no real GC yet, so when next hits limit there will be
+     a failure; still, allocation should work up to that point. */
+  size_t nursery_size = 1024 * 1024 * 10;
+  char *nursery = jitter_xmalloc (nursery_size);
+  jitter_state_runtime->allocation_next = nursery;
+  jitter_state_runtime->allocation_limit = nursery + nursery_size;
+#endif // #ifdef JITTER_GC_STUB
+  end
+end
 
+
+
 
 ## Instructions.
 #################################################################
@@ -819,13 +855,30 @@ end
 
 # This doesn't nip, in the hope that the separate nip instruction generated
 # right after this will be rewritten.
-instruction primitive-cons-special ()
+instruction primitive-cons-special (?f)
   code
     /* When this compiles to a total of five or six instructions in the
        fast path I'll be a happy man.  Make it even eight including the
        initialization. */
+#ifndef JITTER_GC_STUB
     JITTERLISP_CONS_(JITTER_TOP_MAINSTACK(),
                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+#else // ! JITTER_GC_STUB
+    /* This is a preliminary version of the allocation fast path, using a
+       still non-existing Jitter garbage collector.
+       Of course most of this should be factored into a macro. */
+    jitterlisp_object tagged_cons
+      = JITTERLISP_CONS_ENCODE
+          (JITTER_STATE_RUNTIME_FIELD (allocation_next));
+    JITTER_STATE_RUNTIME_FIELD (allocation_next) += JITTER_BYTES_PER_WORD * 2;
+    JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED
+       (JITTER_STATE_RUNTIME_FIELD(allocation_next),
+        JITTER_STATE_RUNTIME_FIELD(allocation_limit),
+        JITTER_ARGF0);
+    JITTERLISP_CONS_DECODE (tagged_cons)->car = JITTER_UNDER_TOP_MAINSTACK();
+    JITTERLISP_CONS_DECODE (tagged_cons)->cdr = JITTER_TOP_MAINSTACK();
+    JITTER_TOP_MAINSTACK() = tagged_cons;
+#endif //#ifndef JITTER_GC_STUB
   end
 end
 
@@ -2051,7 +2104,7 @@ end
 
 # Test case: (lambda () (while #t (cons 1 2)))
 rule useless-cons-elimination rewrite
-  primitive-cons-special; nip-drop
+  primitive-cons-special $f; nip-drop
 into
   # Don't cons at all and drop the two cons operands as well, which will
   # hopefully rewrite further.  I don't generate just one nip-drop instruction
