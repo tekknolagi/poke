@@ -6226,6 +6226,25 @@
         ((< n 0)   -1)
         (else      1)))
 
+(define (interpreted-closure-names)
+  (filter (lambda (s)
+            (and (defined? s)
+                 (interpreted-closure? (symbol-global s))))
+          (interned-symbols)))
+
+(define (compile-all-sequentially!)
+  (dolist (s (interpreted-closure-names))
+    (display `(compiling ,s))
+    (newline)
+    (compile! (symbol-global s))))
+
+(define-macro (compile-all!)
+  (let ((interpreted-closure-names (interpreted-closure-names)))
+    `(begin
+       (display '(compiling ,(length interpreted-closure-names) procedures in one shot))
+       (newline)
+       (compile! ,@interpreted-closure-names))))
+
 
 ;;; I CAN DO BETTER IN THIS CASE:
 ;;; (lambda (f x) (f (begin y x)))
