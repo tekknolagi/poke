@@ -832,32 +832,70 @@ instruction primitive-cdr (?f)
   end
 end
 
+instruction heap-allocate (?n 4 8 12 16 24 32 36 48 52 64)
+  code
+#ifdef JITTER_GC_STUB
+    /* FIXME: I might want to merge this, along with the body of other
+       instructions, into a macro.  This may still be factored in a different
+       way, but the idea looks correct and promising. */
+    /* Bump the allocation pointer, unconditionally.  Another instruction
+       will check if it went out of the nursery. */
+    const size_t allocation_size = JITTER_ARGN0;
+    JITTER_STATE_RUNTIME_FIELD (allocation_next) += allocation_size;
+#else
+    /* Nothing to do.  With the ordinary non-stub heap all the actual
+       memory allocation happens in primitive-cons-special. */
+#endif //#ifdef JITTER_GC_STUB
+  end
+end
+
+instruction gc-if-needed (?f)
+  code
+#ifdef JITTER_GC_STUB
+    /* FIXME: I might want to merge this, along with the body of other
+       instructions, into a macro.  This may still be factored in a different
+       way, but the idea looks correct and promising. */
+    /* Branch to the slow path of the allocation, which includes a minor GC,
+       in case the allocation pointer is now out of the nursery.  Do nothing
+       otherwise.
+       Rationale: separating branches from instructions having effect on the VM
+       state prevents defective instructions; even if I have reason to believe
+       that this particular state effect (unconditionally incrementing a runtime
+       field) is not problematic with respect to defects, I will need to seriously
+       stress the system after defect replacement is really implemented. */
+    JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED
+       (JITTER_STATE_RUNTIME_FIELD (allocation_next),
+        JITTER_STATE_RUNTIME_FIELD (allocation_limit),
+        JITTER_ARGF0);
+#else
+    /* Nothing to do.  With the ordinary non-stub heap all the actual
+       memory allocation happens in primitive-cons-special. */
+#endif //#ifdef JITTER_GC_STUB
+  end
+end
+
 # This doesn't nip, in the hope that the separate nip instruction generated
 # right after this will be rewritten.
-instruction primitive-cons-special (?f)
+instruction primitive-cons-special ()
   code
-    /* When this compiles to a total of five or six instructions in the
-       fast path I'll be a happy man.  Make it even eight including the
-       initialization. */
-#ifndef JITTER_GC_STUB
-    JITTERLISP_CONS_(JITTER_TOP_MAINSTACK(),
-                     JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
-#else // ! JITTER_GC_STUB
+#ifdef JITTER_GC_STUB
     /* This is a preliminary version of the allocation fast path, using a
        still non-existing Jitter garbage collector.
        Of course most of this should be factored into a macro. */
+    const size_t allocation_size
+      = JITTER_BYTES_PER_WORD * 2;
+    const size_t header_size = 0;
     jitterlisp_object tagged_cons
       = JITTERLISP_CONS_ENCODE
-          (JITTER_STATE_RUNTIME_FIELD (allocation_next));
-    JITTER_STATE_RUNTIME_FIELD (allocation_next) += JITTER_BYTES_PER_WORD * 2;
-    JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED
-       (JITTER_STATE_RUNTIME_FIELD(allocation_next),
-        JITTER_STATE_RUNTIME_FIELD(allocation_limit),
-        JITTER_ARGF0);
+          (JITTER_STATE_RUNTIME_FIELD
+              (allocation_next - allocation_size + header_size));
     JITTERLISP_CONS_DECODE (tagged_cons)->car = JITTER_UNDER_TOP_MAINSTACK();
     JITTERLISP_CONS_DECODE (tagged_cons)->cdr = JITTER_TOP_MAINSTACK();
     JITTER_TOP_MAINSTACK() = tagged_cons;
-#endif //#ifndef JITTER_GC_STUB
+#else // ! JITTER_GC_STUB
+    JITTERLISP_CONS_(JITTER_TOP_MAINSTACK(),
+                     JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+#endif //#ifdef JITTER_GC_STUB
   end
 end
 
@@ -2083,7 +2121,7 @@ end
 
 # Test case: (lambda () (while #t (cons 1 2)))
 rule useless-cons-elimination rewrite
-  primitive-cons-special $f; nip-drop
+  heap-allocate $a; gc-if-needed $f; primitive-cons-special; nip-drop
 into
   # Don't cons at all and drop the two cons operands as well, which will
   # hopefully rewrite further.  I don't generate just one nip-drop instruction

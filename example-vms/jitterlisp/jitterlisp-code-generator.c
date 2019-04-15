@@ -374,15 +374,17 @@ jitterlisp_translate_primitive (struct jitterlispvm_routine *p,
          collector is not implemented yet (JitterLisp can use Boehm's collector
          instead), but this is useful for me to look at the generated code and
          reason about its performance. */
-      JITTERLISPVM_APPEND_INSTRUCTION (p, primitive_mcons_mspecial);
+      JITTERLISPVM_APPEND_INSTRUCTION (p, heap_mallocate);
+      jitterlispvm_append_unsigned_literal_parameter
+         (p, sizeof (struct jitterlisp_cons));
+      JITTERLISPVM_APPEND_INSTRUCTION (p, gc_mif_mneeded);
       jitterlispvm_label slow_path_label = jitterlisp_error_label (p, map);
       jitterlispvm_append_label_parameter (p, slow_path_label);
+      JITTERLISPVM_APPEND_INSTRUCTION (p, primitive_mcons_mspecial);
       JITTERLISPVM_APPEND_INSTRUCTION (p, nip);
       /* Here I cannot use the ordinary can_fail logic for the slow path,
-         because the consing instruction is not the last; it is too late to
-         append a label argument after this block ends and the nip instruction
-         has been emitted already.  The label parameter has been handled
-         already. */
+         because the instruction taking the label argument is not the last.  The
+         label parameter has been handled already where it was needed. */
       can_fail = false;
     }
   else if (! strcmp (name, "set-car!")
