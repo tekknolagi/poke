@@ -2908,10 +2908,7 @@ jitterc_emit_executor_main_function
 
   EMIT("  /* Declare the instruction pointer from the thread array, unless the dispatching\n");
   EMIT("     model is no-threading, in which case no thread array even exists. */\n");
-  EMIT("//#ifndef JITTER_DISPATCH_NO_THREADING\n");
-  EMIT("// FIXME: comment about the new role of this under no-threading.\n");
   EMIT("  vmprefix_program_point jitter_ip = NULL; /* Invalidate to catch errors. */\n");
-  EMIT("//#endif // #ifndef JITTER_DISPATCH_NO_THREADING\n\n");
 
   /* EMIT("  /\* Declare a variable to be supposedly used as a computed goto target for jumping;\n"); */
   /* EMIT("     to any VM instruction; in actuality the variable is not ever accessed by reachable\n"); */
@@ -2983,8 +2980,14 @@ jitterc_emit_executor_main_function
   EMIT("        || defined(JITTER_DISPATCH_MINIMAL_THREADING))\n");
   EMIT("    goto * (jitter_ip->label);\n");
   EMIT("# elif defined(JITTER_DISPATCH_NO_THREADING)\n");
-  EMIT("    //printf (\"Jumping to the first instruction at %%p\\n\", jitter_ip);\n");
+  EMIT("    /* On no-threading we only use jitter_ip for the first instruction.\n");
+  EMIT("       Make it an alias for the base, which will be enough to satisfy\n");
+  EMIT("       inline assembly code which pretends to alter the instruction\n");
+  EMIT("       pointer in ways invisible to the compiler.\n");
+  EMIT("       At least in my tests this trick frees up one hardware register,\n");
+  EMIT("       which is not surprising. */\n");
   EMIT("    goto * jitter_ip;\n");
+  EMIT("#   define jitter_ip vmprefix_array_base_register_variable// FIXME: comment\n");
   EMIT("# else\n");
   EMIT("#   error \"unknown dispatch\"\n");
   EMIT("# endif // if ... dispatch\n");
