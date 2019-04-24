@@ -2987,7 +2987,7 @@ jitterc_emit_executor_main_function
   EMIT("       At least in my tests this trick frees up one hardware register,\n");
   EMIT("       which is not surprising. */\n");
   EMIT("    goto * jitter_ip;\n");
-  EMIT("#   define jitter_ip vmprefix_array_base_register_variable// FIXME: comment\n");
+  EMIT("#   define jitter_ip vmprefix_array_base_register_variable\n");
   EMIT("# else\n");
   EMIT("#   error \"unknown dispatch\"\n");
   EMIT("# endif // if ... dispatch\n");
