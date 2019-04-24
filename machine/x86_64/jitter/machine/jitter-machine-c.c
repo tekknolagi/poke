@@ -235,6 +235,10 @@ jitter_routine_for_patch_in (const struct jitter_patch_in_descriptor *dp)
       return jitter_routine_jump_on_zero_32bit_offset;
     case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONZERO:
       return jitter_routine_jump_on_nonzero_32bit_offset;
+    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_POSITIVE:
+      return jitter_routine_jump_on_greater_32bit_offset;
+    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONPOSITIVE:
+      return jitter_routine_jump_on_notgreater_32bit_offset;
     case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NEGATIVE:
       return jitter_routine_jump_on_sign_32bit_offset;
     case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONNEGATIVE:
