@@ -294,18 +294,18 @@
 // FIXME: comment.
 // FIXME: remove.  Fake-jumping to an arbitrary label different from
 // jitter_dispatch_label doesn't work well with defect descriptors.
-#define JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(_jitter_label)                  \
-  asm goto (JITTER_ASM_COMMENT_UNIQUE("Pretend to possibly jump to "        \
-                                      JITTER_STRINGIFY(_jitter_label)       \
-                                      " at %l["                             \
-                                      JITTER_STRINGIFY(_jitter_label)       \
-                                      "] based on "                         \
-                                      " jitter_ip"                          \
-                                      " at %[the_jitter_ip]")               \
-            : /* outputs */                                                 \
-            : [the_jitter_ip] JITTER_IP_INPUT_CONSTRAINT (jitter_ip)  \
-              /* inputs */                                                  \
-            : /* clobbers */                                                \
+#define JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(_jitter_label)             \
+  asm goto (JITTER_ASM_COMMENT_UNIQUE("Pretend to possibly jump to "   \
+                                      JITTER_STRINGIFY(_jitter_label)  \
+                                      " at %l["                        \
+                                      JITTER_STRINGIFY(_jitter_label)  \
+                                      "] based on "                    \
+                                      " jitter_ip"                     \
+                                      " at %[the_jitter_ip]")          \
+            : /* outputs */                                            \
+            : [the_jitter_ip] JITTER_IP_INPUT_CONSTRAINT (jitter_ip)   \
+              /* inputs */                                             \
+            : /* clobbers */                                           \
             : /* jump destinations */ _jitter_label)
 
 #define JITTER_PRETEND_TO_UPDATE_IP_                          \
