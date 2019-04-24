@@ -87,10 +87,12 @@
  * ************************************************************************** */
 
 /* On SH I seem to be able to reserve the following callee-save registers:
-     r8 r9 r10 r11 r12 r13 r14
+     r8 r9 r10 r11 r13 r14
    I don't want to reserve r0, and I'm not even sure if I could, as it is
    the only valid target for some operations and the only register usable
    for certain addressing modes.
+   r12 is the GOT context pointer.
+   r14 is supposed to be the frame pointer, but I think I could use it.
    r15 is the stack pointer. */
 
 /* Register pointing to The Array base. */
@@ -106,7 +108,7 @@
 #define JITTER_RESIDUAL_REGISTER_2    r11
 
 /* The scratch register. */
-#define JITTER_SCRATCH_REGISTER       r12
+#define JITTER_SCRATCH_REGISTER       r13
 
 /* FIXME: I'm probably reserving way too many registers.  I should still be able
    to declare every usable register as a candidate to be reserved, but use only
