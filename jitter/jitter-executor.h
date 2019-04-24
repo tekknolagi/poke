@@ -301,9 +301,9 @@
                                       JITTER_STRINGIFY(_jitter_label)       \
                                       "] based on "                         \
                                       " jitter_ip"                          \
-                                      " at %[jitter_ip]")                   \
+                                      " at %[the_jitter_ip]")               \
             : /* outputs */                                                 \
-            : [jitter_ip] JITTER_IP_INPUT_CONSTRAINT (jitter_ip)  \
+            : [the_jitter_ip] JITTER_IP_INPUT_CONSTRAINT (jitter_ip)  \
               /* inputs */                                                  \
             : /* clobbers */                                                \
             : /* jump destinations */ _jitter_label)
