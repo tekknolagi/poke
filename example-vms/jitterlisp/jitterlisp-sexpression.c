@@ -1,6 +1,7 @@
 /* JitterLisp: s-expression implementation.
 
    Copyright (C) 2017, 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -65,7 +66,7 @@ jitterlisp_platform_sanity_check (void)
     jitter_fatal ("this machine doesn't seem to use two's complement");
 
   /* Check that the C implementation sign-extends on signed >> operands. */
-  if (! JITTER_RIGHT_SHIFT_SIGN_EXTENDS)
+  if (! JITTER_RIGHT_SHIFT_SIGN_EXTENDS (jitter_uint, jitter_int))
     jitter_fatal ("this compiler doesn't sign-extend on signed >> .  "
                   "You can comment out this fatal error and everything "
                   "should still work, but performance will suffer.  "

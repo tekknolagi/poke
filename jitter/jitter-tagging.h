@@ -102,7 +102,8 @@ jitter_tagged_object;
    right-shifted by _jitter_bit_no . */
 #define JITTER_WITH_BITS_ASHIFTED_OFF(_jitter_word,                 \
                                       _jitter_bit_no)               \
-  JITTER_ARITHMETIC_SHIFT_RIGHT ((_jitter_word), (_jitter_bit_no))
+  JITTER_ARITHMETIC_SHIFT_RIGHT (jitter_uint, jitter_int,           \
+                                 (_jitter_word), (_jitter_bit_no))
 
 /* Expand to an r-value evaluating to the given word modified by logically
    right-shifting the value by the given number of bits.  No side effects. */
