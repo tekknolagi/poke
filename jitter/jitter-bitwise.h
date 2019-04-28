@@ -23,6 +23,8 @@
 #define JITTER_BITWISE_H_
 
 
+#include <limits.h> /* For CHAR_BIT . */
+
 #include <jitter/jitter.h>
 
 
@@ -99,5 +101,94 @@
 #define JITTER_NEXT_MULTIPLE_OF_POSITIVE(a, b)  \
   (((a) + (b) - 1) / (b) * (b))
 
+
+
+
+/* Type sizes in bits.
+ * ************************************************************************** */
+
+/* Given a type expand to a constant expression evaluating to the type size in
+   bits.  This is useful for playing with bit masks. */
+#define JITTER_SIZEOF_IN_BITS(_jitter_type)  \
+  (sizeof (_jitter_type) * CHAR_BIT)
+
+/* Jitter word size in bits. */
+#define JITTER_BITS_PER_WORD \
+  JITTER_SIZEOF_IN_BITS (jitter_int)
+
+
+
+
+/* Arithmetic right shifts.
+ * ************************************************************************** */
+
+/* Expand to an r-value evaluating to the given word arithmetically
+   right-shifted by _jitter_bit_nom , using the given types which must be
+   unsigned and signed integer types of the same width.
+
+   There are basically two separate implementations of this, one relying on >>
+   sign-extending on signed operands, like GCC does, and another generic but
+   slow solution.  Which implementation is used depends on a constant expression
+   checking how >> behaves at compile time.  I cannot think of any way of moving
+   this logic to configure, as the check would depend on run-time behavior and
+   would break under cross-compilation.
+
+   Notice that the seemingly obvious alternative of doing a signed division by
+   a power of two does not always compute the correct result with a negative
+   operand in two's complement: the rounding direction for signed division is
+   not what we need here. */
+#define JITTER_ARITHMETIC_SHIFT_RIGHT(_jitter_unsigned_type,        \
+                                      _jitter_signed_type,          \
+                                      _jitter_word,                 \
+                                      _jitter_bit_no)               \
+  (JITTER_RIGHT_SHIFT_SIGN_EXTENDS (_jitter_unsigned_type,          \
+                                    _jitter_signed_type)            \
+   ? JITTER_ARITHMETIC_SHIFT_RIGHT_GCC (_jitter_unsigned_type,      \
+                                        _jitter_signed_type,        \
+                                        (_jitter_word),             \
+                                        (_jitter_bit_no))           \
+   : JITTER_ARITHMETIC_SHIFT_RIGHT_GENERIC (_jitter_unsigned_type,  \
+                                            _jitter_signed_type,    \
+                                            (_jitter_word),         \
+                                            (_jitter_bit_no)))
+
+/* Expand to a constant expression, nonzero iff >> sign-extends (at least on an
+   argument of size jitter_int , which is what we care about here).
+   This is used in the implementation of JITTER_ARITHMETIC_SHIFT_RIGHT . */
+#define JITTER_RIGHT_SHIFT_SIGN_EXTENDS(_jitter_unsigned_type,                \
+                                        _jitter_signed_type)                  \
+  /* Just do on one simple test.  Some ridiculous C compiler might in theory  \
+     behave in some different way than actually performing an arithmetic      \
+     shift and still give the expected result here, but I do not feel like    \
+     being overly pedantic. */                                                \
+  ((((_jitter_signed_type) -56) >> 3)                                         \
+   == ((_jitter_signed_type) -7))
+
+/* One of the two implementations for JITTER_ARITHMETIC_SHIFT_RIGHT .  This
+   definition is more efficient than the alternative but relies on >>
+   sign-extending on signed operands like GCC does; the C standards doesn't
+   define a behavior in this case. */
+#define JITTER_ARITHMETIC_SHIFT_RIGHT_GCC(_jitter_unsigned_type,  \
+                                          _jitter_signed_type,    \
+                                          _jitter_word,           \
+                                          _jitter_bit_no)         \
+  ((_jitter_unsigned_type)                                        \
+   (((_jitter_signed_type) (_jitter_word))                        \
+    >> (_jitter_bit_no)))
+
+/* One of the two implementations for JITTER_ARITHMETIC_SHIFT_RIGHT .  This
+   definition does not rely on implementation-defined behavior. */
+#define JITTER_ARITHMETIC_SHIFT_RIGHT_GENERIC(_jitter_unsigned_type,  \
+                                              _jitter_signed_type,    \
+                                              _jitter_word,           \
+                                              _jitter_bit_no)         \
+  /* The technique comes from from Hacker's Delight, §2. */           \
+  ((_jitter_signed_type)                                              \
+   ((((_jitter_unsigned_type) (_jitter_word)) >> (_jitter_bit_no))    \
+    | - (((_jitter_unsigned_type)                                     \
+          (((_jitter_unsigned_type) (_jitter_word))                   \
+           >> (JITTER_SIZEOF_IN_BITS (_jitter_unsigned_type) - 1)))   \
+         << (JITTER_SIZEOF_IN_BITS (_jitter_unsigned_type) - 1        \
+             - (_jitter_bit_no)))))
 
 #endif // #ifndef JITTER_BITWISE_H_

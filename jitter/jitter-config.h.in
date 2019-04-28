@@ -45,6 +45,7 @@
 
 /* Optional system functionality. */
 #undef HAVE_MAP_ANONYMOUS
+#undef JITTER_HAVE_GCC_OVERFLOW_CHECKING
 
 /* Optional libraries. */
 #undef JITTER_HAVE_GNU_READLINE

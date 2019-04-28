@@ -479,6 +479,29 @@ fi # if test "x$jitter_check_readline" = "xyes"
 ################################################################
 
 
+# Check for GCC builtins.
+################################################################
+
+# Checking for builtins with AC_CHECK_FUNCS does not work for me, which is
+# reasonable since they are not usually implemented as C functions.
+
+# Overflow-checking builtins are fairly recent, and it is better to check their
+# presence rather than assuming that they are always available with GCC.
+AC_CACHE_CHECK([for GCC overflow-checking builtins], [ac_cv_have_gcc_overflow],
+  [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM(
+        [[#include <stdio.h>]],
+        [[int foo = __builtin_add_overflow_p (1, 2, 42);
+          printf ("%i\n", foo); /* -Werror: avoid unused variable warnings. */
+        ]])],
+     [ac_cv_have_gcc_overflow=yes],
+     [ac_cv_have_gcc_overflow=no])])
+if test "x$ac_cv_have_gcc_overflow" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_GCC_OVERFLOW_CHECKING], [1],
+            [Define if __builtin_add_overflow_p and friends are usable.])
+fi
+
+
 # Check for specific functions in the C library.
 ################################################################
 
