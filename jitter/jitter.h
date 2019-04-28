@@ -197,16 +197,12 @@ union jitter_word
 
 
 
-/* Word size in bits and bytes and its binary logarithm.
+/* Word size in bytes and its binary logarithm.
  * ************************************************************************** */
 
 /* Word size in bytes (actually in chars). */
 #define JITTER_BYTES_PER_WORD \
   SIZEOF_VOID_P
-
-/* Word size in bits. */
-#define JITTER_BITS_PER_WORD \
-  (JITTER_BYTES_PER_WORD * CHAR_BIT)
 
 /* Define the binary logarithm of the word size in bits (a common parameter to
    use for shifting operations), and the name for a Gas pseudo-op generating a

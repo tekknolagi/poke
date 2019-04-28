@@ -243,6 +243,8 @@ jitter_is_negative (int64_t word);
    in 8 bits, but 256 does not.
    The number of bits does not need to be a power of two, and can even be
    greater than 64. */
+// FIXME: this is now implemented as a macro in jitter/jitter-arithmetic.h .
+// Remove this version.
 bool
 jitter_fits_in_bits_zero_extended (uint64_t word, unsigned bit_no);
 
@@ -250,6 +252,8 @@ jitter_fits_in_bits_zero_extended (uint64_t word, unsigned bit_no);
    number of (low) bits and sign-extended back to a word without loss of
    information.
    The given number of bits must be between 0 and 64, included. */
+// FIXME: this is now implemented as a macro in jitter/jitter-arithmetic.h .
+// Remove this version.
 bool
 jitter_fits_in_bits_sign_extended (uint64_t word, unsigned bit_no);
 

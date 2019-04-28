@@ -231,6 +231,7 @@ generated-c-files: $(BUILT_SOURCES)
 # not rely on Gnulib.
 noinst_LTLIBRARIES += lib/libjitterutility--convenience.la
 lib_libjitterutility__convenience_la_SOURCES = \
+  jitter/jitter-arithmetic.h \
   jitter/jitter-bitwise.h \
   jitter/jitter-cpp.h \
   jitter/jitter-fatal.h jitter/jitter-fatal.c \
@@ -249,6 +250,7 @@ lib_libjitterutility__convenience_la_SOURCES = \
 # Jitter-generated code in VMs, so they belong in the jitterinclude directory
 # along with the rest of the runtime library.
 jitterinclude_HEADERS += \
+  jitter/jitter-arithmetic.h \
   jitter/jitter-bitwise.h \
   jitter/jitter-cpp.h \
   jitter/jitter-fatal.h \

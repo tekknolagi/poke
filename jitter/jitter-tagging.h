@@ -96,62 +96,10 @@ jitter_tagged_object;
    | ((jitter_uint) (_jitter_new_bits)))
 
 /* Expand to an r-value evaluating to the given word arithmetically
-   right-shifted by _jitter_bit_no .
-
-   There are basically two separate implementations of this, one relying on >>
-   sign-extending on signed operands, like GCC does, and another generic but
-   slow solution.  Which implementation is used depends on a constant expression
-   checking how >> behaves at compile time.  It might be desirable to move this
-   logic to configure.
-
-   Notice that the seemingly obvious alternative of doing a signed division by
-   a power of two does not always compute the correct result with a negative
-   operand in two's complement: the rounding direction for signed division is
-   not what we need here. */
-#define JITTER_WITH_BITS_ASHIFTED_OFF(_jitter_word,          \
-                                      _jitter_bit_no)        \
-  (JITTER_RIGHT_SHIFT_SIGN_EXTENDS                           \
-   ? JITTER_WITH_BITS_ASHIFTED_OFF_GCC(_jitter_word,         \
-                                       _jitter_bit_no)       \
-   : JITTER_WITH_BITS_ASHIFTED_OFF_GENERIC(_jitter_word,     \
-                                           _jitter_bit_no))
-
-/* Expand to a constant expression, nonzero iff >> sign-extends (at least on an
-   argument of size jitter_int , which is what we care about here).
-   This is used in the implementation of JITTER_WITH_BITS_ASHIFTED_OFF . */
-#define JITTER_RIGHT_SHIFT_SIGN_EXTENDS                                 \
-  /* We rely on one simple test.  Some ridiculous C compiler might */   \
-  /* in theory behave in different ways according to the arguments, */  \
-  /* but I don't feel pedantic enough to care about this. */            \
-  ((((jitter_int) -56) >> 3)                                            \
-   == ((jitter_int) -7))
-
-/* One of the two implementations for JITTER_WITH_BITS_ASHIFTED_OFF .  This
-   definition is more efficient than the alternative but relies on >>
-   sign-extending on signed operands like GCC does; the C standards doesn't
-   define a behavior in this case. */
-#define JITTER_WITH_BITS_ASHIFTED_OFF_GCC(_jitter_word,    \
-                                          _jitter_bit_no)  \
-  ((jitter_uint)                                           \
-   (((jitter_int) (_jitter_word))                          \
-    >> (_jitter_bit_no)))
-
-/* One of the two implementations for JITTER_WITH_BITS_ASHIFTED_OFF .  This
-   solution is not pretty and probably very inefficient, with a conditional
-   essentially impossible to optimize away and even difficult to compile to
-   non-branching code; but at least this doesn't rely on >> performing
-   arithmetic right shifts on signed operands. */
-#define JITTER_WITH_BITS_ASHIFTED_OFF_GENERIC(_jitter_word,            \
-                                              _jitter_bit_no)          \
-  (JITTER_MOST_SIGNIFICANT_BIT(_jitter_word)                           \
-   ? /* The word is negative: do a logic shift, then or a low bit */   \
-     /* mask to the result to set the least significant bits to 1. */  \
-     ((((jitter_uint) (_jitter_word))                                  \
-       >> (_jitter_bit_no))                                            \
-      | JITTER_HIGH_BIT_MASK(_jitter_bit_no))                          \
-   : /* The word is non-negative: just do a logic shift. */            \
-     (((jitter_uint) (_jitter_word))                                   \
-      >> (_jitter_bit_no)))
+   right-shifted by _jitter_bit_no . */
+#define JITTER_WITH_BITS_ASHIFTED_OFF(_jitter_word,                 \
+                                      _jitter_bit_no)               \
+  JITTER_ARITHMETIC_SHIFT_RIGHT ((_jitter_word), (_jitter_bit_no))
 
 /* Expand to an r-value evaluating to the given word modified by logically
    right-shifting the value by the given number of bits.  No side effects. */
