@@ -51,7 +51,8 @@
 #include <jitter/jitter-disassemble.h>
 #include <jitter/jitter-vm.h>
 #include <jitter/jitter-data-locations.h>
-#include <jitter/jitter-bitwise.h> // for JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO
+#include <jitter/jitter-arithmetic.h>
+#include <jitter/jitter-bitwise.h>
 
 
 

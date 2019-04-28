@@ -1,6 +1,7 @@
 /* Jitter: data tagging header.
 
    Copyright (C) 2017 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -26,8 +27,10 @@
    concatenation. */
 #include <jitter/jitter-cpp.h>
 
-/* We need Jitter integer types. */
+/* We need Jitter integer types, and a few bitwise and range operations. */
 #include <jitter/jitter.h>
+#include <jitter/jitter-bitwise.h>
+#include <jitter/jitter-arithmetic.h>
 
 
 
