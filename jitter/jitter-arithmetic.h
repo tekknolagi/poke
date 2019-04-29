@@ -295,6 +295,26 @@
 
 
 
+/* Sign function, as a macro.
+ * ************************************************************************** */
+
+/* Given an expression a, expand to a signed integer expression holding the sign
+   of the result of the evaluation of a: one of -1, 0, +1.
+   The argument may be evaluated more than once.  If the argument is a constant
+   expression then the expansion is constant as well.
+   This is also correct for floating-point arguments. */
+#define JITTER_SIGN(n)                                                \
+  /* The idea is from Hacker's Delight §2-8, which also presents an   \
+     alternative equivalent to, in my notation,                       \
+       (!! ((n) >= 0) - !! ((n) <= 0))                                \
+     .  In C, ever since K&R, (! expression) is guaranteed to always  \
+     yield either 0 or 1; therefore (!! expression) is a portable     \
+     way of normalizing a Boolean. */                                 \
+  (!! ((n) > 0) - !! ((n) < 0))
+
+
+
+
 /* Boolean operations.
  * ************************************************************************** */
 
