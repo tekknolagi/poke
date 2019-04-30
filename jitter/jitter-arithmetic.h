@@ -108,9 +108,9 @@
 /* Integer overflow checking.
  * ************************************************************************** */
 
-/* This functionality provides ways of checking for overflow on signed before
-   actually attempting an operation which would result in undefined behavior in
-   C.
+/* This functionality provides ways of checking for overflow on signed integers
+   before actually attempting an operation which would result in undefined
+   behavior in C.
 
    At this time only signed integer operations are supported. */
 
@@ -175,7 +175,9 @@
    for the user to call directly, and in fact is only correct when the given
    integer type matches the result width.  Again, not for the user. */
 #define JITTER_WOULD_PLUS_OVERFLOW_GCC(__jitter_signed_type, a, b)  \
-  (__builtin_add_overflow_p ((a), (b), (__jitter_signed_type) -1))
+  (__builtin_add_overflow_p ((__jitter_signed_type) (a),            \
+                             (__jitter_signed_type) (b),            \
+                             (__jitter_signed_type) -1))
 
 /* Like JITTER_WOULD_PLUS_OVERFLOW, but checking overflow for subtraction; the
    sign-bit idea is the same. */
@@ -218,7 +220,9 @@
                                             (a), (b), (bit_no))       \
    & JITTER_SIGN_BIT_FOR_BITS(bit_no))
 #define JITTER_WOULD_MINUS_OVERFLOW_GCC(__jitter_signed_type, a, b)  \
-  (__builtin_sub_overflow_p ((a), (b), (__jitter_signed_type) -1))
+  (__builtin_sub_overflow_p ((__jitter_signed_type) (a),             \
+                             (__jitter_signed_type) (b),             \
+                             (__jitter_signed_type) -1))
 
 /* Like JITTER_WOULD_PLUS_OVERFLOW and JITTER_WOULD_MINUS_OVERFLOW, but checking
    overflow for multiplication; unfortunately the fallback non-builtin case for
@@ -271,7 +275,9 @@
                    JITTER_MOST_POSITIVE_SIGNED_IN_BITS (bit_no)       \
                    / (a)))))
 #define JITTER_WOULD_TIMES_OVERFLOW_GCC(__jitter_signed_type, a, b)  \
-  (__builtin_mul_overflow_p ((a), (b), (__jitter_signed_type) -1))
+  (__builtin_mul_overflow_p ((__jitter_signed_type) (a),             \
+                             (__jitter_signed_type) (b),             \
+                             (__jitter_signed_type) -1))
 
 /* Like the previous operations, checking overflow for division.  GCC has no
    builtin for this case. */
