@@ -284,10 +284,14 @@
 #define JITTER_WOULD_DIVIDED_OVERFLOW(__jitter_unsigned_type,  \
                                       __jitter_signed_type,    \
                                       a, b, bit_no)            \
-  ((b) == 0                                                    \
+  /* The cast on the result seems gratuitous, but the size of  \
+     the result (not really the sign) may be important as      \
+     this macro may occur in inline asm operands. */           \
+  ((__jitter_unsigned_type)                                    \
+   ((b) == 0                                                   \
     || ((a) == ((__jitter_signed_type)                         \
                 JITTER_MOST_NEGATIVE_SIGNED_IN_BITS (bit_no))  \
-       && (b) == -1))
+        && (__jitter_signed_type) (b) == -1)))
 
 /* Like the previous operations, checking overflow for remainder. */
 #define JITTER_WOULD_REMAINDER_OVERFLOW(__jitter_unsigned_type,  \
