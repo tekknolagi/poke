@@ -1299,8 +1299,8 @@ jitterc_emit_configuration (const struct jitterc_vm *vm)
   EMIT("  c->lower_case_prefix = \"%s\";\n", vm->lower_case_prefix);
   EMIT("  c->upper_case_prefix = \"%s\";\n", vm->upper_case_prefix);
 
-  EMIT("  c->max_fast_register_no_per_class = %u;\n",
-       (unsigned)vm->max_fast_register_no_per_class);
+  EMIT("  c->max_fast_register_no_per_class = %i;\n",
+       (int) vm->max_fast_register_no_per_class);
   EMIT("  c->max_nonresidual_literal_no = %i;\n",
        (int)vm->max_nonresidual_literal_no);
   EMIT("  c->dispatch = JITTER_DISPATCH_NAME_STRING;\n");
