@@ -939,48 +939,115 @@ if (jitter_ip != NULL) goto * jitter_ip; \
 
 /* This macro is only used internally in the following macro definitions in this
    section. */
-#define _JITTER_BRANCH_IF(type, operand0, operator, operand1, target)  \
-  do                                                                   \
-    {                                                                  \
-      if ((type) (operand0) operator (type) (operand1))                \
-        JITTER_BRANCH (target);                                        \
-    }                                                                  \
+#define _JITTER_BRANCH_IF(outer_operator, type, operand0,    \
+                          infix_operator, operand1, target)  \
+  do                                                         \
+    {                                                        \
+      if (outer_operator ((type) (operand0)                  \
+                          infix_operator                     \
+                          (type) (operand1)))                \
+        JITTER_BRANCH (target);                              \
+    }                                                        \
   while (false)
 
 /* These are the non-fast counterparts of the similarly named macros in
    jitter-fast-branch.h and the machine-specific headers. */
 #define JITTER_BRANCH_IF_ZERO(operand, target)            \
-  _JITTER_BRANCH_IF(jitter_uint, operand, ==, 0, target)
+  _JITTER_BRANCH_IF(, jitter_uint, operand, ==, 0, target)
 #define JITTER_BRANCH_IF_NONZERO(operand, target)         \
-  _JITTER_BRANCH_IF(jitter_uint, operand, !=, 0, target)
+  _JITTER_BRANCH_IF(, jitter_uint, operand, !=, 0, target)
 #define JITTER_BRANCH_IF_POSITIVE(operand, target)      \
-  _JITTER_BRANCH_IF(jitter_int, operand, >, 0, target)
+  _JITTER_BRANCH_IF(, jitter_int, operand, >, 0, target)
 #define JITTER_BRANCH_IF_NONPOSITIVE(operand, target)    \
-  _JITTER_BRANCH_IF(jitter_int, operand, <=, 0, target)
+  _JITTER_BRANCH_IF(, jitter_int, operand, <=, 0, target)
 #define JITTER_BRANCH_IF_NEGATIVE(operand, target)      \
-  _JITTER_BRANCH_IF(jitter_int, operand, <, 0, target)
+  _JITTER_BRANCH_IF(, jitter_int, operand, <, 0, target)
 #define JITTER_BRANCH_IF_NONNEGATIVE(operand, target)    \
-  _JITTER_BRANCH_IF(jitter_int, operand, >=, 0, target)
+  _JITTER_BRANCH_IF(, jitter_int, operand, >=, 0, target)
 #define JITTER_BRANCH_IF_EQUAL(operand0, operand1, target)     \
-  _JITTER_BRANCH_IF(jitter_int, operand0, ==, operand1, target)
+  _JITTER_BRANCH_IF(, jitter_int, operand0, ==, operand1, target)
 #define JITTER_BRANCH_IF_NOTEQUAL(operand0, operand1, target)  \
-  _JITTER_BRANCH_IF(jitter_int, operand0, !=, operand1, target)
+  _JITTER_BRANCH_IF(, jitter_int, operand0, !=, operand1, target)
 #define JITTER_BRANCH_IF_LESS_SIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_IF(jitter_int, operand0, <, operand1, target)
+  _JITTER_BRANCH_IF(, jitter_int, operand0, <, operand1, target)
 #define JITTER_BRANCH_IF_LESS_UNSIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_IF(jitter_uint, operand0, <, operand1, target)
+  _JITTER_BRANCH_IF(, jitter_uint, operand0, <, operand1, target)
 #define JITTER_BRANCH_IF_NOTLESS_SIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_IF(jitter_int, operand0, >=, operand1, target)
+  _JITTER_BRANCH_IF(, jitter_int, operand0, >=, operand1, target)
 #define JITTER_BRANCH_IF_NOTLESS_UNSIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_IF(jitter_uint, operand0, >=, operand1, target)
+  _JITTER_BRANCH_IF(, jitter_uint, operand0, >=, operand1, target)
 #define JITTER_BRANCH_IF_GREATER_SIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_IF(jitter_int, operand0, >, operand1, target)
+  _JITTER_BRANCH_IF(, jitter_int, operand0, >, operand1, target)
 #define JITTER_BRANCH_IF_GREATER_UNSIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_IF(jitter_uint, operand0, >, operand1, target)
+  _JITTER_BRANCH_IF(, jitter_uint, operand0, >, operand1, target)
 #define JITTER_BRANCH_IF_NOTGREATER_SIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_IF(jitter_int, operand0, <=, operand1, target)
+  _JITTER_BRANCH_IF(, jitter_int, operand0, <=, operand1, target)
 #define JITTER_BRANCH_IF_NOTGREATER_UNSIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_IF(jitter_uint, operand0, <=, operand1, target)
+  _JITTER_BRANCH_IF(, jitter_uint, operand0, <=, operand1, target)
+#define JITTER_BRANCH_IF_AND(operand0, operand1, target)  \
+  _JITTER_BRANCH_IF(, jitter_uint, operand0, &, operand1, target)
+#define JITTER_BRANCH_IF_NAND(operand0, operand1, target)  \
+  _JITTER_BRANCH_IF(!, jitter_uint, operand0, &, operand1, target)
 
+/* This factors the common code for branch-on-overflow primitives. */
+#define JITTER_BRANCH_IF_OPERATION_OVERFLOWS(operation_name,     \
+                                             operand0, operand1, \
+                                             target)             \
+  do                                                             \
+    {                                                            \
+      if (JITTER_CONCATENATE_THREE (JITTER_WOULD_,               \
+                                    operation_name,              \
+                                    _OVERFLOW)                   \
+             (jitter_uint, jitter_int,                           \
+              (operand0), (operand1),                            \
+              JITTER_BITS_PER_WORD))                             \
+        JITTER_BRANCH (target);                                  \
+    }                                                            \
+  while (false)
+
+#define JITTER_BRANCH_IF_PLUS_OVERFLOWS(opd0, opd1, tgt)              \
+  JITTER_BRANCH_IF_OPERATION_OVERFLOWS (PLUS, (opd0), (opd1), (tgt))
+#define JITTER_BRANCH_IF_MINUS_OVERFLOWS(opd0, opd1, tgt)              \
+  JITTER_BRANCH_IF_OPERATION_OVERFLOWS (MINUS, (opd0), (opd1), (tgt))
+#define JITTER_BRANCH_IF_TIMES_OVERFLOWS(opd0, opd1, tgt)              \
+  JITTER_BRANCH_IF_OPERATION_OVERFLOWS (TIMES, (opd0), (opd1), (tgt))
+#define JITTER_BRANCH_IF_DIVIDED_OVERFLOWS(opd0, opd1, tgt)              \
+  JITTER_BRANCH_IF_OPERATION_OVERFLOWS (DIVIDED, (opd0), (opd1), (tgt))
+#define JITTER_BRANCH_IF_REMAINDER_OVERFLOWS(opd0, opd1, tgt)              \
+  JITTER_BRANCH_IF_OPERATION_OVERFLOWS (REMAINDER, (opd0), (opd1), (tgt))
+#define JITTER_BRANCH_IF_NEGATE_OVERFLOWS(opd0, tgt)              \
+  JITTER_BRANCH_IF_OPERATION_OVERFLOWS (MINUS, 0, (opd0), (tgt))
+
+/* This factors the common code for operate-and-branch-on-overflow primitives. */
+#define JITTER_OPERATION_BRANCH_IF_OVERFLOW(res, operation_name,       \
+                                            operand0, infix, operand1, \
+                                            target)                    \
+  do                                                                   \
+    {                                                                  \
+      const jitter_int _jitter_opd0_value = (jitter_int) (operand0);   \
+      const jitter_int _jitter_opd1_value = (jitter_int) (operand1);   \
+      if (JITTER_CONCATENATE_THREE (JITTER_WOULD_, operation_name,     \
+                                    _OVERFLOW)                         \
+             (jitter_uint, jitter_int,                                 \
+              _jitter_opd0_value, _jitter_opd1_value,                  \
+              JITTER_BITS_PER_WORD))                                   \
+        JITTER_BRANCH (target);                                        \
+      else                                                             \
+        (res) = _jitter_opd0_value infix _jitter_opd1_value;           \
+    }                                                                  \
+  while (false)
+
+#define JITTER_PLUS_BRANCH_IF_OVERFLOW(res, opd0, opd1, tgt)  \
+  JITTER_OPERATION_BRANCH_IF_OVERFLOW ((res), PLUS, (opd0), +, (opd1), (tgt))
+#define JITTER_MINUS_BRANCH_IF_OVERFLOW(res, opd0, opd1, tgt)  \
+  JITTER_OPERATION_BRANCH_IF_OVERFLOW ((res), MINUS, (opd0), -, (opd1), (tgt))
+#define JITTER_TIMES_BRANCH_IF_OVERFLOW(res, opd0, opd1, tgt)  \
+  JITTER_OPERATION_BRANCH_IF_OVERFLOW ((res), TIMES, (opd0), *, (opd1), (tgt))
+#define JITTER_DIVIDED_BRANCH_IF_OVERFLOW(res, opd0, opd1, tgt)  \
+  JITTER_OPERATION_BRANCH_IF_OVERFLOW ((res), DIVIDED, (opd0), /, (opd1), (tgt))
+#define JITTER_REMAINDER_BRANCH_IF_OVERFLOW(res, opd0, opd1, tgt)  \
+  JITTER_OPERATION_BRANCH_IF_OVERFLOW ((res), REMAINDER, (opd0), %, (opd1), (tgt))
+#define JITTER_NEGATE_BRANCH_IF_OVERFLOW(res, opd0, tgt)  \
+  JITTER_OPERATION_BRANCH_IF_OVERFLOW ((res), MINUS, 0, -, (opd0), (tgt))
 
 #endif // #ifndef JITTER_EXECUTOR_H_

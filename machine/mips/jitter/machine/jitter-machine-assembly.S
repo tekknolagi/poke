@@ -120,7 +120,7 @@ jitter_routine load_32bit_to_memory,  \
    Of course the observable behavior is the same. */
 jitter_routine jump_unconditional_28bit_pseudo_direct,  \
            <.long 0x8000000>,                           \
-           <or $1, $1, $0>
+           <JITTER_MIPS_NOP>
 
 /* Identical to jump_unconditional_28bit_pseudo_direct , except that the
    jumping instruction also stores the return address (the adress of the
@@ -130,7 +130,7 @@ jitter_routine jump_unconditional_28bit_pseudo_direct,  \
      00200825   # or $1, $1, $0 */
 jitter_routine jump_and_link_28bit_pseudo_direct,  \
            <.long 0xc000000>,                      \
-           <or $1, $1, $0>
+           <JITTER_MIPS_NOP>
 
 /* This routine does nothing and takes zero bytes: all the complexity is in the
    inline asm and in the patch-in replacement code, which only replaces the

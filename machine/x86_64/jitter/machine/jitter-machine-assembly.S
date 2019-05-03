@@ -157,42 +157,20 @@ jitter_routine set_32bit_sign_extended_residual_memory,   \
 jitter_routine jump_unconditional_32bit_offset,  \
            <jmp.d32 0>
 
-/* Branch conditional relative (to the end of the branch instruction) with
-   a 32-bit signed offset.  This assembles to something like:
+/* The point after a conditional branch, relative (to the end of the branch
+   instruction) with a 32-bit signed offset.  The previous part, *not*
+   included in the empty routine, assembles to something like:
      0f 8? 00 00 00 00   # j? L
    For example:
      0f 87 00 00 00 00   # ja L
      0f 8f 00 00 00 00   # jg L
    An offset of zero, like in the examples, would jump to the address
    immediately following the conditional branch instruction. */
-jitter_routine jump_on_zero_32bit_offset,  \
-           <jz.d32 0>
-jitter_routine jump_on_nonzero_32bit_offset,  \
-           <jnz.d32 0>
-jitter_routine jump_on_sign_32bit_offset,  \
-           <js.d32 0>
-jitter_routine jump_on_nonsign_32bit_offset,  \
-           <jns.d32 0>
-jitter_routine jump_on_equal_32bit_offset,  \
-           <je.d32 0>
-jitter_routine jump_on_notequal_32bit_offset,  \
-           <jne.d32 0>
-jitter_routine jump_on_above_32bit_offset,  \
-           <ja.d32 0>
-jitter_routine jump_on_notbelow_32bit_offset,  \
-           <jae.d32 0>
-jitter_routine jump_on_below_32bit_offset,  \
-           <jb.d32 0>
-jitter_routine jump_on_notabove_32bit_offset,  \
-           <jbe.d32 0>
-jitter_routine jump_on_less_32bit_offset,  \
-           <jl.d32 0>
-jitter_routine jump_on_notgreater_32bit_offset,  \
-           <jle.d32 0>
-jitter_routine jump_on_greater_32bit_offset,  \
-           <jg.d32 0>
-jitter_routine jump_on_notless_32bit_offset,  \
-           <jge.d32 0>
+jitter_routine empty_after_conditional_jump_32bit_offset,                \
+           /* No new code to insert.  This patch-in marks the end        \
+              of an instruction, already generated, whose last argument  \
+              nees to be patched. */                                     \
+           <>
 
 /* Call a procedure whose beginning is given relative (to the end of the call
    instruction) with a 32-bit signed offset.  This assembles to something like:

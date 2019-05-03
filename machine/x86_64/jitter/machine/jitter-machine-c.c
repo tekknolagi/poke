@@ -231,38 +231,8 @@ jitter_routine_for_patch_in (const struct jitter_patch_in_descriptor *dp)
     case JITTER_PATCH_IN_CASE_FAST_BRANCH_UNCONDITIONAL:
       return jitter_routine_jump_unconditional_32bit_offset;
 
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ZERO:
-      return jitter_routine_jump_on_zero_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONZERO:
-      return jitter_routine_jump_on_nonzero_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_POSITIVE:
-      return jitter_routine_jump_on_greater_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONPOSITIVE:
-      return jitter_routine_jump_on_notgreater_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NEGATIVE:
-      return jitter_routine_jump_on_sign_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONNEGATIVE:
-      return jitter_routine_jump_on_nonsign_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_EQUAL:
-      return jitter_routine_jump_on_equal_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTEQUAL:
-      return jitter_routine_jump_on_notequal_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_LESS_SIGNED:
-      return jitter_routine_jump_on_less_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_LESS_UNSIGNED:
-      return jitter_routine_jump_on_below_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTGREATER_SIGNED:
-      return jitter_routine_jump_on_notgreater_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTGREATER_UNSIGNED:
-      return jitter_routine_jump_on_notabove_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_SIGNED:
-      return jitter_routine_jump_on_greater_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_UNSIGNED:
-      return jitter_routine_jump_on_above_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_SIGNED:
-      return jitter_routine_jump_on_notless_32bit_offset;
-    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_UNSIGNED:
-      return jitter_routine_jump_on_notbelow_32bit_offset;
+    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ANY:
+      return jitter_routine_empty_after_conditional_jump_32bit_offset;
 
     case JITTER_PATCH_IN_CASE_FAST_BRANCH_BRANCH_AND_LINK:
       return jitter_routine_call_32bit_offset;
@@ -296,27 +266,19 @@ jitter_patch_patch_in (char *native_code,
         memcpy (native_code + 1, & offset, sizeof (offset));
         break;
       }
-    case jitter_routine_jump_on_zero_32bit_offset:
-    case jitter_routine_jump_on_nonzero_32bit_offset:
-    case jitter_routine_jump_on_sign_32bit_offset:
-    case jitter_routine_jump_on_nonsign_32bit_offset:
-    case jitter_routine_jump_on_equal_32bit_offset:
-    case jitter_routine_jump_on_notequal_32bit_offset:
-    case jitter_routine_jump_on_less_32bit_offset:
-    case jitter_routine_jump_on_below_32bit_offset:
-    case jitter_routine_jump_on_notgreater_32bit_offset:
-    case jitter_routine_jump_on_notabove_32bit_offset:
-    case jitter_routine_jump_on_greater_32bit_offset:
-    case jitter_routine_jump_on_above_32bit_offset:
-    case jitter_routine_jump_on_notless_32bit_offset:
-    case jitter_routine_jump_on_notbelow_32bit_offset:
+
+    case jitter_routine_empty_after_conditional_jump_32bit_offset:
       {
         /* On x86_64 jump targets are encoded as signed distances from the *end*
-           of the jumping instruction--in this case in 32 bits.  This
-           conditional jump instruction takes 6 bytes, of which the last 4 are
-           the offset. */
-        int32_t offset = jump_target - (native_code + 6);
-        memcpy (native_code + 2, & offset, sizeof (offset));
+           of the jumping instruction--in this case in 32 bits.  This patch-in
+           records the *end* of the conditional branching instruction,
+           therefore, independently from how many bytes this conditional jump
+           instruction takes (it should be 5), the address to patch in comes
+           right *before* the native_code pointer.
+           By using only one (trivial) routine for every conditional jump I
+           have moved the complexity from patching to instruction generation. */
+        int32_t offset = jump_target - native_code;
+        memcpy (native_code - 4, & offset, sizeof (offset));
         break;
       }
 

@@ -105,9 +105,9 @@
 /* FIXME: redefine this as 4, but reserve fewer register by default on
    register-starved architectures like this one. */
 #ifdef JITTER_BRANCH_AND_LINK_NO_CALL
-# define JITTER_RESIDUAL_REGISTER_NO        3
+# define JITTER_RESIDUAL_REGISTER_NO       0 //3
 #else /* Ordinary procedures, based on callq and retq . */
-# define JITTER_RESIDUAL_REGISTER_NO        4
+# define JITTER_RESIDUAL_REGISTER_NO       1 // 4
 #endif // #ifdef JITTER_BRANCH_AND_LINK_NO_CALL
 
 /* Registers holding residual arguments, with 0-based suffixes.  These have to
@@ -163,122 +163,169 @@
 #define JITTER_ASM_PATCH_IN_FILL_BYTE       "0xea"
 
 /* For each patch-in case define its size in bytes, corresponding to the total
-   size of the instructions to be patched in in bytes, including possible
-   padding nops.
-   FIXME: no, not really: it's not necessary to do it for every patch-in
-   case. */
-#define JITTER_PATCH_IN_SIZE_FAST_BRANCH_UNCONDITIONAL   5
-#define JITTER_PATCH_IN_SIZE_FAST_BRANCH_CONDITIONAL     6 /* all cases. */
-#define JITTER_PATCH_IN_SIZE_FAST_BRANCH_BRANCH_AND_LINK 5
+   size of the instructions to be patched in in bytes.
+   On this archtiecture, in the case of conditioanl branches, I made the choice
+   of using patch-ins to record the end of the conditional branch instruction.
+   This means that the routine to be inserted has size zero, and the code to
+   be patched comes right *before* the pointer. */
+#define JITTER_PATCH_IN_SIZE_FAST_BRANCH_UNCONDITIONAL        5
+#define JITTER_PATCH_IN_SIZE_0_FAST_BRANCH_AFTER_CONDITIONAL  0 /* all cases. */
+#define JITTER_PATCH_IN_SIZE_FAST_BRANCH_BRANCH_AND_LINK      5
 
-#define _JITTER_BRANCH_FAST_CONDITIONAL(asm_instruction_name,                    \
-                                       constraints0, constraints1,              \
-                                       case, operand0, operand1, target_index)  \
-  do                                                                            \
-    {                                                                           \
-      /* In AT&T syntax operand1 comes before operand0: this is not a mistake. */ \
-      asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                    \
-                asm_instruction_name " %[jitter_operand1], %[jitter_operand0]\n\t" \
-                JITTER_ASM_PATCH_IN_PLACEHOLDER(                                \
-                   JITTER_PATCH_IN_SIZE_FAST_BRANCH_CONDITIONAL /*size_in_bytes*/, \
-                   case /*case*/,                                               \
-                   target_index,                                                \
-                   0, 0, 0 /* not used for this case */)                        \
-                : /* outputs */                                                 \
-                : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                        \
-                  [jitter_operand0] constraints0 (operand0),                    \
-                  [jitter_operand1] constraints1 (operand1),                    \
-                  JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */            \
-                : "cc" /* clobbers */                                           \
-                : jitter_dispatch_label /* goto labels */);                \
-    }                                                                           \
-  while (false)
+/* This macro serves to factor the common code in every low-level conditional on
+   x86_64, by emitting a comparing instruction followed by a conditional
+   branching instruction. The patch-in case is not really used here: every
+   sequence of a comparing instruction followed by a branching instruction is
+   patched the same way (in the branch part only). */
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_(compare_insn_template,       \
+                                                   branch_insn_template,        \
+                                                   opd0_constraints, opd0,      \
+                                                   opd1_constraints, opd1,      \
+                                                   tgt)                         \
+  asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                        \
+            /* In AT&T syntax operand1 comes before operand0: this is not a     \
+               mistake. */                                                      \
+            compare_insn_template " %[jitter_operand1], %[jitter_operand0]\n\t" \
+            branch_insn_template ".d32 .jitter_irrelevant_label_%=\n"           \
+            ".jitter_irrelevant_label_%=:\n\t"                                  \
+            /* This patch-in marks the end of the instruction to be patched,    \
+               and has actually size zero: I already emitted the correct        \
+               branching instruction with the correct prefixes and opcode; the  \
+               only thing remaining to patch in is the destination displacement \
+               at the very end of the instruction we just emitted, which the    \
+               ".d32" above forced to always be 32-bit wide. */                 \
+            JITTER_ASM_PATCH_IN_PLACEHOLDER(                                    \
+               JITTER_PATCH_IN_SIZE_0_FAST_BRANCH_AFTER_CONDITIONAL /*size*/,   \
+               JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ANY /*case*/,       \
+               tgt,                                                             \
+               0, 0, 0 /* not used for this case */)                            \
+            : /* outputs */                                                     \
+            : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                            \
+              [jitter_operand0] opd0_constraints (opd0),                        \
+              [jitter_operand1] opd1_constraints (opd1),                        \
+              JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */                \
+            : "cc" /* clobbers */                                               \
+            : jitter_dispatch_label /* goto labels */)
 
+/* Low-level conditional fast-branches.  
+   Implementation note: I could use testq in tests against zero and in tests for
+   sign.  In fact testq would be one byte smaller than cmpq if the operand (in
+   this case to be repeated twice) were in a register, but there is way of making
+   sure it doesn't have to be loaded from memory just in order to satisfy the
+   constraint. */
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_ZERO_(opd0, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_               \
+     ("cmpq", "jz", "rm", (opd0), "e", (0), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONZERO_(opd0, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                  \
+     ("cmpq", "jnz", "rm", (opd0), "e", (0), (tgt))
 
-/* FIXME: this works in all cases but only operand1 may be a literal: this
-   limitation may cause suboptimal code generation with a movq $LITERAL, %TEMP
-   preceding the comparison instruction.  I should automatically reverse the
-   conditional jump condition and swap the two arguments if the literal happens
-   to be in the wrong position.  This can be done with __builtin_constant_p .
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_POSITIVE_(opd0, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                   \
+     ("cmpq", "jg", "rm", (opd0), "e", (0), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONPOSITIVE_(opd0, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                      \
+     ("cmpq", "jle", "rm", (opd0), "e", (0), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NEGATIVE_(opd0, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                   \
+     ("cmpq", "js", "rm", (opd0), "e", (0), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONNEGATIVE_(opd0, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                      \
+     ("cmpq", "jns", "rm", (opd0), "e", (0), (tgt))
 
-   Another sensible optimization, even if likely less useful in real code, would
-   be checking whether *both* operands are literals, and if so turning the
-   conditional branch into an unconditional branch. */
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_EQUAL_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                      \
+     ("cmpq", "je", "rm", (opd0), "er", (opd1), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NOTEQUAL_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                         \
+     ("cmpq", "jne", "rm", (opd0), "er", (opd1), (tgt))
 
-/* FIXME: the cmp instruction sign-extends its immediate, if any, to the size of
-   the other operand; since I use the q suffix here the immediate is
-   sign-extended to 64 bits.  I haven't found an explicit statement about this
-   in the intel documentation, but I suppose that test zero-extends
-   immediates. */
-#define _JITTER_BRANCH_FAST_CMP(case, type, operand0, operand1, target_index) \
-  _JITTER_BRANCH_FAST_CONDITIONAL("cmpq", "rm", "er", case, \
-                                 (type)(operand0), (type)(operand1), target_index)
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_LESS_UNSIGNED_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                              \
+     ("cmpq", "jb", "rm", (opd0), "er", (opd1), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_LESS_SIGNED_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                            \
+     ("cmpq", "jl", "rm", (opd0), "er", (opd1), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_GREATER_UNSIGNED_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                                 \
+     ("cmpq", "ja", "rm", (opd0), "er", (opd1), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_GREATER_SIGNED_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                               \
+     ("cmpq", "jg", "rm", (opd0), "er", (opd1), (tgt))
 
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NOTLESS_UNSIGNED_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                                 \
+     ("cmpq", "jae", "rm", (opd0), "er", (opd1), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NOTLESS_SIGNED_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                               \
+     ("cmpq", "jge", "rm", (opd0), "er", (opd1), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NOTGREATER_UNSIGNED_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                                    \
+     ("cmpq", "jbe", "rm", (opd0), "er", (opd1), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NOTGREATER_SIGNED_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                                  \
+     ("cmpq", "jle", "rm", (opd0), "er", (opd1), (tgt))
 
-#define _JITTER_BRANCH_FAST_TEST(case, type, operand0, operand1, target_index) \
-  _JITTER_BRANCH_FAST_CONDITIONAL("testq", "rm", "Zr", case, \
-                                 (type)(operand0), (type)(operand1), target_index)
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_AND_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                    \
+     ("testq", "jnz", "rm", (opd0), "er", (opd1), (tgt))
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NAND_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                     \
+     ("testq", "jz", "rm", (opd0), "er", (opd1), (tgt))
 
-// FIXME: comment.
-#define _JITTER_BRANCH_FAST_TEST_ONE_OPERAND(case, type, operand0, target_index) \
-  _JITTER_BRANCH_FAST_TEST(case, type, operand0, operand0, target_index)
+/* This factors the common code of low-level primitives for checking overflow.
+   On x86_64 it is convenient to define as primitives the
+   operate-and-branch-on-overflow operations, actually computing a result --
+   based on those, the other branch-on-overflow primitives will be defined
+   automatically in
+      jitter/jitter-fast-branch-machine-generated.h
+   , which however can also do the converse.
+   On other architecture generating a correct result is not necessarily so
+   obvious, so it may be better to follow a different route and only define
+   branch-on-overflow primitives, with the automatic script generating
+   operate-and-branch-on-overflow macros based on them. */
+#define _JITTER_LOW_LEVEL_OPERATION_BRANCH_FAST_IF_OVERFLOW_(res, insn, opd0,   \
+                                                             opd1, tgt)         \
+  const jitter_int _jitter_opd0_value = (opd0);                                 \
+  const jitter_int _jitter_opd1_value = (opd1);                                 \
+  /* This is a dirty way of working around GCC's restriction on asm goto        \
+     statements not supporting output operands.  GCC does not know that         \
+     _jitter_tmp is changed by the asm goto statement, and it receives it as    \
+     an *input* operand.  Still, the same local register variable is then used  \
+     as an input/output for another (dummy) inline assembly statement, and      \
+     then read.  This is enough, I suppose, for the register to remain          \
+     assigned to the variable during its entire life time.  Nothing should      \
+     clobber the register. */                                                   \
+  register jitter_int _jitter_tmp asm ("%rax") = _jitter_opd0_value;            \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                                    \
+     (insn, "jo", "r", (_jitter_tmp), "er", (_jitter_opd1_value), (tgt));       \
+  /* This is the critical point: see the comment above.  I want to make sure    \
+     that _jitter_tmp remains in the same register, which is to say, that       \
+     (res) gets assigned the updated value. */                                  \
+  asm ("": "+r" (_jitter_tmp));                                                 \
+  (res) = _jitter_tmp;
 
+/* The operate-and-branch-on-overflow primitives.  Division and remainder use
+   the default definition. */
+#define _JITTER_LOW_LEVEL_PLUS_BRANCH_FAST_IF_OVERFLOW_(res, opd0,  \
+                                                        opd1, tgt)  \
+  _JITTER_LOW_LEVEL_OPERATION_BRANCH_FAST_IF_OVERFLOW_              \
+     (res, "addq", (opd0), (opd1), (tgt))
+#define _JITTER_LOW_LEVEL_MINUS_BRANCH_FAST_IF_OVERFLOW_(res, opd0,  \
+                                                         opd1, tgt)  \
+  _JITTER_LOW_LEVEL_OPERATION_BRANCH_FAST_IF_OVERFLOW_               \
+     (res, "subq", (opd0), (opd1), (tgt))
+#define _JITTER_LOW_LEVEL_TIMES_BRANCH_FAST_IF_OVERFLOW_(res, opd0,  \
+                                                         opd1, tgt)  \
+  _JITTER_LOW_LEVEL_OPERATION_BRANCH_FAST_IF_OVERFLOW_               \
+     (res, "imulq", (opd0), (opd1), (tgt))
 
-#define _JITTER_BRANCH_FAST_IF_ZERO(operand0, target_index) \
-  _JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ZERO, \
-                                      jitter_uint, operand0, target_index)
-#define _JITTER_BRANCH_FAST_IF_NONZERO(operand0, target_index) \
-  _JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONZERO, \
-                                      jitter_uint, operand0, target_index)
+/* FIXME: figure out how to handle known immediates in a clean way.  On this
+   architecture immediates fit naturally on the right, as operand 1; therefore
+   I should define low-level conditional branches with immediates on the right
+   only, and let the machine-generated code define the missing cases with known
+   literals on the left. */
 
-#define _JITTER_BRANCH_FAST_IF_POSITIVE(operand0, target_index) \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_SIGNED, \
-                         jitter_int, operand0, 0, target_index)
-#define _JITTER_BRANCH_FAST_IF_NONPOSITIVE(operand0, target_index) \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTGREATER_SIGNED, \
-                         jitter_int, operand0, 0, target_index)
-
-#define _JITTER_BRANCH_FAST_IF_NEGATIVE(operand0, target_index) \
-  _JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NEGATIVE, \
-                                      jitter_int, operand0, target_index)
-#define _JITTER_BRANCH_FAST_IF_NONNEGATIVE(operand0, target_index) \
-  _JITTER_BRANCH_FAST_TEST_ONE_OPERAND(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONNEGATIVE, \
-                                      jitter_int, operand0, target_index)
-
-#define _JITTER_BRANCH_FAST_IF_EQUAL(operand0, operand1, target_index) \
-  /* FIXME: nonimmediate? */ \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_EQUAL, \
-                         jitter_uint, operand0, operand1, target_index)
-#define _JITTER_BRANCH_FAST_IF_NOTEQUAL(operand0, operand1, target_index) \
-  /* FIXME: nonimmediate? */ \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTEQUAL, \
-                         jitter_uint, operand0, operand1, target_index)
-
-#define _JITTER_BRANCH_FAST_IF_LESS_SIGNED(operand0, operand1, target_index) \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_LESS_SIGNED, \
-                         jitter_int, operand0, operand1, target_index)
-#define _JITTER_BRANCH_FAST_IF_LESS_UNSIGNED(operand0, operand1, target_index) \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_LESS_UNSIGNED, \
-                         jitter_uint, operand0, operand1, target_index)
-#define _JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED(operand0, operand1, target_index) \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTGREATER_SIGNED, \
-                         jitter_int, operand0, operand1, target_index)
-#define _JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED(operand0, operand1, target_index) \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTGREATER_UNSIGNED, \
-                         jitter_uint, operand0, operand1, target_index)
-
-#define _JITTER_BRANCH_FAST_IF_GREATER_SIGNED(operand0, operand1, target_index) \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_SIGNED, \
-                         jitter_int, operand0, operand1, target_index)
-#define _JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED(operand0, operand1, target_index) \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_UNSIGNED, \
-                         jitter_uint, operand0, operand1, target_index)
-#define _JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(operand0, operand1, target_index) \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_SIGNED, \
-                         jitter_int, operand0, operand1, target_index)
-#define _JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED(operand0, operand1, target_index) \
-  _JITTER_BRANCH_FAST_CMP(JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_UNSIGNED, \
-                         jitter_uint, operand0, operand1, target_index)
 #endif // #if defined(JITTER_MACHINE_SUPPORTS_PATCH_IN) && defined(...
 
 
@@ -590,20 +637,7 @@ enum jitter_routine_to_patch
     jitter_routine_set_64bit_residual_memory_two_32bit_stores,
     jitter_routine_set_32bit_sign_extended_residual_memory,
     jitter_routine_jump_unconditional_32bit_offset,
-    jitter_routine_jump_on_zero_32bit_offset,
-    jitter_routine_jump_on_nonzero_32bit_offset,
-    jitter_routine_jump_on_sign_32bit_offset,
-    jitter_routine_jump_on_nonsign_32bit_offset,
-    jitter_routine_jump_on_equal_32bit_offset,
-    jitter_routine_jump_on_notequal_32bit_offset,
-    jitter_routine_jump_on_above_32bit_offset,
-    jitter_routine_jump_on_notbelow_32bit_offset,
-    jitter_routine_jump_on_below_32bit_offset,
-    jitter_routine_jump_on_notabove_32bit_offset,
-    jitter_routine_jump_on_less_32bit_offset,
-    jitter_routine_jump_on_notgreater_32bit_offset,
-    jitter_routine_jump_on_greater_32bit_offset,
-    jitter_routine_jump_on_notless_32bit_offset,
+    jitter_routine_empty_after_conditional_jump_32bit_offset,
     jitter_routine_call_32bit_offset,
 
     /* The number of routines. */

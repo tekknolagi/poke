@@ -2291,6 +2291,14 @@ jitter_fast_branch_macros []
       "_IF_GREATER_UNSIGNED",
       "_IF_NOTGREATER_SIGNED",
       "_IF_NOTGREATER_UNSIGNED",
+      "_IF_AND",
+      "_IF_NAND",
+      "_IF_PLUS_OVERFLOWS",
+      "_IF_MINUS_OVERFLOWS",
+      "_IF_TIMES_OVERFLOWS",
+      "_IF_DIVIDED_OVERFLOWS",
+      "_IF_REMAINDER_OVERFLOWS",
+      "_IF_NEGATE_OVERFLOWS",
       /*
 // FIXME: I *think* I only use these internally.
       "_IF_NEVER_UNARY",
@@ -2305,6 +2313,24 @@ jitter_fast_branch_macros []
 static const size_t
 jitter_fast_branch_macro_no
 = sizeof (jitter_fast_branch_macros) / sizeof (jitter_fast_branch_macros [0]);
+
+/* Same role as jitter_fast_branch_macros above for operations fast-branching on
+   overflow.  Only the operation name is given here. */
+static const char *
+jitter_fast_branching_operation_macros []
+  = {
+      "PLUS",
+      "MINUS",
+      "TIMES",
+      "DIVIDED",
+      "REMAINDER",
+      "NEGATE"
+    };
+/* How many strings jitter_fast_branching_operation_macros has. */
+static const size_t
+jitter_fast_branching_operation_macro_no
+= sizeof (jitter_fast_branching_operation_macros)
+  / sizeof (jitter_fast_branching_operation_macros [0]);
 
 /* Emit macro definitions for fast branching.  These are defined in a different
    way for replacement and non-replacement specialized instructions. */
@@ -2328,6 +2354,15 @@ jitterc_emit_executor_fast_branch_definitions
         EMIT("#   define JITTER_BRANCH_FAST%s JITTER_BRANCH%s\n", macro_name, macro_name);
       else
         EMIT("#   define JITTER_BRANCH_FAST%s _JITTER_BRANCH_FAST%s\n", macro_name, macro_name);
+    }
+  for (i = 0; i < jitter_fast_branching_operation_macro_no; i ++)
+    {
+      const char *macro_name = jitter_fast_branching_operation_macros [i];
+      EMIT("#   undef JITTER_%s_BRANCH_FAST_IF_OVERFLOW\n", macro_name);
+      if (is_replacement)
+        EMIT("#   define JITTER_%s_BRANCH_FAST_IF_OVERFLOW JITTER_%s_BRANCH_IF_OVERFLOW\n", macro_name, macro_name);
+      else
+        EMIT("#   define JITTER_%s_BRANCH_FAST_IF_OVERFLOW _JITTER_%s_BRANCH_FAST_IF_OVERFLOW\n", macro_name, macro_name);
     }
 }
 
