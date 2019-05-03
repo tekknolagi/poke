@@ -1,0 +1,944 @@
+#!@SHELL_OR_BIN_SH@
+## An -*- sh -*- script (to be preprocessed by M4sh and then by config.status:
+## if the file extension of this file is not .in.m4sh then you are not looking
+## at the actual source), part of Jitter.
+
+## Generate the fast-branch header containing repetitive CPP macro definitions.
+
+## Copyright (C) 2019 Luca Saiu
+## Written by Luca Saiu
+
+## This file is part of Jitter.
+
+## Jitter is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+
+## Jitter is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+
+## You should have received a copy of the GNU General Public License
+## along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Introduction.
+################################################################
+
+# Conditional high-level fast branch macros are defined in a C header based on
+# conditional low-level fast branch macros, which are hand-written in a way
+# specific to each architecture.
+
+# Low-level fast branches are conceived to be easy to define, so that porting
+# is easy and mostly uniform.  All the mechanism which expands high-level fast
+# branches into low-level fast branches while at the same time making high-level
+# fast branches convenient for the user is machine-independent, very regular,
+# very tedious to write but at the same time extremely error-prone.
+#
+# There is also a performance problem: the expansion of high-level fast-branch
+# macros, directly employed by the user, should generate code as small as
+# possible.  Expanding to C statements containing conditionals based on constant
+# expressions would be correct (I was doing it previously), but is better
+# avoided in the context of Jitter where machine-generated C code is already
+# painfully expensive to compile.
+#
+# Here it is better to have repetitive and redundant macro definitions, with
+# expansions as simple as possible.
+#
+# CPP is, unfortunately, inadequate to express the kind of declarative knowledge
+# exploited here: for example, the fact that "less-than" is a relation
+# symmetrical to "greater-than" and opposite to "not-less-than"; and the fact
+# that "less-than (x, 0)" is equivalent to "negative (x)", while "less-than (0,
+# x)" is equivalent to "positive (x)".
+#
+# This kind of statements, however, is not very hard to express in a shell
+# script like this.
+#
+# This file, after preprocessing by M4sh and config.status, yields a portable
+# shell script generating a C header containing CPP macro definitions.
+# Those macros will be invoked in user code snippets written by human users
+# as part of virtual machine specifications to be translated into C (with a
+# lot of CPP macros) by Jitter.
+
+
+# M4sh initialization.
+################################################################
+
+# Include the M4sh script "library", part of every M4sh script here.  That
+# library starts with the AS_INIT call.
+m4_include([jitter-script.m4sh])
+
+
+# Utility.
+################################################################
+
+# Print the given error message and exit with failure.
+# Arguments:
+# - error message.
+fatal ()
+{
+    error_message="$1"
+    echo "FATAL ERROR: ${error_message}"
+    exit 1
+}
+
+
+# Command line handling.
+################################################################
+
+version ()
+{
+    cat <<EOF
+generate-fast-branches (@PACKAGE_NAME@) @PACKAGE_VERSION@
+Copyright (C) 2016-2019 Luca Saiu.
+Jitter comes with ABSOLUTELY NO WARRANTY.
+You may redistribute copies of Jitter under the terms of the GNU General Public
+License, version 3 or any later version published by the Free Software
+Foundation.  For more information see the file named COPYING in the source
+distribution.
+
+Written by Luca Saiu <http://ageinghacker.net>.
+EOF
+}
+
+help ()
+{
+    cat <<EOF
+Usage: $0 @<:@OPTION@:>@
+An internal shell script machine-generating a C header containing repetitive
+CPP macro definitions under the Jitter source directory (in this case
+@abs_top_srcdir@ ).
+This script emits C code to the standard output.
+
+Common GNU-style options:
+  -?, --help                 Give this help list
+  -V, --version              Print program version
+
+Report bugs to: <@PACKAGE_BUGREPORT@>
+Jitter home page: <@PACKAGE_URL@>
+EOF
+}
+
+# Handle command line arguments.
+handle_command_line ()
+{
+    # I only support --help and --version out out of cleanness, to comply with
+    # the GNU conventions.  This script is not meant to use the command line
+    # at all.
+    if test "$#" != 0; then
+        for arg in "$@"; do
+            if test "$arg" = "--version" || test "$arg" = "-V"; then
+                version
+                exit 0
+            elif test "$arg" = "--help" || test "$arg" = '-?'; then
+                help
+                exit 0
+            else
+                fatal "invalid argument $arg"
+            fi
+        done
+    fi
+}
+
+
+# Lists.
+################################################################
+
+# Here a "list" is encoded as a string made of "elements" each
+# separated by ' ' characters.  It is acceptable to have empty
+# spaces at the beginning and the end of the string.
+#
+# No escaping is supported.
+
+# Given an element and a list return success if the element belongs to the list,
+# failure otherwise.
+#
+# Arguments:
+# - an element.
+# - a list.
+is_in_list ()
+{
+    element="$1"
+    list="$2"
+    for an_element in ${list}; do
+        if test "${element}" = "${an_element}"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+
+# Lists of pairs.
+################################################################
+
+# A "list of pairs" (or just "pairs") is a simple implementation of an
+# associative data structure.
+#
+# A list of pairs is encoded as a string with a particular structure.  The
+# string contains "pairs" separated by single ' ' characters.  Each pair
+# contains two strings separated by a single '/' character.  It is acceptable to
+# have empty spaces at the beginning and the end of the string.
+# No escaping is supported.
+#
+# In some case the association is non-directional, in others the left element
+# of each pair is considered to be the "key" and its right element the
+# associated "datum".
+
+# Given a pair print its left element.
+# Arguments:
+# - a pair.
+left ()
+{
+    pair="$1"
+    echo "${pair}" | @SED@ 's@^\(@<:@^/@:>@*\)/\(@<:@^/@:>@*\)$@\1@'
+}
+
+# Given a pair print its right element.
+# Arguments:
+# - a pair.
+right ()
+{
+    pair="$1"
+    echo "${pair}" | @SED@ 's@^\(@<:@^/@:>@*\)/\(@<:@^/@:>@*\)$@\2@'
+}
+
+# Given an element and a list of pairs such as the element occurs as a key, print
+# its associated datum.  Fail fatally on no match.
+# Arguments:
+# - a key
+# - a list of pairs
+lookup ()
+{
+    element="$1"
+    pairs="$2"
+    for pair in ${pairs}; do
+        key=$(left "${pair}")
+        if test "${element}" = "${key}"; then
+            right "${pair}"
+            return
+        fi
+    done
+    fatal "could not match \"${element}\" as a key in \"${pairs}\""
+}
+
+# Given an element and a list of pairs return with success if the element
+# is a key in the list (as per lookup, above), failure otherwise.
+# fatally on no match.
+# Arguments:
+# - an element.
+# - a list of pairs.
+is_key_in_pairs ()
+{
+    element="$1"
+    pairs="$2"
+    for pair in ${pairs}; do
+        key=$(left "${pair}")
+        if test "${element}" = "${key}"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Given an element and a list of pairs print the given element's companion
+# element, be it on the left-hand or the right-hand side of a pair.  Fail
+# fatally on no match.
+# Arguments:
+# - an element.
+# - a list of pairs.
+match_in_pairs ()
+{
+    element="$1"
+    pairs="$2"
+    for pair in ${pairs}; do
+        first=$(left "${pair}")
+        second=$(right "${pair}")
+        if test "${element}" = "${first}"; then
+            echo "${second}"
+            return
+        elif test "${element}" = "${second}"; then
+            echo "${first}"
+            return
+        fi
+    done
+    fatal "could not match \"${element}\" in \"${pairs}\""
+}
+
+# Given an element and a list of pairs return with success if the element
+# has a match (as per match, above), failure otherwise.
+# Arguments:
+# - an element.
+# - a list of pairs.
+has_match_in_pairs ()
+{
+    element="$1"
+    pairs="$2"
+    for pair in ${pairs}; do
+        first=$(left "${pair}")
+        second=$(right "${pair}")
+        if test "${element}" = "${first}" \
+           || test "${element}" = "${second}"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+
+# Relations.
+################################################################
+
+# The list of unary relations.
+# Notice that, by convention, never and always are unary.
+unaries="never always zero nonzero positive nonpositive negative nonnegative"
+
+# The list of binary relations.
+binaries="equal notequal less greater notless notgreater and nand"
+
+# Definition of unary relations having relation names as keys and C expressions,
+# written as unsafe macro bodies, as data.
+#
+# Those macro bodies are "unsafe" in the sense that they do not cast the macro
+# arguments to a type with the intuitive signedness, and that is important: see
+# for example zeroleft below, and how, for example, "greater" has "negative" as
+# zeroleft (0 > y iff y is negative): this must be correct in the unsigned case
+# as well, where "negative" effectively degenerates to "never".
+# Such macros are, of course, not intended for the user.  Like other similar C
+# identifier in Jitter they have a "_" name suffix for this reason.
+#
+# C expressions have spaces escaped by '.' characters and slashed escaped by '|'
+# characters, formal arguments being named "x".
+# The argument type, the same for every argumetn, is accessible as
+# "_jitter_type" from definitions where needed.
+unary_definitions='never/0 always/1 zero/(!.(x)) nonzero/(x) positive/((x).>.0) nonpositive/((x).<=.0) negative/((x).<.0) nonnegative/((x).>=.0)'
+
+# Definitions of binary relations, like above for unaries, with first formal
+# arguments named "x" and second formal arguments named "y".
+binary_definitions='equal/((x).==.(y)) notequal/((x).!=.(y)) less/((x).<.(y)) greater/((x).>.(y)) notless/((x).>=.(y)) notgreater/((x).<=.(y)) and/((x).&.(y)) nand/(~.((x).&.(y)))'
+
+# Binary relations which admit two variants, one unsigned and another signed.
+sign_sensitives='less notless greater notgreater'
+
+# The list of every relation, unary or binary.
+relations="${unaries} ${binaries}"
+
+# Pairs of each binary relation and its symmetrical.
+# For example, for every x,y : x <= y iff y >= x.
+symmetries="equal/equal notequal/notequal less/greater notless/notgreater and/and nand/nand"
+
+# Pairs of each relation, unary or binary, and its opposite.
+# For example:
+#   for every x    : x is nonzero iff ! (x is zero).
+#   for every x, y : x <= y iff ! (x > y).
+oppositions="never/always zero/nonzero positive/nonpositive negative/nonnegative equal/notequal less/notless greater/notgreater and/nand"
+
+# Given a relation name print its symmetrical.  Fail fatally on no match.
+# Arguments:
+# - relation name
+symmetrical ()
+{
+    element="$1"
+    match_in_pairs "${element}" "${symmetries}"
+}
+
+# Given a binary relation name return success if it has an opposite, failure
+# otherwise.  Fail fatally if the argument is not a relation name.
+# Arguments:
+# - relation name
+has_opposite ()
+{
+    r="$1"
+    if (! is_unary "${r}") && (! is_binary "${r}"); then
+        fatal "has_opposite: ${r} is not a relation"
+    fi
+    has_match_in_pairs "${r}" "${oppositions}"
+}
+
+# Given a binary relation name return success if it has an symmetrical, failure
+# otherwise.  Fail fatally if the argument is not a binary relation.
+# Arguments:
+# - relation name
+has_symmetrical ()
+{
+    r="$1"
+    if ! is_binary "${r}"; then
+        fatal "has_symmetrical: ${r} is not a binary relation"
+    fi
+    has_match_in_pairs "${r}" "${symmetries}"
+}
+
+# Given a binary relation name return success if it has a zeroleft, failure
+# otherwise.  Fail fatally if the argument is not a binary relation.
+# Arguments:
+# - relation name
+has_zeroleft ()
+{
+    r="$1"
+    if ! is_binary "${r}"; then
+        fatal "has_zeroleft: ${r} is not a binary relation"
+    fi
+    is_key_in_pairs "${r}" "${zerolefts}"
+}
+
+# Given a binary relation name return success if it has a zeroright, failure
+# otherwise.  Fail fatally if the argument is not a binary relation.
+# Arguments:
+# - relation name
+has_zeroright ()
+{
+    r="$1"
+    if ! is_binary "${r}"; then
+        fatal "has_zeroright: ${r} is not a binary relation"
+    fi
+    is_key_in_pairs "${r}" "${zerorights}"
+}
+
+# Given a relation name print its opposite.  Fail fatally on no match.
+# Arguments:
+# - relation name
+opposite ()
+{
+    element="$1"
+    match_in_pairs "${element}" "${oppositions}"
+}
+
+# Pairs of each binary relation R(_,_) and its associated unary relation S(_)
+# such that for every y : R(0,y) iff S(y).
+# For example:
+#   0 != y   iff  y is nonzero
+#   0 < y    iff  y is positive
+#   0 & y    iff  never (y)
+#   ~(0 & y) iff  always (y)
+zerolefts="equal/zero notequal/nonzero less/positive notless/nonpositive greater/negative notgreater/nonnegative and/never nand/always"
+
+# FIXME: those special cases could be handled, but they do not follow the
+# pattern below for the automatic definition of zerorights.  I could add
+# those to both zeroleft and zerorights, manually, after machine-generating
+# the regular part of zerorights from the regular part of zerolefts.
+#
+#   minus-overflows (0, y) iff ismostnegative (y)
+#   minus-overflows (x, 0) iff never (x)
+#   divided-overflows (0, y) iff zero (y)
+#   divided-overflows (x, 0) iff always (x)
+#
+# Anyway, it is not necessary to have an optimization for every weird case.
+# FIXME: I should rather make sure that relations without a symmetrical or
+# opposite relation are handled correctly.
+
+# Pairs of each binary relation R(_,_) and its associated unary relation S(_)
+# such that for every x : R(x,0) iff S(x).
+# Like zerolefts except that here 0 is the right argument of R(_,_).
+# For example:
+#   x != 0  iff  x is nonzero
+#   x < 0   iff  x is negative
+# zerorights can be computed as
+#   (map (lambda (pair)
+#          (cons (car pair)
+#                (symmetric (cdr pair))))
+#          zerolefts)
+zerorights=''
+for a_pair in ${zerolefts}; do
+    zerorights=$zerorights' '$(symmetrical $(left "${a_pair}"))'/'$(right "${a_pair}")
+done
+#echo $zerorights
+#echo "equal/zero notequal/nonzero less/negative notless/nonnegative greater/positive notgreater/nonpositive"
+
+# A list of pair of name and definitions (like relation definitions above) for
+# binary operations on signed integers which may overflow.
+overflowing_definitions='plus/((jitter_int).(x).+.(jitter_int).(y)) minus/((jitter_int).(x).-.(jitter_int).(y)) times/((jitter_int).(x).*.(jitter_int).(y)) divided/((jitter_int).(x).|.(jitter_int).(y)) remainder/((jitter_int).(x).%.(jitter_int).(y))'
+
+# Evaluate to success if the given operation name matches the check-for-overflow
+# relation name of one of the overflowing operators defined in
+# overflowing_definitions.
+is_overflow_checking ()
+{
+    o="$1"
+    for pair in ${overflowing_definitions}; do
+        left=$(left "${pair}")
+        if test "x${o}" = "x${left}-overflows"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Given an element and two lists, return success when the element is in the
+# first list, failure when the element is in the second list, or fail fatally
+# when the element is in neither.
+# This factors the common code in is_unary and is_binary.
+# Arguments:
+# - element
+# - first list
+# - second list
+is_in_first_of_two ()
+{
+    element="$1"
+    first_list="$2"
+    second_list="$3"
+    if is_in_list "${element}" "${first_list}"; then
+        return 0
+    elif is_in_list "${element}" "${second_list}"; then
+        return 1
+    else
+        fatal "element \"${element}\" not in \"${first_list}\" nor in \"${second_list}\""
+    fi
+}
+
+# Given a relation name return success when the relation is unary, failure when
+# it is not unary.  Fail fatally if the relation is unknown.
+# Arguments:
+# - relation name
+is_unary ()
+{
+    relation="$1"
+    is_in_first_of_two "${relation}" "${unaries}" "${binaries}"
+}
+
+# Given a relation name return success when the relation is unary, failure when
+# it is not unary.  Fail fatally if the relation is unknown.
+# Arguments:
+# - relation name
+is_binary ()
+{
+    relation="$1"
+    is_in_first_of_two "${relation}" "${binaries}" "${unaries}"
+}
+
+# Given a relation name return success when the relation is sign-sensitive,
+# failure if not.  Fail fatally if the relation is unknown.
+# Arguments:
+# - relation name
+is_sign_sensitive ()
+{
+    relation="$1"
+    is_in_first_of_two "${relation}" "${sign_sensitives}" "${relations}"
+}
+
+
+# C generation.
+################################################################
+
+# In order to make debugging easier the functions in this section print to the
+# standard output rather than to ${c_file_pathname}.
+
+# The name of the C file to generate as an absolute pathname.
+c_file_pathname="@abs_top_srcdir@/jitter/jitter-fast-branch-machine-generated.h"
+
+# Given an identifier, print it capitalized and with dashes changed to
+# underscores, the way it would be written as a C macro.
+#
+# The identifier should only contain ASCII letters, digits, dashes
+# and underscores (not checked).
+#
+# Arguments:
+# - identifier
+macroize ()
+{
+    identifier="$1"
+    echo "${identifier}" \
+        | tr 'abcdefghijklmnopqrstuvwxyz-' \
+             'ABCDEFGHIJKLMNOPQRSTUVWXYZ_'
+}
+
+# Print the given input escaping spaces as per the convention in relation
+# definitions above.
+escape_c ()
+{
+    input="$1"
+    echo "${input}" | tr '.|' ' /'
+}
+
+# Emit the initial part of the C file.
+emit_opening ()
+{
+    cat <<EOF
+/* This header is machine-generated.  Its actual source is in
+   scripts/generate-fast-branches.in.m4sh
+, within the Jitter source distribution. */
+
+#ifndef JITTER_FAST_BRANCH_MACHINE_GENERATED_H_
+#define JITTER_FAST_BRANCH_MACHINE_GENERATED_H_
+
+EOF
+}
+
+# Emit the final part of the C file.
+emit_closing ()
+{
+    cat <<EOF
+
+#endif // #ifndef JITTER_FAST_BRANCH_MACHINE_GENERATED_H_
+EOF
+}
+
+# Emit a macro expanding to a C expression evaluating a condition.
+emit_condition ()
+{
+    @SED@ "s/_jitter_type/$type/g" <<EOF
+#define _JITTER_C_CONDITION_${macroized_r}_(${formals}) \\
+  ${definition}
+EOF
+}
+
+# Emit a conditional definition of a low-level fast branch operator, in case
+# it is missing.
+# FIXME: if this is an overflowing operation behave differently.  Emit a CPP
+# conditional defining low-level primitives:
+# - operate-and-branch-on-overflow from branch-on-overflow,
+#   if branch-on-overflow is there
+# - branch-on-overflow from operate-and-branch-on-overflow,
+#   if operate-and-branch-on-overflow is there
+# - fail if both are defined already
+# - both
+emit_low_level ()
+{
+    if test "x${macroized_r}" = 'xNEVER'; then
+        # Optimization.
+        body='/* Never branch. */'
+    elif test "x${macroized_r}" = 'xALWAYS'; then
+        # Another optimization.
+        body='_JITTER_LOW_LEVEL_BRANCH_FAST_ (_jitter_tgt)'
+    elif test "x${macroized_r}" = 'xNONZERO'; then
+        # This is the only case where it's appropriate, as a fallback solution,
+        # to use a C branch to "branch around" an unconditional branch in
+        # assembly.  Every other case will expand to a use of this, which, if
+        # even just nonzero is implemented, will already yield reasonably
+        # acceptable code on machines without flags -- RISC-V, MIPS, Alpha.
+        body="if (${definition}) \\
+                { \\
+                  _JITTER_LOW_LEVEL_BRANCH_FAST_ (_jitter_tgt); \\
+                }"
+    else
+        # Generic fallback code.
+        body="_JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONZERO_ ((jitter_uint) (${definition}), _jitter_tgt)"
+    fi
+        @SED@ "s/_jitter_type/$type/g" <<EOF
+#ifndef _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_r}_
+# define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_r}_(${formals}, _jitter_tgt) \\
+    ${body}
+#endif
+
+EOF
+}
+
+# Emit definition of a high-level fast branch operator.
+emit_high_level ()
+{
+    definitions='const _jitter_type _jitter_x = (_jitter_type) (x);'
+    bounds='_jitter_x'
+    if test "x$binary" = 'xyes'; then
+        definitions="$definitions \\
+      const _jitter_type _jitter_y = (_jitter_type) (y);"
+        bounds="$bounds, _jitter_y"
+    fi
+    (cat <<EOF
+#define _JITTER_BRANCH_FAST_IF_${macroized_r}(${formals}, _jitter_tgt) \\
+  do \\
+    { \\
+      /* Evaluate arguments, once and for all. */ \\
+      ${definitions} \\
+      /* "Evaluate" the condition in C, just to see if it's a known constant. \\
+         The condition of this if statement is a constant expression, and will \\
+         be optimized away in either case. */ \\
+      const bool _jitter_condition \\
+        = _JITTER_C_CONDITION_${macroized_r}_ (${bounds}); \\
+      const bool _jitter_condition_known \\
+        = __builtin_constant_p (_jitter_condition); \\
+      if (_jitter_condition_known) \\
+        { \\
+          /* The condition is a known constant, so this if will turn into \\
+             either nothing or an unconditional branch. */ \\
+          if (_jitter_condition) \\
+            { \\
+              _JITTER_LOW_LEVEL_BRANCH_FAST_ (_jitter_tgt); \\
+            } \\
+        } \\
+EOF
+     # If the condition is binary and the condition has the suitable zeroleft and
+     # zeroright, emit those cases.
+     if test "x$binary" = 'xyes'; then
+         for operand in '_jitter_x' '_jitter_y'; do
+             has_zero='no'
+             macroized_zeroname='???invalid???'
+             if test "x$operand" = 'x_jitter_x'; then
+                 other_operand='_jitter_y'
+                 if test "x${has_zeroleft}" = 'xyes'; then
+                     has_zero='yes'
+                     macroized_zeroname="${macroized_zeroleft}"
+                 fi
+             else
+                 other_operand='_jitter_x'
+                 if test "x${has_zeroright}" = 'xyes'; then
+                     has_zero='yes'
+                     macroized_zeroname="${macroized_zeroright}"
+                 fi
+             fi
+             if test "x${has_zero}" = 'xyes'; then
+                 cat <<EOF
+      else if (__builtin_constant_p (${operand}) && ${operand} == 0) \\
+        { \\
+          /* ${operand} is known to be zero, but ${other_operand} is unknown. */ \\
+          _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_zeroname}_ \\
+             (${other_operand}, _jitter_tgt); \\
+        } \\
+EOF
+             fi
+         done
+     fi
+     # Emit the fallback case, in which no operand is known.
+     cat <<EOF
+      else \\
+        { \\
+          /* The condition is not a known constant. */ \\
+          _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_r}_ \\
+             (${bounds}, _jitter_tgt); \\
+        } \\
+    } \\
+  while (0)
+EOF
+) | @SED@ "s/_jitter_type/$type/g"
+}
+
+# Iterate over each relation, defining local variables and then calling the
+# named function.
+# This relies on dynamic scoping to pass parameters: variables are simply
+# bound here, and then automatically visible as nonlocals in the body of the
+# called function.
+# Arguments:
+# - comment text.
+# - function name.
+for_each_relation ()
+{
+    comment_text="$1"
+    function_name="$2"
+    echo "/* ${comment_text} */"
+    for r in ${relations}; do
+        macroized_r_stem="$(macroize ${r})"
+        if is_unary "${r}"; then
+            unary='yes'
+            binary='no'
+            formals='x'
+            definition=$(lookup "${r}" "${unary_definitions}")
+            has_symmetrical='no'
+            macroized_symmetrical_stem=''
+            macroized_zeroleft_stem=''
+            macroized_zeroright_stem=''
+        else
+            unary='no'
+            binary='yes'
+            formals='x, y'
+            definition=$(lookup "${r}" "${binary_definitions}")
+            if has_zeroleft "${r}"; then
+                has_zeroleft='yes'
+                macroized_zeroleft_stem=$(macroize $(lookup "${r}" "${zerolefts}"))
+            else
+                has_zeroleft='no'
+                macroized_zeroleft_stem=''
+            fi
+            if has_zeroright "${r}"; then
+                has_zeroright='yes'
+                macroized_zeroright_stem=$(macroize $(lookup "${r}" "${zerorights}"))
+            else
+                has_zeroright='no'
+                macroized_zeroright_stem=''
+            fi
+            if has_symmetrical "${r}"; then
+                has_symmetrical='yes'
+                macroized_symmetrical_stem=$(macroize $(symmetrical "${r}"))
+            else
+                has_symmetrical='no'
+            fi
+        fi
+        if has_opposite "${r}"; then
+            has_opposite='yes'
+            macroized_opposite_stem=$(macroize $(opposite "${r}"))
+        else
+            has_opposite='no'
+            macroized_opposite_stem=''
+        fi
+        definition=$(escape_c "${definition}")
+        if is_sign_sensitive "${r}"; then
+            sign_sensitive='yes'
+            types='jitter_uint jitter_int'
+        else
+            sign_sensitive='no'
+            types='jitter_uint'
+        fi
+        for type in ${types}; do
+            if test "x$sign_sensitive" = 'xyes'; then
+                if test "x$type" = 'xjitter_uint'; then
+                    suffix='_UNSIGNED'
+                else
+                    suffix='_SIGNED'
+                fi
+            else
+                suffix=''
+            fi
+            macroized_r="${macroized_r_stem}${suffix}"
+            if test "x${macroized_symmetrical_stem}" != 'x'; then
+                macroized_symmetrical="${macroized_symmetrical_stem}${suffix}"
+            fi
+            # zeroleft and zeroright operators cannot have a suffix, since they
+            # are unary.
+            macroized_zeroleft="${macroized_zeroleft_stem}"
+            macroized_zeroright="${macroized_zeroright_stem}"
+            if test "x${macroized_opposite_stem}" != 'x'; then
+                macroized_opposite="${macroized_opposite_stem}${suffix}"
+            fi
+            eval ${function_name}
+        done
+    done
+    echo
+}
+
+emit_overflowing_operations ()
+{
+    echo '/* High-level operate-and-branch-on-overflow operations. */'
+    for pair in ${overflowing_definitions}; do
+        operation=$(left "${pair}")
+        definition=$(escape_c $(right "${pair}"))
+        macroized_operation=$(macroize ${operation})
+        cat <<EOF
+/* The operation which may overflow, in C. */
+#define _JITTER_C_OPERATION_${macroized_operation}_(x, y) \\
+  (${definition})
+
+/* The overflow condition, in C. */
+#define _JITTER_C_CONDITION_${macroized_operation}_OVERFLOWS_(x, y) \\
+  ((jitter_uint) \\
+   JITTER_WOULD_${macroized_operation}_OVERFLOW \\
+      (jitter_uint, jitter_int, (x), (y), JITTER_BITS_PER_WORD))
+
+/* If the branch-on-overflow and operate-and-branch-on-overflow low-level
+   primitives are both missing for ${macroized_operation} , define one. */
+#if (! defined (_JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_)    \\
+     && ! defined (_JITTER_LOW_LEVEL_${macroized_operation}_BRANCH_FAST_IF_OVERFLOW_))
+# define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_(opd0, opd1, tgt) \\
+    _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONZERO_ \\
+       (_JITTER_C_CONDITION_${macroized_operation}_OVERFLOWS_ (opd0, opd1), \\
+        (tgt))
+#endif
+
+/* At this point we definitely have one of the branch-on-overflow and
+   operate-and-branch-on-overflow low-level primitives for ${macroized_operation} .
+   Using the one we have, define the other. */
+#if (defined (_JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_)    \\
+     && defined (_JITTER_LOW_LEVEL_${macroized_operation}_BRANCH_FAST_IF_OVERFLOW_))
+# error "both _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_ and"
+# error "_JITTER_LOW_LEVEL_${macroized_operation}_BRANCH_FAST_IF_OVERFLOW_ are defined."
+# error "The machine-specific header should define only one: the other"
+# error "will be automatically defined here, based on the one supplied by you."
+#elif (! defined (_JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_) \\
+       && defined (_JITTER_LOW_LEVEL_${macroized_operation}_BRANCH_FAST_IF_OVERFLOW_))
+# define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_(opd0, opd1, tgt)   \\
+    /* Use the operate-and-branch-on-overflow primitive and just throw away  \\
+       the result. */                                                        \\
+    jitter_int _jitter_unused_result __attribute__ ((unused));               \\
+    /* Prevent uninitialized-variable warnings. */                           \\
+    asm ("": "=X" (_jitter_unused_result));                                  \\
+    _JITTER_LOW_LEVEL_${macroized_operation}_BRANCH_FAST_IF_OVERFLOW_ \\
+       (_jitter_unused_result, (opd0), (opd1), (tgt))
+#elif (! defined (_JITTER_LOW_LEVEL_${macroized_operation}_BRANCH_FAST_IF_OVERFLOW_) \\
+       && defined (_JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_))
+# define _JITTER_LOW_LEVEL_${macroized_operation}_BRANCH_FAST_IF_OVERFLOW_(res, opd0, opd1, tgt) \\
+    /* Fast-branch away if the operation would overflow. */ \\
+    _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_ \\
+       ((opd0), (opd1), (tgt)); \\
+    /* If we are still here the operation will not overflow.  Do it. */ \\
+    (res) = _JITTER_C_OPERATION_${macroized_operation}_ ((opd0), (opd1))
+#else
+# error "impossible"
+#endif // which ${macroized_operation}_OVERFLOWS low-level primitive is defined
+
+/* This is the operate-and-branch-on-overflow high-level primitive for
+   ${macroized_operation} . */
+#define _JITTER_${macroized_operation}_BRANCH_FAST_IF_OVERFLOW(res, opd0, opd1, tgt) \\
+  do \\
+    { \\
+      /* Evaluate the arguments, once and for all. */ \\
+      const jitter_int _jitter_x = (jitter_int) (opd0); \\
+      const jitter_int _jitter_y = (jitter_int) (opd1); \\
+      \\
+      /* Check if the condition's value is a known constant, before actually \\
+         computing it.  I have my own macros for this which appear to be more \\
+         accurate than just __builtin_constant_p (will the thing overflow); \\
+         when my macros say that the condition is a known constant it always \\
+         appears to actually be for GCC as well -- making the fast branch \\
+         either disappear or become unconditional.  This helps with \\
+         performance, but is not required for correctness. */ \\
+      const bool _jitter_condition_known \\
+        = JITTER_${macroized_operation}_OVERFLOWS_KNOWN_CONSTANT_GCC (_jitter_x, _jitter_y); \\
+      if (_jitter_condition_known) \\
+        { \\
+          /* The condition is a known constant, so this if will turn into \\
+             either nothing or an unconditional branch.  If we do not branch \\
+             then we have to assign the result. */ \\
+          if (_JITTER_C_CONDITION_${macroized_operation}_OVERFLOWS_ (_jitter_x, _jitter_y)) \\
+            { \\
+              _JITTER_LOW_LEVEL_BRANCH_FAST_ (tgt); \\
+            } \\
+          else \\
+            (res) = _JITTER_C_OPERATION_${macroized_operation}_ (_jitter_x, _jitter_y); \\
+        } \\
+      else \\
+        { \\
+          /* The condition is not a known constant.  The overflow check \\
+             will not be optimized away, but the operation might still be \\
+             rewritable into a cheaper one (with overflow checking); this \\
+             is why the expansion uses a middle-level, instead of a low-level, \\
+             primitive. */ \\
+          _JITTER_MIDDLE_LEVEL_${macroized_operation}_BRANCH_FAST_IF_OVERFLOW_ \\
+             ((res), _jitter_x, _jitter_y, (tgt)); \\
+        } \\
+    } \\
+  while (false)
+
+/* This is the branch-on-overflow high-level primitive for ${macroized_operation}
+   , which conditionally branches but does not yield a result. */
+#define _JITTER_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS(opd0, opd1, tgt) \\
+  do \\
+    { \\
+      /* Here we are only interested in branching or not branching; compute a \\
+         useless result, to be ignored.  GCC will be able to optimize that away, \\
+         unless the result is required for computing the overflow condition \\
+         itself. */ \\
+      jitter_int _jitter_unused_result __attribute__ ((unused)); \\
+      _JITTER_${macroized_operation}_BRANCH_FAST_IF_OVERFLOW \\
+         (_jitter_unused_result, (opd0), (opd1), (tgt)); \\
+    } \\
+  while (0)
+
+EOF
+    done
+    echo
+}
+
+# Emit the entire text of the generated file to the standard output.
+emit_everything ()
+{
+    emit_opening
+    for_each_relation 'Condition-evaluating macros, expanding to C expressions.' \
+                      'emit_condition'
+    for_each_relation 'Add missing low-level conditional fast branch definitions.' \
+                      'emit_low_level'
+    for_each_relation 'High-level conditional fast branches.' \
+                      'emit_high_level'
+    emit_overflowing_operations
+    emit_closing
+}
+
+
+# Main.
+################################################################
+
+# FIXME: remove after debugging
+set -e
+
+# Handle options, just to support --help and --version .
+handle_command_line
+
+# Print code to the standard input.  The user will take care of redirecting it.
+emit_everything

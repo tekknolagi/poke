@@ -22,195 +22,264 @@
 #ifndef JITTER_FAST_BRANCH_H_
 #define JITTER_FAST_BRANCH_H_
 
+#include <jitter/jitter-arithmetic.h>
+
 
 /* Check whether patch-ins are needed, and supported on this machine.
  * ************************************************************************** */
 
-/* This amond the rest includes <jitter/machine/jitter-machine.h> , which is
+/* This among the rest includes <jitter/machine/jitter-machine.h> , which is
    enough to see the definition of JITTER_MACHINE_SUPPORTS_BRANCH_AND_LINK used
-   below. */
+   below, and all the machine-specific branch definitions, which are optional;
+   in case patch-ins are used what is missing will be defined here. */
 #include <jitter/jitter-patch-in.h>
 
 
 
 
-/* Fallback unconditional fast branch definitions.
+/* Low-level versus high-level fast-branches.
  * ************************************************************************** */
 
-/* VM specifications use fast branching macros, but these are not implemented on
-   every machine, and even on machines supporting them the fast version is not
-   compatible with every dispatching model. */
+/* The low-level machine-specific definition for conditional fast branches, when
+   available, "assume the worst case" in terms of constantness.  This means that
+   low-level macros expand to inline assembly code actually performing a
+   conditional, even when there is no need to because the condition is actually
+   a compile-time constant.
 
+   Low-level macros can assume they receive trivial arguments with no side
+   effects, always either constants or variables, even if not necessarily known
+   at compile time.  Argument evaluation happens *out* of low-level macros.
+
+   Low-level macros are conceived for easy portability and make machine-specific
+   code more declarative than algorithmic, but are not intended for the user.
+   The user should always use high-level fast branches, defined in a
+   machine-generated header as explained below (using machine-specific low-level
+   fast-branches when available), which evaluate every comparison argument
+   exactly once, rely on statements containing conditionals based on complex
+   constant expression in order to eventually generate optimized code containing
+   only a translation of the appropriate expansion of low-level macros.
+
+   It is not necessary to protect low-level fast-branch operators with do..while
+   (false).  The high-level definitions already wrap their uses.  Like elsewhere
+   in Jitter, a macro whose name ends with "_" is unsafe in this respect, but
+   is only used internally. */
+
+/* This one low-level fast branch has a machine-independent definition, only
+   relying on JITTER_PATCH_IN_SIZE_FAST_BRANCH_UNCONDITIONAL and
+   JITTER_PATCH_IN_SIZE_FAST_BRANCH_UNCONDITIONAL , which of course are to
+   be supplied in the machine-specific header.
+   Low-level fast-branch unconditionally, going to tgt. */
 #ifdef JITTER_HAVE_PATCH_IN
-/* FIXME: comment.
-
-   Notice that some of the macros used here as the arguments of
-   JITTER_FAST_UNCONDITIONAL_BRANCH_PLACEHOLDER are not defined yet at the time
-   of the definition of _JITTER_BRANCH_FAST , but will be defined before
-   _JITTER_BRANCH_FAST is called.
-   This is the case for JITTER_FAST_BRANCH_PREFIX ,
-   JITTER_SPECIALIZED_INSTRUCTION_OPCODE and
-   JITTER_SPECIALIZED_INSTRUCTION_MANGLED_NAME .
-
-   I am not personally a fan CPP or of its macro evaluation order, but it works
-   to my advantage in this case.  Any static-scoping integralist coming across
-   this comment is welcome to propose a nicer solution *not* adding irrelevant
-   arguments everywhere. */
-# define _JITTER_BRANCH_FAST(index) \
-  JITTER_FAST_UNCONDITIONAL_BRANCH_PLACEHOLDER(index)
-#else /* JITTER_HAVE_PATCH_IN is not defined. */
-// FIXME: comment.
-# define _JITTER_BRANCH_FAST(label) \
-  JITTER_BRANCH(label)
+# define _JITTER_LOW_LEVEL_BRANCH_FAST_(tgt)             \
+    JITTER_PATCH_IN_PLACEHOLDER_GOTO_                    \
+       (JITTER_PATCH_IN_SIZE_FAST_BRANCH_UNCONDITIONAL,  \
+        JITTER_PATCH_IN_CASE_FAST_BRANCH_UNCONDITIONAL,  \
+        tgt,                                             \
+        0, 0, 0); /* Unused for this case. */            \
+    __builtin_unreachable ()
+#else /* not using fast branches */
+# define _JITTER_LOW_LEVEL_BRANCH_FAST_(tgt)                      \
+    /* If fast branches are not used this expands to an ordinary  \
+       branch.  The arguments of fast and non-fast branches are   \
+       not at all compatible, but the user will not see the       \
+       difference. */                                             \
+    JITTER_BRANCH(tgt)
 #endif // #ifdef JITTER_HAVE_PATCH_IN
+
+/* This is a good default solution for overflow-checking on sum and subtraction,
+   which appears to yield optimal code on machines without special support for
+   overflow checks such as MIPS and --apparently, from my tests: there is no
+   Jitter port yet-- RISC-V, provided that the fast-branch-on-negative operation
+   is efficient.  Instead of using the builtin plus inline asm (which would need
+   to generate a Boolean and then test that same Boolean in another conditional)
+   I can generate better code by computing the condition as a signed word in
+   simple C and then using a low-level fast-branch primitive, presumably written
+   in assembly, only for fast-branching on its sign. */
+#if (! defined (_JITTER_LOW_LEVEL_BRANCH_FAST_IF_PLUS_OVERFLOWS_)     \
+     && ! defined (_JITTER_LOW_LEVEL_PLUS_BRANCH_FAST_IF_OVERFLOW_))
+# define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_PLUS_OVERFLOWS_(opd0, opd1, tgt)  \
+    _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NEGATIVE_                              \
+       (JITTER_WOULD_PLUS_OVERFLOW_SIGNED_WORD (jitter_uint,                \
+                                                jitter_int,                 \
+                                                (jitter_int) (opd0),        \
+                                                (jitter_int) (opd1),        \
+                                                JITTER_BITS_PER_WORD),      \
+        (tgt))
+#endif // no machine-specific support for sum overflow
+#if (! defined (_JITTER_LOW_LEVEL_BRANCH_FAST_IF_MINUS_OVERFLOWS_)     \
+     && ! defined (_JITTER_LOW_LEVEL_MINUS_BRANCH_FAST_IF_OVERFLOW_))
+# define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_MINUS_OVERFLOWS_(opd0, opd1, tgt)  \
+    _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NEGATIVE_                               \
+       (JITTER_WOULD_MINUS_OVERFLOW_SIGNED_WORD (jitter_uint,                \
+                                                 jitter_int,                 \
+                                                 (jitter_int) (opd0),        \
+                                                 (jitter_int) (opd1),        \
+                                                 JITTER_BITS_PER_WORD),      \
+        (tgt))
+#endif // no machine-specific support for subtraction overflow
+
+/* No equally good solution for multiplication overflow is obvious.  By default
+   the machine-generated header will use GCC's builtin when available, or a C
+   macro otherwise. */
 
 
 
 
-/* Fallback conditional fast branch definitions.
+/* Middle-level operate-and-branch-on-overflow.
  * ************************************************************************** */
 
-/* Machines for which fast branch support is not fully implemented use an
-   ordinary C conditional statement containing an unconditional fast branch. */
+/* The following definitions rewrite low-level operate-and-branch-on-overflow
+   branches into other low-level operate-and-branch-on-overflow which are
+   cheaper to compute, where possible.  These constitute a thin abstraction over
+   low-level operate-and-branch-on-overflow, and are used internally in the
+   machine-generated header descrbied below in order to implement high-level
+   branches, of both the operate-and-branch-on-overflow and branch-on-overflow
+   kinds.  Middle-level primitives do not optimize away overflow checks: that is
+   done by high-level primitives, which will not resort to middle-level
+   primitives (as there is be no need to: GCC will be able to optimize the
+   operations written in C, in those cases) when the overflow checks yield
+   results known at compile time, either always or never branching.
+   Middle-level primitives are used in the "worst" case by high-level
+   primitives, where the overflow condition is not known, but the operation
+   might still be optimizable; the overflow check will remain in the rewrite.
+   Of course nothing of this is intended for the user, who should only ever see
+   high-level operations. */
 
-/* This auxiliary macro factors the common part of fallback fast-branch
-   conditionals.  It's not for the user to call directly. */
-#define _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK(expression, target)  \
-  do                                                                 \
-    {                                                                \
-      if (expression)                                                \
-        _JITTER_BRANCH_FAST (target);                                 \
-    }                                                                \
+/* These macros may all evaluate their arguments more than once.  They do not
+   even protect their arguments with parentheses in the expansion: they are
+   meant to be only used in machine-generated code, with variables or constants
+   as arguments. */
+#define _JITTER_MIDDLE_LEVEL_PLUS_BRANCH_FAST_IF_OVERFLOW_(res, a, b, tgt)  \
+  /* Nothing to do here. */                                                 \
+  _JITTER_LOW_LEVEL_PLUS_BRANCH_FAST_IF_OVERFLOW_ (res, a, b, tgt)
+#define _JITTER_MIDDLE_LEVEL_MINUS_BRANCH_FAST_IF_OVERFLOW_(res, a, b, tgt)  \
+  /* Nothing to do here. */                                                  \
+  _JITTER_LOW_LEVEL_MINUS_BRANCH_FAST_IF_OVERFLOW_ (res, a, b, tgt)
+#define _JITTER_MIDDLE_LEVEL_TIMES_BRANCH_FAST_IF_OVERFLOW_(res, a, b, tgt)  \
+  if (JITTER_KNOWN_TO_BE (a, -1))                                            \
+    {                                                                        \
+      /* -1 * b  ==>  0 - b */                                               \
+      _JITTER_LOW_LEVEL_MINUS_BRANCH_FAST_IF_OVERFLOW_ (res, 0, b, tgt);     \
+    }                                                                        \
+  else if (JITTER_KNOWN_TO_BE (b, -1))                                       \
+    {                                                                        \
+      /* a * -1  ==>  0 - a */                                               \
+      _JITTER_LOW_LEVEL_MINUS_BRANCH_FAST_IF_OVERFLOW_ (res, 0, a, tgt);     \
+    }                                                                        \
+  else if (JITTER_KNOWN_TO_BE (a, 2))                                        \
+    {                                                                        \
+      /* 2 * b  ==>  b + b */                                                \
+      _JITTER_LOW_LEVEL_PLUS_BRANCH_FAST_IF_OVERFLOW_ (res, b, b, tgt);      \
+    }                                                                        \
+  else if (JITTER_KNOWN_TO_BE (b, 2))                                        \
+    {                                                                        \
+      /* a * 2  ==>  a + a */                                                \
+      _JITTER_LOW_LEVEL_PLUS_BRANCH_FAST_IF_OVERFLOW_ (res, a, a, tgt);      \
+    }                                                                        \
+  else                                                                       \
+    {                                                                        \
+      /* Worst case: a * b is not rewritten. */                              \
+      _JITTER_LOW_LEVEL_TIMES_BRANCH_FAST_IF_OVERFLOW_ (res, a, b, tgt);     \
+    }
+#define _JITTER_MIDDLE_LEVEL_DIVIDED_BRANCH_FAST_IF_OVERFLOW_(res, a, b, tgt)  \
+  if (JITTER_KNOWN_TO_BE (b, -1))                                              \
+    {                                                                          \
+      /* a / -1  ==>  0 - a */                                                 \
+      _JITTER_LOW_LEVEL_MINUS_BRANCH_FAST_IF_OVERFLOW_ (res, 0, a, tgt);       \
+    }                                                                          \
+  /* No need to treat the a / 2 case here: it cannot overflow, and the         \
+     high-level primitive can handle that. */                                  \
+  else if (JITTER_KNOWN_TO_BE_EQUAL (a, b))                                    \
+    {                                                                          \
+      /* a / a  ==>  if a == 0 then overflow else 1 */                         \
+      _JITTER_LOW_LEVEL_BRANCH_FAST_IF_ZERO_ (a, tgt);                         \
+      (res) = 1;                                                               \
+    }                                                                          \
+  else if (JITTER_KNOWN_TO_BE (a, 1))                                          \
+    {                                                                          \
+      /* 1 / b  ==>  case b of 0: overflow, 1: 1, -1: -1 else 0 */             \
+      /* The benefit of this case may be somewhat questionable.  This code     \
+         yields a couple of conditionals or conditional moves, but course no   \
+         divisions.  Without this case I get possibly a little fewer           \
+         instructions, still with conditionals, but including one division.    \
+         Notice that b is not known and therefore the tests against b will     \
+         survive optimization into run time, or otherwise we would not be here \
+         in the middle-level primitive. */                                     \
+      _JITTER_LOW_LEVEL_BRANCH_FAST_IF_ZERO_ (b, tgt);                         \
+      if (b == 1)                                                              \
+        (res) = 1;                                                             \
+      else if (b == -1)                                                        \
+        (res) = -1;                                                            \
+      else                                                                     \
+        (res) = 0;                                                             \
+    }                                                                          \
+  else if (JITTER_KNOWN_TO_BE (a, -1))                                         \
+    {                                                                          \
+      /* -1 / b  ==>  case b of 0: overflow, -1: 1, 1: -1 else 0 */            \
+      /* The comment about efficiency in the previous case applies here as     \
+         well. */                                                              \
+      _JITTER_LOW_LEVEL_BRANCH_FAST_IF_ZERO_ (b, tgt);                         \
+      if (b == -1)                                                             \
+        (res) = 1;                                                             \
+      else if (b == 1)                                                         \
+        (res) = -1;                                                            \
+      else                                                                     \
+        (res) = 0;                                                             \
+    }                                                                          \
+  else                                                                         \
+    {                                                                          \
+      /* Worst case: a / b is not rewritten. */                                \
+      _JITTER_LOW_LEVEL_DIVIDED_BRANCH_FAST_IF_OVERFLOW_ (res, a, b, tgt);     \
+    }
+#define _JITTER_MIDDLE_LEVEL_REMAINDER_BRANCH_FAST_IF_OVERFLOW_(res, a, b, tgt) \
+  /* No rewrite here. */                                                        \
+  _JITTER_LOW_LEVEL_REMAINDER_BRANCH_FAST_IF_OVERFLOW_ (res, a, b, tgt)
+  
+
+
+
+/* High-level negation overflow primitives.
+ * ************************************************************************** */
+
+/* The integer negation operation is only a user convenience hiding a first zero
+   operand in a subtraction.  In this case it is enough to define high-level
+   primitives, based on the subtraction which have been defined already. */
+#define _JITTER_NEGATE_BRANCH_FAST_IF_OVERFLOW(res, opd0, tgt)  \
+  _JITTER_MINUS_BRANCH_FAST_IF_OVERFLOW((res), 0, (opd0), tgt)
+#define _JITTER_BRANCH_FAST_IF_NEGATE_OVERFLOWS(opd0, tgt)  \
+  _JITTER_BRANCH_FAST_IF_MINUS_OVERFLOWS(0, (opd0), tgt)
+
+
+
+
+/* High-level unconditional fast branch.
+ * ************************************************************************** */
+
+/* High-level unconditional branch.  This definition is machine-independent,
+   even if of course it relies on a low-level machine-specific primitive (itself
+   having a fallback definition in case it is missing). */
+# define _JITTER_BRANCH_FAST(tgt)            \
+  do                                         \
+    {                                        \
+      _JITTER_LOW_LEVEL_BRANCH_FAST_ (tgt);  \
+    }                                        \
   while (false)
 
-/* Fast branch if the given operand is zero. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_ZERO)
-# define _JITTER_BRANCH_FAST_IF_ZERO(operand0, target)                 \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((operand0) == 0, (target))
-#endif
 
-/* Fast branch if the given operand is nonzero. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_NONZERO)
-# define _JITTER_BRANCH_FAST_IF_NONZERO(operand0, target)              \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((operand0) != 0, (target))
-#endif
+
 
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_POSITIVE)
-# define _JITTER_BRANCH_FAST_IF_POSITIVE(operand0, target)                 \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK(((jitter_int) (operand0)) < 0,  \
-                                          (target))
-#endif
+/* The machine-generated header for fast branches.
+ * ************************************************************************** */
 
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_NONPOSITIVE)
-# define _JITTER_BRANCH_FAST_IF_NONPOSITIVE(operand0, target)               \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK(((jitter_int) (operand0)) >= 0,  \
-                                          (target))
-#endif
+/* In order to make porting easier a machine specification does not need to
+   include a definition for every possible low-level fast branch; moreover, in
+   the case of overflow checking, a machine specification is free to either
+   define operate-and-branch-on-overflow or branch-on-overflow primitives; the
+   missing kind will be defined based on the other.
 
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_NEGATIVE)
-# define _JITTER_BRANCH_FAST_IF_NEGATIVE(operand0, target)                 \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK(((jitter_int) (operand0)) < 0,  \
-                                          (target))
-#endif
-
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_NONNEGATIVE)
-# define _JITTER_BRANCH_FAST_IF_NONNEGATIVE(operand0, target)             \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int) (operand0) >= 0,  \
-                                          (target))
-#endif
-
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_EQUAL)
-# define _JITTER_BRANCH_FAST_IF_EQUAL(operand0, operand1, target)     \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((operand0) == (operand1),  \
-                                          (target))
-#endif
-
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_NOTEQUAL)
-# define _JITTER_BRANCH_FAST_IF_NOTEQUAL(operand0, operand1, target)  \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((operand0) != (operand1),  \
-                                          (target))
-#endif
-
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_LESS_SIGNED)
-# define _JITTER_BRANCH_FAST_IF_LESS_SIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int) (operand0)       \
-                                          < (jitter_int) (operand1),    \
-                                          (target))
-#endif
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_LESS_UNSIGNED)
-# define _JITTER_BRANCH_FAST_IF_LESS_UNSIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint) (operand0)        \
-                                          < (jitter_uint) (operand1),     \
-                                          (target))
-#endif
-
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED)
-# define _JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int) (operand0)          \
-                                          >= (jitter_int) (operand1),      \
-                                          (target))
-#endif
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED)
-# define _JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint) (operand0)           \
-                                          >= (jitter_uint) (operand1),       \
-                                          (target))
-#endif
-
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_GREATER_SIGNED)
-# define _JITTER_BRANCH_FAST_IF_GREATER_SIGNED(operand0, operand1, target)       \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int) (operand0)               \
-                                          > (jitter_int) (operand1), (target))
-#endif
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED)
-# define _JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED(operand0, operand1, target)      \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint) (operand0)               \
-                                          > (jitter_uint) (operand1), (target))
-#endif
-
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED)
-# define _JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED(operand0, operand1, target)    \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_int) (operand0)               \
-                                          <= (jitter_int) (operand1), (target))
-#endif
-/* FIXME: comment. */
-#if ! defined(JITTER_HAVE_PATCH_IN) || ! defined(_JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED)
-# define _JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED(operand0, operand1, target)  \
-  _JITTER_BRANCH_FAST_CONDITIONAL_FALLBACK((jitter_uint) (operand0)              \
-                                          <= (jitter_uint) (operand1),          \
-                                          (target))
-#endif
-
-/* This is convenient to have as a macroexpansion of conditions known to be
-   false.  If does not need to be defined conditionally, as this one definition
-   suffices for every configuration. */
-#define _JITTER_BRANCH_FAST_IF_NEVER_UNARY(operand, target)  \
-  do                                                        \
-    {                                                       \
-      /* Do nothing: in particular, don't branch. */        \
-    }                                                       \
-  while (false)
-
-/* Similar to _JITTER_BRANCH_FAST_IF_NEVER_UNARY , but always branching. */
-#define _JITTER_BRANCH_FAST_IF_ALWAYS_UNARY(operand, target)  \
-  do                                                         \
-    {                                                        \
-      _JITTER_BRANCH_FAST(target);                            \
-    }                                                        \
-  while (false)
+   This machine-generated header completes the missing definitions for low-level
+   fast branches and defines high-level fast branches. */
+# include <jitter/jitter-fast-branch-machine-generated.h>
 
 
 
@@ -218,14 +287,14 @@
 /* Fallback fast branch-and-link definition.
  * ************************************************************************** */
 
-/* Provide a fallback definition of _JITTER_BRANCH_FAST_AND_LINK_INTERNAL , if needed.
-   The definition will either use the slow JITTER_BRANCH_AND_LINK if fast
-   labels are not used in this configuration, or use a generic branch-and-link
-   implementation but do the actual branch as a fast branch.
+/* Provide a fallback definition of _JITTER_BRANCH_FAST_AND_LINK_INTERNAL , if
+   needed.  The definition will either use the slow JITTER_BRANCH_AND_LINK if
+   fast labels are not used in this configuration, or use a generic
+   branch-and-link implementation but do the actual branch as a fast branch.
 
    No fallback is provided if the machine already defiens its own
-   _JITTER_BRANCH_FAST_AND_LINK_INTERNAL : this means that the dispatching model is
-   no-threading, and the machine supports both patch-ins and procedures.
+   _JITTER_BRANCH_FAST_AND_LINK_INTERNAL : this means that the dispatching model
+   is no-threading, and the machine supports both patch-ins and procedures.
 
    The user should never call _JITTER_BRANCH_FAST_AND_LINK_INTERNAL , or even
    JITTER_BRANCH_AND_LINK_INTERNAL .  Suitable user macros, without the initial
@@ -256,12 +325,12 @@
      using a generic branch-and-link implementation (relying on a hidden
      residual parameter for caller instructions) which performs the actual
      branch with a fast branch. */
-# define _JITTER_BRANCH_FAST_AND_LINK_INTERNAL(target)                                \
+# define _JITTER_BRANCH_FAST_AND_LINK_INTERNAL(target)                       \
     do                                                                       \
       {                                                                      \
         /* Use the return address from the implicit specialized argument */  \
         jitter_state_runtime._jitter_link = JITTER_RETURN_ADDRESS;           \
-        _JITTER_BRANCH_FAST(target);                                          \
+        _JITTER_BRANCH_FAST (target);                                        \
         __builtin_unreachable ();                                            \
       }                                                                      \
     while (false)
@@ -296,10 +365,10 @@
 
 
 
-/* Fast-branch types.
+/* Fast branch types.
  * ************************************************************************** */
 
-/* The type of a fast jump as a patch-in case, each corresponding to different
+/* The type of a fast branch as a patch-in case, each corresponding to different
    assembly non-zero natural code to insert in assembly code.
 
    These are CPP macros rather than enum cases because the case values are used
@@ -310,7 +379,10 @@
 
    This complication is a pity: GCC documents the "x86 Operand Modifiers" as
    non-portable; having the equivalent of the 'c' modifier on every platform
-   would allow for cleaner code. */
+   would allow for cleaner code.
+
+   It is not necessary to use every case on any given machine, or to use only
+   these.  Still it is convenient to have a centralized definition to reuse. */
 #define JITTER_PATCH_IN_CASE_FAST_BRANCH_UNCONDITIONAL                    1
 #define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ZERO                 2
 #define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NONZERO              3
@@ -330,34 +402,13 @@
 #define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_GREATER_SIGNED       15
 #define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_UNSIGNED     16
 #define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_SIGNED       17
+#define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_AND                  18
+#define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NAND                 19
 
-#define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ANY                  18
+#define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ANY                  20
 
-#define JITTER_PATCH_IN_CASE_FAST_BRANCH_BRANCH_AND_LINK                  19
-/* /\* These should be extended in the future with floating-point conditionals. *\/ */
-
-
-
-
-/* Fast-branch macros expanding to patch-ins within the intepreter.
- * ************************************************************************** */
-
-// FIXME: add comments.
-// FIXME: move?  The separation between fast branches and patch-ins feels arbitrary in many places.
-
-#define JITTER_FAST_UNCONDITIONAL_BRANCH_PLACEHOLDER(residual_index)  \
-  do                                                                  \
-    {                                                                 \
-/*asm ("" : : : "memory"); / * FIXME: remove now, unless really needed. * / */     \
-      JITTER_PATCH_IN_PLACEHOLDER_GOTO_(                              \
-         JITTER_PATCH_IN_SIZE_FAST_BRANCH_UNCONDITIONAL,              \
-         JITTER_PATCH_IN_CASE_FAST_BRANCH_UNCONDITIONAL,              \
-         residual_index,                                              \
-         0, 0, 0); /* Unused for this case. */                        \
-      __builtin_unreachable ();                                       \
-    }                                                                 \
-  while (false)
-
+#define JITTER_PATCH_IN_CASE_FAST_BRANCH_BRANCH_AND_LINK                  21
+/* These should be extended in the future with floating-point conditionals. */
 
 #endif // #ifdef JITTER_HAVE_PATCH_IN
 #endif // #ifndef JITTER_FAST_BRANCH_H_

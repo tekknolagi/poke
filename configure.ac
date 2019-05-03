@@ -1316,6 +1316,10 @@ AC_CONFIG_FILES([scripts/highlight-disassembly],
 AC_CONFIG_FILES([scripts/jitter-config],
                 [chmod +x scripts/jitter-config])
 
+# Generate the shell script generating high-level fast-branch macros.
+AC_CONFIG_FILES([scripts/generate-fast-branches],
+                [chmod +x scripts/generate-fast-branches])
+
 
 # Optional dependencies, for examples only.
 ################################################################

@@ -167,7 +167,9 @@
 #define JITTER_WOULD_PLUS_OVERFLOW_SIGNED_WORD(__jitter_unsigned_type,  \
                                                __jitter_signed_type,    \
                                                a, b, bit_no)            \
-  /* The formula comes from Hacker's Delight, §2. */                    \
+  /* The formula, like others below in this file, is a generalization   \
+     to an arbitrary number of bits of an idea in Hacker's Delight,     \
+     §2. */                                                             \
   ((__jitter_signed_type)                                               \
    (~ ((__jitter_unsigned_type) (a)                                     \
        ^ (__jitter_unsigned_type) (b))                                  \
