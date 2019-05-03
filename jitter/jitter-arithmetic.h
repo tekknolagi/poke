@@ -168,11 +168,12 @@
                                                __jitter_signed_type,    \
                                                a, b, bit_no)            \
   /* The formula comes from Hacker's Delight, §2. */                    \
-  (~ ((__jitter_unsigned_type) (a)                                      \
-      ^ (__jitter_unsigned_type) (b))                                   \
-   & (((__jitter_unsigned_type) (a))                                    \
-      ^ (((__jitter_unsigned_type) (a)                                  \
-          + (__jitter_unsigned_type) (b)))))
+  ((__jitter_signed_type)                                               \
+   (~ ((__jitter_unsigned_type) (a)                                     \
+       ^ (__jitter_unsigned_type) (b))                                  \
+    & (((__jitter_unsigned_type) (a))                                   \
+       ^ (((__jitter_unsigned_type) (a)                                 \
+           + (__jitter_unsigned_type) (b))))))
 
 /* The generic non-builtin implementation of JITTER_WOULD_PLUS_OVERFLOW, with
    the same API.  This is not intended for the user to call directly. */
@@ -221,10 +222,11 @@
                                                 __jitter_signed_type,    \
                                                 a, b, bit_no)            \
   /* This formula comes from Hacker's Delight §2, again. */              \
-  ((((__jitter_unsigned_type) (a) - (__jitter_unsigned_type) (b))        \
-    ^ (__jitter_unsigned_type) (a))                                      \
-   & (((__jitter_unsigned_type) (a) - (__jitter_unsigned_type) (b))      \
-      ^ ~ (__jitter_unsigned_type) (b)))
+  ((__jitter_signed_type)                                                \
+   ((((__jitter_unsigned_type) (a) - (__jitter_unsigned_type) (b))       \
+     ^ (__jitter_unsigned_type) (a))                                     \
+    & (((__jitter_unsigned_type) (a) - (__jitter_unsigned_type) (b))     \
+       ^ ~ (__jitter_unsigned_type) (b))))
 #define JITTER_WOULD_MINUS_OVERFLOW_NON_GCC(__jitter_unsigned_type,   \
                                             __jitter_signed_type,     \
                                             a, b, bit_no)             \
