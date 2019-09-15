@@ -299,6 +299,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-heap.h \
   jitter/jitter-heap-debug.h \
   jitter/jitter-list.h \
+  jitter/jitter-missing.h \
   jitter/jitter-parse-int.h \
   jitter/jitter-print-binary.h \
   jitter/jitter-readline.h \
