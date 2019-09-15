@@ -320,27 +320,27 @@
 
 /* Like JITTER_CONDITIONAL_IF_NEGATIVE , but expanding to then if the
    discriminand is positive. */
-#define JITTER_CONDITIONAL_IF_POSITIVE(_jitter_unsigned_type,                  \
-                                       _jitter_signed_type,                    \
-                                       _jitter_discriminand,                   \
-                                       _jitter_then,                           \
-                                       _jitter_else)                           \
-  JITTER_CONDITIONAL_IF_NEGATIVE (_jitter_unsigned_type,                       \
-                                  _jitter_signed_type,                         \
-                                  /* Using unary - would affect the range and  \
-                                     I have seen it not optimized by GCC in a  \
-                                     few cases (with                           \
-                                     JITTER_HAVE_FAST_STRAIGHT_LINE_NEGATIVITY \
-                                     disabled).  Since in practice on two's    \
-                                     complement machines, and actually  even   \
-                                     on others) this makes no difference with  \
-                                     respect to the sign bit it is better to   \
-                                     just see the number as a bit mask to      \
-                                     complement. */                            \
-                                  ~ ((_jitter_unsigned_type)                   \
-                                     (_jitter_discriminand)),                  \
-                                  (_jitter_then),                              \
-                                  (_jitter_else))
+#define JITTER_CONDITIONAL_IF_POSITIVE(_jitter_unsigned_type,                   \
+                                       _jitter_signed_type,                     \
+                                       _jitter_discriminand,                    \
+                                       _jitter_then,                            \
+                                       _jitter_else)                            \
+  /* This cannot be rewritten into a call to JITTER_CONDITIONAL_IF_NEGATIVE.    \
+     One could naïvely think of using the equivalence                           \
+        d > 0  iff  (- d) < 0                                                   \
+     , which would be correct except that the arithmetic negation overflows     \
+     when d is the most negative integer.                                       \
+     This alternative, more directly working on the sign bit,                   \
+        d > 0  iff  (~ d) < 0                                                   \
+     , fails when d is zero.                                                    \
+     Hacker's Delight §2-12 "Comparison Predicates" gives formulas for x < y    \
+     which would be applicable to 0 < y, if they did both not involve an        \
+     arithmetic negation of y.                                                  \
+     I cannot think of any clever way to optimize this.  If some way exists     \
+     then it can be implemented here, in the place of this trivial version. */  \
+  (((_jitter_signed_type) (_jitter_discriminand) > 0)                           \
+   ? (_jitter_unsigned_type) (_jitter_then)                                     \
+   : (_jitter_unsigned_type) (_jitter_else))
 
 /* Like JITTER_CONDITIONAL_IF_NEGATIVE , but expanding to then if the
    discriminand is non-positive. */
