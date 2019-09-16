@@ -185,13 +185,47 @@ subdirs="${jitter_subdirs_backup}"
 # Jitter Autoconf macros, not meant for the user.
 ################################################################
 
+# AC_JITTER_WITH_JITTER_COMMAND_LINE_OPTION
+# -----------------------------------------
+# Provide a configure-time option --with-jitter="PREFIX", setting a prefix
+# to search for jitter-config and jitter.
+# If the option is not given then the two executables are searched for in
+# $PATH; if the option is given then they are searched for *only* in the
+# "bin" subdirectory of the given prefix.
+#
+# This macro sets the environment variable ac_jitter_path if the option is
+# given; it leaves the variable unset otherwise.
+#
+# This option is intended for packages using Jitter as a dependency, rather than
+# as a sub-package; in sub-package mode the executables will be searched for in
+# the appropriately named subdirectories of the super-package source and build
+# directories.
+AC_DEFUN([AC_JITTER_WITH_JITTER_COMMAND_LINE_OPTION], [
+# Fail if this is used in sub-package mode.
+if test "x$JITTER_SUBPACKAGE" != 'x'; then \
+  AC_MSG_ERROR([supporting --with-jitter makes no sense in sub-package mode])
+fi
+
+# Provide an option for the user to explicitly set the prefix to
+# bin/jitter .  ac_jitter_path will be defined as either the given
+# path with "/bin" appended, or $PATH.
+AC_ARG_WITH([jitter],
+            [AS_HELP_STRING([--with-jitter="PREFIX"],
+               [use the jitter and jitter-config programs from the "bin"
+                subdirectory of the given prefix instead of searching for
+                them in $PATH])],
+            [ac_jitter_path="$withval/bin"])
+])
+
+
 # AC_JITTER_CONFIG
 # ----------------
 # Look for the jitter-config script:
-# * if the option --with-jitter="PREFIX" is given, in PREFIX/bin (only);
 # * if the shell variable JITTER_SUBPACKAGE is defined as a non-empty
 #   value, in ${JITTER_SUBPACKAGE}/bin relative to the super-package
 #   build directory;
+# * if the environment variable ac_jitter_path is set, in
+#   ${ac_jitter_path}/bin (only);
 # * otherwise, in $PATH;
 #
 # Choose the default dispatch, using --with-jitter-dispatch="DISPATCH" or
@@ -243,22 +277,6 @@ if test "x$ac_cv_prog_cc_c99" = "no"; then
   AC_MSG_WARN([the C compiler $CC does not seem to support C99.  I will
                try to go on, but there may be problems])
 fi
-
-# Provide an option for the user to explicitly set the prefix to
-# bin/jitter .  ac_jitter_path will be defined as either the given
-# path with "/bin" appended, or $PATH.
-AC_ARG_WITH([jitter],
-            [AS_HELP_STRING([--with-jitter="PREFIX"],
-               [use the jitter and jitter-config programs from the bin
-                directory of the given prefix instead of searching for
-                it in $PATH.
-                This is intended for using an installed Jitter as a
-                dependency; for a sub-package Jitter do not use this, and
-                instead just export and set the shell variable
-                JITTER_SUBPACKAGE to a non-empty value different
-                from "no" (this is normally done in the super-package via
-                the Autoconf macro provided with Jitter)])],
-            [ac_jitter_path="$withval/bin"])
 
 # Define ac_jitter_path from JITTER_SUBPACKAGE, if Jitter is being
 # used in sub-package mode.  From the point of view of prefixes, this is
@@ -464,16 +482,28 @@ fi
 # Jitter Autoconf macros, intended for the user.
 ################################################################
 
+# The macros in this sections are meant for other packages using Jitter as a
+# dependency or as a sub-package.  They are not used in the configuration of
+# Jitter.
+
+
 # AC_JITTER
 # ---------
 # Check for jitter-config and jitter as by calling both AC_JITTER_CONFIG
 # and AC_JITTER_C_GENERATOR , performing the same substitutions and
 # supporting the same command-line options.
+#
+# Add the configure option --with-jitter , as per
+# AC_JITTER_WITH_JITTER_COMMAND_LINE_OPTION above.
+#
 # Warn if jitter-config and jitter have different versions.
 #
 # This is the only macro the user needs to call to check for a Jitter
 # installation as a dependency.
 AC_DEFUN([AC_JITTER], [
+
+# Provide the command-line option --with-jitter.
+AC_REQUIRE([AC_JITTER_WITH_JITTER_COMMAND_LINE_OPTION])
 
 # Check for jitter-config .
 AC_REQUIRE([AC_JITTER_CONFIG])
@@ -501,6 +531,10 @@ fi
 # as AC_JITTER, but differently from it does not rely on, or support, an
 # already installed copy of Jitter as a dependency.
 AC_DEFUN([AC_JITTER_SUBPACKAGE], [
+
+# Notice that in this case it makes no sense to support the command-line option
+# --with-jitter , and therefore this macro does not depend on
+# AC_JITTER_WITH_JITTER_COMMAND_LINE_OPTION .
 
 # Print one explicit message about what is about to happen.  Even Autoconf
 # experts might be surprised by the unusual configuration order, and it is good
