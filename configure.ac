@@ -116,8 +116,8 @@ cd "${jitter_abs_top_builddir}"
 # in case some Autoconf or Automake source in a sub-package Jitter source
 # directory is modified.
 AC_ARG_VAR([JITTER_SUBPACKAGE],
-           [define to a non-empty value for configuring Jitter as a
-            sub-package])
+           [define to a non-empty value to configure Jitter as a
+            sub-package rather than as a dependency])
 
 # Change library defaults.
 if test "x$JITTER_SUBPACKAGE" != 'x'; then
