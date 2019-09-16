@@ -182,7 +182,7 @@ subdirs="${jitter_subdirs_backup}"
 ]) # AC_JITTER_CONFIG_SUBDIRS_NOW
 
 
-# Jitter exported Autoconf macros.
+# Jitter Autoconf macros, not meant for the user.
 ################################################################
 
 # AC_JITTER_CONFIG
@@ -461,6 +461,9 @@ fi
 ]) # AC_JITTER_C_GENERATOR
 
 
+# Jitter Autoconf macros, intended for the user.
+################################################################
+
 # AC_JITTER
 # ---------
 # Check for jitter-config and jitter as by calling both AC_JITTER_CONFIG
@@ -469,7 +472,7 @@ fi
 # Warn if jitter-config and jitter have different versions.
 #
 # This is the only macro the user needs to call to check for a Jitter
-# installation, in most cases.
+# installation as a dependency.
 AC_DEFUN([AC_JITTER], [
 
 # Check for jitter-config .
@@ -492,6 +495,11 @@ fi
 # ------------------------------------
 # Configure Jitter in sub-package mode, using the Jitter source directory
 # from the given subdirectory relative to the super-package source directory.
+#
+# This is the only macro the user needs to call to configure Jitter as a
+# sub-package included in a source directory.  It defines the same entities
+# as AC_JITTER, but differently from it does not rely on, or support, an
+# already installed copy of Jitter as a dependency.
 AC_DEFUN([AC_JITTER_SUBPACKAGE], [
 
 # Print one explicit message about what is about to happen.  Even Autoconf
