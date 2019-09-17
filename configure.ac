@@ -1035,21 +1035,27 @@ fi
 # Test suite support.
 ################################################################
 
-# Decide whether we can run the test suite...
-AC_MSG_CHECKING([if we can run the test suite])
+# Decide whether we should enable the test suite...
+AC_MSG_CHECKING([if we should enable the test suite])
 # By default we can run the test suite if we have all the needed utilites
-# *and* either we are not cross-compiling, or if an emulator is enabled...
+# *and* either we are not cross-compiling, or if an emulator is enabled,
+# *and* we are not in sub-package mode...
 if    test "x$jitter_test_suite_missing_progs" = "x" \
    && (   test "x$jitter_cross_compiling" = "xno" \
-       || ! test "x$JITTER_EMULATOR" = "x"); then
+       || ! test "x$JITTER_EMULATOR" = "x") \
+   && test "x$JITTER_SUBPACKAGE" = 'x'; then
   default=yes
 else
   default=no
 fi
 # ... But this default can be overridden with a configure option.
-AC_ARG_ENABLE([test-suite],
-              AS_HELP_STRING([--enable-test-suite],
-                             [enable the test suite (default: detected)]),
+AC_ARG_ENABLE([jitter-test-suite],
+              AS_HELP_STRING([--enable-jitter-test-suite],
+                             [enable the test suite (default: automatically
+                              detected in non-sub-package mode; no in
+                              sub-package mode).  The name includes "jitter"
+                              to prevent collisions with configure options
+                              in a super-package]),
               jitter_enable_test_suite="$enableval",
               jitter_enable_test_suite="$default")
 if    ! test "x$jitter_enable_test_suite" = "xyes" \
@@ -1077,6 +1083,24 @@ if    test "x$JITTER_CAN_RUN_TESTSUITE" = "xyes" \
    && test "x$JITTER_VALGRIND" = "x"; then
   AC_MSG_WARN([the test suite will skip Valgrind test cases])
 fi
+
+# In sub-package mode when the test suite is disabled, running it anyway (as it
+# may well happen because of recursion from the super-package) should be
+# successful but also as silent as possible.
+# A good way of ensuring this is redefining TEST_SUITE_LOG to have an empty
+# value instead of the default test-suite.log: this will take precedence
+# over any setting of the same variable by Automake.
+# Explicitly defining TEST_SUITE_LOG in Makefile.am would also work, but at
+# the cost of generating a warning when Automake is run.
+# This way of using AC_SUBST to override Automake default behavior is in fact
+# supported and documented in the Automake manual (§"Extending Automake Rules").
+if test "x$JITTER_SUBPACKAGE" != 'x' \
+   && test "x$jitter_enable_test_suite" = 'xno'; then
+  jitter_test_suite_log_value=''
+else
+  jitter_test_suite_log_value='test-suite.log'
+fi
+AC_SUBST([TEST_SUITE_LOG], [$jitter_test_suite_log_value])
 
 
 # Dispatching models to be enabled.

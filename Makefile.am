@@ -1866,6 +1866,13 @@ if JITTER_ENABLE_TEST_SUITE
   tests/uninspired/programs.log: $(check_PROGRAMS)
   tests/structured/programs.log: $(check_PROGRAMS)
 else # JITTER_ENABLE_TEST_SUITE is false
+  # This causes failure when a disabled test suite is run, which is not
+  # desirable in sub-package mode; however in sub-package mode with a
+  # disabled test suite making "check" or "check-recursive" has no effect
+  # at all, since in that case TEST_SUITE_LOG is AC_SUBSTed to an empty
+  # value instead of the default test-suite.log: making all the test
+  # log files, which would normally have the effect of running all tests,
+  # will just make nothing.
   TESTS += \
     test-suite-disabled
   test-suite-disabled:
