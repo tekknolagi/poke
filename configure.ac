@@ -1126,7 +1126,7 @@ AC_MSG_CHECKING([if switch dispatching is enabled])
 default=yes
 AC_ARG_ENABLE([dispatch-switch],
               AS_HELP_STRING([--enable-dispatch-switch],
-              [enable switch dispatching: default no (unimplemented)]),
+              [enable switch dispatching (default: yes)]),
               jitter_enable_dispatch_switch="$enableval",
               jitter_enable_dispatch_switch="$default")
 if test "x$jitter_enable_dispatch_switch" = "xyes"; then
