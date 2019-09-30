@@ -1789,7 +1789,7 @@ do-nothing-on-sub-package-mode-install:
 	@echo "Cannot install or uninstall after configuring in sub-package"
 	@echo "mode."
 	@echo "This is by design, and not an error: succeeding, so as not to"
-	@echo "break make distcheck."
+	@echo "break the install or distcheck rules."
 	@exit 0
 install: do-nothing-on-sub-package-mode-install
 install-data: do-nothing-on-sub-package-mode-install
