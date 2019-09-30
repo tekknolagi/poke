@@ -198,10 +198,10 @@
     }                                                                          \
   while (false)
 
-/* Easy: perform a "jump to subroutine" (a branch-and-link via register, with an
+/* Easy: perform a "jump to subsnippet" (a branch-and-link via register, with an
    absolute target -- the bsrf instruction has a PC-relative target), and the
    return address will be in the system register PR , accessible from the
-   procedure prolog.  The branch to subroutine far instruction has a delay
+   procedure prolog.  The branch to subsnippet far instruction has a delay
    slot. */
 #define JITTER_BRANCH_AND_LINK_INTERNAL(callee_rvalue)                       \
   do                                                                         \
@@ -246,7 +246,7 @@
     }                                                                         \
   while (false)
 
-/* The patch-in has a simple two-instruction routine ( bsr and nop ), of which
+/* The patch-in has a simple two-instruction snippet ( bsr and nop ), of which
    the first instruction will be patched.  No other code is necessary. */
 #define _JITTER_BRANCH_FAST_AND_LINK_INTERNAL(target_index)                    \
   do                                                                           \
@@ -279,39 +279,39 @@
 
 /* Notice that the order matters, and these shouldn't be rearranged without also
    changing the order of definitions in machine.S .  We also rely on the first
-   case having value 0, since we use enum jitter_routine_to_patch values as
+   case having value 0, since we use enum jitter_snippet_to_patch values as
    array indices. */
-enum jitter_routine_to_patch
+enum jitter_snippet_to_patch
   {
-    jitter_routine_load_signed_8bit_to_register_0,
-    jitter_routine_load_signed_8bit_to_register_1,
-    jitter_routine_load_signed_8bit_to_register_2,
+    jitter_snippet_load_signed_8bit_to_register_0,
+    jitter_snippet_load_signed_8bit_to_register_1,
+    jitter_snippet_load_signed_8bit_to_register_2,
 
     /* These look inefficient.  I could very easily do zero-extended versions as
        well, but I wonder whether it's worth the trouble.  The SH really suffers
        under simple code generation systems like this where PC-relative loads
        are difficult to exploit. */
-    jitter_routine_load_signed_16bit_8th_bit_1_to_register_0,
-    jitter_routine_load_signed_16bit_8th_bit_1_to_register_1,
-    jitter_routine_load_signed_16bit_8th_bit_1_to_register_2,
-    jitter_routine_load_signed_16bit_8th_bit_0_to_register_0,
-    jitter_routine_load_signed_16bit_8th_bit_0_to_register_1,
-    jitter_routine_load_signed_16bit_8th_bit_0_to_register_2,
+    jitter_snippet_load_signed_16bit_8th_bit_1_to_register_0,
+    jitter_snippet_load_signed_16bit_8th_bit_1_to_register_1,
+    jitter_snippet_load_signed_16bit_8th_bit_1_to_register_2,
+    jitter_snippet_load_signed_16bit_8th_bit_0_to_register_0,
+    jitter_snippet_load_signed_16bit_8th_bit_0_to_register_1,
+    jitter_snippet_load_signed_16bit_8th_bit_0_to_register_2,
 
     /* Here I use PC-relative loads, but I have to skip over the datum word, and
        worry about alignment. */
-    jitter_routine_load_pcrel_to_register_0_pc_aligned,
-    jitter_routine_load_pcrel_to_register_0_pc_misaligned,
-    jitter_routine_load_pcrel_to_register_1_pc_aligned,
-    jitter_routine_load_pcrel_to_register_1_pc_misaligned,
-    jitter_routine_load_pcrel_to_register_2_pc_aligned,
-    jitter_routine_load_pcrel_to_register_2_pc_misaligned,
+    jitter_snippet_load_pcrel_to_register_0_pc_aligned,
+    jitter_snippet_load_pcrel_to_register_0_pc_misaligned,
+    jitter_snippet_load_pcrel_to_register_1_pc_aligned,
+    jitter_snippet_load_pcrel_to_register_1_pc_misaligned,
+    jitter_snippet_load_pcrel_to_register_2_pc_aligned,
+    jitter_snippet_load_pcrel_to_register_2_pc_misaligned,
 
-    jitter_routine_branch_unconditional_13bit_offset,
-    jitter_routine_branch_and_link_13bit_offset,
+    jitter_snippet_branch_unconditional_13bit_offset,
+    jitter_snippet_branch_and_link_13bit_offset,
 
-    /* The number of routines. */
-    jitter_routine_no
+    /* The number of snippets. */
+    jitter_snippet_no
   };
 
 #endif // #ifndef __ASSEMBLER__

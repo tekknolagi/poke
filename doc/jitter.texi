@@ -233,8 +233,8 @@ registers.
 @cindex C
 @cindex API
 The specification contains some C code associated to every VM
-instruction; the generator takes care of combining such small snippets
-into a whole body of code with low---often zero---dispatching and
+instruction; the generator takes care of combining such small code
+snippets into a whole body of code with low---often zero---dispatching and
 branching overhead.
 The generated code includes a simple C API to dynamically emit and
 execute VM code, and a self-contained driver program for running VM
@@ -990,7 +990,8 @@ VM frontend; the C API would get uglier, but maybe not too much.
 The thing can be done in a VM-independent way,
 or possibly in a VM-dependent way yielding a very compact binary
 format.  Another problem, in the future, will be data embedded in
-routines.  Since introducing tagging in every word is out of the
+routines @fixme{did I mean what are now called snippets?}.
+Since introducing tagging in every word is out of the
 question, data would be in a state where saving is possible only right
 after initialization.  Again, this may complicate the C API.}
 
@@ -3271,7 +3272,7 @@ just to make my life easier when debugging).
 Do not reserve the scratch register: just mark it as clobbered or set
 by inline asm in residual-loading code, so that GCC can reuse it as a
 temporary.  This would require GCC local register variables, but the
-thing is not trivial: residual loading routines can no longer just be
+thing is not trivial: residual loading snippets can no longer just be
 copied before each instructions, but have to become patch-ins;
 otherwise GCC might insert code @emph{around} the local register
 variable declaration or inline asm, to save and restore the value
@@ -3279,7 +3280,7 @@ previously held in the scratch register.
 
 This is a lot of work.  An easier compromise might be not to reserve
 the scratch register at all, and instead saving and restoring it from
-the assembly routines setting it.
+the assembly snippets setting it.
 
 @section Frontend optimization
 Optimize the frontend.  In particular, turn checks for impossible

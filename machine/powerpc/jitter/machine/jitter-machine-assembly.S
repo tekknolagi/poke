@@ -1,6 +1,6 @@
 /* VM library: assembly support for PowerPC .
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -27,9 +27,9 @@
 
 .text
 
-/* Here come the actual routine definitions, containing the code to be copied
-   and patched.  Notice that the order matters, and the calls to jitter_routine
-   here must follow the same order as the enum jitter_routine_to_patch cases in
+/* Here come the actual snippet definitions, containing the code to be copied
+   and patched.  Notice that the order matters, and the calls to jitter_snippet
+   here must follow the same order as the enum jitter_snippet_to_patch cases in
    native.h . */
 jitter_arrays .long
 
@@ -55,33 +55,33 @@ jitter_arrays .long
    .  I prefer never to use extended mnemonic or pseudo-instructions, out
    of fear that their encoding may change in the future, breaking my patch
    mechanism. */
-jitter_routine load_sign_extended_16bit_to_register_0, \
+jitter_snippet load_sign_extended_16bit_to_register_0, \
            <addi JITTER_RESIDUAL_REGISTER_0, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_1, \
+jitter_snippet load_sign_extended_16bit_to_register_1, \
            <addi JITTER_RESIDUAL_REGISTER_1, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_2, \
+jitter_snippet load_sign_extended_16bit_to_register_2, \
            <addi JITTER_RESIDUAL_REGISTER_2, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_3, \
+jitter_snippet load_sign_extended_16bit_to_register_3, \
            <addi JITTER_RESIDUAL_REGISTER_3, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_4, \
+jitter_snippet load_sign_extended_16bit_to_register_4, \
            <addi JITTER_RESIDUAL_REGISTER_4, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_5, \
+jitter_snippet load_sign_extended_16bit_to_register_5, \
            <addi JITTER_RESIDUAL_REGISTER_5, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_6, \
+jitter_snippet load_sign_extended_16bit_to_register_6, \
            <addi JITTER_RESIDUAL_REGISTER_6, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_7, \
+jitter_snippet load_sign_extended_16bit_to_register_7, \
            <addi JITTER_RESIDUAL_REGISTER_7, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_8, \
+jitter_snippet load_sign_extended_16bit_to_register_8, \
            <addi JITTER_RESIDUAL_REGISTER_8, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_9, \
+jitter_snippet load_sign_extended_16bit_to_register_9, \
            <addi JITTER_RESIDUAL_REGISTER_9, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_10, \
+jitter_snippet load_sign_extended_16bit_to_register_10, \
            <addi JITTER_RESIDUAL_REGISTER_10, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_11, \
+jitter_snippet load_sign_extended_16bit_to_register_11, \
            <addi JITTER_RESIDUAL_REGISTER_11, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_12, \
+jitter_snippet load_sign_extended_16bit_to_register_12, \
            <addi JITTER_RESIDUAL_REGISTER_12, 0, 0>
-jitter_routine load_sign_extended_16bit_to_register_13, \
+jitter_snippet load_sign_extended_16bit_to_register_13, \
            <addi JITTER_RESIDUAL_REGISTER_13, 0, 0>
 
 
@@ -92,55 +92,55 @@ jitter_routine load_sign_extended_16bit_to_register_13, \
    where the first instruction loads the high half and the second the low
    half.  Both halves are encoded in the rightmost 16 bits of each
    instruction.  The 32-bit literal in this example is 0x12345678 . */
-jitter_routine load_32bit_to_register_0,                               \
+jitter_snippet load_32bit_to_register_0,                               \
            <lis JITTER_RESIDUAL_REGISTER_0, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_0, JITTER_RESIDUAL_REGISTER_0, 0>
-jitter_routine load_32bit_to_register_1,                               \
+jitter_snippet load_32bit_to_register_1,                               \
            <lis JITTER_RESIDUAL_REGISTER_1, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_1, JITTER_RESIDUAL_REGISTER_1, 0>
-jitter_routine load_32bit_to_register_2,                               \
+jitter_snippet load_32bit_to_register_2,                               \
            <lis JITTER_RESIDUAL_REGISTER_2, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_2, JITTER_RESIDUAL_REGISTER_2, 0>
-jitter_routine load_32bit_to_register_3,                               \
+jitter_snippet load_32bit_to_register_3,                               \
            <lis JITTER_RESIDUAL_REGISTER_3, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_3, JITTER_RESIDUAL_REGISTER_3, 0>
-jitter_routine load_32bit_to_register_4,                               \
+jitter_snippet load_32bit_to_register_4,                               \
            <lis JITTER_RESIDUAL_REGISTER_4, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_4, JITTER_RESIDUAL_REGISTER_4, 0>
-jitter_routine load_32bit_to_register_5,                               \
+jitter_snippet load_32bit_to_register_5,                               \
            <lis JITTER_RESIDUAL_REGISTER_5, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_5, JITTER_RESIDUAL_REGISTER_5, 0>
-jitter_routine load_32bit_to_register_6,                               \
+jitter_snippet load_32bit_to_register_6,                               \
            <lis JITTER_RESIDUAL_REGISTER_6, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_6, JITTER_RESIDUAL_REGISTER_6, 0>
-jitter_routine load_32bit_to_register_7,                               \
+jitter_snippet load_32bit_to_register_7,                               \
            <lis JITTER_RESIDUAL_REGISTER_7, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_7, JITTER_RESIDUAL_REGISTER_7, 0>
-jitter_routine load_32bit_to_register_8,                               \
+jitter_snippet load_32bit_to_register_8,                               \
            <lis JITTER_RESIDUAL_REGISTER_8, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_8, JITTER_RESIDUAL_REGISTER_8, 0>
-jitter_routine load_32bit_to_register_9,                               \
+jitter_snippet load_32bit_to_register_9,                               \
            <lis JITTER_RESIDUAL_REGISTER_9, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_9, JITTER_RESIDUAL_REGISTER_9, 0>
-jitter_routine load_32bit_to_register_10,                               \
+jitter_snippet load_32bit_to_register_10,                               \
            <lis JITTER_RESIDUAL_REGISTER_10, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_10, JITTER_RESIDUAL_REGISTER_10, 0>
-jitter_routine load_32bit_to_register_11,                               \
+jitter_snippet load_32bit_to_register_11,                               \
            <lis JITTER_RESIDUAL_REGISTER_11, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_11, JITTER_RESIDUAL_REGISTER_11, 0>
-jitter_routine load_32bit_to_register_12,                               \
+jitter_snippet load_32bit_to_register_12,                               \
            <lis JITTER_RESIDUAL_REGISTER_12, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_12, JITTER_RESIDUAL_REGISTER_12, 0>
-jitter_routine load_32bit_to_register_13,                               \
+jitter_snippet load_32bit_to_register_13,                               \
            <lis JITTER_RESIDUAL_REGISTER_13, 0>,                        \
            <ori JITTER_RESIDUAL_REGISTER_13, JITTER_RESIDUAL_REGISTER_13, 0>
 
 /* FIXME: actually implement. */
-jitter_routine load_sign_extended_16bit_to_memory,  \
+jitter_snippet load_sign_extended_16bit_to_memory,  \
            <nop>
 
 /* FIXME: actually implement. */
-jitter_routine load_32bit_to_memory,  \
+jitter_snippet load_32bit_to_memory,  \
            <nop>
 
 /* Unconditionally branch to an instruction, with a signed 26-bit offset
@@ -151,5 +151,5 @@ jitter_routine load_32bit_to_memory,  \
    least significant bits of the instruction are the AA and LK flags, which
    I set to zero for a relative non-link branch.
       48 00 00 00   # L: b L  */
-jitter_routine jump_unconditional_26bit_offset_no_link,  \
+jitter_snippet jump_unconditional_26bit_offset_no_link,  \
           <.long 0x48000000>

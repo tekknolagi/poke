@@ -166,7 +166,7 @@
    size of the instructions to be patched in in bytes.
    On this archtiecture, in the case of conditioanl branches, I made the choice
    of using patch-ins to record the end of the conditional branch instruction.
-   This means that the routine to be inserted has size zero, and the code to
+   This means that the snippet to be inserted has size zero, and the code to
    be patched comes right *before* the pointer. */
 #define JITTER_PATCH_IN_SIZE_FAST_BRANCH_UNCONDITIONAL        5
 #define JITTER_PATCH_IN_SIZE_0_FAST_BRANCH_AFTER_CONDITIONAL  0 /* all cases. */
@@ -605,47 +605,47 @@
    works for constants in [-128, -1].
    Are these fast?  Is there a way not to have them affect flags?  I doubt it.
    This is good for loading 1, assuming it's fast (not so sure: incq modifies
-   some flag, and /mnt/big/handbooks/assembly/intel/optimizing-subroutines-in-assembly-language--fog--1996-2016.pdf §16.2 recommends using add/sub when optimizing for speed, vs. inc/dec when optimizing for size unless we expect no penalty from flag dependencies, which might or might not be my case):
+   some flag, and /mnt/big/handbooks/assembly/intel/optimizing-subsnippets-in-assembly-language--fog--1996-2016.pdf §16.2 recommends using add/sub when optimizing for speed, vs. inc/dec when optimizing for size unless we expect no penalty from flag dependencies, which might or might not be my case):
      31 db         # xorl %ebx, %ebx
      48 ff c3      # incq %rbx
 
-   FIXME: See /mnt/big/handbooks/assembly/intel/optimizing-subroutines-in-assembly-language--fog--1996-2016.pdf , §10.2 "Using shorter constants and addresses".
+   FIXME: See /mnt/big/handbooks/assembly/intel/optimizing-subsnippets-in-assembly-language--fog--1996-2016.pdf , §10.2 "Using shorter constants and addresses".
 */
 
 /* Notice that the order matters, and these shouldn't be rearranged without also
    changing the order of definitions in machine.S .  We also rely on the first
-   case having value 0, since we use enum jitter_routine_to_patch values as
+   case having value 0, since we use enum jitter_snippet_to_patch values as
    array indices. */
-enum jitter_routine_to_patch
+enum jitter_snippet_to_patch
   {
-    jitter_routine_load_0_to_64bit_residual_register_0,
-    jitter_routine_load_0_to_64bit_residual_register_1,
-    jitter_routine_load_0_to_64bit_residual_register_2,
-    jitter_routine_load_0_to_64bit_residual_register_3,
-    jitter_routine_load_minus_1_to_64bit_residual_register_0,
-    jitter_routine_load_minus_1_to_64bit_residual_register_1,
-    jitter_routine_load_minus_1_to_64bit_residual_register_2,
-    jitter_routine_load_minus_1_to_64bit_residual_register_3,
-    jitter_routine_set_64bit_residual_register_0,
-    jitter_routine_set_64bit_residual_register_1,
-    jitter_routine_set_64bit_residual_register_2,
-    jitter_routine_set_64bit_residual_register_3,
-    jitter_routine_set_32bit_residual_register_0,
-    jitter_routine_set_32bit_residual_register_1,
-    jitter_routine_set_32bit_residual_register_2,
-    jitter_routine_set_32bit_residual_register_3,
-    jitter_routine_set_32bit_sign_extended_residual_register_0,
-    jitter_routine_set_32bit_sign_extended_residual_register_1,
-    jitter_routine_set_32bit_sign_extended_residual_register_2,
-    jitter_routine_set_32bit_sign_extended_residual_register_3,
-    jitter_routine_set_64bit_residual_memory_two_32bit_stores,
-    jitter_routine_set_32bit_sign_extended_residual_memory,
-    jitter_routine_jump_unconditional_32bit_offset,
-    jitter_routine_empty_after_conditional_jump_32bit_offset,
-    jitter_routine_call_32bit_offset,
+    jitter_snippet_load_0_to_64bit_residual_register_0,
+    jitter_snippet_load_0_to_64bit_residual_register_1,
+    jitter_snippet_load_0_to_64bit_residual_register_2,
+    jitter_snippet_load_0_to_64bit_residual_register_3,
+    jitter_snippet_load_minus_1_to_64bit_residual_register_0,
+    jitter_snippet_load_minus_1_to_64bit_residual_register_1,
+    jitter_snippet_load_minus_1_to_64bit_residual_register_2,
+    jitter_snippet_load_minus_1_to_64bit_residual_register_3,
+    jitter_snippet_set_64bit_residual_register_0,
+    jitter_snippet_set_64bit_residual_register_1,
+    jitter_snippet_set_64bit_residual_register_2,
+    jitter_snippet_set_64bit_residual_register_3,
+    jitter_snippet_set_32bit_residual_register_0,
+    jitter_snippet_set_32bit_residual_register_1,
+    jitter_snippet_set_32bit_residual_register_2,
+    jitter_snippet_set_32bit_residual_register_3,
+    jitter_snippet_set_32bit_sign_extended_residual_register_0,
+    jitter_snippet_set_32bit_sign_extended_residual_register_1,
+    jitter_snippet_set_32bit_sign_extended_residual_register_2,
+    jitter_snippet_set_32bit_sign_extended_residual_register_3,
+    jitter_snippet_set_64bit_residual_memory_two_32bit_stores,
+    jitter_snippet_set_32bit_sign_extended_residual_memory,
+    jitter_snippet_jump_unconditional_32bit_offset,
+    jitter_snippet_empty_after_conditional_jump_32bit_offset,
+    jitter_snippet_call_32bit_offset,
 
-    /* The number of routines. */
-    jitter_routine_no
+    /* The number of snippets. */
+    jitter_snippet_no
   };
 
 #endif // #ifndef __ASSEMBLER__

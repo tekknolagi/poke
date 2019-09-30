@@ -1,6 +1,6 @@
 /* VM library: native code patching for SPARC (either bitness).
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -41,8 +41,8 @@ jitter_invalidate_icache (char *from, size_t byte_no)
      __builtin___clear_cache seems sufficient, on the machines I've tested. */
 }
 
-enum jitter_routine_to_patch
-jitter_routine_for_loading_register (const char *immediate_pointer,
+enum jitter_snippet_to_patch
+jitter_snippet_for_loading_register (const char *immediate_pointer,
                                      unsigned int residual_register_index,
                                      const char *loading_code_to_write)
 {
@@ -51,16 +51,16 @@ jitter_routine_for_loading_register (const char *immediate_pointer,
 
   jitter_uint immediate = * (jitter_int*) immediate_pointer;
   if (jitter_fits_in_bits_sign_extended (immediate, 13))
-    return jitter_routine_load_or_to_reg_0 + 4 * residual_register_index;
+    return jitter_snippet_load_or_to_reg_0 + 4 * residual_register_index;
   else if (jitter_fits_in_bits_zero_extended (immediate, 32))
-    return jitter_routine_load_sethi_or_to_reg_0 + 4 * residual_register_index;
+    return jitter_snippet_load_sethi_or_to_reg_0 + 4 * residual_register_index;
   // FIXME: also use the sethi-only version.
   else
-    return jitter_routine_load_64bit_to_reg_0 + 4 * residual_register_index;
+    return jitter_snippet_load_64bit_to_reg_0 + 4 * residual_register_index;
 }
 
-enum jitter_routine_to_patch
-jitter_routine_for_loading_memory (const char *immediate_pointer,
+enum jitter_snippet_to_patch
+jitter_snippet_for_loading_memory (const char *immediate_pointer,
                                    unsigned int index,
                                    const char *loading_code_to_write)
 {
@@ -71,7 +71,7 @@ void
 jitter_patch_load_immediate_to_register (char *native_code,
                                          size_t native_code_size,
                                          const char *immediate_pointer,
-                                         enum jitter_routine_to_patch routine)
+                                         enum jitter_snippet_to_patch snippet)
 {
   jitter_uint u = * (jitter_uint *) immediate_pointer;
   uint32_t low13_mask = ((1u << 13) - 1);
@@ -80,20 +80,20 @@ jitter_patch_load_immediate_to_register (char *native_code,
   uint32_t *first_instruction_p = (uint32_t *) native_code;
 
   /* See the comments in machine-assembly.S about offsets. */
-  switch (routine)
+  switch (snippet)
     {
-    case jitter_routine_load_or_to_reg_0:
-    case jitter_routine_load_or_to_reg_1:
-    case jitter_routine_load_or_to_reg_2:
-    case jitter_routine_load_or_to_reg_3:
-    case jitter_routine_load_or_to_reg_4:
-    case jitter_routine_load_or_to_reg_5:
-    case jitter_routine_load_or_to_reg_6:
-    case jitter_routine_load_or_to_reg_7:
-    case jitter_routine_load_or_to_reg_8:
-    case jitter_routine_load_or_to_reg_9:
-    case jitter_routine_load_or_to_reg_10:
-    case jitter_routine_load_or_to_reg_11:
+    case jitter_snippet_load_or_to_reg_0:
+    case jitter_snippet_load_or_to_reg_1:
+    case jitter_snippet_load_or_to_reg_2:
+    case jitter_snippet_load_or_to_reg_3:
+    case jitter_snippet_load_or_to_reg_4:
+    case jitter_snippet_load_or_to_reg_5:
+    case jitter_snippet_load_or_to_reg_6:
+    case jitter_snippet_load_or_to_reg_7:
+    case jitter_snippet_load_or_to_reg_8:
+    case jitter_snippet_load_or_to_reg_9:
+    case jitter_snippet_load_or_to_reg_10:
+    case jitter_snippet_load_or_to_reg_11:
       {
         uint32_t low13 = u & low13_mask;
         uint32_t instruction = * first_instruction_p;
@@ -102,18 +102,18 @@ jitter_patch_load_immediate_to_register (char *native_code,
       }
       break;
 
-    case jitter_routine_load_sethi_or_to_reg_0:
-    case jitter_routine_load_sethi_or_to_reg_1:
-    case jitter_routine_load_sethi_or_to_reg_2:
-    case jitter_routine_load_sethi_or_to_reg_3:
-    case jitter_routine_load_sethi_or_to_reg_4:
-    case jitter_routine_load_sethi_or_to_reg_5:
-    case jitter_routine_load_sethi_or_to_reg_6:
-    case jitter_routine_load_sethi_or_to_reg_7:
-    case jitter_routine_load_sethi_or_to_reg_8:
-    case jitter_routine_load_sethi_or_to_reg_9:
-    case jitter_routine_load_sethi_or_to_reg_10:
-    case jitter_routine_load_sethi_or_to_reg_11:
+    case jitter_snippet_load_sethi_or_to_reg_0:
+    case jitter_snippet_load_sethi_or_to_reg_1:
+    case jitter_snippet_load_sethi_or_to_reg_2:
+    case jitter_snippet_load_sethi_or_to_reg_3:
+    case jitter_snippet_load_sethi_or_to_reg_4:
+    case jitter_snippet_load_sethi_or_to_reg_5:
+    case jitter_snippet_load_sethi_or_to_reg_6:
+    case jitter_snippet_load_sethi_or_to_reg_7:
+    case jitter_snippet_load_sethi_or_to_reg_8:
+    case jitter_snippet_load_sethi_or_to_reg_9:
+    case jitter_snippet_load_sethi_or_to_reg_10:
+    case jitter_snippet_load_sethi_or_to_reg_11:
       {
         uint32_t low10 = u & low10_mask;
         uint32_t high22 = u >> 10;
@@ -127,38 +127,38 @@ jitter_patch_load_immediate_to_register (char *native_code,
       }
       break;
 
-    case jitter_routine_load_sethi_to_reg_0:
-    case jitter_routine_load_sethi_to_reg_1:
-    case jitter_routine_load_sethi_to_reg_2:
-    case jitter_routine_load_sethi_to_reg_3:
-    case jitter_routine_load_sethi_to_reg_4:
-    case jitter_routine_load_sethi_to_reg_5:
-    case jitter_routine_load_sethi_to_reg_6:
-    case jitter_routine_load_sethi_to_reg_7:
-    case jitter_routine_load_sethi_to_reg_8:
-    case jitter_routine_load_sethi_to_reg_9:
-    case jitter_routine_load_sethi_to_reg_10:
-    case jitter_routine_load_sethi_to_reg_11:
+    case jitter_snippet_load_sethi_to_reg_0:
+    case jitter_snippet_load_sethi_to_reg_1:
+    case jitter_snippet_load_sethi_to_reg_2:
+    case jitter_snippet_load_sethi_to_reg_3:
+    case jitter_snippet_load_sethi_to_reg_4:
+    case jitter_snippet_load_sethi_to_reg_5:
+    case jitter_snippet_load_sethi_to_reg_6:
+    case jitter_snippet_load_sethi_to_reg_7:
+    case jitter_snippet_load_sethi_to_reg_8:
+    case jitter_snippet_load_sethi_to_reg_9:
+    case jitter_snippet_load_sethi_to_reg_10:
+    case jitter_snippet_load_sethi_to_reg_11:
       {
         jitter_fatal ("sethi: patching unimplemented");
       }
       break;
 
-    case jitter_routine_load_64bit_to_reg_0:
-    case jitter_routine_load_64bit_to_reg_1:
-    case jitter_routine_load_64bit_to_reg_2:
-    case jitter_routine_load_64bit_to_reg_3:
-    case jitter_routine_load_64bit_to_reg_4:
-    case jitter_routine_load_64bit_to_reg_5:
-    case jitter_routine_load_64bit_to_reg_6:
-    case jitter_routine_load_64bit_to_reg_7:
-    case jitter_routine_load_64bit_to_reg_8:
-    case jitter_routine_load_64bit_to_reg_9:
-    case jitter_routine_load_64bit_to_reg_10:
-    case jitter_routine_load_64bit_to_reg_11:
+    case jitter_snippet_load_64bit_to_reg_0:
+    case jitter_snippet_load_64bit_to_reg_1:
+    case jitter_snippet_load_64bit_to_reg_2:
+    case jitter_snippet_load_64bit_to_reg_3:
+    case jitter_snippet_load_64bit_to_reg_4:
+    case jitter_snippet_load_64bit_to_reg_5:
+    case jitter_snippet_load_64bit_to_reg_6:
+    case jitter_snippet_load_64bit_to_reg_7:
+    case jitter_snippet_load_64bit_to_reg_8:
+    case jitter_snippet_load_64bit_to_reg_9:
+    case jitter_snippet_load_64bit_to_reg_10:
+    case jitter_snippet_load_64bit_to_reg_11:
       {
 #if   SIZEOF_VOID_P == 4
-        jitter_fatal ("attempting to patch a 64-bit loading routine on 32 bit");
+        jitter_fatal ("attempting to patch a 64-bit loading snippet on 32 bit");
 #elif SIZEOF_VOID_P == 8
         uint32_t low_half = (int32_t) u;
         uint32_t high_half = (int32_t) (u >> 32);
@@ -190,7 +190,7 @@ jitter_patch_load_immediate_to_register (char *native_code,
       break;
 
     default:
-      jitter_fatal ("jitter_patch_load_immediate_to_register: unknown routine");
+      jitter_fatal ("jitter_patch_load_immediate_to_register: unknown snippet");
     }
 }
 
@@ -199,14 +199,14 @@ jitter_patch_load_immediate_to_memory (char *native_code,
                                        size_t native_code_size,
                                        unsigned int memory_index,
                                        const char *immediate_pointer,
-                                       enum jitter_routine_to_patch routine)
+                                       enum jitter_snippet_to_patch snippet)
 {
   jitter_fatal ("SPARC residual memory: not implemented yet");
 }
 
 #ifdef JITTER_HAVE_PATCH_IN
-enum jitter_routine_to_patch
-jitter_routine_for_patch_in (const struct jitter_patch_in_descriptor *dp)
+enum jitter_snippet_to_patch
+jitter_snippet_for_patch_in (const struct jitter_patch_in_descriptor *dp)
 {
   jitter_uint patch_in_case = dp->patch_in_case;
   switch (patch_in_case)
@@ -214,12 +214,12 @@ jitter_routine_for_patch_in (const struct jitter_patch_in_descriptor *dp)
     case JITTER_PATCH_IN_CASE_FAST_BRANCH_UNCONDITIONAL:
       /* This has some subtle problems, sometimes generating an incorrect
          immediate; I'm not sure where my mistake is.  Anyway the other patch-in
-         routine below works reliably, despite its narrower range. */
-      //return jitter_routine_branch_unconditional_21bits_offset;
-      return jitter_routine_branch_unconditional_18bits_offset;
+         snippet below works reliably, despite its narrower range. */
+      //return jitter_snippet_branch_unconditional_21bits_offset;
+      return jitter_snippet_branch_unconditional_18bits_offset;
 
     default:
-      jitter_fatal ("jitter_routine_for_patch_in: unsupported patch-in case");
+      jitter_fatal ("jitter_snippet_for_patch_in: unsupported patch-in case");
     }
 }
 #endif // #ifdef JITTER_HAVE_PATCH_IN
@@ -231,11 +231,11 @@ void
 jitter_patch_patch_in (char *native_code,
                        const char *immediate_pointer,
                        const struct jitter_patch_in_descriptor *descriptor,
-                       enum jitter_routine_to_patch routine)
+                       enum jitter_snippet_to_patch snippet)
 {
-  switch (routine)
+  switch (snippet)
     {
-    case jitter_routine_branch_unconditional_18bits_offset:
+    case jitter_snippet_branch_unconditional_18bits_offset:
       {
         char *jump_target = * (char**) immediate_pointer;
         char *jump_address = native_code;
@@ -272,7 +272,7 @@ jitter_patch_patch_in (char *native_code,
 
         /* Patch the branching instruction.  We need two replace the two split
            fields encoding the displacement, but we can keep the rest of the
-           instruction coming from the assembly routine. */
+           instruction coming from the assembly snippet. */
         uint32_t old_instruction = * (uint32_t *) native_code;
         uint32_t instruction
           = ((old_instruction & ~ low14_mask) & ~ high2_mask) | immediate;
@@ -282,7 +282,7 @@ jitter_patch_patch_in (char *native_code,
 
     /* FIXME: this case is currently not used, as the destination is not
        always correct; see the comment at the end of the case. */
-    case jitter_routine_branch_unconditional_21bits_offset:
+    case jitter_snippet_branch_unconditional_21bits_offset:
       {
         char *jump_target = * (char**) immediate_pointer;
         char *jump_address = native_code;
@@ -311,7 +311,7 @@ jitter_patch_patch_in (char *native_code,
 
         /* Patch the branching instruction.  We only have to replace the
            immediate; the other fields we can copy from the current
-           instruction, which came from the assembly routine.  */
+           instruction, which came from the assembly snippet.  */
         uint32_t old_instruction = * (uint32_t *) native_code;
         uint32_t instruction = (old_instruction & ~ low19_mask) | immediate19;
         * (uint32_t *) native_code = instruction;
@@ -326,8 +326,8 @@ jitter_patch_patch_in (char *native_code,
       }
 
     default:
-      jitter_fatal ("jitter_patch_patch_in: unsupported routine %li",
-                    (long) routine);
+      jitter_fatal ("jitter_patch_patch_in: unsupported snippet %li",
+                    (long) snippet);
     }
 }
 #endif // #ifdef JITTER_HAVE_PATCH_IN

@@ -1,7 +1,6 @@
 /* Jitter: replication functionality.
 
-   Copyright (C) 2016, 2017, 2018 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -73,7 +72,7 @@
 
 /* A structure containing enough information to resolve label references after
    the full native code is generated, and backpatch a native code address into
-   a residual load routine.  */
+   a residual load snippet.  */
 struct jitter_backpatch
 {
 #ifdef JITTER_HAVE_PATCH_IN
@@ -84,7 +83,7 @@ struct jitter_backpatch
   const struct jitter_patch_in_descriptor *patch_in_descriptor;
 #endif //#ifdef JITTER_HAVE_PATCH_IN
 
-  /* The native code of the load residual routine we have to backpatch. */
+  /* The native code of the load residual snippet we have to backpatch. */
   char *native_code;
 
   /* An residual parameter index relative to the specialized instruction,
@@ -94,8 +93,8 @@ struct jitter_backpatch
   /* The thread argument to be translated into a native code address. */
   union jitter_word thread;
 
-  /* Machine-specific routine identifier. */
-  enum jitter_routine_to_patch routine;
+  /* Machine-specific snippet identifier. */
+  enum jitter_snippet_to_patch snippet;
 };
 #endif // #ifdef JITTER_DISPATCH_NO_THREADING
 
@@ -286,43 +285,43 @@ jitter_replicate_program (struct jitter_routine *p)
              return pointer.
              The return address is the beginning of the next replicated VM
              instruction, which we don't actually know, as it will come after
-             the routine to patch in the value we are computing.  Just like in
+             the snippet to patch in the value we are computing.  Just like in
              the following case about labels we have to be pessimistic and
-             possibly reserve space for a routine slightly longer than needed,
+             possibly reserve space for a snippet slightly longer than needed,
              but working for any possible label in the useful range.
              FIXME: actually be more pessimistic: there should ge a
-             jitter_routine_for_loading_pessimistic , yielding a routine working
+             jitter_snippet_for_loading_pessimistic , yielding a snippet working
              for a sufficiently wide range of arguments. */
           if ((! relocatable || caller) && j == residual_arity - 1)
             {
-              /* This doesn't keep into account the routine to load the return
+              /* This doesn't keep into account the snippet to load the return
                  target itself. */
               const char *sample_target
                 = free_code + instruction_size;
-              enum jitter_routine_to_patch sample_routine
-                = jitter_routine_for_loading ((const char*) & sample_target,
+              enum jitter_snippet_to_patch sample_snippet
+                = jitter_snippet_for_loading ((const char*) & sample_target,
                                               jout_non_fast_label,
                                               free_code);
-              const size_t sample_routine_size
-                = jitter_routine_size (sample_routine);
+              const size_t sample_snippet_size
+                = jitter_snippet_size (sample_snippet);
 
-              /* Now we have an estimate of the routine size.  Assuming that's
+              /* Now we have an estimate of the snippet size.  Assuming that's
                  correct use it to compute the actual return target, and check
-                 again what routine will be needed to load the actual target.
+                 again what snippet will be needed to load the actual target.
                  If its size is the same as the eastimate we're golden.
                  Otherwise, currently, we bail out. */
-              const char *actual_target = sample_target + sample_routine_size;
-              enum jitter_routine_to_patch actual_routine
-                = jitter_routine_for_loading ((const char*) & actual_target,
+              const char *actual_target = sample_target + sample_snippet_size;
+              enum jitter_snippet_to_patch actual_snippet
+                = jitter_snippet_for_loading ((const char*) & actual_target,
                                               jout_non_fast_label,
                                               free_code);
-              const size_t actual_routine_size
-                = jitter_routine_size (actual_routine);
-              if (sample_routine_size != actual_routine_size)
+              const size_t actual_snippet_size
+                = jitter_snippet_size (actual_snippet);
+              if (sample_snippet_size != actual_snippet_size)
                 jitter_fatal ("replication: failed estimating non-relocatable return address size");
 
               /* If we arrived here we know the actual target.  Set it as the
-                 thread argument.  This will be loaded with a routine below, as
+                 thread argument.  This will be loaded with a snippet below, as
                  any other literal argument.  Also setting the correct argument
                  in the thread field is useful for disassembly. */
               immediate.pointer
@@ -330,7 +329,7 @@ jitter_replicate_program (struct jitter_routine *p)
                 = (void*) actual_target;
             }
 
-          enum jitter_routine_to_patch routine;
+          enum jitter_snippet_to_patch snippet;
           if (is_label)
             {
               /* We do not necessarily know the referred native code address at
@@ -339,16 +338,16 @@ jitter_replicate_program (struct jitter_routine *p)
                  a plausible example of what an actual code address might look
                  like.
                  FIXME: be more pessimistic: there should ge a
-                 jitter_routine_for_loading_pessimistic , yielding a routine
+                 jitter_snippet_for_loading_pessimistic , yielding a snippet
                  working for a sufficiently wide range of arguments. */
               const char *sample_target = free_code;
-              routine = jitter_routine_for_loading ((const char*)
+              snippet = jitter_snippet_for_loading ((const char*)
                                                     & sample_target,
                                                     jout_non_fast_label,
                                                     free_code);
             }
           else
-            routine = jitter_routine_for_loading ((const char*) & immediate,
+            snippet = jitter_snippet_for_loading ((const char*) & immediate,
                                                   jout_non_fast_label,
                                                   free_code);
 
@@ -359,7 +358,7 @@ jitter_replicate_program (struct jitter_routine *p)
 
           /* The implicit residual return address argument for callers is
              useless when the implementation supports machine-specific
-             procedures: in this case just skip the routine. */
+             procedures: in this case just skip the snippet. */
           bool supports_native_procedures
 #ifdef JITTER_MACHINE_SUPPORTS_PROCEDURE
             = true;
@@ -375,12 +374,12 @@ jitter_replicate_program (struct jitter_routine *p)
             /* The argument we ignored was not a fast label. */
             jout_non_fast_label ++;
 
-            /* Do not insert the routine.  A break would work as well here. */
+            /* Do not insert the snippet.  A break would work as well here. */
             continue;
           }
 
-          size_t load_residual_code_size = jitter_routine_size (routine);
-          jitter_copy_routine (free_code, routine);
+          size_t load_residual_code_size = jitter_snippet_size (snippet);
+          jitter_copy_snippet (free_code, snippet);
           if (is_label)
             {
               /* We cannot resolve a label references if it refers a thread we
@@ -393,17 +392,17 @@ jitter_replicate_program (struct jitter_routine *p)
               bp.native_code = free_code;
               bp.residual_index = jout_non_fast_label;
               bp.thread = immediate;
-              bp.routine = routine;
+              bp.snippet = snippet;
               jitter_dynamic_buffer_push (& backpatches, & bp,
                                           sizeof (struct jitter_backpatch));
             }
           else
             jitter_patch_load_immediate (free_code, jout_non_fast_label,
-                                         (const char*) & immediate, routine);
+                                         (const char*) & immediate, snippet);
 
-          /* size_t load_residual_code_size = vmprefix_native_nop_routine_size; */
+          /* size_t load_residual_code_size = vmprefix_native_nop_snippet_size; */
           /* printf ("%li bytes\n", (long) load_residual_code_size); */
-          /* memcpy (free_code, vmprefix_native_nop_routine, load_residual_code_size); */
+          /* memcpy (free_code, vmprefix_native_nop_snippet, load_residual_code_size); */
           free_code += load_residual_code_size;
 
           /* If we arrived here then the j-th parameter is not a fast label.
@@ -459,7 +458,7 @@ jitter_replicate_program (struct jitter_routine *p)
                   bp.native_code = free_code + pid->offset;
                   bp.residual_index = j;
                   bp.thread = immediate;
-                  bp.routine = jitter_routine_for_patch_in (pid);
+                  bp.snippet = jitter_snippet_for_patch_in (pid);
                   jitter_dynamic_buffer_push (& backpatches, & bp,
                                               sizeof (struct jitter_backpatch));
               }
@@ -506,12 +505,12 @@ jitter_replicate_program (struct jitter_routine *p)
                    pid, bp->native_code, (unsigned) pid->length, target_native_code);
           fprintf (stderr, "Pathing-in at [%p, %p]\n",
                   bp->native_code,
-                  ((char *) bp->native_code) + jitter_routine_size (bp->routine) - 1);
-          jitter_copy_routine (bp->native_code, bp->routine);
+                  ((char *) bp->native_code) + jitter_snippet_size (bp->snippet) - 1);
+          jitter_copy_snippet (bp->native_code, bp->snippet);
           jitter_patch_patch_in (bp->native_code,
                                  (const char*) & target_native_code,
                                  pid,
-                                 bp->routine);
+                                 bp->snippet);
         }
       else
 #endif // ifdef JITTER_HAVE_PATCH_IN
@@ -522,7 +521,7 @@ jitter_replicate_program (struct jitter_routine *p)
           */
           jitter_patch_load_immediate (bp->native_code, bp->residual_index,
                                        (const char*)& target_native_code,
-                                       bp->routine);
+                                       bp->snippet);
         }
 
       jitter_dynamic_buffer_pop (& backpatches,

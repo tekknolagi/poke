@@ -519,15 +519,15 @@
 
 /* Notice that the order matters, and these shouldn't be rearranged without also
    changing the order of definitions in machine.S .  We also rely on the first
-   case having value 0, since we use enum jitter_routine_to_patch values as
+   case having value 0, since we use enum jitter_snippet_to_patch values as
    array indices. */
-enum jitter_routine_to_patch
+enum jitter_snippet_to_patch
   {
 #define ROUTINES_TO_LOAD_RESIDUALS_TO_REGISTER(idx)                   \
-  JITTER_CONCATENATE_TWO(jitter_routine_load_or_to_reg_, idx),        \
-  JITTER_CONCATENATE_TWO(jitter_routine_load_sethi_or_to_reg_, idx),  \
-  JITTER_CONCATENATE_TWO(jitter_routine_load_sethi_to_reg_, idx),     \
-  JITTER_CONCATENATE_TWO(jitter_routine_load_64bit_to_reg_, idx),
+  JITTER_CONCATENATE_TWO(jitter_snippet_load_or_to_reg_, idx),        \
+  JITTER_CONCATENATE_TWO(jitter_snippet_load_sethi_or_to_reg_, idx),  \
+  JITTER_CONCATENATE_TWO(jitter_snippet_load_sethi_to_reg_, idx),     \
+  JITTER_CONCATENATE_TWO(jitter_snippet_load_64bit_to_reg_, idx),
 
     ROUTINES_TO_LOAD_RESIDUALS_TO_REGISTER(0)
     ROUTINES_TO_LOAD_RESIDUALS_TO_REGISTER(1)
@@ -541,18 +541,18 @@ enum jitter_routine_to_patch
     ROUTINES_TO_LOAD_RESIDUALS_TO_REGISTER(9)
     ROUTINES_TO_LOAD_RESIDUALS_TO_REGISTER(10)
     ROUTINES_TO_LOAD_RESIDUALS_TO_REGISTER(11)
-    /* FIXME: routines for loading to residuals memory. */
+    /* FIXME: snippets for loading to residuals memory. */
 
 #undef ROUTINES_TO_LOAD_RESIDUALS_TO_REGISTER
 
-    jitter_routine_branch_unconditional_18bits_offset,
+    jitter_snippet_branch_unconditional_18bits_offset,
 
     /* FIXME: this is broken for some reason I have to investigate, and I'm
-       using the previous routine despite its narrower range. */
-    jitter_routine_branch_unconditional_21bits_offset,
+       using the previous snippet despite its narrower range. */
+    jitter_snippet_branch_unconditional_21bits_offset,
 
-    /* The number of routines. */
-    jitter_routine_no
+    /* The number of snippets. */
+    jitter_snippet_no
   };
 
 #endif // #ifndef __ASSEMBLER__

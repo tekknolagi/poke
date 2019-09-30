@@ -1,6 +1,6 @@
 /* VM library: assembly support for SH .
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2019 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -27,9 +27,9 @@
 
 .text
 
-/* Here come the actual routine definitions, containing the code to be copied
-   and patched.  Notice that the order matters, and the calls to jitter_routine
-   here must follow the same order as the enum jitter_routine_to_patch cases in
+/* Here come the actual snippet definitions, containing the code to be copied
+   and patched.  Notice that the order matters, and the calls to jitter_snippet
+   here must follow the same order as the enum jitter_snippet_to_patch cases in
    native.h . */
 jitter_arrays .long
 
@@ -53,17 +53,17 @@ jitter_arrays .long
 /* Load a signed 8 bit value to a general register.  The value is always
    sign-extended.
       09 ea   ! mov #9, r10  (little-endian) */
-.macro jitter_routine_load_signed_8bit residual_register_index,  \
+.macro jitter_snippet_load_signed_8bit residual_register_index,  \
                                        residual_register_name
-jitter_routine load_signed_8bit_to_register_&\residual_register_index,  \
+jitter_snippet load_signed_8bit_to_register_&\residual_register_index,  \
     <jitter_op_immediate_to_register mov 0 \residual_register_name>
 .endm
 
-/* Define a routine per residual register.  This follows the order of enum
-   jitter_routine_to_patch . */
-jitter_routine_load_signed_8bit 0 JITTER_RESIDUAL_REGISTER_0
-jitter_routine_load_signed_8bit 1 JITTER_RESIDUAL_REGISTER_1
-jitter_routine_load_signed_8bit 2 JITTER_RESIDUAL_REGISTER_2
+/* Define a snippet per residual register.  This follows the order of enum
+   jitter_snippet_to_patch . */
+jitter_snippet_load_signed_8bit 0 JITTER_RESIDUAL_REGISTER_0
+jitter_snippet_load_signed_8bit 1 JITTER_RESIDUAL_REGISTER_1
+jitter_snippet_load_signed_8bit 2 JITTER_RESIDUAL_REGISTER_2
 
 /* Load a sign-extended 16-bit value to a general register.  Since an or
    instruction with an immediate argument can only work on r0 I'd have to save
@@ -74,7 +74,7 @@ jitter_routine_load_signed_8bit 2 JITTER_RESIDUAL_REGISTER_2
    shifting, I can or the scratch register into the destination.
    This version is to be used when the highest bit of the low byte of the
    constant is 1; othwerwise the extu.b instruction is useless, and for
-   that case I have another set of routines below.  Notice that this version
+   that case I have another set of snippets below.  Notice that this version
    is correct independently from the value of that bit; the variant below is
    faster, but its correctness relies on the bit being 0.
       30 e9   mov #48,r9      ! Sign-extend high byte into result's low byte
@@ -84,10 +84,10 @@ jitter_routine_load_signed_8bit 2 JITTER_RESIDUAL_REGISTER_2
       cb 29   or r12,r9       ! Or scratch into the result low byte.
    FIXME: is this version faster than the generic pcrel version below, using
    three instructions including a jump? */
-.macro jitter_routine_load_signed_16bit_8th_bit_1_to_register \
+.macro jitter_snippet_load_signed_16bit_8th_bit_1_to_register \
     residual_register_index,  \
     residual_register_name
-jitter_routine load_signed_16bit_8th_bit_1_to_register_&\residual_register_index,  \
+jitter_snippet load_signed_16bit_8th_bit_1_to_register_&\residual_register_index,  \
     <jitter_op_immediate_to_register mov 0xff residual_register_name>, \
     <jitter_op_immediate_to_register mov 0xee JITTER_SCRATCH_REGISTER>, \
     <shll8 residual_register_name>, \
@@ -106,9 +106,9 @@ jitter_routine load_signed_16bit_8th_bit_1_to_register_&\residual_register_index
       03 69   mov r0,r9   ! Copy r0 to the intended target register
       c3 60   mov r12,r0  ! Restore r0 from the scratch register */
  /*
-.macro jitter_routine_load_signed_16bit residual_register_index,  \
+.macro jitter_snippet_load_signed_16bit residual_register_index,  \
                                         residual_register_name
-jitter_routine load_signed_16bit_to_register_&\residual_register_index,  \
+jitter_snippet load_signed_16bit_to_register_&\residual_register_index,  \
     <mov r0, JITTER_SCRATCH_REGISTER>, \
     <jitter_op_immediate_to_register mov 0xff r0>, \
     <shll8 r0>, \
@@ -118,41 +118,41 @@ jitter_routine load_signed_16bit_to_register_&\residual_register_index,  \
 .endm
  */
 
-/* Define a routine per residual register.  This follows the order of enum
-   jitter_routine_to_patch . */
-jitter_routine_load_signed_16bit_8th_bit_1_to_register  \
+/* Define a snippet per residual register.  This follows the order of enum
+   jitter_snippet_to_patch . */
+jitter_snippet_load_signed_16bit_8th_bit_1_to_register  \
    0 JITTER_RESIDUAL_REGISTER_0
-jitter_routine_load_signed_16bit_8th_bit_1_to_register  \
+jitter_snippet_load_signed_16bit_8th_bit_1_to_register  \
    1 JITTER_RESIDUAL_REGISTER_1
-jitter_routine_load_signed_16bit_8th_bit_1_to_register  \
+jitter_snippet_load_signed_16bit_8th_bit_1_to_register  \
    2 JITTER_RESIDUAL_REGISTER_2
 
 /* See the comment above about
-   jitter_routine_load_signed_16bit_8th_bit_1_to_register ; this is identical,
+   jitter_snippet_load_signed_16bit_8th_bit_1_to_register ; this is identical,
    except that it doesn't have the extu.b instruction.  This variant is only
    correct if the 8-th bit (the highest bit of the low byte) is zero.
    This version is not always optimal either: if the low byte were all 0s I
    could do everything in two instructions ( mov , shll8 ).  But I guess
    that case is not common enough.
    The immediates to be patched from C are at the same positions as in the
-   jitter_routine_load_signed_16bit_8th_bit_1_to_register routines. */
-.macro jitter_routine_load_signed_16bit_8th_bit_0_to_register \
+   jitter_snippet_load_signed_16bit_8th_bit_1_to_register snippets. */
+.macro jitter_snippet_load_signed_16bit_8th_bit_0_to_register \
     residual_register_index,  \
     residual_register_name
-jitter_routine load_signed_16bit_8th_bit_0_to_register_&\residual_register_index,  \
+jitter_snippet load_signed_16bit_8th_bit_0_to_register_&\residual_register_index,  \
     <jitter_op_immediate_to_register mov 0xff residual_register_name>, \
     <jitter_op_immediate_to_register mov 0xee JITTER_SCRATCH_REGISTER>, \
     <shll8 residual_register_name>, \
     <or JITTER_SCRATCH_REGISTER, residual_register_name>
 .endm
 
-/* Define a routine per residual register.  This follows the order of enum
-   jitter_routine_to_patch . */
-jitter_routine_load_signed_16bit_8th_bit_0_to_register  \
+/* Define a snippet per residual register.  This follows the order of enum
+   jitter_snippet_to_patch . */
+jitter_snippet_load_signed_16bit_8th_bit_0_to_register  \
    0 JITTER_RESIDUAL_REGISTER_0
-jitter_routine_load_signed_16bit_8th_bit_0_to_register  \
+jitter_snippet_load_signed_16bit_8th_bit_0_to_register  \
    1 JITTER_RESIDUAL_REGISTER_1
-jitter_routine_load_signed_16bit_8th_bit_0_to_register  \
+jitter_snippet_load_signed_16bit_8th_bit_0_to_register  \
    2 JITTER_RESIDUAL_REGISTER_2
 
 /* This way of loading constants works for any 32-bit value and is not so
@@ -165,7 +165,7 @@ jitter_routine_load_signed_16bit_8th_bit_0_to_register  \
    SH instructions are 16-bit wide and only aligned to 16 bits, but 32-bit
    constants embedded among instructions have to be aligned to 32 bits.
    Therefore there may be two possible situations, according to the alignment of
-   the code coming right before one of these routines: either the PC happens to
+   the code coming right before one of these snippets: either the PC happens to
    be aligned to 32 bits, or not.  In one case I have to insert a 16-bit
    padding, and that is the *aligned* case, since the padding comes right before
    an odd number of instructions: mov.l , bra , nop .
@@ -185,17 +185,17 @@ jitter_routine_load_signed_16bit_8th_bit_0_to_register  \
       09 00        nop
       00 00        .word <padding>
    D: 12 ef cd ab  .long <datum>
-   L: ...                              ! Out of the routine. */
-.macro jitter_routines_load_pcrel residual_register_index,  \
+   L: ...                              ! Out of the snippet. */
+.macro jitter_snippets_load_pcrel residual_register_index,  \
                                   residual_register_name
-jitter_routine load_pcrel_to_register_&\residual_register_index&_pc_aligned,  \
+jitter_snippet load_pcrel_to_register_&\residual_register_index&_pc_aligned,  \
     <mov.l @(8, pc), \residual_register_name>, \
     <bra 1f>, \
     <nop>, \
     <.word 0x0000> /* Padding*/, \
     <.long 0xabcdef12>, \
     <1:>
-jitter_routine load_pcrel_to_register_&\residual_register_index&_pc_misaligned, \
+jitter_snippet load_pcrel_to_register_&\residual_register_index&_pc_misaligned, \
     <mov.l @(8, pc), \residual_register_name>, \
     <bra 1f>, \
     <nop>, \
@@ -203,11 +203,11 @@ jitter_routine load_pcrel_to_register_&\residual_register_index&_pc_misaligned, 
     <1:>
 .endm
 
-/* Define two routines, one aligned and one mialigned, per residual register.
-   This follows the order of enum jitter_routine_to_patch . */
-jitter_routines_load_pcrel 0 JITTER_RESIDUAL_REGISTER_0
-jitter_routines_load_pcrel 1 JITTER_RESIDUAL_REGISTER_1
-jitter_routines_load_pcrel 2 JITTER_RESIDUAL_REGISTER_2
+/* Define two snippets, one aligned and one mialigned, per residual register.
+   This follows the order of enum jitter_snippet_to_patch . */
+jitter_snippets_load_pcrel 0 JITTER_RESIDUAL_REGISTER_0
+jitter_snippets_load_pcrel 1 JITTER_RESIDUAL_REGISTER_1
+jitter_snippets_load_pcrel 2 JITTER_RESIDUAL_REGISTER_2
 
 
 /* Branch to the instruction identified by a signed 13-bit displacement (aligned
@@ -215,12 +215,12 @@ jitter_routines_load_pcrel 2 JITTER_RESIDUAL_REGISTER_2
    for the delay slot.  This example is little-endian.
    L: fe af   bra L ! 0xffe, or -2, is half the offset from the end of the nop.
       09 00   nop   ! From here to the branch target the offset is -4 bytes. */
-jitter_routine branch_unconditional_13bit_offset, \
+jitter_snippet branch_unconditional_13bit_offset, \
    <1: bra 1b>, \
    <nop>
 
 /* This has the same encoding as branch_unconditional_13bit_offset , the only
    difference being in the four bits coming before the 12-bit immediate. */
-jitter_routine branch_and_link_13bit_offset, \
+jitter_snippet branch_and_link_13bit_offset, \
    <1: bsr 1b>, \
    <nop>

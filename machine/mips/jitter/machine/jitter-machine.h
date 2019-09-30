@@ -481,41 +481,41 @@
 
 /* Notice that the order matters, and these shouldn't be rearranged without also
    changing the order of definitions in machine.S .  We also rely on the first
-   case having value 0, since we use enum jitter_routine_to_patch values as
+   case having value 0, since we use enum jitter_snippet_to_patch values as
    array indices. */
-enum jitter_routine_to_patch
+enum jitter_snippet_to_patch
   {
-    jitter_routine_load_zero_extended_16bit_to_register_0,
-    jitter_routine_load_zero_extended_16bit_to_register_1,
-    jitter_routine_load_zero_extended_16bit_to_register_2,
-    jitter_routine_load_zero_extended_16bit_to_register_3,
-    jitter_routine_load_zero_extended_16bit_to_register_4,
-    jitter_routine_load_zero_extended_16bit_to_register_5,
-    jitter_routine_load_sign_extended_16bit_to_register_0,
-    jitter_routine_load_sign_extended_16bit_to_register_1,
-    jitter_routine_load_sign_extended_16bit_to_register_2,
-    jitter_routine_load_sign_extended_16bit_to_register_3,
-    jitter_routine_load_sign_extended_16bit_to_register_4,
-    jitter_routine_load_sign_extended_16bit_to_register_5,
-    jitter_routine_load_32bit_to_register_0,
-    jitter_routine_load_32bit_to_register_1,
-    jitter_routine_load_32bit_to_register_2,
-    jitter_routine_load_32bit_to_register_3,
-    jitter_routine_load_32bit_to_register_4,
-    jitter_routine_load_32bit_to_register_5,
+    jitter_snippet_load_zero_extended_16bit_to_register_0,
+    jitter_snippet_load_zero_extended_16bit_to_register_1,
+    jitter_snippet_load_zero_extended_16bit_to_register_2,
+    jitter_snippet_load_zero_extended_16bit_to_register_3,
+    jitter_snippet_load_zero_extended_16bit_to_register_4,
+    jitter_snippet_load_zero_extended_16bit_to_register_5,
+    jitter_snippet_load_sign_extended_16bit_to_register_0,
+    jitter_snippet_load_sign_extended_16bit_to_register_1,
+    jitter_snippet_load_sign_extended_16bit_to_register_2,
+    jitter_snippet_load_sign_extended_16bit_to_register_3,
+    jitter_snippet_load_sign_extended_16bit_to_register_4,
+    jitter_snippet_load_sign_extended_16bit_to_register_5,
+    jitter_snippet_load_32bit_to_register_0,
+    jitter_snippet_load_32bit_to_register_1,
+    jitter_snippet_load_32bit_to_register_2,
+    jitter_snippet_load_32bit_to_register_3,
+    jitter_snippet_load_32bit_to_register_4,
+    jitter_snippet_load_32bit_to_register_5,
     /* FIXME: the next three are not implemented yet. */
-    jitter_routine_load_zero_extended_16bit_to_memory,
-    jitter_routine_load_sign_extended_16bit_to_memory,
-    jitter_routine_load_32bit_to_memory,
+    jitter_snippet_load_zero_extended_16bit_to_memory,
+    jitter_snippet_load_sign_extended_16bit_to_memory,
+    jitter_snippet_load_32bit_to_memory,
 
-    jitter_routine_jump_unconditional_28bit_pseudo_direct,
-    jitter_routine_jump_and_link_28bit_pseudo_direct,
+    jitter_snippet_jump_unconditional_28bit_pseudo_direct,
+    jitter_snippet_jump_and_link_28bit_pseudo_direct,
 
-    /* The same routine works for any conditional branch. */
-    jitter_routine_branch_conditional_18bit_offset,
+    /* The same snippet works for any conditional branch. */
+    jitter_snippet_branch_conditional_18bit_offset,
 
-    /* The number of routines. */
-    jitter_routine_no
+    /* The number of snippets. */
+    jitter_snippet_no
   };
 
 #endif // #ifndef __ASSEMBLER__
