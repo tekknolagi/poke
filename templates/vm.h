@@ -740,7 +740,7 @@ vmprefix_defect_table [];
    The implementation of this function is machine-generated, but the user can
    add her own code in the rewriter-c block, which ends up near the beginning of
    this function body, right after JITTTER_REWRITE_FUNCTION_PROLOG_ .  The
-   formal argument seen from the body is named jitter_routine_p .
+   formal argument seen from the body is named jitter_mutable_routine_p .
 
    Rationale: the argument is named differently in the body in order to keep
    the namespace conventions and, more importantly, to encourage the user to
@@ -751,12 +751,12 @@ vmprefix_defect_table [];
    removes, including their arguments.  The user can assume that
    jitter_rewritable_instruction_no is strictly greater than zero. */
 void
-vmprefix_rewrite (struct jitter_mutable_routine *p);
+vmprefix_rewrite (struct jitter_mutable_routine *jitter_mutable_routine_p);
 
 
 
 
-/* Program points at runtime in executable routines.
+/* Program points at run time in executable routines.
  * ************************************************************************** */
 
 /* Provide a nice name for a program point type which looks VM-dependent. */

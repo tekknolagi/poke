@@ -1,6 +1,7 @@
 /* Instruction rewrite functionality header.
 
    Copyright (C) 2017, 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -191,7 +192,7 @@ jitter_destroy_last_instructions (struct jitter_mutable_routine *p,
   /* memory every time, in a context where GCC might not be able to infer */  \
   /* that the value is, in fact, constant. */                                 \
   const int jitter_rewritable_instruction_no =                                \
-    jitter_routine_p->rewritable_instruction_no;                              \
+    jitter_mutable_routine_p->rewritable_instruction_no;                      \
   /* A pointer to the first instruction which is potentially a candidate */   \
   /* for rewriting, with any rule.  Making this a constant pointer to */      \
   /* constant data should help GCC to share condition computations across */  \
@@ -201,7 +202,7 @@ jitter_destroy_last_instructions (struct jitter_mutable_routine *p,
   const struct jitter_instruction * const * const                             \
      jitter_all_rewritable_instructions __attribute__ ((unused))              \
        = ((const struct jitter_instruction * const * const)                   \
-          jitter_last_instructions (jitter_routine_p,                         \
+          jitter_last_instructions (jitter_mutable_routine_p,                 \
                                     jitter_rewritable_instruction_no))
 
 
@@ -353,7 +354,7 @@ jitter_destroy_last_instructions (struct jitter_mutable_routine *p,
     /* conditional body. */                                                  \
     /* Destroy the instructions matching the rule head.  We have already */  \
     /* copied the arguments we need for rewriting. */                        \
-    jitter_destroy_last_instructions (jitter_routine_p,                      \
+    jitter_destroy_last_instructions (jitter_mutable_routine_p,              \
                                       jitter_head_instruction_no);           \
     /* From here on it's incorrect to use head instructions or non-cloned */ \
     /* placeholders. */
@@ -672,17 +673,17 @@ jitter_destroy_last_instructions (struct jitter_mutable_routine *p,
    VMPREFIX_APPEND_INSTRUCTION ) is given; the arguments, if any, need to be
    added explicitly after calling this macro.  Not
    do..while(false)-protected. */
-#define JITTER_RULE_APPEND_INSTRUCTION_(_jitter_mangled_suffix)                 \
-  JITTER_CONCATENATE_TWO(JITTER_VM_PREFIX_UPPER_CASE,                           \
-                         _MUTABLE_ROUTINE_APPEND_INSTRUCTION)(jitter_routine_p, \
-                                              _jitter_mangled_suffix)
+#define JITTER_RULE_APPEND_INSTRUCTION_(_jitter_mangled_suffix)  \
+  JITTER_CONCATENATE_TWO(JITTER_VM_PREFIX_UPPER_CASE,            \
+                         _MUTABLE_ROUTINE_APPEND_INSTRUCTION)    \
+     (jitter_mutable_routine_p, _jitter_mangled_suffix)
 
 /* Append a copy of the parameter pointed by the named placeholder variable,
    which must be non-NULL, to the current instruction.  Not
    do..while(false)-protected. */
-#define JITTER_RULE_APPEND_PLACEHOLDER_(_jitter_placeholder_name)  \
-  jitter_mutable_routine_append_parameter_copy (jitter_routine_p,  \\
-                                JITTER_PLACEHOLDER_NAME(           \
+#define JITTER_RULE_APPEND_PLACEHOLDER_(_jitter_placeholder_name)          \
+  jitter_mutable_routine_append_parameter_copy (jitter_mutable_routine_p,  \
+                                JITTER_PLACEHOLDER_NAME(                   \
                                    _jitter_placeholder_name));
 
 

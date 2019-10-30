@@ -902,7 +902,7 @@ jitterc_emit_rewrite_rule_instruction_template
 
       // FIXME: make a rewriting-specific macro instead of using
       // jitter_mutable_routine_append_parameter_copy ?
-      EMIT("    jitter_mutable_routine_append_parameter_copy (jitter_routine_p,\n");
+      EMIT("    jitter_mutable_routine_append_parameter_copy (jitter_mutable_routine_p,\n");
       jitterc_emit_rewrite_rule_template_expression (f, vm, ae, false);
       EMIT("                                 );\n");
     }
@@ -984,7 +984,7 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
   FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
 
   EMIT("void\n");
-  EMIT("vmprefix_rewrite (struct jitter_mutable_routine *jitter_routine_p)\n");
+  EMIT("vmprefix_rewrite (struct jitter_mutable_routine *jitter_mutable_routine_p)\n");
   EMIT("{\n");
 
   /* Add the common prolog, defining variables to be visible to the entire
