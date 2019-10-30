@@ -1,6 +1,7 @@
 /* Jitter: replication header.
 
    Copyright (C) 2016, 2017 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -44,7 +45,7 @@
  * ************************************************************************** */
 
 //#include <jitter/jitter-instruction.h>
-#include <jitter/jitter-routine.h>
+#include <jitter/jitter-mutable-routine.h>
 
 
 
@@ -54,7 +55,7 @@
 
 /* Replicate code in an already specialized program. */
 void
-jitter_replicate_program (struct jitter_routine *p);
+jitter_replicate_program (struct jitter_mutable_routine *p);
 
 /* Insert a !BEGINBASICBLOCK specialized instruction.  Such a specialized
    instruction serves to support threaded jumps with minimal-threading dispatch,
@@ -62,7 +63,7 @@ jitter_replicate_program (struct jitter_routine *p);
    of each basic block.  See the comment within vmprefix_specialize_program .
    Not intended for the user. */
 void
-jitter_insert_beginbasicblock (struct jitter_routine *p);
+jitter_insert_beginbasicblock (struct jitter_mutable_routine *p);
 
 #endif // #ifdef JITTER_REPLICATE
 #endif // #ifndef JITTER_REPLICATE_H_

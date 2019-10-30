@@ -23,7 +23,7 @@
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-vm.h>
-#include <jitter/jitter-routine.h>
+#include <jitter/jitter-mutable-routine.h>
 
 #include <jitter/jitter-fatal.h>
 

@@ -495,7 +495,7 @@ main (int argc, char **argv)
   vmprefix_initialize ();
 
   /* Make an empty VM routine, and set options as requested by the user. */
-  struct vmprefix_routine *r = vmprefix_make_routine ();
+  struct vmprefix_mutable_routine *r = vmprefix_make_mutable_routine ();
   if (cl.debug)
     fprintf (progress,
              "Options:\n"
@@ -505,9 +505,11 @@ main (int argc, char **argv)
              cl.slow_literals_only ? "yes" : "no",
              cl.slow_registers_only ? "yes" : "no",
              cl.optimization_rewriting ? "yes" : "no");
-  vmprefix_set_routine_option_slow_literals_only (r, cl.slow_literals_only);
-  vmprefix_set_routine_option_slow_registers_only (r, cl.slow_registers_only);
-  vmprefix_set_routine_option_optimization_rewriting
+  vmprefix_set_mutable_routine_option_slow_literals_only
+     (r, cl.slow_literals_only);
+  vmprefix_set_mutable_routine_option_slow_registers_only
+     (r, cl.slow_registers_only);
+  vmprefix_set_mutable_routine_option_optimization_rewriting
      (r, cl.optimization_rewriting);
 
   /* Print the VM configuration if in debugging mode. */
@@ -517,9 +519,9 @@ main (int argc, char **argv)
   if (cl.debug)
     fprintf (progress, "Parsing...\n");
   if (! strcmp (cl.input_file, "-"))
-    vmprefix_parse_file_star (stdin, r);
+    vmprefix_parse_mutable_routine_from_file_star (stdin, r);
   else
-    vmprefix_parse_file (cl.input_file, r);
+    vmprefix_parse_mutable_routine_from_file (cl.input_file, r);
   if (cl.debug)
     fprintf (progress, "The requried slow register number is %li per class.\n",
              (long) r->slow_register_per_class_no);
@@ -541,7 +543,7 @@ main (int argc, char **argv)
     {
       if (cl.debug)
         fprintf (progress, "Printing back the routine...\n");
-      vmprefix_print_routine (stdout, r);
+      vmprefix_mutable_routine_print (stdout, r);
     }
 
   if (cl.disassemble_routine)
@@ -583,7 +585,7 @@ main (int argc, char **argv)
   /* Destroy the Jittery routine in both its versions, executable and
      non-executable. */
   vmprefix_destroy_executable_routine (er);
-  vmprefix_destroy_routine (r);
+  vmprefix_destroy_mutable_routine (r);
 
   if (cl.debug)
     fprintf (progress, "Finalizing...\n");

@@ -901,8 +901,8 @@ jitterc_emit_rewrite_rule_instruction_template
            i, it->instruction_name);
 
       // FIXME: make a rewriting-specific macro instead of using
-      // jitter_append_parameter_copy ?
-      EMIT("    jitter_append_parameter_copy (jitter_routine_p,\n");
+      // jitter_mutable_routine_append_parameter_copy ?
+      EMIT("    jitter_mutable_routine_append_parameter_copy (jitter_routine_p,\n");
       jitterc_emit_rewrite_rule_template_expression (f, vm, ae, false);
       EMIT("                                 );\n");
     }
@@ -984,7 +984,7 @@ jitterc_emit_rewriter (const struct jitterc_vm *vm)
   FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
 
   EMIT("void\n");
-  EMIT("vmprefix_rewrite (struct jitter_routine *jitter_routine_p)\n");
+  EMIT("vmprefix_rewrite (struct jitter_mutable_routine *jitter_routine_p)\n");
   EMIT("{\n");
 
   /* Add the common prolog, defining variables to be visible to the entire
@@ -1164,7 +1164,7 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
   /* Generate the main recognizer function. */
   EMIT("/* Recognizer entry point. */\n");
   EMIT("static enum vmprefix_specialized_instruction_opcode\n");
-  EMIT("vmprefix_recognize_specialized_instruction (struct jitter_routine *p,\n");
+  EMIT("vmprefix_recognize_specialized_instruction (struct jitter_mutable_routine *p,\n");
   EMIT("                                            const struct jitter_instruction *ins)\n");
   EMIT("{\n");
   EMIT("  bool fl = ! p->options.slow_literals_only;\n");
@@ -1189,7 +1189,7 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
   /* Generate the specializer function. */
   EMIT("/* Specializer entry point: the only non-static function here. */\n");
   EMIT("int\n");
-  EMIT("vmprefix_specialize_instruction (struct jitter_routine *p,\n");
+  EMIT("vmprefix_specialize_instruction (struct jitter_mutable_routine *p,\n");
   EMIT("                                 const struct jitter_instruction *ins)\n");
   EMIT("{\n");
   EMIT("  enum vmprefix_specialized_instruction_opcode opcode\n");

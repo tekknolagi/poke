@@ -24,7 +24,7 @@
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-instruction.h>
-#include <jitter/jitter-routine.h>
+#include <jitter/jitter-mutable-routine.h>
 
 
 /* Rewriter API.
@@ -71,7 +71,7 @@
    and third arguments would not be rewritten.
 
    Rewriting happens after each instruction is completed, by a call to
-   jitter_append_instruction_name or one of the jitter_append_*_parameter
+   jitter_mutable_routine_append_instruction_name or one of the jitter_mutable_routine_append_*_parameter
    functions.  Rewriting can never happen "across" a label: an original
    unspecialized instruction before rewriting is replaced with a sequence, and
    both the original and the rewritten sequence lie completely before or
@@ -121,7 +121,7 @@
    fatally if no instructions exist or if the last one is not complete, or if the
    program is not unspecialized. */
 struct jitter_instruction*
-jitter_last_instruction (struct jitter_routine *p);
+jitter_last_instruction (struct jitter_mutable_routine *p);
 
 /* Return a pointer pointing within an array of pointers to instructions,
    how_many elements from the last one.  The pointed memory may be invalidated
@@ -133,7 +133,7 @@ jitter_last_instruction (struct jitter_routine *p);
 /* Fail fatally if no instructions exist or if the last one is not complete, or
    if the program is not unspecialized.  [FIXME: possibly change this] */
 struct jitter_instruction**
-jitter_last_instructions (struct jitter_routine *p, size_t how_many);
+jitter_last_instructions (struct jitter_mutable_routine *p, size_t how_many);
 
 /* Pop the last instruction off the pointed program, which must be complete, and
    return a pointer to it; fail fatally if the instruction is not complete or
@@ -146,9 +146,9 @@ jitter_last_instructions (struct jitter_routine *p, size_t how_many);
    .  The intended use case for this is fisrt checking whether a replacement
    should occour, and then if so calling jitter_pop_instruction once; the result
    pointer will be used to determine which instructions to append as a
-   replacement, by the usual jitter_append_instruction_name /
-   jitter_append_*_parameter functions, which may in their turn trigger rewrites
-   -- or by jitter_append_instruction, which also triggers rewrites.
+   replacement, by the usual jitter_mutable_routine_append_instruction_name /
+   jitter_mutable_routine_append_*_parameter functions, which may in their turn trigger rewrites
+   -- or by jitter_mutable_routine_append_instruction, which also triggers rewrites.
 
    Notice that rewrites are applied eagerly, as soon as each appended
    instruction is complete and until no more rewrites are possible.  For this
@@ -160,7 +160,7 @@ jitter_last_instructions (struct jitter_routine *p, size_t how_many);
    It is the user's responsiblity to ensure that her rewrite rules don't loop
    forever. */
 struct jitter_instruction*
-jitter_pop_instruction (struct jitter_routine *p);
+jitter_pop_instruction (struct jitter_mutable_routine *p);
 
 /* Pop the last how_many instructions from the given program, and destroy them.
    Undefined behavior if the program has less than how_many rewritable
@@ -170,7 +170,7 @@ jitter_pop_instruction (struct jitter_routine *p);
    can never trigger a rewrite: see the jitter_pop_instruction comment for a
    justification. */
 void
-jitter_destroy_last_instructions (struct jitter_routine *p,
+jitter_destroy_last_instructions (struct jitter_mutable_routine *p,
                                   size_t how_many);
 
 
@@ -672,16 +672,16 @@ jitter_destroy_last_instructions (struct jitter_routine *p,
    VMPREFIX_APPEND_INSTRUCTION ) is given; the arguments, if any, need to be
    added explicitly after calling this macro.  Not
    do..while(false)-protected. */
-#define JITTER_RULE_APPEND_INSTRUCTION_(_jitter_mangled_suffix)        \
-  JITTER_CONCATENATE_TWO(JITTER_VM_PREFIX_UPPER_CASE,                  \
-                         _APPEND_INSTRUCTION)(jitter_routine_p,        \
+#define JITTER_RULE_APPEND_INSTRUCTION_(_jitter_mangled_suffix)                 \
+  JITTER_CONCATENATE_TWO(JITTER_VM_PREFIX_UPPER_CASE,                           \
+                         _MUTABLE_ROUTINE_APPEND_INSTRUCTION)(jitter_routine_p, \
                                               _jitter_mangled_suffix)
 
 /* Append a copy of the parameter pointed by the named placeholder variable,
    which must be non-NULL, to the current instruction.  Not
    do..while(false)-protected. */
 #define JITTER_RULE_APPEND_PLACEHOLDER_(_jitter_placeholder_name)  \
-  jitter_append_parameter_copy (jitter_routine_p,                  \
+  jitter_mutable_routine_append_parameter_copy (jitter_routine_p,  \\
                                 JITTER_PLACEHOLDER_NAME(           \
                                    _jitter_placeholder_name));
 

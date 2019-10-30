@@ -22,7 +22,7 @@
 
 %{
   #include <jitter/jitter.h>
-  #include <jitter/jitter-parser.h>
+  #include <jitter/jitter-routine-parser.h>
 
   /* Re-declare two automatically-defined flex functions with
      __attribute__((unused)), to prevent an annoying GCC warning. */

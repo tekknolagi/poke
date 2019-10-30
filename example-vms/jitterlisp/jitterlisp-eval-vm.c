@@ -75,7 +75,7 @@ jitterlispvm_state;
 /* The driver routine, used to call compiled closures from the interpreter.
    Jumping from interpreted to compiled code is common and must be fast: we
    keep one driver routine, always the same, to be reused. */
-static struct jitterlispvm_routine *
+static struct jitterlispvm_mutable_routine *
 jitterlisp_driver_vm_routine;
 static struct jitterlispvm_executable_routine *
 jitterlisp_driver_vm_executable_routine;
@@ -110,15 +110,15 @@ jitterlisp_vm_initialize (void)
         call-from-interpreter
         exitvm
      , of which the second is added implicitly. */
-  jitterlisp_driver_vm_routine = jitterlispvm_make_routine ();
+  jitterlisp_driver_vm_routine = jitterlispvm_make_mutable_routine ();
   /* In the particular case of the driver I can keep the default option
      generating a final exitvm instruction at the end.  This will not be
      the same for compiled user code. */
-//JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine, debug);
-  JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine,
+//JITTERLISPVM_MUTABLE_ROUTINE_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine, debug);
+  JITTERLISPVM_MUTABLE_ROUTINE_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine,
                                   call_mfrom_mc);
-//JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine, debug);
-//JITTERLISPVM_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine, debug);
+//JITTERLISPVM_MUTABLE_ROUTINE_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine, debug);
+//JITTERLISPVM_MUTABLE_ROUTINE_APPEND_INSTRUCTION(jitterlisp_driver_vm_routine, debug);
   jitterlisp_driver_vm_executable_routine
     = jitterlispvm_make_executable_routine (jitterlisp_driver_vm_routine);
 }
@@ -129,7 +129,7 @@ jitterlisp_vm_finalize (void)
   /* Destroy the driver routine and invalidate its pointer to catch mistakes. */
   jitterlispvm_destroy_executable_routine
      (jitterlisp_driver_vm_executable_routine);
-  jitterlispvm_destroy_routine (jitterlisp_driver_vm_routine);
+  jitterlispvm_destroy_mutable_routine (jitterlisp_driver_vm_routine);
   jitterlisp_driver_vm_routine = NULL;
   jitterlisp_driver_vm_executable_routine = NULL;
 

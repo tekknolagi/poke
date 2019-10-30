@@ -25,16 +25,16 @@
   #include <limits.h>
   #include <jitter/jitter.h>
   #include <jitter/jitter-instruction.h>
-  #include <jitter/jitter-routine.h>
+  #include <jitter/jitter-mutable-routine.h>
 
-  #include <jitter/jitter-parser.h>
-  #include <jitter/jitter-scanner.h>
+  #include <jitter/jitter-routine-parser.h>
+  #include <jitter/jitter-routine-scanner.h>
   #include <jitter/jitter-fatal.h>
 
   /* This is currently a fatal error.  I could longjmp away instead. */
   static void
   jitter_error (YYLTYPE *locp,
-                struct parser_arg *parser_arg, /*struct jitter_routine *routine,*/
+                struct parser_arg *parser_arg, /*struct jitter_mutable_routine *routine,*/
                 yyscan_t scanner, const char *message)
     __attribute__ ((noreturn));
 
@@ -124,7 +124,8 @@
 %parse-param { void* jitter_scanner }
 
 /* We don't need a %initial-action block, because the parser receives an already
-   initialized routine; see the definition of jitter_parse_file_star . */
+   initialized routine; see the definition of
+   jitter_parse_mutable_routine_from_file_star . */
 
 /* This goes to the header file. */
 %code requires {
@@ -132,7 +133,7 @@
 
   #include <jitter/jitter.h>
   #include <jitter/jitter-instruction.h>
-  #include <jitter/jitter-routine.h>
+  #include <jitter/jitter-mutable-routine.h>
   #include <jitter/jitter-vm.h>
 
   /* The structure whose pointer is passed to the parser function.  FIXME:
@@ -142,7 +143,7 @@
   {
     /* The routine to be parsed, allowed but not required to be empty on
        input. */
-    struct jitter_routine *routine;
+    struct jitter_mutable_routine *routine;
 
     /* VM-dependent data.  Not modified. */
     const struct jitter_vm *vm;
@@ -162,16 +163,19 @@
      the user to call directly.  For this reason they are wrapped in the vm1.c
      template into VM-specific functions not requiring a VM struct pointer. */
   void
-  jitter_parse_file_star (FILE *input_file, struct jitter_routine *p,
-                          const struct jitter_vm *vm)
+  jitter_parse_mutable_routine_from_file_star (FILE *input_file,
+                                               struct jitter_mutable_routine *p,
+                                               const struct jitter_vm *vm)
     __attribute__ ((nonnull (1, 2, 3)));
   void
-  jitter_parse_file (const char *input_file_name, struct jitter_routine *p,
-                     const struct jitter_vm *vm)
+  jitter_parse_mutable_routine_from_file (const char *input_file_name,
+                                          struct jitter_mutable_routine *p,
+                                          const struct jitter_vm *vm)
     __attribute__ ((nonnull (1, 2, 3)));
   void
-  jitter_parse_string (const char *string, struct jitter_routine *p,
-                       const struct jitter_vm *vm)
+  jitter_parse_mutable_routine_from_string (const char *string,
+                                            struct jitter_mutable_routine *p,
+                                            const struct jitter_vm *vm)
     __attribute__ ((nonnull (1, 2, 3)));
 }
 
@@ -214,13 +218,14 @@ label :
   LABEL { char *label = jitter_get_text (jitter_scanner);
           label [strlen (label) - 1] = '\0';  /* Remove the trailing colon. */
           /* Add one to skip the prefix. */
-          jitter_append_symbolic_label (parser_arg->routine, label + 1); }
+          jitter_mutable_routine_append_symbolic_label (parser_arg->routine,
+                                                        label + 1); }
 ;
 
 instruction_name :
   INSTRUCTION_NAME { char *name = jitter_get_text (jitter_scanner);
-                     jitter_append_instruction_name (parser_arg->routine,
-                                                     name); }
+                     jitter_mutable_routine_append_instruction_name
+                        (parser_arg->routine, name); }
 ;
 
 arguments :
@@ -277,11 +282,11 @@ int_expression :
 ;
 
 argument :
-  int_expression { jitter_append_literal_parameter (parser_arg->routine,
-                                                    $1); }
+  int_expression { jitter_mutable_routine_append_literal_parameter
+                      (parser_arg->routine, $1); }
 | LABEL_LITERAL  { char *text = jitter_get_text (jitter_scanner) + 1; /* Skip the prefix. */
-                   jitter_append_symbolic_label_parameter (parser_arg->routine,
-                                                           text); }
+                   jitter_mutable_routine_append_symbolic_label_parameter
+                      (parser_arg->routine, text); }
 | REGISTER       { char *text = jitter_get_text (jitter_scanner);
                    char register_class_character = text [1];
                    const struct jitter_register_class *register_class
@@ -290,9 +295,8 @@ argument :
                    if (register_class == NULL)
                      jitter_simple_error (jitter_scanner, "invalid register class");
                    int register_id = strtol (text + 2, NULL, 10);
-                   jitter_append_register_parameter (parser_arg->routine,
-                                                     register_class,
-                                                     register_id); }
+                   jitter_mutable_routine_append_register_parameter
+                      (parser_arg->routine, register_class, register_id); }
 ;
 
 %%
@@ -337,7 +341,7 @@ jitter_parse_error (void *jitter_scanner)
    The pointed scanner must be already initialized when this is called, and
    it's the caller's responsibility to finalize it. */
 static void
-jitter_parse_core (yyscan_t scanner, struct jitter_routine *p,
+jitter_parse_core (yyscan_t scanner, struct jitter_mutable_routine *p,
                    const struct jitter_vm *vm)
 {
   struct parser_arg pa;
@@ -352,8 +356,9 @@ jitter_parse_core (yyscan_t scanner, struct jitter_routine *p,
 }
 
 void
-jitter_parse_file_star (FILE *input_file, struct jitter_routine *p,
-                        const struct jitter_vm *vm)
+jitter_parse_mutable_routine_from_file_star (FILE *input_file,
+                                             struct jitter_mutable_routine *p,
+                                             const struct jitter_vm *vm)
 {
   yyscan_t scanner;
   jitter_lex_init (& scanner);
@@ -366,8 +371,9 @@ jitter_parse_file_star (FILE *input_file, struct jitter_routine *p,
 }
 
 void
-jitter_parse_file (const char *input_file_name, struct jitter_routine *p,
-                   const struct jitter_vm *vm)
+jitter_parse_mutable_routine_from_file (const char *input_file_name,
+                                        struct jitter_mutable_routine *p,
+                                        const struct jitter_vm *vm)
 {
   FILE *f;
   if ((f = fopen (input_file_name, "r")) == NULL)
@@ -378,13 +384,14 @@ jitter_parse_file (const char *input_file_name, struct jitter_routine *p,
 
   /* FIXME: if I ever make parse errors non-fatal, I'll need to close the file
      before returning. */
-  jitter_parse_file_star (f, p, vm);
+  jitter_parse_mutable_routine_from_file_star (f, p, vm);
   fclose (f);
 }
 
 void
-jitter_parse_string (const char *string, struct jitter_routine *p,
-                     const struct jitter_vm *vm)
+jitter_parse_mutable_routine_from_string (const char *string,
+                                          struct jitter_mutable_routine *p,
+                                          const struct jitter_vm *vm)
 {
   yyscan_t scanner;
   jitter_lex_init (& scanner);

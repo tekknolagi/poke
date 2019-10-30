@@ -469,7 +469,7 @@ struct jitterlisp_compiled_closure
   jitter_uint nonlocal_no;
 
   /* Nonlocals as used in compiled code, with no names and with boxed nonlocals
-     are stored as boxes; NULL if no nonlocals are needed.
+     stored as boxes; NULL if no nonlocals are needed.
 
      This is currently a list; it should become a vector, ideally with immutable
      size to avoid an indirection, after I properly implement vectors. */
@@ -478,9 +478,9 @@ struct jitterlisp_compiled_closure
   /* The non-executable VM routine for the closure code.  FIXME: I may want to
      remove this, or make it optional for disassembling only, after the new
      Jitter API allows me to free this independently from executable_routine. */
-  /* This is actually a struct jitterlispvm_routine * object, but I'm declaring
+  /* This is actually a struct jitterlispvm_mutable_routine * object, but I'm declaring
      this as a generic pointer to avoid cyclical CPP inclusion. */
-  void *routine;
+  void *mutable_routine;
 
   /* The executable VM routine for the closure code. */
   /* This is actually a struct jitterlispvm_executable_routine * object, but I'm

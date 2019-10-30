@@ -46,7 +46,9 @@
    own code, even at a small cost in complexity within this source file.
 
    The command-line interface of the structued program is simple, but civilized
-   enough to respect the GNU conventions. */
+   enough to respect the GNU conventions.
+
+   This example uses routines through the unified API. */
 
 
 
@@ -346,11 +348,12 @@ structured_work (struct structured_command_line *cl)
   structuredvm_initialize ();
 
   /* Make an empty Jittery routine and set options for it as needed. */
-  struct structuredvm_routine *vmr = structuredvm_make_routine ();
-  structuredvm_set_routine_option_slow_literals_only (vmr,
-                                                      cl->slow_literals_only);
-  structuredvm_set_routine_option_slow_registers_only (vmr,
-                                                       cl->slow_registers_only);
+  structuredvm_routine vmr
+    = structuredvm_make_routine ();
+  structuredvm_set_routine_option_slow_literals_only
+     (vmr, cl->slow_literals_only);
+  structuredvm_set_routine_option_slow_registers_only
+     (vmr, cl->slow_registers_only);
   structuredvm_set_routine_option_optimization_rewriting
      (vmr, cl->optimization_rewriting);
 
@@ -367,36 +370,35 @@ structured_work (struct structured_command_line *cl)
       jitter_fatal ("unknwon code generator (bug): %i", (int) cl->code_generator);
     }
 
-  /* Make an executable jittery routine. */
-  struct structuredvm_executable_routine *vmer
-    = structuredvm_make_executable_routine (vmr);
+  /* Here, if I were not using the unified API, I would need to make an
+     executable Jittery routine from a mutable Jittery routine by calling
+     structuredvm_make_executable_routine.  However the unified API makes this
+     automatic. */
 
   /* Print and/or disassemble the routine as requested. */
   if (cl->print)
-    structuredvm_print_routine (stdout, vmr);
+    structuredvm_routine_print (stdout, vmr);
   if (cl->cross_disassemble)
     cl->disassemble = true;
   if (cl->print_locations)
     structuredvm_dump_data_locations (stdout);
   if (cl->disassemble)
-    structuredvm_disassemble_executable_routine (vmer, true,
-                                                 (cl->cross_disassemble
-                                                  ? JITTER_CROSS_OBJDUMP
-                                                  : JITTER_OBJDUMP),
-                                                 NULL);
+    structuredvm_disassemble_routine (vmr, true,
+                                      (cl->cross_disassemble
+                                       ? JITTER_CROSS_OBJDUMP
+                                       : JITTER_OBJDUMP),
+                                      NULL);
 
   /* Run the Jittery routine in a temporary state, unless this is a dry run. */
   if (! cl->dry_run)
     {
       struct structuredvm_state s;
       structuredvm_state_initialize (& s);
-      structuredvm_execute_executable_routine (vmer, & s);
+      structuredvm_execute_routine (vmr, & s);
       structuredvm_state_finalize (& s);
     }
 
-  /* Destroy the Jittery routine in both its versions, executable and
-     non-executable. */
-  structuredvm_destroy_executable_routine (vmer);
+  /* Destroy the Jittery routine. */
   structuredvm_destroy_routine (vmr);
 
   /* Finalize the structured-VM subsystem. */

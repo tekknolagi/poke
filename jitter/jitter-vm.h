@@ -25,7 +25,7 @@
 #include <stdio.h>
 
 #include <jitter/jitter.h>
-#include <jitter/jitter-routine.h>
+#include <jitter/jitter-mutable-routine.h>
 #include <jitter/jitter-patch-in.h>
 
 
@@ -143,12 +143,12 @@ struct jitter_vm
   /* FIXME: the comment above has been obsolete for a long time (in the end I
      decided not to have superinstructions), and the API can be simplified.
      The result should be void, not int. */
-  int (*specialize_instruction) (struct jitter_routine *p,
+  int (*specialize_instruction) (struct jitter_mutable_routine *p,
                                  const struct jitter_instruction *ins);
 
   /* Rewrite an instruction.  This points to the vmprefix_rewrite function declared
      in templates/vm.h and implemented in Jitter-generated code. */
-  void (*rewrite) (struct jitter_routine *p);
+  void (*rewrite) (struct jitter_mutable_routine *p);
 };
 
 

@@ -49,7 +49,7 @@
 
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-instruction.h>
-#include <jitter/jitter-routine.h>
+#include <jitter/jitter-mutable-routine.h>
 #include <jitter/jitter-vm.h>
 #include <jitter/jitter-patch-in.h>
 #include <jitter/jitter-fast-branch.h>
@@ -118,7 +118,7 @@ jitter_align_branch_target (char *address, size_t alignment)
 
 /* FIXME: the internal implementation of this needs to be cleaned up. */
 void
-jitter_replicate_program (struct jitter_routine *p)
+jitter_replicate_program (struct jitter_mutable_routine *p)
 {
   if (p->stage != jitter_routine_stage_specialized)
     jitter_fatal ("replicating non-specialized program");
@@ -557,7 +557,7 @@ jitter_replicate_program (struct jitter_routine *p)
 }
 
 void
-jitter_insert_beginbasicblock (struct jitter_routine *p)
+jitter_insert_beginbasicblock (struct jitter_mutable_routine *p)
 {
   /* Add a !BEGINBASICBLOCK specialized instruction.  Its residual argument
      will be the thread, to be filled in later when known. */

@@ -421,15 +421,15 @@ EXTRA_DIST += \
 # VM-independent code, using VM-dependent data structures.
 FRONTEND_NON_GENERATED_FILES += jitter/jitter-routine.l jitter/jitter-routine.y
 FRONTEND_GENERATED_FILES += \
-   jitter/jitter-parser.c jitter/jitter-parser.h \
-   jitter/jitter-scanner.c jitter/jitter-scanner.h
-$(srcdir)/jitter/jitter-parser.c: jitter/jitter-routine.y
+   jitter/jitter-routine-parser.c jitter/jitter-routine-parser.h \
+   jitter/jitter-routine-scanner.c jitter/jitter-routine-scanner.h
+$(srcdir)/jitter/jitter-routine-parser.c: jitter/jitter-routine.y
 	$(YACC) -o "$@" "$(srcdir)/jitter/jitter-routine.y"
-$(srcdir)/jitter/jitter-parser.h: jitter/jitter-parser.c
-$(srcdir)/jitter/jitter-scanner.c: jitter/jitter-routine.l
-	$(LEX) --header-file=$(srcdir)/jitter/jitter-scanner.h -o"$@" \
+$(srcdir)/jitter/jitter-routine-parser.h: jitter/jitter-routine-parser.c
+$(srcdir)/jitter/jitter-routine-scanner.c: jitter/jitter-routine.l
+	$(LEX) --header-file=$(srcdir)/jitter/jitter-routine-scanner.h -o"$@" \
 	  "$(srcdir)/jitter/jitter-routine.l"
-$(srcdir)/jitter/jitter-scanner.h: jitter/jitter-scanner.c
+$(srcdir)/jitter/jitter-routine-scanner.h: jitter/jitter-routine-scanner.c
 
 
 # Jitter template files.
@@ -477,6 +477,7 @@ SOURCES_FOR_LIBJITTER = \
   jitter/jitter.c jitter/jitter.h \
   jitter/jitter-config.h \
   jitter/jitter-instruction.c jitter/jitter-instruction.h \
+  jitter/jitter-mutable-routine.c jitter/jitter-mutable-routine.h \
   jitter/jitter-routine.c jitter/jitter-routine.h \
   jitter/jitter-rewrite.c jitter/jitter-rewrite.h \
   jitter/jitter-specialize.c jitter/jitter-specialize.h \
@@ -486,8 +487,8 @@ SOURCES_FOR_LIBJITTER = \
   jitter/jitter-fast-branch.c jitter/jitter-fast-branch.h \
   jitter/jitter-fast-branch-machine-generated.h \
   jitter/jitter-executor.h \
-  jitter/jitter-parser.c jitter/jitter-parser.h \
-  jitter/jitter-scanner.c jitter/jitter-scanner.h \
+  jitter/jitter-routine-parser.c jitter/jitter-routine-parser.h \
+  jitter/jitter-routine-scanner.c jitter/jitter-routine-scanner.h \
   jitter/jitter-tagging.c jitter/jitter-tagging.h \
   jitter/jitter-vm.c jitter/jitter-vm.h \
   jitter/jitter-machine-common.S jitter/jitter-machine-common.h \
@@ -513,14 +514,15 @@ jitterinclude_HEADERS += \
   jitter/jitter-instruction.h \
   jitter/jitter-machine-common.h \
   jitter/jitter-mmap.h \
+  jitter/jitter-mutable-routine.h \
   jitter/jitter-routine.h \
   jitter/jitter-rewrite.h \
   jitter/jitter-specialize.h \
   jitter/jitter-disassemble.h \
   jitter/jitter-executor.h \
   jitter/jitter-patch-in.h \
-  jitter/jitter-parser.h \
-  jitter/jitter-scanner.h \
+  jitter/jitter-routine-parser.h \
+  jitter/jitter-routine-scanner.h \
   jitter/jitter-sections.h \
   jitter/jitter-tagging.h \
   jitter/jitter-stack.h \

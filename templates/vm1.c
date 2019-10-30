@@ -36,9 +36,10 @@
 #include <jitter/jitter-hash.h>
 #include <jitter/jitter-instruction.h>
 #include <jitter/jitter-mmap.h>
-#include <jitter/jitter-routine.h>
+#include <jitter/jitter-mutable-routine.h>
 #include <jitter/jitter-rewrite.h>
-#include <jitter/jitter-parser.h>
+#include <jitter/jitter-routine.h>
+#include <jitter/jitter-routine-parser.h>
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-defect.h>
 #include <jitter/jitter-patch-in.h>
@@ -124,7 +125,7 @@ vmprefix_check_specialized_instruction_opcode_once (void)
 /* A prototype for a machine-generated function not needing a public
    declaration, only called thru a pointer within struct jitter_vm . */
 int
-vmprefix_specialize_instruction (struct jitter_routine *p,
+vmprefix_specialize_instruction (struct jitter_mutable_routine *p,
                                  const struct jitter_instruction *ins);
 
 /* Forward-declaration.  The implementation of this is machine-generated, and
@@ -448,13 +449,13 @@ vmprefix_finalize (void)
 
 
 
-/* Program initialization.
+/* VM-dependant mutable routine initialization.
  * ************************************************************************** */
 
-struct jitter_routine*
-vmprefix_make_routine (void)
+struct jitter_mutable_routine*
+vmprefix_make_mutable_routine (void)
 {
-  return jitter_make_routine (vmprefix_vm);
+  return jitter_make_mutable_routine (vmprefix_vm);
 }
 
 
@@ -490,7 +491,7 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
 }
 
 void
-vmprefix_ensure_enough_slow_registers_for
+vmprefix_ensure_enough_slow_registers_for_executable_routine
    (const struct jitter_executable_routine *er, struct vmprefix_state *s)
 {
   vmprefix_make_place_for_slow_registers (s, er->slow_register_per_class_no);
@@ -503,21 +504,48 @@ vmprefix_ensure_enough_slow_registers_for
  * ************************************************************************** */
 
 void
-vmprefix_parse_file_star (FILE *input_file, struct jitter_routine *p)
+vmprefix_parse_mutable_routine_from_file_star (FILE *input_file,
+                                               struct jitter_mutable_routine *p)
 {
-  jitter_parse_file_star (input_file, p, vmprefix_vm);
+  jitter_parse_mutable_routine_from_file_star (input_file, p, vmprefix_vm);
 }
 
 void
-vmprefix_parse_file (const char *input_file_name, struct jitter_routine *p)
+vmprefix_parse_mutable_routine_from_file (const char *input_file_name,
+                                          struct jitter_mutable_routine *p)
 {
-  jitter_parse_file (input_file_name, p, vmprefix_vm);
+  jitter_parse_mutable_routine_from_file (input_file_name, p, vmprefix_vm);
 }
 
 void
-vmprefix_parse_string (const char *string, struct jitter_routine *p)
+vmprefix_parse_mutable_routine_from_string (const char *string,
+                                            struct jitter_mutable_routine *p)
 {
-  jitter_parse_string (string, p, vmprefix_vm);
+  jitter_parse_mutable_routine_from_string (string, p, vmprefix_vm);
+}
+
+
+
+
+/* Executing code: unified routine API.
+ * ************************************************************************** */
+
+void
+vmprefix_ensure_enough_slow_registers_for_routine
+   (jitter_routine r, struct vmprefix_state *s)
+{
+  struct jitter_executable_routine *e
+    = jitter_routine_make_executable_if_needed (r);
+  vmprefix_ensure_enough_slow_registers_for_executable_routine (e, s);
+}
+
+void
+vmprefix_execute_routine (jitter_routine r,
+                          struct vmprefix_state *s)
+{
+  struct jitter_executable_routine *e
+    = jitter_routine_make_executable_if_needed (r);
+  vmprefix_execute_executable_routine (e, s);
 }
 
 

@@ -123,14 +123,14 @@ struct jitter_parameter
 
     /* The parameter, as an 0-based unspecialized instruction index.  Opaque
        labels are all replaced with unspecialized instruction indices by
-       jitter_resolve_labels_in_unspecialized_routine . */
+       jitter_resolve_labels_in_mutable_routine . */
     jitter_label_as_index label_as_index;
   };
 };
 
-/* Forward declaration.  The actual definition of struct jitter_routine is in
-   jitter-routine.h . */
-struct jitter_routine;
+/* Forward declaration.  The actual definition of struct jitter_mutable_routine is in
+   jitter-mutable-routine.h . */
+struct jitter_mutable_routine;
 
 /* Return a pointer to a fresh instruction parameter, allocated according to
    the conventions above, with the label_name field set to NULL. */

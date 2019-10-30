@@ -26,7 +26,7 @@
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-instruction.h>
-#include <jitter/jitter-routine.h>
+#include <jitter/jitter-mutable-routine.h>
 #include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-replicate.h>
@@ -42,7 +42,7 @@
    Fail fatally if the routine already has another executable routine. */
 static void
 jitter_initialize_executable_routine (struct jitter_executable_routine *er,
-                                      struct jitter_routine *r)
+                                      struct jitter_mutable_routine *r)
 {
   //fprintf (stderr, "[Making an executable routine at %p]\n", er);
   /* Fail if this executable routine is not the first for the routine. */
@@ -66,7 +66,7 @@ jitter_destroy_executable_routine (struct jitter_executable_routine *er)
   //fprintf (stderr, "[Destroying executable routine at %p]\n", er);
   /* If the non-executable routine which was translated into *er still exists
      then unlink this. */
-  struct jitter_routine *r = er->routine;
+  struct jitter_mutable_routine *r = er->routine;
   if (r != NULL)
     r->executable_routine = NULL;
 
@@ -93,7 +93,7 @@ jitter_destroy_executable_routine (struct jitter_executable_routine *er)
 
 void
 jitter_add_specialized_instruction_opcode
-   (struct jitter_routine *p,
+   (struct jitter_mutable_routine *p,
     /* This is actually an enum vmprefix_specialized_instruction_opcode , but
        the type is VM-dependent. */
     jitter_uint specialized_opcode)
@@ -124,7 +124,7 @@ jitter_add_specialized_instruction_opcode
 }
 
 void
-jitter_add_specialized_instruction_literal (struct jitter_routine *p,
+jitter_add_specialized_instruction_literal (struct jitter_mutable_routine *p,
                                             jitter_uint literal)
 {
   // fprintf (stderr, "Adding specialized instruction literal %i\n", (int)literal);
@@ -134,7 +134,7 @@ jitter_add_specialized_instruction_literal (struct jitter_routine *p,
 }
 
 void
-jitter_add_specialized_instruction_label_index (struct jitter_routine *p,
+jitter_add_specialized_instruction_label_index (struct jitter_mutable_routine *p,
                                                 jitter_label_as_index
                                                 unspecialized_instruction_index)
 {
@@ -150,7 +150,7 @@ jitter_add_specialized_instruction_label_index (struct jitter_routine *p,
 }
 
 static void
-jitter_backpatch_labels_in_specialized_routine (struct jitter_routine *p)
+jitter_backpatch_labels_in_specialized_routine (struct jitter_mutable_routine *p)
 {
   union jitter_word *specialized_program
     = jitter_dynamic_buffer_to_pointer (& p->specialized_program);
@@ -177,16 +177,18 @@ jitter_backpatch_labels_in_specialized_routine (struct jitter_routine *p)
 
 /* Add implicit instructions at the end of an unspecialized program. */
 static void
-jitter_add_program_epilog (struct jitter_routine *p)
+jitter_mutable_routine_add_epilog (struct jitter_mutable_routine *p)
 {
   /* Add the final instructions which are supposed to close every VM routine.
      Having each label, including the ones at the very end of the program when
      they exist, associated to an actual unspecialized instruction makes
      replication easier. */
   if (p->options.add_final_exitvm)
-    jitter_append_meta_instruction (p, p->vm->exitvm_meta_instruction);
+    jitter_mutable_routine_append_meta_instruction
+       (p, p->vm->exitvm_meta_instruction);
   else
-    jitter_append_meta_instruction (p, p->vm->unreachable_meta_instruction);
+    jitter_mutable_routine_append_meta_instruction
+       (p, p->vm->unreachable_meta_instruction);
 }
 
 
@@ -196,7 +198,7 @@ jitter_add_program_epilog (struct jitter_routine *p)
  * ************************************************************************** */
 
 struct jitter_executable_routine*
-jitter_make_executable_routine (struct jitter_routine *p)
+jitter_make_executable_routine (struct jitter_mutable_routine *p)
 {
   if (p->stage != jitter_routine_stage_unspecialized)
     jitter_fatal ("specializing non-unspecialized program");
@@ -207,20 +209,20 @@ jitter_make_executable_routine (struct jitter_routine *p)
 
   /* Add epilog instructions.  This way we can be sure that the program
      ends with an "exitvm" or "unreachable" instruction. */
-  jitter_add_program_epilog (p);
+  jitter_mutable_routine_add_epilog (p);
 
   /* Resolve label arguments in unspecialized instruction parameters. */
-  jitter_resolve_labels_in_unspecialized_routine (p);
+  jitter_mutable_routine_resolve_labels (p);
   /* Now label arguments refer unspecialized instruction indices. */
 
   /* Compute jump targets. */
   assert (p->jump_targets == NULL);
-  p->jump_targets = jitter_jump_targets (p);
+  p->jump_targets = jitter_mutable_routine_jump_targets (p);
 
   /* Now that we know how many instructions there are we can allocate
      p->instruction_index_to_specialized_instruction_offset once and for all.
      Its content will still be uninitialized. */
-  const int instruction_no = jitter_routine_instruction_no (p);
+  const int instruction_no = jitter_mutable_routine_instruction_no (p);
   assert (p->instruction_index_to_specialized_instruction_offset == NULL);
   p->instruction_index_to_specialized_instruction_offset
     = jitter_xmalloc (sizeof (jitter_int) * instruction_no);
@@ -256,7 +258,7 @@ jitter_make_executable_routine (struct jitter_routine *p)
   const struct jitter_instruction **instructions
     = (const struct jitter_instruction **)
       jitter_dynamic_buffer_to_pointer (& p->instructions);
-  int (* const specialize_instruction) (struct jitter_routine *p,
+  int (* const specialize_instruction) (struct jitter_mutable_routine *p,
                                         const struct jitter_instruction *ins)
     = p->vm->specialize_instruction;
   int instruction_index = 0;

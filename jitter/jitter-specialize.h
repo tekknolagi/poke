@@ -23,7 +23,7 @@
 #define JITTER_SPECIALIZE_H_
 
 #include <jitter/jitter.h>
-#include <jitter/jitter-routine.h>
+#include <jitter/jitter-mutable-routine.h>
 #include <jitter/jitter-instruction.h>
 
 
@@ -54,17 +54,17 @@ struct jitter_executable_routine
   /* The non-executable version of this routine, if one still exists.  This
      field, non-NULL at initialization, becomes NULL if the original
      non-executable routine is destroyed. */
-  struct jitter_routine *routine;
+  struct jitter_mutable_routine *routine;
 
   /* The following fields, including the ones conditionalized over the
      dispatching mode, have the same meaning as the fields with the same name
-     from struct jitter_routine, and are copied from there.  See the comments in
+     from struct jitter_mutable_routine, and are copied from there.  See the comments in
      jitter-routine.h .
      The fields represented as struct jitter_dynamic_buffer in struct
      jitter_routine, for ease of incremental construction, here are simply
      heap-allocated buffers, whose size will no longer change.  In fact their
-     heap storage is the same allocated within struct jitter_routine, obtained
-     by extraction.  The finalization API for struct jitter_routine keeps this
+     heap storage is the same allocated within struct jitter_mutable_routine, obtained
+     by extraction.  The finalization API for struct jitter_mutable_routine keeps this
      into account, and of course avoids freeing heap memory twice. */
   jitter_int slow_register_per_class_no;
 #if   (defined(JITTER_DISPATCH_SWITCH)                 \
@@ -90,12 +90,12 @@ struct jitter_executable_routine
 
 /* Translate the pointed routine into a fresh executable routine, and return a
    pointer to it.
-   The warn_unused_result attribute serves to aid early users who may be
+   The warn_unused_result attribute serves to aid for early users who may be
    surprised by an API change.  Early versions of this function used to return
    void. */
 struct jitter_executable_routine*
-jitter_make_executable_routine (struct jitter_routine *p)
-  __attribute__ ((nonnull (1), warn_unused_result));
+jitter_make_executable_routine (struct jitter_mutable_routine *p)
+  __attribute__ ((nonnull (1), returns_nonnull));
 
 /* Destroy the pointed executable routine, freeing its resources.  If its
    original non-executable routine still exists -- in case it has been destroyed
@@ -189,7 +189,7 @@ enum jitter_specialized_instruction_opcode
    wide unsigned type so that this code is VM-independent. */
 void
 jitter_add_specialized_instruction_opcode
-   (struct jitter_routine *p,
+   (struct jitter_mutable_routine *p,
     /* This is actually an enum vmprefix_specialized_instruction_opcode , but
        the type is VM-dependent. */
     jitter_uint opcode);
@@ -197,14 +197,14 @@ jitter_add_specialized_instruction_opcode
 /* Add a fixnum literal to the specialized program which is being built.  This
    is an auxiliary function used by vmprefix_specialize_instruction . */
 void
-jitter_add_specialized_instruction_literal (struct jitter_routine *p,
+jitter_add_specialized_instruction_literal (struct jitter_mutable_routine *p,
                                             jitter_uint literal);
 
 /* Add a label literal (as an instruction index) to the specialized program
    which is being built.  This is an auxiliary function used by
    vmprefix_specialize_instruction . */
 void
-jitter_add_specialized_instruction_label_index (struct jitter_routine *p,
+jitter_add_specialized_instruction_label_index (struct jitter_mutable_routine *p,
                                                 jitter_label_as_index
                                                 unspecialized_instruction_index);
 

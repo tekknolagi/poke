@@ -31,7 +31,7 @@
 #include <jitter/jitter-fatal.h>
 
 #include <jitter/jitter-instruction.h>
-#include <jitter/jitter-routine.h>
+#include <jitter/jitter-mutable-routine.h>
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-disassemble.h>
 #include <jitter/jitter-vm.h>
@@ -301,7 +301,7 @@ jitter_disassemble_range (FILE *output,
 static void
 jitter_disassemble_show_specialized_instruction
    (FILE *f,
-    const struct jitter_routine *p,
+    const struct jitter_mutable_routine *p,
     /* enum vmprefix_specialized_instruction_opcode */
     jitter_uint opcode,
     const union jitter_word * const first_residual_argument_pointer,
@@ -336,7 +336,7 @@ jitter_disassemble_executable_routine_to (FILE *f,
 {
   /* Get the non-executable routine for er.  If that is no longer available we
      have to work differently. */
-  const struct jitter_routine *p = er->routine;
+  const struct jitter_mutable_routine *p = er->routine;
   if (p == NULL)
     {
 #if defined(JITTER_DISPATCH_SWITCH)

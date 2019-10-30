@@ -29,7 +29,7 @@
 /* Fill the pointed empty VM routine using stack-based instructions which are
    the translation of the pointed AST program. */
 void
-structured_translate_program_stack (struct structuredvm_routine *vmp,
+structured_translate_program_stack (struct structuredvm_mutable_routine *vmp,
                                     struct structured_program *p)
   __attribute__ ((nonnull (1, 2)));
 

@@ -46,8 +46,9 @@
 #include <jitter/jitter-hash.h>
 #include <jitter/jitter-stack.h>
 #include <jitter/jitter-instruction.h>
+#include <jitter/jitter-mutable-routine.h>
 #include <jitter/jitter-routine.h>
-#include <jitter/jitter-specialize.h> // FIXME: what about only declaring jitter_specialize in another header, and not including this?
+//#include <jitter/jitter-specialize.h> // FIXME: what about only declaring jitter_specialize in another header, and not including this?
 #include <jitter/jitter-disassemble.h>
 #include <jitter/jitter-vm.h>
 #include <jitter/jitter-data-locations.h>
@@ -107,83 +108,115 @@ vmprefix_state_finalize (struct vmprefix_state *state)
 
 
 
-/* Program initialization.
+/* Mutable routine initialization.
  * ************************************************************************** */
 
-/* Return a freshly-allocated empty program for the vmprefix VM. */
-struct jitter_routine*
-vmprefix_make_routine (void)
+/* Return a freshly-allocated empty mutable routine for the vmprefix VM. */
+struct jitter_mutable_routine*
+vmprefix_make_mutable_routine (void)
   __attribute__ ((returns_nonnull));
 
-/* Program finalization is actually VM-independent, but a definition of
-   vmprefix_destroy_routine is provided below as a macro, for cosmetic
+/* Mutable routine finalization is actually VM-independent, but a definition of
+   vmprefix_destroy_mutable_routine is provided below as a macro, for cosmetic
    reasons. */
 
 
-/* Code-generation C API.
+/* Mutable routines: code generation C API.
  * ************************************************************************** */
 
 /* This is the preferred way of adding a new VM instruction to a pointed
-   routine, more efficient than vmprefix_append_instruction_name even if only
-   usable when the VM instruction opcode is known at compile time.  The
-   unspecialized instruction name must be explicitly mangled by the user as per
-   the rules in jitterc_mangle.c .  For example an instruction named foo_bar can
-   be added to the routine pointed by p with any one of
-     vmprefix_append_instruction_name (p, "foo_bar");
+   routine, more efficient than vmprefix_mutable_routine_append_instruction_name
+   even if only usable when the VM instruction opcode is known at compile time.
+   The unspecialized instruction name must be explicitly mangled by the user as
+   per the rules in jitterc_mangle.c .  For example an instruction named foo_bar
+   can be added to the routine pointed by p with any one of
+     vmprefix_mutable_routine_append_instruction_name (p, "foo_bar");
    ,
-     VMPREFIX_APPEND_INSTRUCTION(p, foo_ubar);
+     VMPREFIX_MUTABLE_ROUTINE_APPEND_INSTRUCTION (p, foo_ubar);
    , and
-     VMPREFIX_APPEND_INSTRUCTION_ID(p, vmprefix_meta_instruction_id_foo_ubar);
+     VMPREFIX_MUTABLE_ROUTINE_APPEND_INSTRUCTION_ID 
+        (p, vmprefix_meta_instruction_id_foo_ubar);
    .
    The string "foo_bar" is not mangled, but the token foo_ubar is. */
-#define VMPREFIX_APPEND_INSTRUCTION(routine_p, instruction_mangled_name_root)  \
-  do                                                                           \
-    {                                                                          \
-      jitter_append_meta_instruction                                           \
-         ((routine_p),                                                         \
-          vmprefix_meta_instructions                                           \
-          + JITTER_CONCATENATE_TWO(vmprefix_meta_instruction_id_,              \
-                                   instruction_mangled_name_root));            \
-    }                                                                          \
+#define VMPREFIX_MUTABLE_ROUTINE_APPEND_INSTRUCTION(                 \
+          routine_p, instruction_mangled_name_root)                  \
+  do                                                                 \
+    {                                                                \
+      jitter_mutable_routine_append_meta_instruction                 \
+         ((routine_p),                                               \
+          vmprefix_meta_instructions                                 \
+          + JITTER_CONCATENATE_TWO(vmprefix_meta_instruction_id_,    \
+                                   instruction_mangled_name_root));  \
+    }                                                                \
   while (false)
 
 /* Append the unspecialized instruction whose id is given to the pointed routine.
    The id must be a case of enum vmprefix_meta_instruction_id ; such cases have
    a name starting with vmprefix_meta_instruction_id_ .
-   This is slightly less convenient to use than VMPREFIX_APPEND_INSTRUCTION
+   This is slightly less convenient to use than VMPREFIX_MUTABLE_ROUTINE_APPEND_INSTRUCTION
    but more general, as the instruction id is allowed to be a non-constant C
    expression. */
-#define VMPREFIX_APPEND_INSTRUCTION_ID(_jitter_routine_p,          \
-                                       _jitter_instruction_id)     \
-  do                                                               \
-    {                                                              \
-      jitter_append_instruction_id ((_jitter_routine_p),           \
-                                    vmprefix_meta_instructions,    \
-                                    VMPREFIX_META_INSTRUCTION_NO,  \
-                                    (_jitter_instruction_id));     \
-    }                                                              \
+#define VMPREFIX_MUTABLE_ROUTINE_APPEND_INSTRUCTION_ID(_jitter_routine_p,       \
+                                                       _jitter_instruction_id)  \
+  do                                                                            \
+    {                                                                           \
+      jitter_mutable_routine_append_instruction_id                              \
+         ((_jitter_routine_p),                                                  \
+          vmprefix_meta_instructions,                                           \
+          VMPREFIX_META_INSTRUCTION_NO,                                         \
+          (_jitter_instruction_id));                                            \
+    }                                                                           \
   while (false)
 
 /* This is the preferred way of appending a register argument to the instruction
    being added to the pointed routine, more convenient than directly using
-   vmprefix_append_register_id_parameter , even if only usable when the register
-   class is known at compile time.  Here the register class is only provided as
-   a letter, but both the program pointer and the register index are arbitrary C
-   expressions.
+   vmprefix_mutable_routine_append_register_id_parameter , even if only usable
+   when the register class is known at compile time.  Here the register class is
+   only provided as a letter, but both the program pointer and the register
+   index are arbitrary C expressions.
    For example, in
-     VMPREFIX_APPEND_REGISTER_PARAMETER(p, r, variable_to_index (x));
+     VMPREFIX_MUTABLE_ROUTINE_APPEND_REGISTER_PARAMETER (p, r,  
+                                                         variable_to_index (x));
    the second macro argument "r" represents the register class named "r", and
    not the value of a variable named r. */
-#define VMPREFIX_APPEND_REGISTER_PARAMETER(routine_p, class_letter, index)  \
-  do                                                                        \
-    {                                                                       \
-      vmprefix_append_register_parameter                                    \
-         ((routine_p),                                                      \
-          & JITTER_CONCATENATE_TWO(vmprefix_register_class_,                \
-                                   class_letter),                           \
-          (index));                                                         \
-    }                                                                       \
+#define VMPREFIX_MUTABLE_ROUTINE_APPEND_REGISTER_PARAMETER(routine_p,     \
+                                                           class_letter,  \
+                                                           index)         \
+  do                                                                      \
+    {                                                                     \
+      vmprefix_mutable_routine_append_register_parameter                  \
+         ((routine_p),                                                    \
+          & JITTER_CONCATENATE_TWO(vmprefix_register_class_,              \
+                                   class_letter),                         \
+          (index));                                                       \
+    }                                                                     \
   while (false)
+
+
+
+
+/* Routine unified API: initialization.
+ * ************************************************************************** */
+
+/* See the comments above in "Mutable routines: initialization", and the
+   implementation of the unified routine API in <jitter/jitter-routine.h> . */
+
+#define vmprefix_make_routine vmprefix_make_mutable_routine
+
+
+
+
+/* Routine unified API: code generation C API.
+ * ************************************************************************** */
+
+/* See the comments above in "Mutable routines: code generation C API". */
+
+#define VMPREFIX_ROUTINE_APPEND_INSTRUCTION  \
+  VMPREFIX_MUTABLE_ROUTINE_APPEND_INSTRUCTION
+#define VMPREFIX_ROUTINE_APPEND_INSTRUCTION_ID  \
+  VMPREFIX_MUTABLE_ROUTINE_APPEND_INSTRUCTION_ID
+#define VMPREFIX_ROUTINE_APPEND_REGISTER_PARAMETER  \
+  VMPREFIX_MUTABLE_ROUTINE_APPEND_REGISTER_PARAMETER
 
 
 
@@ -331,21 +364,39 @@ vmprefix_make_routine (void)
 
 
 
-/* Routine text frontend.
+/* Mutable routine text frontend.
  * ************************************************************************** */
 
 /* Parse VM code from the given file or string into the pointed VM routine,
    which is allowed but not required to be empty.
    These are simple wrappers around functions implemented in the Bison file. */
 void
-vmprefix_parse_file_star (FILE *input_file, struct jitter_routine *p)
+vmprefix_parse_mutable_routine_from_file_star (FILE *input_file,
+                                               struct jitter_mutable_routine *p)
   __attribute__ ((nonnull (1, 2)));
 void
-vmprefix_parse_file (const char *input_file_name, struct jitter_routine *p)
+vmprefix_parse_mutable_routine_from_file (const char *input_file_name,
+                                          struct jitter_mutable_routine *p)
   __attribute__ ((nonnull (1, 2)));
 void
-vmprefix_parse_string (const char *string, struct jitter_routine *p)
+vmprefix_parse_mutable_routine_from_string (const char *string,
+                                            struct jitter_mutable_routine *p)
   __attribute__ ((nonnull (1, 2)));
+
+
+
+
+/* Unified routine text frontend.
+ * ************************************************************************** */
+
+/* The C wrappers for the ordinary API can be reused for the unified API, since
+   it internally works with mutable routines. */
+#define vmprefix_parse_routine_from_file_star  \
+  vmprefix_parse_mutable_routine_from_file_star
+#define vmprefix_parse_routine_from_file  \
+  vmprefix_parse_mutable_routine_from_file
+#define vmprefix_parse_routine_from_string  \
+  vmprefix_parse_mutable_routine_from_string
 
 
 
@@ -460,66 +511,141 @@ vmprefix_vm_configuration;
    some VM-independent functions and data structures actually look as if they
    were specific to the user VM. */
 
-/* What the user refers to as struct vmprefix_routine is actually a struct
-   jitter_routine , whose definition is VM-independent. */
-#define vmprefix_routine jitter_routine
+/* What the user refers to as struct vmprefix_mutable_routine is actually a
+   struct jitter_mutable_routine , whose definition is VM-independent. */
+#define vmprefix_mutable_routine jitter_mutable_routine
 
 /* Same for executable routines. */
 #define vmprefix_executable_routine jitter_executable_routine
 
+/* Same for unified routines. */
+#define vmprefix_routine jitter_routine
+
 /* Destroy a non-executable routine (routine initialization is actually
    VM-specific). */
+#define vmprefix_destroy_mutable_routine jitter_destroy_mutable_routine
+
+/* Destroy a unified routine. */
 #define vmprefix_destroy_routine jitter_destroy_routine
 
-/* Program construction API. */
-#define vmprefix_append_instruction_name \
-  jitter_append_instruction_name
-#define vmprefix_append_meta_instruction \
-  jitter_append_meta_instruction
-#define vmprefix_append_label \
-  jitter_append_label
-#define vmprefix_append_symbolic_label \
-  jitter_append_symbolic_label
-#define vmprefix_append_register_parameter \
-  jitter_append_register_parameter
-#define vmprefix_append_literal_parameter \
-  jitter_append_literal_parameter
-#define vmprefix_append_signed_literal_parameter \
-  jitter_append_signed_literal_parameter
-#define vmprefix_append_unsigned_literal_parameter \
-  jitter_append_unsigned_literal_parameter
-#define vmprefix_append_pointer_literal_parameter \
-  jitter_append_pointer_literal_parameter
-#define vmprefix_append_label_parameter \
-  jitter_append_label_parameter
-#define vmprefix_append_symbolic_label_parameter \
-  jitter_append_symbolic_label_parameter
+/* Print VM configuration. */
+#define vmprefix_print_vm_configuration jitter_print_vm_configuration
+
+/* Generic routine construction API. */
 #define vmprefix_label \
   jitter_label
 #define vmprefix_fresh_label \
   jitter_fresh_label
-#define vmprefix_print_routine \
-  jitter_print_routine
-#define vmprefix_make_executable_routine \
-  jitter_make_executable_routine
-#define vmprefix_destroy_executable_routine \
-  jitter_destroy_executable_routine
+
+/* Mutable routine option API. */
+#define vmprefix_set_mutable_routine_option_slow_literals_only \
+  jitter_set_mutable_routine_option_slow_literals_only
+#define vmprefix_set_mutable_routine_option_slow_registers_only \
+  jitter_set_mutable_routine_option_slow_registers_only
+#define vmprefix_set_mutable_routine_option_slow_literals_and_registers_only \
+  jitter_set_mutable_routine_option_slow_literals_and_registers_only
+#define vmprefix_set_mutable_routine_option_add_final_exitvm \
+  jitter_set_mutable_routine_option_add_final_exitvm
+#define vmprefix_set_mutable_routine_option_optimization_rewriting \
+  jitter_set_mutable_routine_option_optimization_rewriting
+
+/* Printing and disassembling: ordinary API. */
+#define vmprefix_mutable_routine_print \
+  jitter_mutable_routine_print
 #define vmprefix_disassemble_executable_routine \
   jitter_disassemble_executable_routine
 #define vmprefix_disassemble_executable_routine_to \
   jitter_disassemble_executable_routine_to
-#define vmprefix_print_vm_configuration \
-  jitter_print_vm_configuration
+
+/* Mutable routine construction API. */
+#define vmprefix_mutable_routine_append_instruction_name \
+  jitter_mutable_routine_append_instruction_name
+#define vmprefix_mutable_routine_append_meta_instruction \
+  jitter_mutable_routine_append_meta_instruction
+#define vmprefix_mutable_routine_append_label \
+  jitter_mutable_routine_append_label
+#define vmprefix_mutable_routine_append_symbolic_label \
+  jitter_mutable_routine_append_symbolic_label
+#define vmprefix_mutable_routine_append_register_parameter \
+  jitter_mutable_routine_append_register_parameter
+#define vmprefix_mutable_routine_append_literal_parameter \
+  jitter_mutable_routine_append_literal_parameter
+#define vmprefix_mutable_routine_append_signed_literal_parameter \
+  jitter_mutable_routine_append_signed_literal_parameter
+#define vmprefix_mutable_routine_append_unsigned_literal_parameter \
+  jitter_mutable_routine_append_unsigned_literal_parameter
+#define vmprefix_mutable_routine_append_pointer_literal_parameter \
+  jitter_mutable_routine_append_pointer_literal_parameter
+#define vmprefix_mutable_routine_append_label_parameter \
+  jitter_mutable_routine_append_label_parameter
+#define vmprefix_mutable_routine_append_symbolic_label_parameter \
+  jitter_mutable_routine_append_symbolic_label_parameter
+
+/* Mutable routine destruction. */
+#define vmprefix_destroy_executable_routine \
+  jitter_destroy_executable_routine
+
+/* Making executable routines from mutable routines. */
+#define vmprefix_make_executable_routine \
+  jitter_make_executable_routine
+
+/* Unified routine option API. */
 #define vmprefix_set_routine_option_slow_literals_only \
-  jitter_set_routine_option_slow_literals_only
+  jitter_set_mutable_routine_option_slow_literals_only
 #define vmprefix_set_routine_option_slow_registers_only \
-  jitter_set_routine_option_slow_registers_only
+  jitter_set_mutable_routine_option_slow_registers_only
 #define vmprefix_set_routine_option_slow_literals_and_registers_only \
-  jitter_set_routine_option_slow_literals_and_registers_only
+  jitter_set_mutable_routine_option_slow_literals_and_registers_only
 #define vmprefix_set_routine_option_add_final_exitvm \
-  jitter_set_routine_option_add_final_exitvm
+  jitter_set_mutable_routine_option_add_final_exitvm
 #define vmprefix_set_routine_option_optimization_rewriting \
-  jitter_set_routine_option_optimization_rewriting
+  jitter_set_mutable_routine_option_optimization_rewriting
+
+/* Printing and disassembling: unified API. */
+#define vmprefix_routine_print \
+  jitter_mutable_routine_print
+#define vmprefix_disassemble_routine                                       \
+  /* This does not follow the pattern of the rest: the wrapped identifier  \
+     here is the name of a C function specific to the unified API. */      \
+  jitter_disassemble_routine
+#define vmprefix_disassemble_routine_to                                    \
+  /* This does not follow the pattern of the rest: the wrapped identifier  \
+     here is the name of a C function specific to the unified API. */      \
+  jitter_disassemble_routine_to
+
+/* Unified routine construction API. */
+#define vmprefix_routine_append_instruction_name \
+  jitter_mutable_routine_append_instruction_name
+#define vmprefix_routine_append_meta_instruction \
+  jitter_mutable_routine_append_meta_instruction
+#define vmprefix_routine_append_label \
+  jitter_mutable_routine_append_label
+#define vmprefix_routine_append_symbolic_label \
+  jitter_mutable_routine_append_symbolic_label
+#define vmprefix_routine_append_register_parameter \
+  jitter_mutable_routine_append_register_parameter
+#define vmprefix_routine_append_literal_parameter \
+  jitter_mutable_routine_append_literal_parameter
+#define vmprefix_routine_append_signed_literal_parameter \
+  jitter_mutable_routine_append_signed_literal_parameter
+#define vmprefix_routine_append_unsigned_literal_parameter \
+  jitter_mutable_routine_append_unsigned_literal_parameter
+#define vmprefix_routine_append_pointer_literal_parameter \
+  jitter_mutable_routine_append_pointer_literal_parameter
+#define vmprefix_routine_append_label_parameter \
+  jitter_mutable_routine_append_label_parameter
+#define vmprefix_routine_append_symbolic_label_parameter \
+  jitter_mutable_routine_append_symbolic_label_parameter
+
+/* Mutable routine destruction. */
+#define vmprefix_destroy_routine                                           \
+  /* This does not follow the pattern of the rest: the wrapped identifier  \
+     here is the name of a C function specific to the unified API. */      \
+  jitter_destroy_routine
+
+/* The unified API has no facility to explicitly make executable routines: their
+   very existence is hidden.  For this reason some of the macros above, such
+   vmprefix_make_executable_routine, have no unified counterpart here. */
 
 
 
@@ -625,12 +751,12 @@ vmprefix_defect_table [];
    removes, including their arguments.  The user can assume that
    jitter_rewritable_instruction_no is strictly greater than zero. */
 void
-vmprefix_rewrite (struct jitter_routine *p);
+vmprefix_rewrite (struct jitter_mutable_routine *p);
 
 
 
 
-/* Program points at runtime in specialized programs.
+/* Program points at runtime in executable routines.
  * ************************************************************************** */
 
 /* Provide a nice name for a program point type which looks VM-dependent. */
@@ -644,13 +770,23 @@ vmprefix_program_point;
 
 
 
+/* Program points at run time in routines: unified routine API.
+ * ************************************************************************** */
+
+/* Like VMPREFIX_EXECUTABLE_ROUTINE_BEGINNING for the unified routine API. */
+#define VMPREFIX_ROUTINE_BEGINNING(_jitter_routine)                \
+  JITTER_EXECUTABLE_ROUTINE_BEGINNING                              \
+     (jitter_routine_make_executable_if_needed (_jitter_routine))
+
+
+
 /* Executing code from an executable routine.
  * ************************************************************************** */
 
 /* Make sure that the pointed state has enough slow registers to run the pointed
    executable routine; if that is not the case, allocate more slow registers. */
 void
-vmprefix_ensure_enough_slow_registers_for
+vmprefix_ensure_enough_slow_registers_for_executable_routine
    (const struct jitter_executable_routine *er, struct vmprefix_state *s)
   __attribute__ ((nonnull (1, 2)));
 
@@ -659,7 +795,9 @@ vmprefix_ensure_enough_slow_registers_for
 
    Since no executable routine is given this cannot automatically guarantee that
    the slow registers in the pointed state are in sufficient number; it is the
-   user's responsibility to check, if needed. */
+   user's responsibility to check, if needed.
+
+   This function is also usable with the unified routine API. */
 void
 vmprefix_branch_to_program_point (vmprefix_program_point p,
                                   struct vmprefix_state *s)
@@ -668,10 +806,35 @@ vmprefix_branch_to_program_point (vmprefix_program_point p,
 /* Run VM code starting from the beginning of the pointed executable routine,
    in the pointed VM state.  This does ensure that the slow registers in
    the pointed state are in sufficient number, by calling
-   vmprefix_ensure_enough_slow_registers_for . */
+   vmprefix_ensure_enough_slow_registers_for .
+   This function is slightly less efficient than
+   vmprefix_branch_to_program_point , and vmprefix_branch_to_program_point
+   should be preferred in contexts where C code repeatedly calls VM code. */
 void
 vmprefix_execute_executable_routine (const struct jitter_executable_routine *er,
                                      struct vmprefix_state *s)
+  __attribute__ ((nonnull (1, 2)));
+
+
+
+
+/* Executing code: unified routine API.
+ * ************************************************************************** */
+
+/* Like vmprefix_ensure_enough_slow_registers_for_executable_routine , with the
+   unified API. */
+void
+vmprefix_ensure_enough_slow_registers_for_routine
+   (jitter_routine r, struct vmprefix_state *s)
+  __attribute__ ((nonnull (1, 2)));
+
+/* vmprefix_branch_to_program_point , declared above, is also usable with the
+   unified routine API. */
+
+/* Like vmprefix_execute_executable_routine, for a unified routine. */
+void
+vmprefix_execute_routine (jitter_routine r,
+                          struct vmprefix_state *s)
   __attribute__ ((nonnull (1, 2)));
 
 
