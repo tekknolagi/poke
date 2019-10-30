@@ -85,12 +85,12 @@ struct structured_location
 };
 
 /* A C constant expression suitable for initializing a struct
-   structured_location object to be an location with an anywhere case. */
+   structured_location object to be a location with an anywhere case. */
 #define STRUCTURED_LOCATION_ANYWHERE     \
   { structured_location_case_anywhere }
 
 /* A C constant expression suitable for initializing a struct
-   structured_location object to be an location with a non-constant case. */
+   structured_location object to be a location with a non-constant case. */
 #define STRUCTURED_LOCATION_NONCONSTANT     \
   { structured_location_case_nonconstant }
 
@@ -392,7 +392,7 @@ structured_translate_expression_conditional_primitive
 }
 
 /* Emit code translating the pointed expression AST to the pointed Jittery
-   program, using the pointed static environment to be looked up and updated.
+   routine, using the pointed static environment to be looked up and updated.
    The result of the expression will be stored, in emitted code, in the required
    location, updated here if its case is "anywhere". */
 static void
@@ -532,7 +532,7 @@ structured_translate_conditional_primitive
       }
     case structured_primitive_logical_not:
       /* Translate the not subexpression as an ordinary contitional,
-         swapping the on_true and on_false labels. */
+         simply flipping the branch_on_true condition flag. */
       structured_translate_conditional (vmp, operand_0, label,
                                         ! branch_on_true, env);
       break;
@@ -639,7 +639,7 @@ structured_translate_conditional (struct structuredvm_routine *vmp,
 }
 
 /* Emit code translating the pointed statement AST to the pointed Jittery
-   program, using the pointed static environment to be looked up and updated. */
+   routine, using the pointed static environment to be looked up and updated. */
 static void
 structured_translate_statement (struct structuredvm_routine *vmp,
                                 struct structured_statement *s,

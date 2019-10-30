@@ -37,7 +37,7 @@
  * ************************************************************************** */
 
 /* Add code to translate the pointed expression AST to the pointed Jittery
-   program, using the pointed static environment to be looked up and updated.
+   routine, using the pointed static environment to be looked up and updated.
    We need one forward-declaration here, as structured_translate_expression and
    structured_translate_primitive are mutually recursive. */
 static void
@@ -46,7 +46,7 @@ structured_translate_expression (struct structuredvm_routine *vmp,
                                  struct structured_static_environment *env);
 
 /* Add code to translate a primitive-case expression AST to the pointed Jittery
-   program, using the pointed static environment to be looked up and updated.
+   routine, using the pointed static environment to be looked up and updated.
    The primitive is given by its case and its two operands, of which the second
    is ignored if the primitive is unary. */
 static void
@@ -163,7 +163,7 @@ structured_translate_expression (struct structuredvm_routine *vmp,
 }
 
 /* Add code to translate the pointed statement AST to the pointed Jittery
-   program, using the pointed static environment to be looked up and updated. */
+   routine, using the pointed static environment to be looked up and updated. */
 static void
 structured_translate_statement (struct structuredvm_routine *vmp,
                                 struct structured_statement *s,
@@ -235,7 +235,7 @@ structured_translate_statement (struct structuredvm_routine *vmp,
 }
 
 /* Add code to translate the pointed program AST to the pointed Jittery
-   program. */
+   routine. */
 static void
 structured_translate_program (struct structuredvm_routine *vmp,
                               struct structured_program *p)
