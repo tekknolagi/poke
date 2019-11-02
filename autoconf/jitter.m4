@@ -568,7 +568,7 @@ fi
 # full path is known.
 JITTER="$(echo $JITTER_CONFIG | sed 's/-config$//')$EXEEXT"
 AC_SUBST([JITTER], [$JITTER])
-AC_MSG_NOTICE([jitter may not exist yet, but it can be built at $JITTER])
+AC_MSG_NOTICE([jitter will be built at $JITTER])
 
 # The C generator will have the same version as the jitter-config script.
 JITTER_VERSION="$JITTER_CONFIG_VERSION"
