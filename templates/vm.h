@@ -175,7 +175,7 @@ vmprefix_make_mutable_routine (void)
    only provided as a letter, but both the routine pointer and the register
    index are arbitrary C expressions.
    For example, in
-     VMPREFIX_MUTABLE_ROUTINE_APPEND_REGISTER_PARAMETER (p, r,  
+     VMPREFIX_MUTABLE_ROUTINE_APPEND_REGISTER_PARAMETER (p, r,
                                                          variable_to_index (x));
    the second macro argument "r" represents the register class named "r", and
    not the value of a variable named r. */
