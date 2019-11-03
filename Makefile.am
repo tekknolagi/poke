@@ -617,7 +617,7 @@ if JITTER_SUBPACKAGE
 # A generic way of extracting a non-Libtool static library file from its Libtool
 # counterpart.
 .la.a:
-	$(LIBTOOL) --mode=install cp $< $(abs_top_builddir)/$@
+	$(LIBTOOL) -Wnone --mode=install cp $< $(abs_top_builddir)/$@
 	$(LIBTOOL) --finish $(abs_top_builddir)/lib
 
 # For every enabled dispatch add one library.
