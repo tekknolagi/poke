@@ -172,7 +172,7 @@ vmprefix_make_mutable_routine (void)
    being added to the pointed routine, more convenient than directly using
    vmprefix_mutable_routine_append_register_id_parameter , even if only usable
    when the register class is known at compile time.  Here the register class is
-   only provided as a letter, but both the program pointer and the register
+   only provided as a letter, but both the routine pointer and the register
    index are arbitrary C expressions.
    For example, in
      VMPREFIX_MUTABLE_ROUTINE_APPEND_REGISTER_PARAMETER (p, r,  
