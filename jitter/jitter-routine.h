@@ -109,15 +109,19 @@ jitter_disassemble_routine_to (FILE *f,
 
 
 
-/* Internal machinery.
- * ************************************************************************** */
-
-/* The functions declared here are not intended for the user. */
-
 /* In case it does not exist yet, make the executable counterpart of the given
    unified routine.  After this function returns it is safe to access the
    executable routine from a pointer in the mutable routine, without
-   checking. */
+   checking.
+   It is not always necessary to use this function is user code, as a unified
+   routine automatically generates an executable routine at its first execution
+   or extraction of external labels [FIXME: external labels are not implemented
+   yet; the other use case is already supported at this point].
+   However relying on this automatic behavior is dangerous in a multi-threaded
+   setting where an executable routine may be generated at the same time for the
+   same unified routine: there is no mutex to automatically handle a critical
+   section, and it is the user's responsibility to provide for it if needed.
+   This function is also used internally. */
 struct jitter_executable_routine *
 jitter_routine_make_executable_if_needed (jitter_routine r)
   __attribute__ ((nonnull (1), returns_nonnull));

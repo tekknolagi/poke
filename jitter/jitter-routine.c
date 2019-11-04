@@ -70,12 +70,6 @@ jitter_disassemble_routine_to (FILE *f,
                                             objdump_options_or_NULL);
 }
 
-
-
-
-/* Internal machinery.
- * ************************************************************************** */
-
 struct jitter_executable_routine *
 jitter_routine_make_executable_if_needed (jitter_routine r)
 {
