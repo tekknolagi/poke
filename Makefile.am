@@ -743,6 +743,16 @@ examples: all benchmarking-examples
 endif # ! JITTER_SUBPACKAGE
 
 
+# Structured benchmarking examples for the user, not to be compiled.
+################################################################
+
+# The user is free to play with those translations of the primes.structured
+# example into other languages, but they are not automatically compiled.
+EXTRA_DIST += \
+  example-vms/structured/examples/primes.java \
+  example-vms/structured/examples/primes.py
+
+
 # Uninspired example VM.
 # ################################################################
 

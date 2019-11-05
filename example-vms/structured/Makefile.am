@@ -147,6 +147,16 @@ examples: $(EXTRA_PROGRAMS)
 benchmarks: $(EXTRA_PROGRAMS)
 
 
+# Benchmarking examples for the user, not to be compiled.
+################################################################
+
+# The user is free to play with those translations of the primes.structured
+# example into other languages, but they are not automatically compiled.
+EXTRA_DIST += \
+  examples/primes.java \
+  examples/primes.py
+
+
 # Cleanup.
 ################################################################
 
