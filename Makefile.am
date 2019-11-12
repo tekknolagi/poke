@@ -38,7 +38,7 @@ bin_SCRIPTS =
 check_PROGRAMS =
 check_SCRIPTS =
 dist_flag_DATA =
-dist_lisp_LISP =
+dist_lisp_DATA =
 dist_man1_MANS =
 dist_template_DATA =
 info_TEXINFOS =
@@ -1752,7 +1752,17 @@ mans: $(dist_man1_MANS)
 
 # The Emacs Lisp major mode for Jitter is to be installed and distributed;
 # byte-compilation is automatically enabled.
-dist_lisp_LISP += \
+#
+# It is necessary to use dist_lisp_DATA rather than dist_lisp_LISP (recent
+# versions of the Automake documentation recommend dist_lisp_DATA anyway)
+# in order to work around this Automake bug, still present in Automake master
+# as of November 2019:
+#   https://debbugs.gnu.org/cgi/bugreport.cgi?bug=38139
+# I described a trivial one-character fix for the Automake bug
+#   https://lists.gnu.org/archive/html/automake/2019-10/msg00001.html
+# , but affected versions will remain in use for some time.  It is better to
+# work around the issue here.
+dist_lisp_DATA += \
   emacs/jitter-mode.el
 
 
