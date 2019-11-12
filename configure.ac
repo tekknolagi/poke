@@ -1550,10 +1550,10 @@ if test "x$jitter_enable_dispatch_no_threading" = "xyes"; then
 fi
 
 # AC_SUBST a set of LDFLAGS to be prepended to the ordinary ones, only useful
-# for linking from an uninstlaled build directory.  @JITTER_UNINSTALLED_LDFLAGS@
-# must always come before other *_LDFLAGS variables, since the first -L option
-# takes precedence.
-AC_SUBST([JITTER_UNINSTALLED_LDFLAGS],
+# for linking from an non-installed build directory.
+# @JITTER_NON_INSTALLED_LDFLAGS@ must always come before other *_LDFLAGS
+# variables, since the first -L option takes precedence.
+AC_SUBST([JITTER_NON_INSTALLED_LDFLAGS],
          [-L$jitter_abs_top_builddir/lib])
 
 

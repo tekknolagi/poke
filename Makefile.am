@@ -815,7 +815,7 @@ if JITTER_ENABLE_DISPATCH_SWITCH
   bin_uninspired__switch_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_SWITCH_CFLAGS)
   bin_uninspired__switch_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_SWITCH_LDFLAGS)
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_SWITCH_LDFLAGS)
   bin_uninspired__switch_LDADD = \
     $(JITTER_SWITCH_LDADD) $(LDADD_FOR_GNULIB)
 endif # JITTER_ENABLE_DISPATCH_SWITCH
@@ -831,7 +831,7 @@ if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
   bin_uninspired__direct_threading_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_DIRECT_THREADING_CFLAGS)
   bin_uninspired__direct_threading_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_DIRECT_THREADING_LDFLAGS)
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_DIRECT_THREADING_LDFLAGS)
   bin_uninspired__direct_threading_LDADD = \
     $(JITTER_DIRECT_THREADING_LDADD) $(LDADD_FOR_GNULIB)
 endif # JITTER_ENABLE_DISPATCH_DIRECT_THREADING
@@ -847,7 +847,7 @@ if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
   bin_uninspired__minimal_threading_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_MINIMAL_THREADING_CFLAGS)
   bin_uninspired__minimal_threading_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_MINIMAL_THREADING_LDFLAGS)
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_MINIMAL_THREADING_LDFLAGS)
   bin_uninspired__minimal_threading_LDADD = \
     $(JITTER_MINIMAL_THREADING_LDADD) $(LDADD_FOR_GNULIB)
 endif # JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
@@ -863,7 +863,7 @@ if JITTER_ENABLE_DISPATCH_NO_THREADING
   bin_uninspired__no_threading_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_NO_THREADING_CFLAGS)
   bin_uninspired__no_threading_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_NO_THREADING_LDFLAGS)
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_NO_THREADING_LDFLAGS)
   bin_uninspired__no_threading_LDADD = \
     $(JITTER_NO_THREADING_LDADD) $(LDADD_FOR_GNULIB)
 endif # JITTER_ENABLE_DISPATCH_NO_THREADING
@@ -978,7 +978,7 @@ bin_structured_CFLAGS = \
 bin_structured_LDADD = \
   $(AM_LDADD) $(JITTER_LDADD)
 bin_structured_LDFLAGS = \
-  $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
+  $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
 PROGRAMS_STRUCTURED += bin/structuredvm
 bin_structuredvm_SOURCES = $(SOURCES_FOR_STRUCTUREDVM)
 bin_structuredvm_CPPFLAGS = $(bin_structured_CPPFLAGS) $(CPPFLAGS_FOR_GNULIB)
@@ -998,7 +998,7 @@ if JITTER_ENABLE_DISPATCH_SWITCH
   bin_structured__switch_LDADD = \
     $(AM_LDADD) $(JITTER_SWITCH_LDADD)
   bin_structured__switch_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_SWITCH_LDFLAGS)
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_SWITCH_LDFLAGS)
   PROGRAMS_STRUCTURED += bin/structuredvm--switch
   bin_structuredvm__switch_SOURCES = $(SOURCES_FOR_STRUCTUREDVM)
   bin_structuredvm__switch_CPPFLAGS = \
@@ -1024,7 +1024,7 @@ if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
   bin_structured__direct_threading_LDADD = \
     $(AM_LDADD) $(JITTER_DIRECT_THREADING_LDADD)
   bin_structured__direct_threading_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_DIRECT_THREADING_LDFLAGS)
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_DIRECT_THREADING_LDFLAGS)
   PROGRAMS_STRUCTURED += bin/structuredvm--direct-threading
   bin_structuredvm__direct_threading_SOURCES = $(SOURCES_FOR_STRUCTUREDVM)
   bin_structuredvm__direct_threading_CPPFLAGS = \
@@ -1050,7 +1050,7 @@ if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
   bin_structured__minimal_threading_LDADD = \
     $(AM_LDADD) $(JITTER_MINIMAL_THREADING_LDADD)
   bin_structured__minimal_threading_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_MINIMAL_THREADING_LDFLAGS)
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_MINIMAL_THREADING_LDFLAGS)
   PROGRAMS_STRUCTURED += bin/structuredvm--minimal-threading
   bin_structuredvm__minimal_threading_SOURCES = $(SOURCES_FOR_STRUCTUREDVM)
   bin_structuredvm__minimal_threading_CPPFLAGS = \
@@ -1076,7 +1076,7 @@ if JITTER_ENABLE_DISPATCH_NO_THREADING
   bin_structured__no_threading_LDADD = \
     $(AM_LDADD) $(JITTER_NO_THREADING_LDADD)
   bin_structured__no_threading_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_NO_THREADING_LDFLAGS)
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_NO_THREADING_LDFLAGS)
   PROGRAMS_STRUCTURED += bin/structuredvm--no-threading
   bin_structuredvm__no_threading_SOURCES = $(SOURCES_FOR_STRUCTUREDVM)
   bin_structuredvm__no_threading_CPPFLAGS = \
@@ -1280,7 +1280,7 @@ bin_jitterlisp_CFLAGS = \
 bin_jitterlisp_LDADD = \
   $(AM_LDADD) $(JITTER_LDADD) $(LDADD_FOR_GNULIB)
 bin_jitterlisp_LDFLAGS = \
-  $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
+  $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
 PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe
 bin_jitterlisp__unsafe_SOURCES = $(SOURCES_FOR_JITTERLISP)
 bin_jitterlisp__unsafe_CPPFLAGS = \
@@ -1319,7 +1319,7 @@ if JITTER_ENABLE_DISPATCH_SWITCH
   bin_jitterlisp__switch_LDADD = \
     $(AM_LDADD) $(JITTER_SWITCH_LDADD) $(LDADD_FOR_GNULIB)
   bin_jitterlisp__switch_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) \
     $(JITTER_SWITCH_LDFLAGS)
   PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--switch
   bin_jitterlisp__unsafe__switch_SOURCES = $(SOURCES_FOR_JITTERLISP)
@@ -1371,7 +1371,7 @@ if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
   bin_jitterlisp__direct_threading_LDADD = \
     $(AM_LDADD) $(JITTER_DIRECT_THREADING_LDADD) $(LDADD_FOR_GNULIB)
   bin_jitterlisp__direct_threading_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) \
     $(JITTER_DIRECT_THREADING_LDFLAGS)
   PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--direct-threading
   bin_jitterlisp__unsafe__direct_threading_SOURCES = \
@@ -1424,7 +1424,7 @@ if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
   bin_jitterlisp__minimal_threading_LDADD = \
     $(AM_LDADD) $(JITTER_MINIMAL_THREADING_LDADD) $(LDADD_FOR_GNULIB)
   bin_jitterlisp__minimal_threading_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) \
     $(JITTER_MINIMAL_THREADING_LDFLAGS)
   PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--minimal-threading
   bin_jitterlisp__unsafe__minimal_threading_SOURCES = \
@@ -1477,7 +1477,7 @@ if JITTER_ENABLE_DISPATCH_NO_THREADING
   bin_jitterlisp__no_threading_LDADD = \
     $(AM_LDADD) $(JITTER_NO_THREADING_LDADD) $(LDADD_FOR_GNULIB)
   bin_jitterlisp__no_threading_LDFLAGS = \
-    $(AM_LDFLAGS) $(JITTER_UNINSTALLED_LDFLAGS) \
+    $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) \
     $(JITTER_NO_THREADING_LDFLAGS)
   PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe--no-threading
   bin_jitterlisp__unsafe__no_threading_SOURCES = \
