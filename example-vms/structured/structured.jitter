@@ -31,7 +31,7 @@ end
 ## Register classes.
 #################################################################
 
-register-class r 4
+register-class r 2
   code
     union jitter_word
   end
