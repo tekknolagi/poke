@@ -89,7 +89,7 @@ early-header-c
   end
 end
 
-register-class r 2 # 1 #2 #3
+register-class r 1 # 1 #2 #3
   code
     union vmprefix_currently_unique_kind_register_t
   end
