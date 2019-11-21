@@ -1698,7 +1698,7 @@ m4_define([jitter_define_prefixed_macro],
                      [@S|@$1],
                      [Same as $2 with a JITTER_ prefix suitable for an
                       installed header.])
-           AC_MSG_NOTICE([defining JITTER_$2 as @S|@$1])])
+           AC_MSG_NOTICE([defining prefixed macro JITTER_$2 as @S|@$1])])
 jitter_define_prefixed_macro([ac_cv_sizeof_void_p], [SIZEOF_VOID_P])
 jitter_define_prefixed_macro([ac_cv_sizeof_short], [SIZEOF_SHORT])
 jitter_define_prefixed_macro([ac_cv_sizeof_int], [SIZEOF_INT])
