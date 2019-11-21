@@ -155,9 +155,9 @@ jitter_patch_load_immediate_to_register (char *native_code,
     case jitter_snippet_load_64bit_to_reg_10:
     case jitter_snippet_load_64bit_to_reg_11:
       {
-#if   SIZEOF_VOID_P == 4
+#if   JITTER_SIZEOF_VOID_P == 4
         jitter_fatal ("attempting to patch a 64-bit loading snippet on 32 bit");
-#elif SIZEOF_VOID_P == 8
+#elif JITTER_SIZEOF_VOID_P == 8
         uint32_t low_half = (int32_t) u;
         uint32_t high_half = (int32_t) (u >> 32);
 
@@ -183,7 +183,7 @@ jitter_patch_load_immediate_to_register (char *native_code,
         first_instruction_p [3] = or2_instruction;
 #else
 # error "word size not 32 or 64 bits"
-#endif // #if   SIZEOF_VOID_P ==
+#endif // #if   JITTER_SIZEOF_VOID_P ==
       }
       break;
 

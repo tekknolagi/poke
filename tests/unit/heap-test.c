@@ -20,7 +20,7 @@
 
 /* Expand to nothing if we don't have mmap. */
 #include <jitter/jitter.h>
-#ifdef HAVE_MAP_ANONYMOUS
+#ifdef JITTER_HAVE_MAP_ANONYMOUS
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -208,7 +208,7 @@ main (void)
   return EXIT_SUCCESS;
 }
 
-#else // we don't have HAVE_MAP_ANONYMOUS defined.
+#else // we don't have JITTER_HAVE_MAP_ANONYMOUS defined.
 #include <stdio.h>
 
 int
@@ -218,4 +218,4 @@ main (void)
   return 0;
 }
 
-#endif // #ifdef HAVE_MAP_ANONYMOUS
+#endif // #ifdef JITTER_HAVE_MAP_ANONYMOUS

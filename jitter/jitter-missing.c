@@ -47,7 +47,7 @@
   while (false)
 
 
-#ifndef HAVE_FLOCKFILE
+#ifndef JITTER_HAVE_FLOCKFILE
   void
   flockfile (FILE *f)
   {
@@ -59,4 +59,4 @@
   {
     JITTER_DO_NOTHING;
   }
-#endif // #ifndef HAVE_FLOCKFILE
+#endif // #ifndef JITTER_HAVE_FLOCKFILE

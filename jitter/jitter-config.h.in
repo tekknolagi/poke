@@ -24,33 +24,35 @@
 #define JITTER_CONFIG_H_
 
 /* This host-dependent file is installed and used in the definition of some
-   fundamental types or features.  It is not for the user to see directly.
+   fundamental types or features.  Macro names have a JITTER_ prefix in order to
+   be safe for user code and prevent clashes.
 
    All of this is particularly useful for generated C code and templates, which
-   must rely on information from an installed header.
+   must rely on information from an installed header rather than a configuration
+   script.
 
    This file is included from both C and assembly, so it must contain only
    preprocessor directives.  In particular, differenly from C sources, it does
-   not use "" for sectioning. */
+   not use "" characters for sectioning. */
 
 
 /* C types and data representation: type availability, size, endianness.
  * ************************************************************************** */
 
-#undef HAVE_LONG_LONG_INT
-#undef HAVE_UNSIGNED_LONG_LONG_INT
+#undef JITTER_HAVE_LONG_LONG_INT
+#undef JITTER_HAVE_UNSIGNED_LONG_LONG_INT
 
-#undef SIZEOF_VOID_P
-#undef SIZEOF_SHORT
-#undef SIZEOF_INT
-#undef SIZEOF_LONG
-#undef SIZEOF_LONG_LONG
+#undef JITTER_SIZEOF_VOID_P
+#undef JITTER_SIZEOF_SHORT
+#undef JITTER_SIZEOF_INT
+#undef JITTER_SIZEOF_LONG
+#undef JITTER_SIZEOF_LONG_LONG
 
-#undef SIZEOF_FLOAT
-#undef SIZEOF_DOUBLE
-#undef SIZEOF_LONG_DOUBLE
+#undef JITTER_SIZEOF_FLOAT
+#undef JITTER_SIZEOF_DOUBLE
+#undef JITTER_SIZEOF_LONG_DOUBLE
 
-#undef WORDS_BIGENDIAN
+#undef JITTER_WORDS_BIGENDIAN
 
 
 /* Machine features.
@@ -82,9 +84,12 @@
 /* Libc features.
  * ************************************************************************** */
 
-#undef HAVE_MAP_ANONYMOUS
-#undef HAVE_SETRLIMIT
-#undef HAVE_ALARM
+/* See configure.ac for the meaning of each macro. */
+// FIXME: make sure that I am using the prefixed version in the source, for each one. !!!!!!!!!!!!!!!!!!!!!!!!!!!
+#undef JITTER_HAVE_MAP_ANONYMOUS
+#undef JITTER_HAVE_SETRLIMIT
+#undef JITTER_HAVE_ALARM
+#undef JITTER_HAVE_FLOCKFILE
 
 
 /* External library availability.
@@ -93,7 +98,7 @@
 #undef JITTER_HAVE_GNU_READLINE
 
 
-/* External utility availability.
+/* External utility availability, features and options.
  * ************************************************************************** */
 
 #undef JITTER_OBJDUMP

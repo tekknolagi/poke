@@ -39,11 +39,11 @@
 /* Patch-in data structures work with machine-word-sized fields.  Define the
    correct size conditionally, as this file can support either a 32- or a 64-bit
    configuration. */
-#if   SIZEOF_VOID_P == 8
+#if   JITTER_SIZEOF_VOID_P == 8
   jitter_arrays .quad
-#elif SIZEOF_VOID_P == 4
+#elif JITTER_SIZEOF_VOID_P == 4
   jitter_arrays .long
-#elif ! defined (SIZEOF_VOID_P)
+#elif ! defined (JITTER_SIZEOF_VOID_P)
 # error "SIZEOF_VOID_P is not defined"
 #else
 # error "SIZEOF_VOID_P is defined but not 4 nor 8"

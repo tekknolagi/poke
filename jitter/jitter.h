@@ -31,9 +31,9 @@
 /* Include the host-dependent header , and make sure that it actually contains
    some definitions. */
 #include <jitter/jitter-config.h>
-#ifndef SIZEOF_VOID_P
+#ifndef JITTER_SIZEOF_VOID_P
 #  error "jitter/jitter-config.h is probably incorrect"
-#endif // #ifndef SIZEOF_VOID_P
+#endif // #ifndef JITTER_SIZEOF_VOID_P
 
 /* Include macros emulating missing GNU C features. */
 #include <jitter/jitter-missing.h>
@@ -62,7 +62,7 @@
    signed and unsigned; also define the format strings, JITTER_PRIi ,
    JITTER_PRIu , JITTER_PRIo and JITTER_PRIx to be used with printf and scanf
    for those types, in the style of PRIi64 , PRIu64 , PRIo64 and PRIx64 . */
-#if   (SIZEOF_VOID_P * CHAR_BIT == 16)
+#if    (JITTER_SIZEOF_VOID_P * CHAR_BIT == 16)
   /* This will not happen on GNU, but one check costs almost nothing. */
   typedef int16_t  jitter_int;
   typedef uint16_t jitter_uint;
@@ -70,14 +70,14 @@
 # define JITTER_PRIu PRIu16
 # define JITTER_PRIo PRIo16
 # define JITTER_PRIx PRIx16
-#elif (SIZEOF_VOID_P * CHAR_BIT == 32)
+#elif  (JITTER_SIZEOF_VOID_P * CHAR_BIT == 32)
   typedef int32_t  jitter_int;
   typedef uint32_t jitter_uint;
 # define JITTER_PRIi PRIi32
 # define JITTER_PRIu PRIu32
 # define JITTER_PRIo PRIo32
 # define JITTER_PRIx PRIx32
-#elif (SIZEOF_VOID_P * CHAR_BIT == 64)
+#elif  (JITTER_SIZEOF_VOID_P * CHAR_BIT == 64)
   typedef int64_t  jitter_int;
   typedef uint64_t jitter_uint;
 # define JITTER_PRIi PRIi64
@@ -86,7 +86,7 @@
 # define JITTER_PRIx PRIx64
 #else
 # error "can't find a word-sized integer type."
-#endif // #if   (SIZEOF_VOID_P == ...)
+#endif // #if    (JITTER_SIZEOF_VOID_P == ...)
 
 /* Define two more format strings for convenience, JITTER_INT_FORMAT and
    JITTER_UINT_FORMAT; they can be used like "%li" and "%lu" . */
@@ -94,17 +94,17 @@
 #define JITTER_UINT_FORMAT "%" JITTER_PRIu
 
 /* Define a word-sized floating-point type. */
-#if   (SIZEOF_VOID_P == SIZEOF_FLOAT)
+#if    (JITTER_SIZEOF_VOID_P == JITTER_SIZEOF_FLOAT)
   typedef float jitter_float;
-#elif (SIZEOF_VOID_P == SIZEOF_DOUBLE)
+#elif  (JITTER_SIZEOF_VOID_P == JITTER_SIZEOF_DOUBLE)
   typedef double jitter_float;
-#elif (SIZEOF_VOID_P == SIZEOF_LONG_DOUBLE)
+#elif  (JITTER_SIZEOF_VOID_P == JITTER_SIZEOF_LONG_DOUBLE)
 /* This should not happen anywhere, I guess -- on PowerPC long double is 64-bit
    but so is double which is checked before.  Anyway, it costs nothing. */
   typedef long double jitter_float;
 #else
 # error "can't find a word-sized floating-point type"
-#endif // #if   (SIZEOF_VOID_P == ...)
+#endif // #if    (JITTER_SIZEOF_VOID_P == ...)
 
 
 /* A thread, which is to say a label-as-value using the GNU C extension.  From
@@ -177,7 +177,7 @@ union jitter_word
      to either "lli" and "llu" or "li" and "lu";
    - the macros jitter_strtoll and jitter_strtoull, expanding to either strtoll
      and strtoull or strtol and strtoul . */
-#ifdef HAVE_LONG_LONG_INT
+#ifdef JITTER_HAVE_LONG_LONG_INT
   /* We have a real long long type.  Define the type and macros above as trivial
      wrappers. */
   typedef long long jitter_long_long;
@@ -195,7 +195,7 @@ union jitter_word
 # define JITTER_PRIull "lu"
 # define jitter_strtoll strtol
 # define jitter_strtoull strtoul
-#endif // #ifdef HAVE_LONG_LONG_INT
+#endif // #ifdef JITTER_HAVE_LONG_LONG_INT
 
 
 
@@ -205,7 +205,7 @@ union jitter_word
 
 /* Word size in bytes (actually in chars). */
 #define JITTER_BYTES_PER_WORD \
-  SIZEOF_VOID_P
+  JITTER_SIZEOF_VOID_P
 
 /* Define the binary logarithm of the word size in bits (a common parameter to
    use for shifting operations), and the name for a Gas pseudo-op generating a

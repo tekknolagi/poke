@@ -220,7 +220,7 @@
    About the word size kludge, it may not be very portable.  Still, the only
    widely used COFF systems are supported this way, and even this effort is
    more than those systems deserve. */
-#if SIZEOF_VOID_P == 8
+#if JITTER_SIZEOF_VOID_P == 8
 # define JITTER_ASM_COFF_GLOBAL_PREFIX  \
     ""
 #else

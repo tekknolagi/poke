@@ -51,9 +51,9 @@
 
 /* Include optional headers. */
 #include <jitter/jitter.h>
-#ifdef HAVE_SETRLIMIT
+#ifdef JITTER_HAVE_SETRLIMIT
 # include <sys/resource.h> /* For getrlimit and setrlimit . */
-#endif // #ifdef HAVE_SETRLIMIT
+#endif // #ifdef JITTER_HAVE_SETRLIMIT
 
 #include <jitter/jitter-parse-int.h>
 #include <jitter/jitter-fatal.h>
@@ -79,15 +79,15 @@ struct vmprefix_main_command_line
   char *objdump_options; /* Use default options when NULL. */
   bool objdump_name_overridden;
 
-#ifdef HAVE_ALARM
+#ifdef JITTER_HAVE_ALARM
   /* The wall-clock run time limit in seconds, or 0 if there is no limit. */
   unsigned int wall_clock_run_time_limit;
-#endif // #ifdef HAVE_ALARM
+#endif // #ifdef JITTER_HAVE_ALARM
 
-#ifdef HAVE_SETRLIMIT
+#ifdef JITTER_HAVE_SETRLIMIT
   /* The CPU time limit in seconds, or RLIM_INFINITY if there is no limit. */
   rlim_t cpu_time_limit;
-#endif // #ifdef HAVE_SETRLIMIT
+#endif // #ifdef JITTER_HAVE_SETRLIMIT
 };
 
 /* Numeric identifiers for --no-* , or more in general "default" options having
@@ -144,19 +144,19 @@ parse_opt (int key, char *arg, struct argp_state *state)
       cl->objdump_name = JITTER_OBJDUMP;
       cl->objdump_name_overridden = false;
       cl->objdump_options = NULL;
-#ifdef HAVE_ALARM
+#ifdef JITTER_HAVE_ALARM
       cl->wall_clock_run_time_limit = 0;
-#endif // #ifdef HAVE_ALARM
-#ifdef HAVE_SETRLIMIT
+#endif // #ifdef JITTER_HAVE_ALARM
+#ifdef JITTER_HAVE_SETRLIMIT
       cl->cpu_time_limit = RLIM_INFINITY;
-#endif // #ifdef HAVE_SETRLIMIT
+#endif // #ifdef JITTER_HAVE_SETRLIMIT
       break;
     case 't':
       {
         jitter_long_long limit;
         if (jitter_string_to_long_long_inconvenient (arg, & limit) != 0)
           argp_error (state, "--time-limit: invalid integer %s", arg);
-#ifdef HAVE_ALARM
+#ifdef JITTER_HAVE_ALARM
         if (limit < 0)
           argp_error (state, "--time-limit: negative time %s", arg);
         else if (limit > UINT_MAX)
@@ -165,7 +165,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
           cl->wall_clock_run_time_limit = limit;
 #else
         fprintf (stderr, "warning: alarm is disabled\n");
-#endif // #ifdef HAVE_ALARM
+#endif // #ifdef JITTER_HAVE_ALARM
         }
       break;
     case 'c':
@@ -173,7 +173,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
         jitter_long_long limit;
         if (jitter_string_to_long_long_inconvenient (arg, & limit) != 0)
           argp_error (state, "--cpu-time-limit: invalid integer %s", arg);
-#ifdef HAVE_SETRLIMIT
+#ifdef JITTER_HAVE_SETRLIMIT
         if (limit < 0)
           argp_error (state, "--cpu-time-limit: negative time %" JITTER_PRIill,
                       limit);
@@ -181,7 +181,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
           cl->cpu_time_limit = limit;
 #else
         fprintf (stderr, "warning: setrlimit is disabled\n");
-#endif // #ifdef HAVE_SETRLIMIT
+#endif // #ifdef JITTER_HAVE_SETRLIMIT
         }
       break;
     case 'd':
@@ -399,15 +399,15 @@ static struct argp_option vmprefix_main_option_specification[] =
     "; this uses the alarm function, which may interfere with sleep on"
     " non-GNU systems where sleep is implemented with SIGALRM"
 #endif // #ifndef JITTER_HOST_OS_IS_GNU
-#ifndef HAVE_ALARM
+#ifndef JITTER_HAVE_ALARM
     "  (Ignored on this configuration.)"
-#endif // #ifndef HAVE_SETRLIMIT
+#endif // #ifndef JITTER_HAVE_SETRLIMIT
    },
    {"cpu-time-limit", 'c', "S", 0,
     "Fail if CPU time exceeds S seconds (0 for no limit)"
-#ifndef HAVE_SETRLIMIT
+#ifndef JITTER_HAVE_SETRLIMIT
     "  (Ignored on this configuration.)"
-#endif // #ifndef HAVE_SETRLIMIT
+#endif // #ifndef JITTER_HAVE_SETRLIMIT
    },
 
    /* Common GNU-style options. */
@@ -468,14 +468,14 @@ main (int argc, char **argv)
   else
     progress = stdout;
 
-#ifdef HAVE_ALARM
+#ifdef JITTER_HAVE_ALARM
   /* Set a limit to the wall-clock run time, if so requested on the command
      line. */
   if (cl.wall_clock_run_time_limit != 0)
     alarm (cl.wall_clock_run_time_limit);
-#endif // #ifdef HAVE_ALARM
+#endif // #ifdef JITTER_HAVE_ALARM
 
-#ifdef HAVE_SETRLIMIT
+#ifdef JITTER_HAVE_SETRLIMIT
   /* Set a limit to the CPU time, if so requested on the command line. */
   if (cl.cpu_time_limit != RLIM_INFINITY)
     {
@@ -488,7 +488,7 @@ main (int argc, char **argv)
       if (setrlimit (RLIMIT_CPU, & limit) != 0)
         jitter_fatal ("setrlimit failed");
     }
-#endif // #ifdef HAVE_SETRLIMIT
+#endif // #ifdef JITTER_HAVE_SETRLIMIT
 
   if (cl.debug)
     fprintf (progress, "Initializing...\n");

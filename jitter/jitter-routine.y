@@ -255,9 +255,9 @@ int_expression :
                                                    jitter_strtoull); }
 | UNSIGNED_HEXADECIMAL_LITERAL{ JITTER_SET_HEXADECIMAL($$.ufixnum,
                                                        jitter_strtoull); }
-| BYTESPERWORD                { $$.ufixnum = SIZEOF_VOID_P; }
+| BYTESPERWORD                { $$.ufixnum = JITTER_SIZEOF_VOID_P; }
 | LGBYTESPERWORD              { $$.ufixnum = JITTER_LG_BYTES_PER_WORD; }
-| BITSPERWORD                 { $$.ufixnum = SIZEOF_VOID_P * CHAR_BIT; }
+| BITSPERWORD                 { $$.ufixnum = JITTER_SIZEOF_VOID_P * CHAR_BIT; }
 | OPEN_PARENS int_expression CLOSE_PARENS { $$ = $2; }
 | int_expression PLUS int_expression
      { JITTER_SET_OPERATION(fixnum, $$, $1, +, $3); }
