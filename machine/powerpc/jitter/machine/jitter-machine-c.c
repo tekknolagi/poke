@@ -155,11 +155,11 @@ jitter_patch_load_immediate_to_register (char *native_code,
       /* Each of these snippets is implemented by a single 32-bit instruction
          with a literal in the rightmost 16 bits; they can all be patched in
          the same way. */
-#ifdef WORDS_BIGENDIAN
+#ifdef JITTER_WORDS_BIGENDIAN
       memcpy (native_code + 2, &low, 2);
 #else
       memcpy (native_code + 0, &low, 2);
-#endif // #ifdef WORDS_BIGENDIAN
+#endif // #ifdef JITTER_WORDS_BIGENDIAN
       break;
     case jitter_snippet_load_32bit_to_register_0:
     case jitter_snippet_load_32bit_to_register_1:
@@ -171,13 +171,13 @@ jitter_patch_load_immediate_to_register (char *native_code,
       /* Not much more difficult.  Here we have two 32-bit instructions to
          patch, each with a 16-bit literal in the end.  The high part comes
          first. */
-#ifdef WORDS_BIGENDIAN
+#ifdef JITTER_WORDS_BIGENDIAN
       memcpy (native_code + 2, &high, 2);
       memcpy (native_code + 6, &low, 2);
 #else
       memcpy (native_code + 0, &high, 2);
       memcpy (native_code + 4, &low, 2);
-#endif // #ifdef WORDS_BIGENDIAN
+#endif // #ifdef JITTER_WORDS_BIGENDIAN
       break;
 
     default:

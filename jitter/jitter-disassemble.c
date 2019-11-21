@@ -52,11 +52,11 @@ jitter_disassemble_executable_routine_to (FILE *f,
 
 static const char *
 endianness_option
-#ifdef WORDS_BIGENDIAN
+#ifdef JITTER_WORDS_BIGENDIAN
   = "--endian=big";
 #else
   = "--endian=little";
-#endif // #ifdef WORDS_BIGENDIAN
+#endif // #ifdef JITTER_WORDS_BIGENDIAN
 
 /* Return a the full pathname of a fresh temporary file name whose basename
    starts with the given prefix, or NULL on failure.  This might be worth
