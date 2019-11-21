@@ -28,6 +28,9 @@
 /* Header transitive inclusion.
  * ************************************************************************** */
 
+/* JitterLisp does rely on Gnulib for portability. */
+#include <config.h>
+
 /* Include the other JitterLisp headers, so that the user has to deal with this
    one only. */
 #include "jitterlisp-config.h"

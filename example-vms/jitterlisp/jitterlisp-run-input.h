@@ -23,6 +23,7 @@
 #ifndef JITTERLISP_RUN_INPUT_H_
 #define JITTERLISP_RUN_INPUT_H_
 
+/* JitterLisp does rely on Gnulib for portability. */
 #include <config.h>
 
 #include <stdio.h>

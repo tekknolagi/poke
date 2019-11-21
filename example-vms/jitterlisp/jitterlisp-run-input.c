@@ -20,6 +20,9 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+/* Include the Gnulib header. */
+#include <config.h>
+
 #include "jitterlisp-run-input.h"
 
 #include <stdio.h>
