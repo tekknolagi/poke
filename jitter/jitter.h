@@ -250,18 +250,23 @@ union jitter_word
 #endif // no CPP definition for the dispatch model
 
 /* Check that one dispatching model is defined with a CPP macro, and define
-   JITTER_REPLICATE if needed.  Also define the JITTER_DISPATCH_NAME macro
-   as the dispatching model name, usable as a C identifier. */
+   JITTER_REPLICATE if needed.  Also define the JITTER_DISPATCH_NAME and
+   JITTER_DISPATCH_NAME_STRING macros as the dispatching model name, to be
+   respectively used as a C identifier and as text for user messages. */
 #if   defined(JITTER_DISPATCH_SWITCH)
-# define JITTER_DISPATCH_NAME switch
+# define JITTER_DISPATCH_NAME        switch
+# define JITTER_DISPATCH_NAME_STRING "switch"
 #elif defined(JITTER_DISPATCH_DIRECT_THREADING)
-# define JITTER_DISPATCH_NAME direct_threading
+# define JITTER_DISPATCH_NAME        direct_threading
+# define JITTER_DISPATCH_NAME_STRING "direct-threading"
 #elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define JITTER_DISPATCH_NAME minimal_threading
+# define JITTER_DISPATCH_NAME        minimal_threading
+# define JITTER_DISPATCH_NAME_STRING "minimal-threading"
   /* Minimal threading requires code replication. */
 # define JITTER_REPLICATE 1
 #elif defined(JITTER_DISPATCH_NO_THREADING)
-# define JITTER_DISPATCH_NAME no_threading
+# define JITTER_DISPATCH_NAME        no_threading
+# define JITTER_DISPATCH_NAME_STRING "no-threading"
   /* No-threading requires code replication. */
 # define JITTER_REPLICATE 1
 #else
@@ -271,12 +276,8 @@ union jitter_word
 
 
 
-/* The selected dispatching model name as a string or a C identifier.
+/* The selected dispatching model name as a C identifier.
  * ************************************************************************** */
-
-/* Define the dispatching model name as a string literal. */
-#define JITTER_DISPATCH_NAME_STRING       \
-  JITTER_STRINGIFY(JITTER_DISPATCH_NAME)
 
 /* Compute the name of a C global whose name depends on the dispatching model.
    Only the one for the selected model is defined, and this serves to prevent
