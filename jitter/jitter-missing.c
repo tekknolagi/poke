@@ -25,7 +25,9 @@
 #include <jitter/jitter-missing.h>
 #include <jitter/jitter-fatal.h>
 
-#include "config.h" // this is the non-Gnulib file.
+/* This is not the Gnulib file: the Jitter runtime does not depend on Gnulib. */
+#include <jitter/jitter-config.h>
+
 
 /* Do nothing. */
 #define JITTER_DO_NOTHING  \

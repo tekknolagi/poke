@@ -19,8 +19,6 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-//#include <config.h>
-
 #include <stdio.h>
 #include <sys/types.h> /* for getpid */
 #include <unistd.h>
@@ -35,11 +33,6 @@
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-disassemble.h>
 #include <jitter/jitter-vm.h>
-
-/* I need objdump's name and the architecture name for objdump.  Notice that
-   this is not Gnulib's special config.h: the libjitter runtime must not depend
-   on Gnulib. */
-#include "config.h"
 
 /* Almost nothing of what follows is relevant with switch-dispatching. */
 #ifdef JITTER_DISPATCH_SWITCH

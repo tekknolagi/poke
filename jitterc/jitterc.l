@@ -1,6 +1,7 @@
 /* Jitter: Flex scanner.
 
    Copyright (C) 2016, 2017, 2018 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -23,6 +24,7 @@
  * ************************************************************************** */
 
 %{
+/* Include the Gnulib header. */
 #include <config.h>
 
 #include <stdio.h>

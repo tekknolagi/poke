@@ -1,6 +1,7 @@
 /* Jitter: utility functions for jitterc.
 
    Copyright (C) 2017 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -19,7 +20,9 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+/* Include the Gnulib header. */
 #include <config.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>

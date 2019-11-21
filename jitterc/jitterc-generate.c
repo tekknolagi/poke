@@ -19,6 +19,7 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+/* Include the Gnulib header. */
 #include <config.h>
 
 #include <assert.h>
@@ -1495,7 +1496,6 @@ jitterc_emit_state_h (const struct jitterc_vm *vm)
   FILE *f = jitterc_fopen_a_basename (vm, "vm.h");
   EMIT("#ifndef VMPREFIX_STATE_H_\n");
   EMIT("#define VMPREFIX_STATE_H_\n\n");
-  EMIT("//#include <config.h>\n");
   EMIT("//#include <jitter/jitter.h>\n\n");
 
   /* Insert C code from the user.  This is supposed to come in before the struct

@@ -25,6 +25,7 @@
 
 /* This code does not go to the generated header. */
 %{
+/* Include the Gnulib header. */
 #include <config.h>
 
 #include <stdio.h>

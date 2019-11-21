@@ -1,6 +1,7 @@
 /* Jitter: generator header.
 
    Copyright (C) 2017 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -22,6 +23,7 @@
 #ifndef JITTERC_JITTERC_GENERATE_H_
 #define JITTERC_JITTERC_GENERATE_H_
 
+/* Include the Gnulib header. */
 #include <config.h>
 
 #include <stdbool.h>

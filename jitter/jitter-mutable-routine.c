@@ -34,8 +34,6 @@
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-fatal.h>
 
-#include "config.h" // this is the non-Gnulib file.
-
 
 /* Routine options.
  * ************************************************************************** */

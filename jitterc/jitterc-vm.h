@@ -22,6 +22,7 @@
 #ifndef JITTERC_JITTERC_VM_H_
 #define JITTERC_JITTERC_VM_H_
 
+/* Include the Gnulib header. */
 #include <config.h>
 
 #include <stdlib.h>

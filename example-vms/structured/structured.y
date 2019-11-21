@@ -22,16 +22,12 @@
 
 /* This code does not go to the generated header. */
 %{
-#include <config.h>
-
 #include <stdio.h>
 #include <ctype.h>
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-fatal.h>
 #include <jitter/jitter-parse-int.h>
 #include <jitter/jitter-string.h>
-  //#include <gl_xlist.h>
-  //#include <gl_array_list.h>
 
 #include "structured-syntax.h"
 #include "structured-parser.h"
