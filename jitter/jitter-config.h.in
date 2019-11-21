@@ -85,7 +85,6 @@
  * ************************************************************************** */
 
 /* See configure.ac for the meaning of each macro. */
-// FIXME: make sure that I am using the prefixed version in the source, for each one. !!!!!!!!!!!!!!!!!!!!!!!!!!!
 #undef JITTER_HAVE_MAP_ANONYMOUS
 #undef JITTER_HAVE_SETRLIMIT
 #undef JITTER_HAVE_ALARM
