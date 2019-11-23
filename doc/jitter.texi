@@ -1698,11 +1698,38 @@ design, doesn't emulate L1i invalidation}
 @cindex build system
 
 @menu
-* Invoking @command{jitter-config}:: You can print out the right compiler options.
+* Building preliminaries::    Compiling a Jittery program can be delicate.
+* Invoking @command{jitter-config}::    You can print out the right compiler options.
 * Autoconf and Automake::     Compiling Jittery programs with the GNU build system.
 * Make::                      Simple makefiles and dependencies.
 * Other systems::             You're on your own, but you have @command{jitter-config}.
 @end menu
+
+@c @@@
+@node Building preliminaries
+@subsection Building preliminaries
+@cindex building, Jittery programs
+
+@fixme{@file{vmprefix-vm2.c} is fragile to compile, and may require its own specific @var{JITTER_CFLAGS}
+for correctness.  The rest is actually not fragile, but
+you still need to pre-process every file using any Jitter header with
+@var{JITTER_CPPFLAGS}; this restriction helps preventing conflicts between
+a sub-package Jitter and a different installed version, and makes Jittery VMs
+behave consistency with Jitter as a dependency or a sub-package.}
+
+@cindex @var{JITTER_CPPFLAGS}
+@cindex @var{JITTER_CFLAGS}
+@cindex @var{JITTER_LDFLAGS}
+@cindex @var{JITTER_LDADD}
+@fixme{
+@var{JITTER_CPPFLAGS}
+@var{JITTER_CFLAGS}
+@var{JITTER_LDFLAGS}
+@var{JITTER_LDADD}.  There are also dispatch-specific versions of these, but
+most people will only use the fastest dispatch available on their configuration.
+Any C file including any header from Jitter must be preprocessed with
+the flags in @var{JITTER_CPPFLAGS}.
+}
 
 @c @@@
 @node Invoking @command{jitter-config}
@@ -1728,7 +1755,27 @@ system also makes a considerable effort to support cross-compilation
 in a convenient way including a running a cross-@command{jitter} and
 even the test suite through an emulator, in an effort to test the
 critical part of the software as thoroughly as possible.  Ordinary
-Jittery programs will avoid going to such lengths.}
+Jittery programs will avoid going to such lengths.
+The recommended way of using Jitter right now is @emph{sub-package mode}:
+@pxref{Jitter as a sub-package}.}
+
+@menu
+* Jitter as a dependency::  You can install Jitter, use it and link to its runtime.
+* Jitter as a sub-package:: You can also distribute Jitter as part of your package.
+@end menu
+
+@c @@
+@node Jitter as a dependency
+@subsubsection Jitter as a dependency
+@cindex dependency, Jitter as a
+@cindex installing, Jitter
+
+@c @@
+@node Jitter as a sub-package
+@subsubsection Jitter as a sub-package
+@cindex sub-package
+@cindex mode, sub-package
+
 
 @c @@@
 @node Make
