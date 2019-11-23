@@ -73,8 +73,12 @@ struct jitter_executable_routine
   union jitter_specialized_word *specialized_program;
 #elif defined(JITTER_DISPATCH_NO_THREADING)
   /* Nothing. */
-#else
+#elif ! defined (JITTER_INTERNAL)
 # error "unknown dispatch: this should not happen"
+#else
+  /* This is a dispatch-independent compilation, either part of the Jitter
+     utility library or of the C code generator.  The specific fields of this
+     struct do not matter. */
 #endif /* dispatch */
 #if (defined(JITTER_DISPATCH_SWITCH)                \
      || defined(JITTER_DISPATCH_DIRECT_THREADING))
@@ -83,8 +87,12 @@ struct jitter_executable_routine
        || defined(JITTER_DISPATCH_NO_THREADING))
   char *native_code;
   size_t native_code_size;
-#else
+#elif ! defined (JITTER_INTERNAL)
 # error "unknown dispatch: this should not happen"
+#else
+  /* This is a dispatch-independent compilation, either part of the Jitter
+     utility library or of the C code generator.  The specific fields of this
+     struct do not matter. */
 #endif /* dispatch */
 };
 

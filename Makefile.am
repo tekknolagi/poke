@@ -259,6 +259,12 @@ generated-c-files: $(BUILT_SOURCES)
 # Jitter utility library.
 # ################################################################
 
+# Code within the Jitter runtime itself and the Jitter C code generator needs to
+# be preprocessed with these flags to avoid failing for not having any variant of
+# JITTER_CPPFLAGS used.
+CPPFLAGS_FOR_INTERNAL_USE = \
+  -DJITTER_INTERNAL=1
+
 # This utility library is used both at generation time by jitterc, and at run
 # time by the programs using VMs (see the SOURCES_FOR_LIBJITTER definition
 # below); in practice the user never needs to see it directly, and I prefer to
@@ -284,6 +290,9 @@ lib_libjitterutility__convenience_la_SOURCES = \
   jitter/jitter-print-binary.h jitter/jitter-print-binary.c \
   jitter/jitter-readline.h jitter/jitter-readline.c \
   jitter/jitter-string.h jitter/jitter-string.c
+lib_libjitterutility__convenience_la_CPPFLAGS = \
+  $(AM_CPPFLAGS) $(CPPFLAGS_FOR_INTERNAL_USE)
+
 
 # The headers need to be installed and be available to the user or to the
 # Jitter-generated code in VMs, so they belong in the jitterinclude directory
@@ -312,6 +321,8 @@ tests_unit_heap_test_SOURCES = tests/unit/heap-test.c
 tests_unit_heap_test_LDADD = \
   lib/libjitterutility--convenience.la \
   $(LDADD_FOR_GNULIB)
+tests_unit_heap_test_CPPFLAGS = \
+  $(AM_CPPFLAGS) $(CPPFLAGS_FOR_INTERNAL_USE)
 endif # if JITTER_ENABLE_TEST_SUITE
 
 
@@ -355,7 +366,8 @@ bin_jitter_LDADD = \
   lib/libjitterutility--convenience.la \
   $(LDADD_FOR_GNULIB)
 bin_jitter_CPPFLAGS = \
-  $(CPPFLAGS_FOR_GNULIB) $(AM_CPPFLAGS) $(CPPFLAGS_FOR_PATHS)
+  $(CPPFLAGS_FOR_GNULIB) $(AM_CPPFLAGS) $(CPPFLAGS_FOR_PATHS) \
+  $(CPPFLAGS_FOR_INTERNAL_USE)
 
 
 # jitter configuration utility.

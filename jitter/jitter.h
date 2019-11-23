@@ -230,24 +230,43 @@ union jitter_word
 /* Definitions depending on the dispatch model.
  * ************************************************************************** */
 
-/* If there is no CPP definition for a dispatching model use the one identified
-   as the best by configure. */
-#if    ! defined(JITTER_DISPATCH_SWITCH)             \
-    && ! defined(JITTER_DISPATCH_DIRECT_THREADING)   \
-    && ! defined(JITTER_DISPATCH_MINIMAL_THREADING)  \
-    && ! defined(JITTER_DISPATCH_NO_THREADING)
-# if   defined(JITTER_BEST_DISPATCHING_MODEL_IS_SWITCH)
-#   define JITTER_DISPATCH_SWITCH 1
-# elif defined(JITTER_BEST_DISPATCHING_MODEL_IS_DIRECT_THREADING)
-#   define JITTER_DISPATCH_DIRECT_THREADING 1
-# elif defined(JITTER_BEST_DISPATCHING_MODEL_IS_MINIMAL_THREADING)
-#   define JITTER_DISPATCH_MINIMAL_THREADING 1
-# elif defined(JITTER_BEST_DISPATCHING_MODEL_IS_NO_THREADING)
-#   define JITTER_DISPATCH_NO_THREADING 1
-# else
-#   error "no best dispatching model is defined.  This should never happen."
-# endif // #if defined(JITTER_BEST_DISPATCHING_MODEL_IS_...)
-#endif // no CPP definition for the dispatch model
+/* Sanity check: make sure that the user passed the correct set of CPP flags.  
+   It is mandatory to either:
+   - specify flags for one dispatch mode by defining a feature macro on the
+     command line;
+   or:
+   - defining the feature macro JITTER_INTERNAL on the command line, in case
+     this compilation is part of the Jitter utility library or the Jitter C code
+     generator, which are independent from the dispatch.
+
+   Of course a user trying hard to shoot herself in the foot will be able to
+   circumvent this check, but the intent here is to protect her from mistakes
+   which would have subtle consequences.  In particular, JITTER_CPPFLAGS and its
+   dispatch-specific variants are defined to contain suitable -I options in
+   sub-package mode, which give priority to the Jitter source and build
+   directories over installed headers.  By requiring that the flags are always
+   passed we can reliably prevent conflicts between two different versions of
+   Jitter, one installed and another used in sub-package mode.
+
+   The user does not need to see any of this complexity, as long as she supplies
+   JITTER_CFLAGS or its appropriate dispatch-specific variant. */
+#if    ! defined (JITTER_DISPATCH_SWITCH)             \
+    && ! defined (JITTER_DISPATCH_DIRECT_THREADING)   \
+    && ! defined (JITTER_DISPATCH_MINIMAL_THREADING)  \
+    && ! defined (JITTER_DISPATCH_NO_THREADING)       \
+    && ! defined (JITTER_INTERNAL)
+# error "You are using a Jitter header, but forgot to supply the preprocessing \
+flags in JITTER_CPPFLAGS or some dispatch-specific variant of it.  \
+This is very easy to do if you are using the GNU Autotools, and should \
+still be easy with other build systems as well.  \
+Please see \"Building preliminaries\" and the appropriate section of \
+\"Building a Jittery program\" in the Jitter manual.  \
+\
+Please do not work around this problem by manually supplying just a \
+command-line option to enable a particular dispatch: using \
+JITTER_CPPFLAGS or one of its variants as intended will prevent subtle \
+problems.  See the source code for more information."
+#endif // no JITTER_CPPFLAGS or -DJITTER_INTERNAL.
 
 /* Check that one dispatching model is defined with a CPP macro, and define
    JITTER_REPLICATE if needed.  Also define the JITTER_DISPATCH_NAME and
@@ -269,7 +288,7 @@ union jitter_word
 # define JITTER_DISPATCH_NAME_STRING "no-threading"
   /* No-threading requires code replication. */
 # define JITTER_REPLICATE 1
-#else
+#elif ! defined (JITTER_INTERNAL)
 # error "unknown dispatching model.  This should never happen."
 #endif // #if defined(JITTER_DISPATCH_...)
 
