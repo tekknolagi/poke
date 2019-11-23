@@ -1164,6 +1164,7 @@ $(srcdir)/example-vms/structured/build-aux/jitter.m4: autoconf/jitter.m4
 # example of an independent software using Jitter.  The sub-build system is not
 # used here, but we have to distribute the files.
 EXTRA_DIST += \
+  example-vms/structured/bootstrap \
   example-vms/structured/configure.ac \
   example-vms/structured/Makefile.am \
   $(srcdir)/example-vms/structured/build-aux/jitter.m4 \

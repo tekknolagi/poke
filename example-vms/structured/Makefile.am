@@ -117,6 +117,14 @@ $(srcdir)/structured-scanner.h: structured-scanner.c
 # Files to be distributed.
 ################################################################
 
+# Distribute the bootstrap script regenerating or copying the machine-generated
+# files needed for building.
+#
+# The Autoconf definitions copied from Jitter into build-aux/jitter.m4 do need
+# to be distributed, but the Autotools automatically discover this automatically
+# from the simple use of AC_CONFIG_MACRO_DIR in configure.ac , along (I suppose)
+# with the fact that the Autoconf macros are actually used.
+#
 # Of course the Jitter, Flex and Bison sources have to be distributed: they are
 # the actual human-written sources.
 #
@@ -127,6 +135,7 @@ $(srcdir)/structured-scanner.h: structured-scanner.c
 # as per the GNU coding standards, this means that in this case every file in
 # $(BUILT_SOURCES) is also distributed.
 EXTRA_DIST = \
+  bootstrap \
   structured.jitter \
   $(BUILT_SOURCES) \
   structured.l structured.y \

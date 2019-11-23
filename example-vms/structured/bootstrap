@@ -1,0 +1,64 @@
+#!/bin/sh
+# Copyright (C) 2019 Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of the Jitter structured-language example,
+# distributed along with Jitter under the same license.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Generate the machine-generated part of the independent build system for
+# the structured example included within the Jitter sources and itself
+# using Jitter as a sub-package.
+#
+# This script should work on a sensible Unix system supporting symlinks.
+
+# Die at the first error.
+set -e
+
+# Enter the directory containing this script, and perform a basic sanity check
+# to ensure that we are inside the Jitter source distribution, as the rest of
+# this script assumes.
+cd $(dirname "$0")
+if ! test -e ../../jitter/jitter-config.h.in; then
+    echo "$0: this script, or the structured/ subdirectory, has been moved"
+    echo "from the jitter source directory.  Cannot work."
+    exit 1
+fi
+
+# Make the build-aux directory, and copy the Autoconf macro definitions from
+# Jitter there.
+if test -d build-aux; then
+    echo 'build-aux/ exists already, and is a directory.  Using it.'
+else
+    mkdir build-aux \
+        || (echo 'could not make build-aux/'; exit 1)
+fi
+cp ../../autoconf/jitter.m4 build-aux/
+
+# Make a symlink from the Jitter directory, which is actually an ancestor
+# directory, to the jitter.  A symlink is just as good as a directory for
+# AC_JITTER_SUBPACKAGE.
+if test -d jitter; then
+    echo 'A jitter/ subdirectory exists already.  Using it for the sub-package.'
+else
+    ln -s ../../ jitter \
+        || (echo 'could not symlink ../.. to jitter'; exit 1)
+fi
+
+# Generate what is missing with the utilities from Automake.
+autoreconf --symlink --install
+
+echo 'Success.  You can now configure the Structured example.'
