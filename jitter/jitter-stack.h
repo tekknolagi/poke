@@ -578,8 +578,14 @@ jitter_stack_height;
   while (false)
 
 /* Push a copy of the under-top element.  Undefined behavior on empty
-   stack.  This operation is called "over" in Forth. */
-#define JITTER_STACK_TOS_OVER(type, stack_container, name)          \
+   stack.  This operation is called "over" in Forth.
+   I currently have two variants of the TOS version, one generating
+   shorter code and not using temporary registers, but with a
+   shorter-distance memory dependency; the other version generates
+   one more instruction and uses a register, but behaves better with
+   respect to dependencies.  FIXME: benchmark, and possibly choose
+   differently according to the configuration. */
+#define JITTER_STACK_TOS_OVER_LONGER(type, stack_container, name)   \
   do                                                                \
     {                                                               \
       const type _jitter_stack_over_under_top_temp                  \
@@ -588,6 +594,29 @@ jitter_stack_height;
                             _jitter_stack_over_under_top_temp);     \
     }                                                               \
   while (false)
+#define JITTER_STACK_TOS_OVER_SHORTER(type, stack_container, name)              \
+  do                                                                            \
+    {                                                                           \
+      /* Name the old top as a temporary.  This does not require a load, but    \
+         having a separate temporary read early might help the compiler with    \
+         alias analysis. */                                                     \
+      const type _jitter_stack_over_top_old                                     \
+        = JITTER_STACK_TOS_TOP (type, stack_container, name);                   \
+      /* Write the old top into memory, at the over-under-top position, which   \
+         means at the top. */                                                   \
+      JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME (type, stack_container, name) [1] \
+        = _jitter_stack_over_top_old;                                           \
+      /* Read the old under-top, which we have not touched, into the top. */    \
+      JITTER_STACK_TOS_TOP (type, stack_container, name)                        \
+        = JITTER_STACK_TOS_UNDER_TOP (type, stack_container, name);             \
+      /* Increment the under-top stack pointer. */                              \
+      JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME (type, stack_container, name) ++; \
+    }                                                                           \
+  while (false)
+#define JITTER_STACK_TOS_OVER(type, stack_container, name)                \
+  /* FIXME: benchmark and choose either JITTER_STACK_TOS_OVER_SHORTER or  \
+     JITTER_STACK_TOS_OVER_LONGER . */                                    \
+  JITTER_STACK_TOS_OVER_SHORTER (type, stack_container, name)
 #define JITTER_STACK_NTOS_OVER(type, stack_container, name)                     \
   do                                                                            \
     {                                                                           \
