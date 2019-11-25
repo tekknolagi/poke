@@ -1778,7 +1778,7 @@ jitter_define_prefixed_feature_macro([ac_cv_type_long_double], [yes],
                                      [HAVE_LONG_DOUBLE])
 jitter_define_prefixed_feature_macro([ac_cv_func_alarm], [yes], [HAVE_ALARM])
 jitter_define_prefixed_feature_macro([gl_have_mmap_anonymous], [yes],
-                                     [HAVE_MAP_ANONYMOUS])
+                                     [HAVE_MMAP_ANONYMOUS])
 jitter_define_prefixed_feature_macro([ac_cv_func_setrlimit], [yes],
                                      [HAVE_SETRLIMIT])
 jitter_define_prefixed_feature_macro([ac_cv_func_flockfile], [yes],

@@ -87,7 +87,7 @@
  * ************************************************************************** */
 
 /* See configure.ac for the meaning of each macro. */
-#undef JITTER_HAVE_MAP_ANONYMOUS
+#undef JITTER_HAVE_MMAP_ANONYMOUS
 #undef JITTER_HAVE_SETRLIMIT
 #undef JITTER_HAVE_ALARM
 #undef JITTER_HAVE_FLOCKFILE
