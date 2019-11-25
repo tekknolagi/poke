@@ -1016,6 +1016,12 @@ after initialization.  Again, this may complicate the C API.}
 @fixme{write}
 @item Calling conventions
 @fixme{write}
+@item Flags
+@fixme{write: special-purpose flag registers are not natural to model explicitly in C,
+and therefore in Jitter.  In particular it is not practical to keep them in a known
+state across VM instructions.  Architectures with no special flag registers
+(RISC-V, MIPS, Alpha) work in a natural way with no penalty; the others can
+be made to behave like them, at some performance loss.}
 @item Machine idioms
 @fixme{write; delay slots, VLIW.  The SH case, which may be an extreme unsolvable case}
 @item Instruction scheduling
