@@ -698,6 +698,11 @@ AC_CHECK_FUNCS([mmap64 mmap mremap munmap])
 # Check for getrlimit/setrlimit and alarm.
 AC_CHECK_FUNCS([getrlimit setrlimit alarm])
 
+# Check for pipes.  These are currently used for disassembling by
+# communicating with an objdump process.
+AC_CHECK_FUNCS([popen pclose])
+
+
 
 # System-dependent configuration.
 ################################################################
@@ -855,6 +860,15 @@ if test "x$jitter_has_host_assembly" = "xyes"; then
                       [Define if we have assembly for the host architecture.])
    AC_DEFINE_UNQUOTED([JITTER_ASSEMBLY_SUBDIRECTORY], ["$JITTER_ASSEMBLY_SUBDIRECTORY"],
                       [the subdirectory containing assembly files.])
+else
+   # Having an existing assembly subdirectory as the value of the substitution,
+   # even if the source files it contains are useless, helps with the dist make
+   # target.
+   # Thanks to this trick I can use variables inside pathnames within
+   # Makefile.am , which makes the code a lot simpler.  Notice that in this case
+   # the CPP feature macro definition JITTER_HAVE_ASSEMBLY remains undefined,
+   # and the Automake conditional JITTER_HAVE_ASSEMBLY remains false.
+   AC_SUBST([JITTER_ASSEMBLY_SUBDIRECTORY], [dummy])
 fi
 AM_CONDITIONAL([JITTER_HAVE_ASSEMBLY],
                [test "x$jitter_has_host_assembly" = "xyes"])
@@ -1764,6 +1778,8 @@ jitter_define_prefixed_feature_macro([ac_cv_func_setrlimit], [yes],
                                      [HAVE_SETRLIMIT])
 jitter_define_prefixed_feature_macro([ac_cv_func_flockfile], [yes],
                                      [HAVE_FLOCKFILE])
+jitter_define_prefixed_feature_macro([ac_cv_func_popen], [yes],
+                                     [HAVE_POPEN])
 
 
 # Output.

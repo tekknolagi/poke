@@ -73,7 +73,7 @@ enum jitter_snippet_to_patch;
 /* A constant array of snippet sizes (in bytes), to be defined for every
    architecture.  The array is meant to be indexed by enum jitter_snippet_to_patch
    objects. */
-extern const uint32_t
+extern const jitter_uint
 jitter_native_snippet_sizes [jitter_snippet_no];
 
 /* A constant array of snippet native code pointers, to be defined for every

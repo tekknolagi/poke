@@ -31,7 +31,7 @@
    and patched.  Notice that the order matters, and the calls to jitter_snippet
    here must follow the same order as the enum jitter_snippet_to_patch cases in
    native.h . */
-jitter_arrays .long
+jitter_arrays
 
 /* SH uses '#' as an immediate prefix, but of course CPP messes with it.
    JITTER_HASHED(n) will expand to #n . */

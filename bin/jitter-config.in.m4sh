@@ -405,7 +405,7 @@ while test "$#" != "0"; do
             echo_and_exit "@build@";;
         --assembly)
             no_option_argument
-            if test "x@JITTER_ASSEMBLY_SUBDIRECTORY@" != "x"; then
+            if test "x@JITTER_ASSEMBLY_SUBDIRECTORY@" != 'xdummy'; then
                 my_echo "@JITTER_ASSEMBLY_SUBDIRECTORY@"
             fi
             exit 0;;

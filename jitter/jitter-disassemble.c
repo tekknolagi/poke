@@ -50,6 +50,8 @@ jitter_disassemble_executable_routine_to (FILE *f,
 
 #else /* not switch-dispatching */
 
+#ifdef JITTER_HAVE_POPEN
+
 static const char *
 endianness_option
 #ifdef JITTER_WORDS_BIGENDIAN
@@ -199,6 +201,7 @@ jitter_disassemble_range_objdump (FILE *output,
   free (temporary_file_name);
   return pclose (objdump_output);
 }
+#endif // #ifdef JITTER_HAVE_POPEN
 
 /* Print a memory dump of the given range.  This is useful as a fallback
    solution when objdump is not usable. */
@@ -267,6 +270,7 @@ jitter_disassemble_range (FILE *output,
   /* If objdump has a possibility of working then try it, and set
      is_objdump_known_to_fail.  If it remains false after calling objdump we are
      done. */
+#ifdef JITTER_HAVE_POPEN
   if (! is_objdump_known_to_fail)
       is_objdump_known_to_fail
         = jitter_disassemble_range_objdump (output,
@@ -275,6 +279,10 @@ jitter_disassemble_range (FILE *output,
                                             raw,
                                             objdump_name,
                                             objdump_options);
+#else // ! defined (JITTER_HAVE_POPEN)
+  /* With no pipes there is no way to use the output of objdump. */
+  is_objdump_known_to_fail = true;
+#endif // #ifdef JITTER_HAVE_POPEN
 
   /* If objdump fails then we have not printed anything at this point.  Use the
      fallback solution. */

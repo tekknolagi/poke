@@ -31,7 +31,7 @@
    and patched.  Notice that the order matters, and the calls to jitter_snippet
    here must follow the same order as the enum jitter_snippet_to_patch cases in
    native.h . */
-jitter_arrays .quad
+jitter_arrays
 
 /* Load zero into a register by xor-ing it with itself.  This assembles to
    something like

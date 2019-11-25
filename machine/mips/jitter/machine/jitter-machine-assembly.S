@@ -36,7 +36,7 @@
    and patched.  Notice that the order matters, and the calls to jitter_snippet
    here must follow the same order as the enum jitter_snippet_to_patch cases in
    native.h . */
-jitter_arrays .long
+jitter_arrays
 
 /* Load a zero-extended 16-bit literal into a 32-bit register.  This
    assembles to something like

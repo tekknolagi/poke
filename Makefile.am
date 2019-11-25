@@ -671,16 +671,10 @@ if JITTER_HAVE_ASSEMBLY
     -I "$(top_srcdir)/machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)"
 
   # Add architecture-dependent sources to libjitter.
-  # FIXME: Here, for some reason I can't exactly understand, and *only* here,
-  # using $(JITTER_ASSEMBLY_SUBDIRECTORY) instead of
-  # @JITTER_ASSEMBLY_SUBDIRECTORY@ yields an unexpanded
-  # "$(JITTER_ASSEMBLY_SUBDIRECTORY)" as part of pathnames.  The header file
-  # doesn't seem to be a problem, but either the C file or the assembly file
-  # suffices to cause the issue.
   SOURCES_FOR_LIBJITTER += \
      machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/jitter-machine.h \
-     machine/@JITTER_ASSEMBLY_SUBDIRECTORY@/jitter/machine/jitter-machine-assembly.S \
-     machine/@JITTER_ASSEMBLY_SUBDIRECTORY@/jitter/machine/jitter-machine-c.c
+     machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/jitter-machine-assembly.S \
+     machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/jitter-machine-c.c
 
   # One architecture-specific header is used when compiling generated code, even
   # if it's never included directly by user code.  This is needed in particular
@@ -704,6 +698,13 @@ EXTRA_DIST += \
   machine/x86_64/jitter/machine/jitter-machine.h \
   machine/x86_64/jitter/machine/jitter-machine-assembly.S \
   machine/x86_64/jitter/machine/jitter-machine-c.c
+
+# Also distribute the dummy architecture-specific files for unsupported
+# architectures.  These help with make dist: see the comment in configure.ac .
+EXTRA_DIST += \
+  machine/dummy/jitter/machine/jitter-machine.h \
+  machine/dummy/jitter/machine/jitter-machine-assembly.S \
+  machine/dummy/jitter/machine/jitter-machine-c.c
 
 
 # A remark about building examples and their library dependencies.
