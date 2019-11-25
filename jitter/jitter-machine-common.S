@@ -60,7 +60,7 @@
     && defined (JITTER_HAVE_SECTION_NOTE_GNU_STACK)
 .section .note.GNU-stack, "", @progbits
 .previous
-#endif /* #ifdef JITTER_HOST_OS_IS_ELF */
+#endif // defined (JITTER_HOST_OS_IS_ELF) && ...
 
 
 
