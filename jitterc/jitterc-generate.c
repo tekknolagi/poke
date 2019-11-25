@@ -1379,6 +1379,7 @@ jitterc_emit_stack_operation_definitions (FILE *f, const struct jitterc_vm *vm)
       jitterc_emit_stack_operation_definition (f, stack, "swap", 0);
       jitterc_emit_stack_operation_definition (f, stack, "quake", 0);
       jitterc_emit_stack_operation_definition (f, stack, "over", 0);
+      jitterc_emit_stack_operation_definition (f, stack, "tuck", 0);
       jitterc_emit_stack_operation_definition (f, stack, "nip", 0);
       jitterc_emit_stack_operation_definition (f, stack, "rot", 0);
       jitterc_emit_stack_operation_definition (f, stack, "mrot", 0);

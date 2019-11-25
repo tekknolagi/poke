@@ -1092,6 +1092,13 @@ instruction quake ()
   end
 end
 
+# The stack effect is ( a b -- b a b ).
+instruction tuck ()
+  code
+    JITTER_TUCK_STACK ();
+  end
+end
+
 
 
 ## System meta-instructions.

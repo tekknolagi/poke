@@ -598,6 +598,54 @@ jitter_stack_height;
     }                                                                           \
   while (false)
 
+/* Insert a copy of the top element as the new under-under-top element, moving
+   the under-top and top elements one position up each; after the execution of
+   the operation the stack will be one element taller.  Undefined behavior on
+   underflow.  This operation is called "tuck" in Forth, and has stack effect
+   ( a b -- b a b ). */
+#define JITTER_STACK_TOS_TUCK(type, stack_container, name)                      \
+  do                                                                            \
+    {                                                                           \
+      /* Do not disturb the top, which has already the correct value for the    \
+         final state.  Instead load a copy of the under-top, whose memory       \
+         content will need to change. */                                        \
+      const type _jitter_stack_tuck_under_top_old                               \
+        = JITTER_STACK_TOS_UNDER_TOP (type, stack_container, name);             \
+      /* Change the stack height.  From now on we can think about stack         \
+         elements in the positions they will occupy in the final state. */      \
+      JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME (type, stack_container, name) ++; \
+      /* We have to change both the under-under-top and the under-top elements, \
+         which now are sure to have values different from the ones in the final \
+         state. */                                                              \
+      JITTER_STACK_TOS_UNDER_UNDER_TOP (type, stack_container, name)            \
+        = JITTER_STACK_TOS_TOP (type, stack_container, name);                   \
+      JITTER_STACK_TOS_UNDER_TOP (type, stack_container, name)                  \
+        = _jitter_stack_tuck_under_top_old;                                     \
+    }                                                                           \
+  while (false)
+#define JITTER_STACK_NTOS_TUCK(type, stack_container, name)                 \
+  do                                                                        \
+    {                                                                       \
+      /* This version will not be as nice and fast as the TOS case.  The    \
+         top three elements in the stack all need to chage. */              \
+      /* Load the current under-top and top. */                             \
+      const type _jitter_stack_tuck_under_top_old                           \
+        = JITTER_STACK_NTOS_UNDER_TOP (type, stack_container, name);        \
+      const type _jitter_stack_tuck_top_old                                 \
+        = JITTER_STACK_NTOS_TOP (type, stack_container, name);              \
+      /* Change the stack height.  The height will be what we need in the   \
+        final state after this. */                                          \
+      JITTER_STACK_NTOS_TOP_POINTER_NAME (type, stack_container, name) ++;  \
+      /* Store the changed elements. */                                     \
+      JITTER_STACK_NTOS_UNDER_UNDER_TOP (type, stack_container, name)       \
+        = _jitter_stack_tuck_top_old;                                       \
+      JITTER_STACK_NTOS_UNDER_TOP (type, stack_container, name)             \
+        = _jitter_stack_tuck_under_top_old;  /* The height has changed. */  \
+      JITTER_STACK_NTOS_TOP (type, stack_container, name)                   \
+        = _jitter_stack_tuck_top_old;  /* Again, not the same height. */    \
+    }                                                                       \
+  while (false)
+
 /* Swap the top and under-top element on the stack; this expands to a statement,
    and there is no result.  Undefined behavior on underflow.  This operation is
    called "swap" in Forth. */
