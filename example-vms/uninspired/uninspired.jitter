@@ -1026,6 +1026,29 @@ instruction reverse (?n 0 1 2 3 4 5 6 7 8 9 10
   end
 end
 
+# Forth-style roll, taking the depth argument from the stack.
+instruction rollforth ()
+  code
+    /* No check on the depth sign, which must be non-negative: this
+       is unsafe code. */
+    jitter_uint top_number = JITTER_TOP_STACK().fixnum;
+    JITTER_DROP_STACK();
+    JITTER_ROLL_STACK (top_number);
+  end
+end
+
+# Forth-style -roll, like rollforth but using the -roll operation.
+instruction mrollforth ()
+  code
+    /* No check on the depth sign, which must be non-negative: this
+       is unsafe code. */
+    jitter_uint top_number = JITTER_TOP_STACK().fixnum;
+    JITTER_DROP_STACK();
+    JITTER_MROLL_STACK (top_number);
+  end
+end
+
+
 instruction roll (?n 0 1 2 3 4 5 6 7 8 9 10
                      11 12 13 14 15 16 17 18 19 20
                      21 22 23 24 25 26 27 28 29 30
