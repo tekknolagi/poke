@@ -522,10 +522,10 @@ jitter_stack_height;
 #define JITTER_STACK_TOS_DROP(type, stack_container, name)             \
   do                                                                   \
     {                                                                  \
-      JITTER_STACK_TOS_TOP_NAME(type, stack_container, name)           \
-        = * (JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type,             \
-                                                     stack_container,  \
-                                                     name));           \
+      /* Load the under-top into the top. */                           \
+      JITTER_STACK_TOS_TOP_NAME (type, stack_container, name)          \
+        = JITTER_STACK_TOS_UNDER_TOP (type, stack_container, name);    \
+      /* Decrement the under-top pointer. */                           \
       JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type,                    \
                                               stack_container,         \
                                               name) --;                \
