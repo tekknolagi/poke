@@ -1085,6 +1085,13 @@ instruction mrot ()
   end
 end
 
+# The stack effect is ( a b c -- b a c ).
+instruction quake ()
+  code
+    JITTER_QUAKE_STACK ();
+  end
+end
+
 
 
 ## System meta-instructions.

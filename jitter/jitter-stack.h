@@ -626,6 +626,39 @@ jitter_stack_height;
     }                                                                \
   while (false)
 
+/* Swap the under-top and the under-under-top elements on the stack; this
+   expands to a statement, and there is no result.  Undefined behavior on
+   underflow.  This operation does not exist in Forth, but following its
+   naming pattern I would call it "quake"; the metaphore being an earth
+   movement right below the surface.
+   The stack effect is ( a b c -- b a c ). */
+#define JITTER_STACK_TOS_QUAKE(type, stack_container, name)               \
+  do                                                                      \
+    {                                                                     \
+      const type _jitter_stack_quake_under_under_top_old                  \
+        = JITTER_STACK_TOS_UNDER_UNDER_TOP(type, stack_container, name);  \
+      const type _jitter_stack_quake_under_top_old                        \
+        = JITTER_STACK_TOS_UNDER_TOP(type, stack_container, name);        \
+      JITTER_STACK_TOS_UNDER_UNDER_TOP(type, stack_container, name)       \
+        = _jitter_stack_quake_under_top_old;                              \
+      JITTER_STACK_TOS_UNDER_TOP(type, stack_container, name)             \
+        = _jitter_stack_quake_under_under_top_old;                        \
+    }                                                                     \
+  while (false)
+#define JITTER_STACK_NTOS_QUAKE(type, stack_container, name)               \
+  do                                                                       \
+    {                                                                      \
+      const type _jitter_stack_quake_under_under_top_old                   \
+        = JITTER_STACK_NTOS_UNDER_UNDER_TOP(type, stack_container, name);  \
+      const type _jitter_stack_quake_under_top_old                         \
+        = JITTER_STACK_NTOS_UNDER_TOP(type, stack_container, name);        \
+      JITTER_STACK_NTOS_UNDER_UNDER_TOP(type, stack_container, name)       \
+        = _jitter_stack_quake_under_top_old;                               \
+      JITTER_STACK_NTOS_UNDER_TOP(type, stack_container, name)             \
+        = _jitter_stack_quake_under_under_top_old;                         \
+    }                                                                      \
+  while (false)
+
 /* Remove the under-top element from the stack, without affecting the top; this
    expands to a statement, and there is no result.  Undefined behavior on an
    empty or one-element stack.  This operation is called "nip" in Forth. */
