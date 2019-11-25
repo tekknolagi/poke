@@ -1263,6 +1263,11 @@ if test "x$jitter_enable_dispatch_no_threading" = "xyes"; then
   implemented])
 fi
 
+# Fail if there is no best dispatch: this means that none was enabled.
+if test "x$jitter_best_dispatch_model" = 'x'; then
+  AC_MSG_ERROR([no dispatch was enabled, but you need at least one])
+fi
+
 # In sub-package mode disable every dispatch except for the best one, in order
 # to speed up compilation and testing.
 if test "x$JITTER_SUBPACKAGE" != 'x'; then
