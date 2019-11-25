@@ -665,6 +665,27 @@ if test "x$ac_cv_have_gcc_overflow" = "xyes"; then
 fi
 
 
+# Check for inline assembly or binary format features.
+################################################################
+
+# Check whether the assembler understands ".section .note.GNU-stack", which
+# is needed on some platforms relying on executable stack support.
+AC_CACHE_CHECK([for .note-GNU-stack section support],
+  [ac_cv_have_section_note_gnu_stack],
+  [AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM(
+        [[]],
+        [[asm volatile (".section .note.GNU-stack, \"\", @progbits\n"
+                        ".previous");
+        ]])],
+     [ac_cv_have_section_note_gnu_stack=yes],
+     [ac_cv_have_section_note_gnu_stack=no])])
+if test "x$ac_cv_have_section_note_gnu_stack" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_SECTION_NOTE_GNU_STACK], [1],
+            [Define if the platform supports a .note.GNU-stack section.])
+fi
+
+
 # Check for specific functions in the C library.
 ################################################################
 

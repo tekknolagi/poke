@@ -56,7 +56,8 @@
    could easily be compiled and linked with
      -Wa,--noexecstack -Wl,-z,noexecstack
    , if there were nothing else. */
-#ifdef JITTER_HOST_OS_IS_ELF
+#if defined (JITTER_HOST_OS_IS_ELF) \
+    && defined (JITTER_HAVE_SECTION_NOTE_GNU_STACK)
 .section .note.GNU-stack, "", @progbits
 .previous
 #endif /* #ifdef JITTER_HOST_OS_IS_ELF */

@@ -76,6 +76,7 @@
 /* Binary format. */
 #undef JITTER_HOST_OS_IS_ELF
 #undef JITTER_HOST_OS_IS_COFF
+#undef JITTER_HAVE_SECTION_NOTE_GNU_STACK
 
 /* Assembler flavor. */
 #undef JITTER_HOST_ASSEMBLER_IS_GNU
