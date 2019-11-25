@@ -973,6 +973,20 @@ if test "x$jitter_host_os_is_coff" = "xyes"; then
 fi
 
 
+# Recognize specific operating systems.
+################################################################
+
+# Recognize specific operating systems or kernels by library features, without
+# trusting the triplet.
+
+AC_CHECK_FUNCS([VirtualAlloc VirtualProtect])
+if test "x$ac_cv_func_VirtualAlloc" = "xyes" \
+   && test "x$ac_cv_func_VirtualProtect" = "xyes"; then
+  AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_WINDOWS], [1],
+                     [Define to 1 iff the host system is windows])
+fi
+
+
 # M4sh machinery.
 ################################################################
 

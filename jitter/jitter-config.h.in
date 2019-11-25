@@ -73,6 +73,9 @@
 #undef JITTER_BUILD_TRIPLET
 
 #undef JITTER_HOST_OS_IS_GNU
+#undef JITTER_HOST_OS_IS_GNU_HURD   /* FIXME: recognize this. */
+#undef JITTER_HOST_OS_IS_GNU_LINUX  /* FIXME: recognize this. */
+#undef JITTER_HOST_OS_IS_WINDOWS
 
 /* Binary format. */
 #undef JITTER_HOST_OS_IS_ELF
