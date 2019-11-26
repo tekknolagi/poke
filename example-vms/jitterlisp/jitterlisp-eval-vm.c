@@ -255,10 +255,10 @@ jitterlisp_apply_compiled (jitterlisp_object rator_value,
   if (__builtin_expect ((c->in_arity != provided_in_arity), false))
     jitterlisp_error_cloned ("arity mismatch in apply to compiled closure");
 
-  /* Push the number of closure operands, unencoded.  The driver programs
-     expects this last operand on the top of the stack, to be able to find
-     the closure below. */
-  JITTERLISPVM_PUSH_MAINSTACK(provided_in_arity);
+  /* Push the number of closure operands plus one, unencoded.  The driver
+     programs expects this last operand on the top of the stack, to be able to
+     find the closure below. */
+  JITTERLISPVM_PUSH_MAINSTACK(provided_in_arity + 1);
 
   /* Pass control to VM code. */
   return jitterlisp_jump_to_driver_and_return_result ();
