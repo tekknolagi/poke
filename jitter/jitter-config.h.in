@@ -114,8 +114,7 @@
 /* Jitter feature selection.
  * ************************************************************************** */
 
-/* These are needed by jitter.h when no dispatching-model CPP macros
-   are defined from the command line. */
+/* What the best dispatch is. */
 #undef JITTER_BEST_DISPATCHING_MODEL_IS_SWITCH
 #undef JITTER_BEST_DISPATCHING_MODEL_IS_DIRECT_THREADING
 #undef JITTER_BEST_DISPATCHING_MODEL_IS_MINIMAL_THREADING
@@ -125,9 +124,14 @@
 /* Versioning.
  * ************************************************************************** */
 
+/* Information about Jitter, to be printed out to the user. */
 #undef JITTER_PACKAGE_NAME
 #undef JITTER_PACKAGE_VERSION
 #undef JITTER_PACKAGE_BUGREPORT
+
+/* Notice that JITTER_DISPATCH_NAME_STRING , not defined here but available from
+   jitter/jitter.h , will also be appropriate to print, particularly for user
+   bug reports. */
 
 
 /* Availability of GNU C features.
