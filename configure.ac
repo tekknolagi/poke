@@ -42,7 +42,7 @@ AC_REQUIRE_AUX_FILE([trivial-source.c])
 # just generating it in a directory different from the build directory, so that
 # in sub-package mode there will be no possible conflict between Jitter's
 # config.h (which the super-package will not be able to access) and the
-# super-package's own config.h.
+# super-package's own config.h .
 #
 # jitter/jitter-config.h is meant to be installed in non-sub-package mode (or
 # available to the super-package in sub-package mode) as it is required when
@@ -65,20 +65,6 @@ m4_include([autoconf/jitter.m4])
 ################################################################
 
 AM_INIT_AUTOMAKE
-
-
-# Define prefixed aliases for Autoconf macros.
-################################################################
-
-# A few macro definitions will end up in an installed header, and their names
-# have to be prefixed with JITTER_ so as not to conflict with macros from other
-# software.
-AC_DEFINE_UNQUOTED([JITTER_PACKAGE_NAME], ["$PACKAGE_NAME"],
-                   [The name of the Jitter package])
-AC_DEFINE_UNQUOTED([JITTER_PACKAGE_VERSION], ["$PACKAGE_VERSION"],
-                   [The Jitter version as a string])
-AC_DEFINE_UNQUOTED([JITTER_PACKAGE_BUGREPORT], ["$PACKAGE_BUGREPORT"],
-                   [An email address where to report Jitter bugs])
 
 
 # Make the source and build directory names visible here.
@@ -1758,14 +1744,33 @@ m4_define([jitter_define_prefixed_macro],
                      [Same as $2 with a JITTER_ prefix suitable for an
                       installed header.])
            AC_MSG_NOTICE([defining prefixed macro JITTER_$2 as @S|@$1])])
-jitter_define_prefixed_macro([ac_cv_sizeof_void_p], [SIZEOF_VOID_P])
-jitter_define_prefixed_macro([ac_cv_sizeof_short], [SIZEOF_SHORT])
-jitter_define_prefixed_macro([ac_cv_sizeof_int], [SIZEOF_INT])
-jitter_define_prefixed_macro([ac_cv_sizeof_long], [SIZEOF_LONG])
-jitter_define_prefixed_macro([ac_cv_sizeof_long_long], [SIZEOF_LONG_LONG])
-jitter_define_prefixed_macro([ac_cv_sizeof_float], [SIZEOF_FLOAT])
-jitter_define_prefixed_macro([ac_cv_sizeof_double], [SIZEOF_DOUBLE])
+jitter_define_prefixed_macro([ac_cv_sizeof_void_p],      [SIZEOF_VOID_P])
+jitter_define_prefixed_macro([ac_cv_sizeof_short],       [SIZEOF_SHORT])
+jitter_define_prefixed_macro([ac_cv_sizeof_int],         [SIZEOF_INT])
+jitter_define_prefixed_macro([ac_cv_sizeof_long],        [SIZEOF_LONG])
+jitter_define_prefixed_macro([ac_cv_sizeof_long_long],   [SIZEOF_LONG_LONG])
+jitter_define_prefixed_macro([ac_cv_sizeof_float],       [SIZEOF_FLOAT])
+jitter_define_prefixed_macro([ac_cv_sizeof_double],      [SIZEOF_DOUBLE])
 jitter_define_prefixed_macro([ac_cv_sizeof_long_double], [SIZEOF_LONG_DOUBLE])
+
+# Define prefixed alternatives for macros expanding to string literals in C,
+# or actually for any shell variable meant to be used in this way.
+#
+# This is like jitter_define_prefixed_macro, but defines CPP macros to have
+# the shell variable value *within double quotes* as their value.
+# Arguments:
+# * shell variable;
+# * unprefixed feature macro name.
+m4_define([jitter_define_prefixed_macro_string],
+          [AC_DEFINE([JITTER_$2],
+                     ["@S|@$1"],
+                     [The value of the shell variable $1 as found by the
+                      configure script, with a JITTER_ prefix suitable for
+                      an installed header.])
+           AC_MSG_NOTICE([defining prefixed macro JITTER_$2 as "@S|@$1"])])
+jitter_define_prefixed_macro_string([PACKAGE_NAME],      [PACKAGE_NAME])
+jitter_define_prefixed_macro_string([PACKAGE_VERSION],   [PACKAGE_VERSION])
+jitter_define_prefixed_macro_string([PACKAGE_BUGREPORT], [PACKAGE_BUGREPORT])
 
 # Define prefixed versions of conditionally-defined feature macros.
 # Arguments:

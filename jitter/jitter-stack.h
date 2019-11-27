@@ -522,7 +522,7 @@ jitter_stack_height;
 #define JITTER_STACK_TOS_DROP(type, stack_container, name)             \
   do                                                                   \
     {                                                                  \
-      /* Load the under-top into the top. */                           \
+      /* Load the under-top element into the top. */                   \
       JITTER_STACK_TOS_TOP_NAME (type, stack_container, name)          \
         = JITTER_STACK_TOS_UNDER_TOP (type, stack_container, name);    \
       /* Decrement the under-top pointer. */                           \
@@ -636,8 +636,8 @@ jitter_stack_height;
   do                                                                            \
     {                                                                           \
       /* Do not disturb the top, which has already the correct value for the    \
-         final state.  Instead load a copy of the under-top, whose memory       \
-         content will need to change. */                                        \
+         final state.  Instead load a copy of the under-top element, whose      \
+         memory content will need to change. */                                 \
       const type _jitter_stack_tuck_under_top_old                               \
         = JITTER_STACK_TOS_UNDER_TOP (type, stack_container, name);             \
       /* Change the stack height.  From now on we can think about stack         \
@@ -656,14 +656,14 @@ jitter_stack_height;
   do                                                                        \
     {                                                                       \
       /* This version will not be as nice and fast as the TOS case.  The    \
-         top three elements in the stack all need to chage. */              \
+         top three elements in the stack all need to change. */             \
       /* Load the current under-top and top. */                             \
       const type _jitter_stack_tuck_under_top_old                           \
         = JITTER_STACK_NTOS_UNDER_TOP (type, stack_container, name);        \
       const type _jitter_stack_tuck_top_old                                 \
         = JITTER_STACK_NTOS_TOP (type, stack_container, name);              \
       /* Change the stack height.  The height will be what we need in the   \
-        final state after this. */                                          \
+         final state after this. */                                         \
       JITTER_STACK_NTOS_TOP_POINTER_NAME (type, stack_container, name) ++;  \
       /* Store the changed elements. */                                     \
       JITTER_STACK_NTOS_UNDER_UNDER_TOP (type, stack_container, name)       \

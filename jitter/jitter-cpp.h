@@ -1,6 +1,7 @@
 /* Jitter: general-purpose CPP macros for stringification and concatenation.
 
    Copyright (C) 2017 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -22,7 +23,8 @@
 #ifndef JITTER_CPP_H_
 #define JITTER_CPP_H_
 
-/* This header has no dependencies. */
+/* This header has no dependencies and expands to nothing, by design.  It is
+   safe to include from assembly sources. */
 
 /* Remark on multiple-level expansion.
  * ************************************************************************** */

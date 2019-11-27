@@ -223,8 +223,8 @@ jitter_asm_exit_section
 
 /* A simple Gas macro emitting the given label with the prefix "jitter_native_",
    followed by up to twenty instructions (or generically "lines"), plus
-   a 32-bit datum with the same name as the function followed by "_size"
-   holding the snippet size in bytes. */
+   a Jitter-word-sized datum with the same name as the function followed by
+   "_size" holding the snippet size in bytes. */
 .macro jitter_snippet snippet_name, \
                   insn1, insn2=<>, insn3=<>, insn4=<>, insn5=<>, insn6=<>, \
                   insn7=<>, insn8=<>, insn9=<>, insn10=<>, insn11=<>, insn12=<>, \
