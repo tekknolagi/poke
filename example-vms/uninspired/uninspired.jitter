@@ -969,6 +969,7 @@ end
 # stack configuration with this instruction and then using print-topmost
 # twice, to print it out before and after a change.
 instruction push-depths (?n)
+  non-relocatable
   code
     /* Make place for JITTER_ARGN0 new elements on the stack. */
     int i;
@@ -987,6 +988,7 @@ end
 # Push n elements to the stack, the deepest one having value 0, the next
 # having value 1, up to the top having value (n - 1) .
 instruction push-increasing (?n)
+  non-relocatable
   code
     /* Make place for JITTER_ARGN0 new elements on the stack. */
     int i;
@@ -1005,6 +1007,7 @@ end
 # each element print its depth between parentheses, the element, and two
 # spaces.  Add a final newline.
 instruction print-topmost (?n)
+  non-relocatable
   code
     int i;
     for (i = JITTER_ARGN0 - 1; i >= 0; i --)
