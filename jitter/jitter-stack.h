@@ -979,6 +979,113 @@ jitter_stack_height;
     }                                                                           \
   while (false)
 
+/* Expand to a statement performing a stack change to delete a given number of
+   non-top elements at the given depth.
+   * The element_no argument is the number of elements to delete.  It must be
+     non-negative;
+   * the depth argument is the depth of the deepest element to delete.  It must
+     be strictly positive.
+   For good performance both arguments should be known at compile time.
+   It is forbidden for this operation to change the top element: the metaphor of
+   "sliding" is a landslide where some below-ground strata collapse, which cause
+   a displacement of the surface layer down (potentially along with other layers)
+   without changing the surface.
+   After the operation is executed the stack will be element_no elements shorter.
+   Undefined behavior on:
+   * underflow;
+   * top element write;
+   * any over-the-top element access.
+   For example
+     slide 1 1
+   is equivalent to nip, and has the stack effect
+     ( a b -- b )
+   .  Then
+     slide 2 2
+   is equivalent to nip nip, and has the stack effect
+     ( a b c -- c )
+   and
+     slide 1 2
+   has the stack effect
+     ( b c d -- c d )
+   This is a generalization of nip, fast when the arguments are known at compile
+   time but potentially dangerous to use because of the possibility of accessing
+   the top element or even elements above the top by mistake, which may lead to
+   subtly incorrect results. */
+#define JITTER_STACK_TOS_SLIDE(type, stack_container, name, element_no, depth)  \
+  do                                                                            \
+    {                                                                           \
+      /* Use unsigned variables to get a warning in case the user passes        \
+         negative constants by mistake. */                                      \
+      unsigned int jitter_slide_element_no = (element_no);                      \
+      unsigned int jitter_slide_depth = (depth);                                \
+                                                                                \
+      /* Slide values down starting from the deepest one, iterating towards     \
+         the top.  Having the jitter_slide_source_depth unsigned might help     \
+         catching some user bugs, ifthe value is negative and the compiler      \
+         gives a warning. */                                                    \
+      unsigned int jitter_slide_source_depth;                                   \
+      for (jitter_slide_source_depth                                            \
+             = jitter_slide_depth - jitter_slide_element_no;                    \
+           /* The top is never modified, and the old under-top element is the   \
+              shallowest element that can be read; instead the under-under-top  \
+              element is the shallowest to be written. */                       \
+           jitter_slide_source_depth != 0; /* !=: stop before the top. */       \
+           jitter_slide_source_depth --)                                        \
+        {                                                                       \
+          unsigned int jitter_slide_target_depth                                \
+            = jitter_slide_source_depth + jitter_slide_element_no;              \
+          const type jitter_slide_source                                        \
+            = JITTER_STACK_TOS_AT_NONZERO_DEPTH (type, stack_container, name,   \
+                                                 jitter_slide_source_depth);    \
+          JITTER_STACK_TOS_SET_AT_NONZERO_DEPTH (type, stack_container, name,   \
+                                                 jitter_slide_target_depth,     \
+                                                 jitter_slide_source);          \
+        }                                                                       \
+      /* Decrement the (under-top) stack pointer. */                            \
+      JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)      \
+        -= jitter_slide_element_no;                                             \
+      /* Notice that the top element has not been updated.  This TOS version    \
+         will *always* leave it as it was, which satisfies the specification    \
+         above but will lead to subtle bugs if this operation is used           \
+         carelessly.*/                                                          \
+    }                                                                           \
+  while (false)
+#define JITTER_STACK_NTOS_SLIDE(type, stack_container, name, element_no, depth) \
+  do                                                                            \
+    {                                                                           \
+      /* Use unsigned variables to get a warning in case the user passes        \
+         negative constants by mistake.  Then convert to signed types and use   \
+         the signed versions which are more convenient later; we need a sign    \
+         test in the loop guard. */                                             \
+      unsigned int jitter_slide_element_nou = (element_no);                     \
+      unsigned int jitter_slide_depthu = (depth);                               \
+      int jitter_slide_element_no = jitter_slide_element_nou;                   \
+      int jitter_slide_depth = jitter_slide_depthu;                             \
+                                                                                \
+      /* Slide values down starting from the deepest one, iterating towards     \
+         the top. */                                                            \
+      int jitter_slide_source_depth;                                            \
+      for (jitter_slide_source_depth                                            \
+             = jitter_slide_depth - jitter_slide_element_no;                    \
+           /* In the non-TOS case the top element is the last to be read. */    \
+           jitter_slide_source_depth >= 0;                                      \
+           jitter_slide_source_depth --)                                        \
+        {                                                                       \
+          int jitter_slide_target_depth                                         \
+            = jitter_slide_source_depth + jitter_slide_element_no;              \
+          const type jitter_slide_source                                        \
+            = JITTER_STACK_NTOS_AT_DEPTH (type, stack_container, name,          \
+                                          jitter_slide_source_depth);           \
+          JITTER_STACK_NTOS_SET_AT_NONZERO_DEPTH (type, stack_container, name,  \
+                                                  jitter_slide_target_depth,    \
+                                                  jitter_slide_source);         \
+        }                                                                       \
+      /* Decrement the top stack pointer. */                                    \
+      JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)           \
+        -= jitter_slide_element_no;                                             \
+    }                                                                           \
+  while (false)
+
 
 
 

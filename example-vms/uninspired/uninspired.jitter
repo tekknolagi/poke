@@ -1102,6 +1102,24 @@ instruction tuck ()
   end
 end
 
+instruction slide (?n 1 2 3, ?n 1 2 3 4 5)
+  code
+    JITTER_SLIDE_STACK (JITTER_ARGN0, JITTER_ARGN1);
+  end
+end
+
+# Like slide above, but taking the arguments from the stack.
+instruction slideforth ()
+  code
+    /* No sign or non-zero checks: this is unsafe code. */
+    jitter_uint element_no = JITTER_UNDER_TOP_STACK ().fixnum;
+    jitter_uint depth = JITTER_TOP_STACK ().fixnum;
+    JITTER_DROP_STACK();
+    JITTER_DROP_STACK();
+    JITTER_SLIDE_STACK (element_no, depth);
+  end
+end
+
 
 
 ## System meta-instructions.
