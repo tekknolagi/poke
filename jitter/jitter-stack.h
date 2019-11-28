@@ -256,11 +256,11 @@ jitter_stack_finalize_backing (struct jitter_stack_backing *backing)
 #define JITTER_STACK_TOS_AT_NONZERO_DEPTH(type, stack_container, name,   \
                                           distance)                      \
   (JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)  \
-     [- (distance - 1)])
+     [1 - (int) (distance)])
 #define JITTER_STACK_NTOS_AT_NONZERO_DEPTH(type, stack_container, name,  \
                                            distance)                     \
   (JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)       \
-     [- (distance)])
+     [- (int) (distance)])
 
 /* Expand to a statement updating an element the given stack at the given
    distance from the top (0 being the top, 1 being the undertop, and so on); the
@@ -293,7 +293,7 @@ jitter_stack_finalize_backing (struct jitter_stack_backing *backing)
   do                                                                           \
     {                                                                          \
       (JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)         \
-          [- (distance)]) = (new_element);                                     \
+          [- (int) (distance)]) = (new_element);                               \
     }                                                                          \
   while (false)
 
@@ -306,7 +306,7 @@ jitter_stack_finalize_backing (struct jitter_stack_backing *backing)
   do                                                                         \
     {                                                                        \
       (JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)  \
-          [1 - (distance)]) = (new_element);                                 \
+          [1 - (int) (distance)]) = (new_element);                           \
     }                                                                        \
   while (false)
 #define JITTER_STACK_NTOS_SET_AT_NONZERO_DEPTH(type, stack_container, name,  \
