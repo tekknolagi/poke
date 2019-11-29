@@ -1086,6 +1086,87 @@ jitter_stack_height;
     }                                                                           \
   while (false)
 
+/* Exchange the top element with a deeper element, deleting the element_no
+   elements in between.
+   Undefined behavior on:
+   * underflow;
+   * negative element_no.
+   This is fast when the argument is known at compile time.
+   The metaphor is two objects dancing around a central pivot exchanging their
+   places, and at the same time squashing the pivot.
+   The stack effect for whirl 1 is
+     ( a b c -- c a )
+   , equivalent to
+     ( a b c ) nip ( a c ) swap ( c a ).
+   For whirl 2 the effect will be
+     ( a b c d -- d a )
+   .  The case of whirl 0 degenerates to swap:
+     ( a b -- b a ) */
+#define JITTER_STACK_TOS_WHIRL(type, stack_container, name, element_no)        \
+  do                                                                           \
+    {                                                                          \
+      /* As long as the argument is a known constant this is just an typical   \
+         exchange between a memory location and a register, followed by a      \
+         stack increment. */                                                   \
+      /* Use an unsigned variable to get a warning in case the user passes     \
+         a negative constant by mistake. */                                    \
+      unsigned int _jitter_whirl_element_no = (element_no);                    \
+      /* The stack depth of the deepest element to be touched, in the old      \
+         state. */                                                             \
+      unsigned int _jitter_whirl_deepest_depth_old                             \
+        = _jitter_whirl_element_no + 1;                                        \
+      /* Name the two source elements.  This will only cost one load, since    \
+         there is no need to modify the top-element register until near the    \
+         end. */                                                               \
+      const type _jitter_stack_swirl_deepest_old                               \
+        = JITTER_STACK_TOS_AT_NONZERO_DEPTH (type, stack_container, name,      \
+                                             _jitter_whirl_deepest_depth_old); \
+      const type _jitter_stack_swirl_top_old                                   \
+        = JITTER_STACK_TOS_TOP (type, stack_container, name);                  \
+      /* Write the two target elements and adjust the stack (under-top)        \
+         pointer.  The deepest element is always in memory, at the same        \
+         address where the old version of it was.  This will cost one store,   \
+         one register copy, plus the register increment. */                    \
+      JITTER_STACK_TOS_SET_AT_NONZERO_DEPTH (type, stack_container, name,      \
+                                             _jitter_whirl_deepest_depth_old,  \
+                                             _jitter_stack_swirl_top_old);     \
+      JITTER_STACK_TOS_TOP (type, stack_container, name)                       \
+        = _jitter_stack_swirl_deepest_old;                                     \
+      JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME (type, stack_container, name)    \
+        -= _jitter_whirl_element_no;                                           \
+    }                                                                          \
+  while (false)
+#define JITTER_STACK_NTOS_WHIRL(type, stack_container, name, element_no)    \
+  do                                                                        \
+    {                                                                       \
+      /* This is not properly an exchange between two memory locations:     \
+         the new top element will end up at a different address from the    \
+         old top element. */                                                \
+      /* Use an unsigned variable to get a warning in case the user passes  \
+         a negative constant by mistake. */                                 \
+      unsigned int _jitter_whirl_element_no = (element_no);                 \
+      /* The stack depth of the deepest element to be touched, in the old   \
+         state. */                                                          \
+      unsigned int _jitter_whirl_deepest_depth_old                          \
+        = _jitter_whirl_element_no + 1;                                     \
+      /* Read the two source elements from memory. */                       \
+      const type _jitter_stack_swirl_deepest_old                            \
+        = JITTER_STACK_NTOS_AT_DEPTH (type, stack_container, name,          \
+                                      _jitter_whirl_deepest_depth_old);     \
+      const type _jitter_stack_swirl_top_old                                \
+        = JITTER_STACK_NTOS_TOP (type, stack_container, name);              \
+      /* Adjust the stack pointer and write the two target elements, again  \
+         in memory. */                                                      \
+      JITTER_STACK_NTOS_SET_AT_DEPTH (type, stack_container, name,          \
+                                      _jitter_whirl_deepest_depth_old,      \
+                                      _jitter_stack_swirl_top_old);         \
+      JITTER_STACK_NTOS_TOP_POINTER_NAME (type, stack_container, name)      \
+        -= _jitter_whirl_element_no;                                        \
+      JITTER_STACK_NTOS_TOP (type, stack_container, name)                   \
+        = _jitter_stack_swirl_deepest_old;                                  \
+    }                                                                       \
+  while (false)
+
 
 
 

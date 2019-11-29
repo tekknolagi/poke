@@ -1120,6 +1120,23 @@ instruction slideforth ()
   end
 end
 
+instruction whirl (?n 0 # Of course 0 is not useful in practice.
+                      1 2 3)
+  code
+    JITTER_WHIRL_STACK (JITTER_ARGU0);
+  end
+end
+
+# Like whirl above, but taking the arguments from the stack.
+instruction whirlforth ()
+  code
+    /* No sign checks: this is unsafe code. */
+    jitter_uint element_no = JITTER_TOP_STACK ().fixnum;
+    JITTER_DROP_STACK();
+    JITTER_WHIRL_STACK (element_no);
+  end
+end
+
 
 
 ## System meta-instructions.
