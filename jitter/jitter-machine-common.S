@@ -230,8 +230,10 @@ jitter_asm_exit_section
                   insn7=<>, insn8=<>, insn9=<>, insn10=<>, insn11=<>, insn12=<>, \
                   insn13=<>, insn14=<>, insn15=<>, insn16=<>, insn17=<>, \
                   insn18=<>, insn19=<>, insn20=<>
-/* Emit the snippet in the current section.  It does not even need to be
-   aligned, since the snippet is only used as a master copy. */
+/* Emit the snippet in the current section.  Use an alignment sufficient for
+   all architectures; Gas refuses to emit misaligned instructions on some
+   platforms. */
+        .balign 16
 jitter_native_&\snippet_name&:
         \insn1
         \insn2
