@@ -1097,6 +1097,90 @@ jitter_stack_height;
     }                                                                           \
   while (false)
 
+/* Duplicate a non-top element at the given depth, moving every shallower
+   element up by one position.  At the end of the operation the stack becomes
+   one position taller.
+   Undefined behavior on:
+   * underflow;
+   * non-positive argument.
+   For good performance the argument should be known at compile time.
+   bulge 1 is equivalent to over swap, and has effect
+     ( a b -- a a b )
+   bulge 2 has effect
+     ( a b c -- a a b c ) */
+#define JITTER_STACK_TOS_BULGE(type, stack_container, name, depth)              \
+  do                                                                            \
+    {                                                                           \
+      /* Use unsigned variables to get a warning in case the user passes a      \
+         negative constant by mistake, or reaches a negative depth.  Also use   \
+         unsigned variables for depths, so that user errors causing a           \
+         wraparound are more catastrophic and therefore easier to see. */       \
+      unsigned int jitter_bulge_depth_old = (depth);                            \
+      /* The given depth is relative to the old state.  Immediately increment   \
+         the (under-top) stack pointer, and only reason about depths in the     \
+         new state. */                                                          \
+      JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME (type, stack_container, name) ++; \
+      unsigned int jitter_bulge_max_source_depth = jitter_bulge_depth_old + 1;  \
+      unsigned int jitter_bulge_max_target_depth                                \
+        = jitter_bulge_max_source_depth - 1;                                    \
+      /* No special handling is needed for the top in the TOS case, as it       \
+         already has the correct value. */                                      \
+      /* Iterate from shallow to deep positions, up to an update to the top     \
+         element, *not included* (this is different from the TOS case).  This   \
+         makes elements at the depth mentioned by the user or above but below   \
+         the top slide up by one position.                                      \
+         Notice the inconsistency in behavior with respect to a zero depth      \
+         argument and the non-TOS case below: the TOS case with zero depth      \
+         degenerates to push-unspecified rather than dup. */                    \
+      unsigned int jitter_bulge_target_depth;                                   \
+      for (jitter_bulge_target_depth = 1; /* Different from non-TOS. */         \
+           jitter_bulge_target_depth <= jitter_bulge_max_target_depth;          \
+           jitter_bulge_target_depth ++)                                        \
+        {                                                                       \
+          unsigned int jitter_bulge_source_depth                                \
+            = jitter_bulge_target_depth + 1;                                    \
+          JITTER_STACK_TOS_AT_NONZERO_DEPTH (type, stack_container, name,       \
+                                             jitter_bulge_target_depth)         \
+            = JITTER_STACK_TOS_AT_NONZERO_DEPTH (type, stack_container, name,   \
+                                                 jitter_bulge_source_depth);    \
+        }                                                                       \
+    }                                                                           \
+  while (false)
+#define JITTER_STACK_NTOS_BULGE(type, stack_container, name, depth)            \
+  do                                                                           \
+    {                                                                          \
+      /* Use unsigned variables to get a warning in case the user passes a     \
+         negative constant by mistake, or reaches a negative depth.  Also use  \
+         unsigned variables for depths, so that user errors causing a          \
+         wraparound are more catastrophic and therefore easier to see. */      \
+      unsigned int jitter_bulge_depth_old = (depth);                           \
+      /* The given depth is relative to the old state.  Immediately increment  \
+         the stack pointer and only reason about new-state depths. */          \
+      JITTER_STACK_NTOS_TOP_POINTER_NAME (type, stack_container, name) ++;     \
+      unsigned int jitter_bulge_max_source_depth = jitter_bulge_depth_old + 1; \
+      unsigned int jitter_bulge_max_target_depth                               \
+        = jitter_bulge_max_source_depth - 1;                                   \
+      /* Iterate from shallow to deep positions, up to an update to the top    \
+         element, included.  This makes elements at the depth mentioned by     \
+         the user or above slide up by one position.                           \
+         Notice that specifying a depth of 0, in the non-TOS case, degenerates \
+         to dup.  This behavior must *not* be relied upon, as it is not        \
+         consistent with the TOS case. */                                      \
+      unsigned int jitter_bulge_target_depth;                                  \
+      for (jitter_bulge_target_depth = 0;                                      \
+           jitter_bulge_target_depth <= jitter_bulge_max_target_depth;         \
+           jitter_bulge_target_depth ++)                                       \
+        {                                                                      \
+          unsigned int jitter_bulge_source_depth                               \
+            = jitter_bulge_target_depth + 1;                                   \
+          JITTER_STACK_NTOS_AT_DEPTH (type, stack_container, name,             \
+                                      jitter_bulge_target_depth)               \
+            = JITTER_STACK_NTOS_AT_DEPTH (type, stack_container, name,         \
+                                          jitter_bulge_source_depth);          \
+        }                                                                      \
+    }                                                                          \
+  while (false)
+
 /* Exchange the top element with a deeper element, deleting the element_no
    elements in between.
    Undefined behavior on:
