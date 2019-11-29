@@ -67,8 +67,11 @@
 static struct jitter_vm
 the_vmprefix_vm;
 
-const struct jitter_vm * const
-vmprefix_vm = (const struct jitter_vm * const) & the_vmprefix_vm;
+struct jitter_vm * const
+vmprefix_vm = & the_vmprefix_vm;
+
+struct jitter_list_header * const
+vmprefix_states = & the_vmprefix_vm.states;
 
 const struct jitter_vm_configuration * const
 vmprefix_vm_configuration = & the_vmprefix_vm.configuration;
@@ -132,6 +135,26 @@ vmprefix_specialize_instruction (struct jitter_mutable_routine *p,
    occurs further down in this file. */
 static void
 vmprefix_initialize_vm_configuration (struct jitter_vm_configuration *c);
+
+
+/* Initialize the pointed special-purpose data structure. */
+static void
+vmprefix_initialize_special_purpose_data
+   (volatile struct jitter_special_purpose_state_data *d)
+{
+  d->pending_notifications = 0;
+  jitter_initialize_pending_signal_notifications
+     (& d->pending_signal_notifications);
+}
+
+/* Finalize the pointed special-purpose data structure. */
+static void
+vmprefix_finalize_special_purpose_data
+   (volatile struct jitter_special_purpose_state_data *d)
+{
+  jitter_finalize_pending_signal_notifications
+     (d->pending_signal_notifications);
+}
 
 
 
@@ -414,6 +437,9 @@ vmprefix_initialize (void)
                                  / sizeof (struct jitter_defect_descriptor)));
 #endif // #ifdef JITTER_HAVE_PATCH_IN
 
+      /* Initialize the empty list of states. */
+      JITTER_LIST_INITIALIZE_HEADER (& the_vmprefix_vm.states);
+
       vm_struct_initialized = true;
     }
 
@@ -444,6 +470,11 @@ vmprefix_finalize (void)
   /* Finalize the executable-memory subsystem. */
   jitter_finalize_executable ();
 #endif // #ifdef JITTER_REPLICATE
+
+  /* Finalize the state list.  If it is not empty then something has gone
+     wrong earlier. */
+  assert (the_vmprefix_vm.states.first == NULL);
+  assert (the_vmprefix_vm.states.last == NULL);
 }
 
 

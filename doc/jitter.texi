@@ -2239,6 +2239,7 @@ user code, but it should be easy to avoid that.}
 * Stack code generation::      Generating code for a stack VM is trivial.
 * Register code generation::   Generating code for register VMs can still be easy.
 * Specific language features:: Suggestions for how to compile some language forms.
+* Specific runtime features::  Suggestions for how to handle runtime features.
 @end menu
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@
@@ -2262,7 +2263,7 @@ user code, but it should be easy to avoid that.}
 @section Specific language features
 
 @menu
-* Primitive operations::                 Make primitives, even if inefficient easy to add.
+* Primitive operations::                 Make primitives, even if inefficient, easy to add.
 * Conditionals and Boolean expressions:: Avoid materializing Booleans for conditionals.
 * Procedural abstraction::               Compiling procedures, functions, or methods.
 * Dynamic tag checking::                 Checking for types at run time (or fail).
@@ -2298,6 +2299,117 @@ user code, but it should be easy to avoid that.}
 
 @fixme{Sometimes called dynamic dispatch, but nothing to do with VM dispatches}
 
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Specific runtime features
+@section Specific runtime features
+
+@menu
+* Multi-threading::                      You can run VM code from multiple threads.
+* Asynchronous notifications::           Sending messages from a VM thread to another.
+* Signals::                              Using signals to interrupt VM code.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Multi-threading
+@subsection Multi-threading
+
+@menu
+* Reentrancy issues::                   A few operations require critical sections.
+* Iterating on VM states::              You will need to walk the list of states.
+@end menu
+
+@c @@@
+@node Reentrancy issues
+@subsubsection Reentrancy issues
+
+
+@c @@@
+@node Iterating on VM states
+@subsubsection Iterating on VM states
+
+If this is not documented anywhere explain @code{vmprefix_states} and the
+state doubly-linked list.
+
+@smallexample
+static void
+handle_signal (int signal_number)
+@{
+  struct vmprefix_state *s;
+  for (s = vmprefix_states->first; s != NULL; s = s->links.next)
+    @{
+      VMPREFIX_STATE_AND_SIGNAL_TO_PENDING_SIGNAL_NOTIFICATION (s, signal_number) = true;
+      VMPREFIX_STATE_TO_PENDING_NOTIFICATIONS (s) = true;
+    @}
+@}
+@end smallexample
+
+Notice that @code{vmprefix_states} is also safe to use from VM
+instructions: it is automatically wrapped as a global.
+
+A pointer to the current state is accessible from VM instruction
+code as @code{VMPREFIX_OWN_STATE}.  It can be used for pointer comparisons when
+iterating over all states, and can be useful for a thread notifying every state
+except its own.
+
+@smallexample
+#if defined (JITTER_HAVE_SIGACTION)
+  struct sigaction action;
+  sigaction (SIGINT, NULL, & action);
+  action.sa_handler = handle_signal;
+  sigaction (SIGINT, & action, NULL);
+#else
+  signal (SIGINT, handle_signal);
+#endif /* #if defined (JITTER_HAVE_SIGACTION) */
+@end smallexample
+
+@code{VMPREFIX_FOR_EACH_STATE}.
+
+@smallexample
+struct vmprefix_state *s;
+VMPREFIX_FOR_EACH_STATE (s)
+  if (s != VMPREFIX_OWN_STATE)
+    printf ("This is a state different from %p: %p\n", VMPREFIX_OWN_STATE, s);
+@end smallexample
+
+
+@c @@@@@@@@@@@@@
+@node Asynchronous notifications
+@subsection Asynchronous notifications
+
+@menu
+* Notification polling and safe points:: Checking for incoming messages must be fast.
+* Blocking primitives::                  Some primitives can be interrupted.
+@end menu
+
+@c @@@
+@node Notification polling and safe points
+@subsubsection Notification polling and safe points
+
+To send: @code{VMPREFIX_STATE_TO_SPECIAL_PURPOSE_STATE_DATA}
+@code{VMPREFIX_STATE_TO_PENDING_NOTIFICATIONS}
+
+To receive/handle: @code{JITTER_PENDING_NOTIFICATIONS}
+
+@c @@@
+@node Blocking primitives
+@subsubsection Blocking primitives
+
+
+@c @@@@@@@@@@@@@
+@node Signals
+@subsection Signals
+
+@code{struct jitter_signal_notification}
+@code{pending}
+@code{user_data}
+
+@code{signal.h} @code{NSIG}
+
+To send: @code{VMPREFIX_STATE_AND_SIGNAL_TO_PENDING_SIGNAL_NOTIFICATION(statep, signal)}
+
+To receive/handle: @code{JITTER_PENDING_SIGNAL_NOTIFICATION(signal_id)}
+@code{JITTER_SIGNAL_NO}
 
 @c Internals
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

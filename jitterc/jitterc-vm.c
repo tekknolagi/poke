@@ -74,6 +74,20 @@ jitterc_make_literal (enum jitterc_literal_type type,
 
 
 
+/* Implicit wraps.
+ * ************************************************************************** */
+
+/* Add implicitly defined wrappers for globals and functions. */
+static void
+jitterc_add_implicit_wraps (struct jitterc_vm *vm)
+{
+  gl_list_add_last (vm->wrapped_globals,
+                    jitter_clone_string ("vmprefix_states"));
+}
+
+
+
+
 /* Implicit instructions.
  * ************************************************************************** */
 
@@ -178,6 +192,9 @@ jitterc_make_vm (void)
      instruction this will be compared with the residual arity of the new
      specialized instruction, and set to the higher value of the two. */
   res->max_residual_arity = 0;
+
+  /* Add implicit wrapped globals and functions. */
+  jitterc_add_implicit_wraps (res);
 
   /* Add the implicit instructions. */
   jitterc_add_implicit_instructions (res);

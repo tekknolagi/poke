@@ -54,6 +54,8 @@
 #include <jitter/jitter-data-locations.h>
 #include <jitter/jitter-arithmetic.h>
 #include <jitter/jitter-bitwise.h>
+#include <jitter/jitter-signals.h>
+#include <jitter/jitter-list.h>
 
 
 
@@ -104,6 +106,44 @@ vmprefix_state_initialize (struct vmprefix_state *state)
 void
 vmprefix_state_finalize (struct vmprefix_state *state)
   __attribute__ ((nonnull (1)));
+
+
+
+
+/* State data structure: iteration.
+ * ************************************************************************** */
+
+/* The header of a doubly-linked list linking every state for the vmprefix VM
+   together.  This global is automatically wrapped, and therefore also
+   accessible from VM instruction code. */
+struct jitter_list_header * const
+vmprefix_states;
+
+/* A pointer to the current state, only accessible from VM code.  This is usable
+   for pointer comparison when iterating over states. */
+#define VMPREFIX_OWN_STATE                           \
+  ((struct vmprefix_state *) jitter_original_state)
+
+/* Given an l-value of type struct vmprefix_state * (usually a variable name)
+   expand to a for loop statement iterating over every existing vmprefix state
+   using the l-value as iteration variable.  The expansion will execute the
+   statement immediately following the macro call with the l-value in scope;
+   in order words the loop body is not a macro argument, but follows the macro
+   use.
+   The l-value may be evaluated an unspecified number of times.
+   This macro is safe to use within VM instruction code.
+   For example:
+     struct vmprefix_state *s;
+     VMPREFIX_FOR_EACH_STATE (s)
+       printf ("This is a state: %p\n", s); // (but printf unsafe in VM code) */
+#define VMPREFIX_FOR_EACH_STATE(jitter_state_iteration_lvalue)     \
+  for ((jitter_state_iteration_lvalue)                             \
+          = vmprefix_states->first;                                \
+       (jitter_state_iteration_lvalue)                             \
+          != NULL;                                                 \
+       (jitter_state_iteration_lvalue)                             \
+         = (jitter_state_iteration_lvalue)->links.next)            \
+    /* Here comes the body supplied by the user: no semicolon. */
 
 
 
@@ -222,7 +262,94 @@ vmprefix_make_mutable_routine (void)
 
 
 
-/* Array element access: residuals, transfers, slow registers, more to come.
+/* Array: special-purpose data.
+ * ************************************************************************** */
+
+/* The Array is a convenient place to store special-purpose data, accessible in
+   an efficient way from a VM routine.
+   Every item in special-purpose data is thread-local. */
+
+/* The special-purpose data struct.  Every Array contains one of these at unbiased
+   offset VMPREFIX_SPECIAL_PURPOSE_STATE_DATA_UNBIASED_OFFSET from the unbiased
+   beginning of the array.
+   This entire struct is aligned to at least sizeof (jitter_int) bytes.  The
+   entire struct is meant to be always accessed through a pointer-to-volatile,
+   as its content may be altered from signal handlers and from different
+   threads.  In particualar the user should use the macro
+     VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA
+   defined below and the macros defined from it as accessors.
+   VM code accessing special-purpose data for its own state should use
+     VMPREFIX_SPECIAL_PURPOSE_STATE_DATA
+   and the macros defined from it. */
+struct jitter_special_purpose_state_data
+{
+  /* This is a Boolean flag, held as a word-sized datum so as to ensure
+     atomicity in access.  It is also aligned to at least sizeof (jitter_int)
+     bytes.
+     Non-zero means that there is at least one notification pending, zero means
+     that there are no notifications.  The flag specifies no other details: it
+     is meant to be fast to check, with detailed information about each pending
+     notification available elsewhere.
+     It is the receiver's responsibility to periodically poll for notifications
+     in application-specific "safe-points":
+     A check can be inserted, for example, in all of these program points:
+     a) at every backward branch;
+     b) at every procedure entry;
+     c) right after a call to each blocking primitive (as long as primitives
+       can be interrupted).
+     Safe-point checks are designed to be short and fast in the common case.  In
+     the common case no action is required, and the VM routine should simply
+     fall through.  If an action is required then control should branch off to a
+     handler, where the user may implement the required behavior.
+     It is mandatory that, as long as notifications can arrive, this field
+     is reset to zero (when handling pending notifications) only by a thread
+     running VM code in the state containing this struct.
+     Other threads are allowed to set this to non-zero, in order to send a
+     notification.  */
+  jitter_int pending_notifications;
+
+  /* Information about pending signal notifications.  If any signal is pending
+     then pending_notifications must also be set, so that a notification check
+     can always just quickly check pending_notifications, and then look at more
+     details (including in pending_signal_notifications) only in the rare case
+     of pending_notifications being true. */
+  struct jitter_signal_notification *pending_signal_notifications;
+};
+
+
+
+
+/* The Array and volatility.
+ * ************************************************************************** */
+
+/* Some fields of The Array, seen from VM code, are meant to be volatile, since
+   they can be set by signal handlers or by other threads.  However it is
+   acceptable to not see such changes immediately after they occur (notifications
+   will get delayed, but not lost) and always accessing such data through a
+   volatile struct is suboptimal.
+
+   Non-VM code does need a volatile qualifier.
+
+   Advanced dispatches already need a trick using inline assembly to make the
+   base pointer (a biased pointer to The Array beginning) appear to
+   spontaneously change beween instruction.  That is sufficient to express the
+   degree of volatility required for this purpose.
+   Simple dispatches, on targets where inline assembly may not be available at
+   all, will use an actual volatile qualifier. */
+#if defined (JITTER_DISPATCH_SWITCH)               \
+    || defined (JITTER_DISPATCH_DIRECT_THREADING)
+# define VMPREFIX_ARRAY_VOLATILE_QUALIFIER volatile
+#elif defined (JITTER_DISPATCH_MINIMAL_THREADING)  \
+      || defined (JITTER_DISPATCH_NO_THREADING)
+# define VMPREFIX_ARRAY_VOLATILE_QUALIFIER /* nothing */
+#else
+# error "unknown dispatch: this should not happen"
+#endif /* dispatch conditional */
+
+
+
+
+/* Array element access: residuals, transfers, slow registers, and more.
  * ************************************************************************** */
 
 /* In order to cover a wider range of addresses with simple base + register
@@ -232,7 +359,7 @@ vmprefix_make_mutable_routine (void)
    FIXME: define the bias as a value appropriate to each architecture.  I think
    I should just move the definition to jitter-machine.h and provide a default
    here, in case the definition is missing on some architecture. */
-#define JITTER_ARRAY_BIAS 0
+#define JITTER_ARRAY_BIAS 0//(((jitter_int) 1 << 15))//(((jitter_int) 1 << 31))//0//0//16//0
 
 /* Array-based globals are not implemented yet.  For the purpose of computing
    Array offsets I will say they are zero. */
@@ -246,6 +373,7 @@ vmprefix_make_mutable_routine (void)
    and transfer register, from an initial Array pointer.
    In general we have to keep into account:
    - globals (word-sized);
+   - special-purpose state data;
    - memory residuals (word-sized);
    - transfer registers (word-sized);
    - slow registers (vmprefix_any_register-sized and aligned).
@@ -256,9 +384,12 @@ vmprefix_make_mutable_routine (void)
    on VMPREFIX_MAX_RESIDUAL_ARITY, which is machine-generated. */
 #define VMPREFIX_FIRST_GLOBAL_UNBIASED_OFFSET  \
   0
-#define VMPREFIX_FIRST_MEMORY_RESIDUAL_UNBIASED_OFFSET  \
-  (VMPREFIX_FIRST_GLOBAL_UNBIASED_OFFSET                \
+#define VMPREFIX_SPECIAL_PURPOSE_STATE_DATA_UNBIASED_OFFSET  \
+  (VMPREFIX_FIRST_GLOBAL_UNBIASED_OFFSET                     \
    + sizeof (jitter_int) * VMPREFIX_GLOBAL_NO)
+#define VMPREFIX_FIRST_MEMORY_RESIDUAL_UNBIASED_OFFSET   \
+  (VMPREFIX_SPECIAL_PURPOSE_STATE_DATA_UNBIASED_OFFSET   \
+   + sizeof (struct jitter_special_purpose_state_data))
 #define VMPREFIX_FIRST_TRANSFER_REGISTER_UNBIASED_OFFSET        \
   (VMPREFIX_FIRST_MEMORY_RESIDUAL_UNBIASED_OFFSET               \
    + sizeof (jitter_int) * VMPREFIX_MAX_MEMORY_RESIDUAL_ARITY)
@@ -267,6 +398,61 @@ vmprefix_make_mutable_routine (void)
      (VMPREFIX_FIRST_TRANSFER_REGISTER_UNBIASED_OFFSET        \
       + sizeof (jitter_int) * VMPREFIX_TRANSFER_REGISTER_NO,  \
       sizeof (union vmprefix_any_register))
+
+/* Expand to the offset of the special-purpose data struct from the Array
+   biased beginning. */
+#define VMPREFIX_SPECIAL_PURPOSE_STATE_DATA_OFFSET       \
+  (VMPREFIX_SPECIAL_PURPOSE_STATE_DATA_UNBIASED_OFFSET   \
+   - JITTER_ARRAY_BIAS)
+
+/* Given an expression evaluating to the Array unbiased beginning, expand to
+   an expression evaluating to a pointer to its special-purpose data.
+   This is convenient for accessing special-purpose data from outside the
+   state -- for example, to set the pending notification flag for another
+   thread.
+   There are two versions of this feature:
+     VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA
+   is meant to be used to access state data for some other thread, or in
+   general out of VM code.
+     VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA
+   is for VM code accessing its own special-purpose data. */
+#define VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA_PRIVATE(qualifier,      \
+                                                             array_address)  \
+  ((qualifier struct jitter_special_purpose_state_data *)                    \
+   (((char *) (array_address))                                               \
+    + VMPREFIX_SPECIAL_PURPOSE_STATE_DATA_UNBIASED_OFFSET))
+#define VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA(array_address)       \
+  VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA_PRIVATE (volatile,         \
+                                                        (array_address))
+#define VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA          \
+  VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA_PRIVATE   \
+     (VMPREFIX_ARRAY_VOLATILE_QUALIFIER,                 \
+      ((char *) jitter_array_base) - JITTER_ARRAY_BIAS)
+
+/* Given a state pointer, expand to an expression evaluating to a pointer to
+   the state's special-purpose data.  This is meant for threads accessing
+   other threads' special-purpose data, typically to set notifications. */
+#define VMPREFIX_STATE_TO_SPECIAL_PURPOSE_STATE_DATA(state_p)  \
+  (VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA                \
+     ((state_p)->vmprefix_state_backing.jitter_array))
+
+/* Given a state pointer, expand to an expression evaluating to the
+   pending_notification field for the state as an l-value.  This is meant for
+   threads sending notifications to other threads. */
+#define VMPREFIX_STATE_TO_PENDING_NOTIFICATIONS(state_p)   \
+  (VMPREFIX_STATE_TO_SPECIAL_PURPOSE_STATE_DATA (state_p)  \
+     ->pending_notifications)
+
+/* Given a state pointer and a signal, expand to an l-value evaluating to a the
+   pending field of the struct jitter_signal_notification element for the given
+   signal in the pointed state.  This is meant for threads sending signal
+   notifications to other threads and for C handler function. */
+#define VMPREFIX_STATE_AND_SIGNAL_TO_PENDING_SIGNAL_NOTIFICATION(state_p,    \
+                                                                 signal_id)  \
+  (((VMPREFIX_STATE_TO_SPECIAL_PURPOSE_STATE_DATA (state_p)                   \
+       ->pending_signal_notifications)                                        \
+    + (signal_id))->pending)
+
 
 /* Expand to the offset of the i-th register of class c in bytes from the Array
    beginning.
@@ -490,7 +676,7 @@ vmprefix_specialized_instruction_names [];
    Each program data structure contains a pointer to that instance, so that
    VM-independent functions, given a program, will have everything needed to
    work.  The one instance of struct jitter_vm for the vmprefix VM. */
-extern const struct jitter_vm * const
+extern struct jitter_vm * const
 vmprefix_vm;
 
 /* A pointer to a struct containing VM-specific parameters set in part when
