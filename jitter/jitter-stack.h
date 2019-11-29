@@ -779,6 +779,17 @@ jitter_stack_height;
 #define JITTER_STACK_NTOS_MROT(type, stack_container, name)  \
   JITTER_STACK_NTOS_MROLL (type, stack_container, name, 2)
 
+
+
+
+/* Potentially inefficient stack operations.
+ * ************************************************************************** */
+
+/* The stack operations defined in this section may expand to inefficient code
+   and are not recommended for production use, unless the arguments are known
+   small constants.  Anyway they are convenient for testing. */
+
+
 /* Expand to a statement rearranging the topmost roll_depth + 1 elements of
    the given stack so that the element originally at depth roll_depth goes to
    top, and every element originally above it is moved down one position to
@@ -1166,16 +1177,6 @@ jitter_stack_height;
         = _jitter_stack_swirl_deepest_old;                                  \
     }                                                                       \
   while (false)
-
-
-
-
-/* Inefficient stack operations.
- * ************************************************************************** */
-
-/* The stack operations defined in this section may expand to inefficient code
-   and are not recommended for production use, unless the arguments are known
-   small constants.  Anyway they are convenient for testing. */
 
 /* Expand to a statement destructively reversing the order of the topmost n
    elements of the given stack. */
