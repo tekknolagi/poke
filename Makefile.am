@@ -661,26 +661,26 @@ endif # JITTER_SUBPACKAGE
 # architecture-dependent sources from the appropriate directory to libjitter and
 # to the installed headers.
 if JITTER_HAVE_ASSEMBLY
-  # Search included file in "machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)" , so that
+  # Search included file in "machine/@JITTER_ASSEMBLY_SUBDIRECTORY@" , so that
   # including <jitter/machine/FILE> from a source will find
-  # machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/FILE .  This is only
+  # machine/@JITTER_ASSEMBLY_SUBDIRECTORY@/jitter/machine/FILE .  This is only
   # needed when compiling without installed headers: after installation the
   # installed header will look into <jitter/machine/FILE> and find it in the
   # default include path, without any -I option.
   AM_CPPFLAGS += \
-    -I "$(top_srcdir)/machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)"
+    -I "$(top_srcdir)/machine/@JITTER_ASSEMBLY_SUBDIRECTORY@"
 
   # Add architecture-dependent sources to libjitter.
   SOURCES_FOR_LIBJITTER += \
-     machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/jitter-machine.h \
-     machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/jitter-machine-assembly.S \
-     machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/jitter-machine-c.c
+     machine/@JITTER_ASSEMBLY_SUBDIRECTORY@/jitter/machine/jitter-machine.h \
+     machine/@JITTER_ASSEMBLY_SUBDIRECTORY@/jitter/machine/jitter-machine-assembly.S \
+     machine/@JITTER_ASSEMBLY_SUBDIRECTORY@/jitter/machine/jitter-machine-c.c
 
   # One architecture-specific header is used when compiling generated code, even
   # if it's never included directly by user code.  This is needed in particular
   # for reserving registers.
   jittermachineinclude_HEADERS += \
-    machine/$(JITTER_ASSEMBLY_SUBDIRECTORY)/jitter/machine/jitter-machine.h
+    machine/@JITTER_ASSEMBLY_SUBDIRECTORY@/jitter/machine/jitter-machine.h
 endif # if JITTER_HAVE_ASSEMBLY
 
 # All the source files for every architecture have to be distributed,
