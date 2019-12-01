@@ -1815,12 +1815,10 @@ jitterc_emit_register_access_macros_h (const struct jitterc_vm *vm)
    the register index as the argument.
 
    The slow-register access macro yields an array access with an index known at
-   compile time.
-
-   FIXME: this will need generalization when I introduce register classes. */
+   compile time. */
 static void
 jitterc_emit_executor_register_access_macros (FILE *f,
-                                                 const struct jitterc_vm *vm)
+                                              const struct jitterc_vm *vm)
 {
   EMIT("/* Expand to the i-th fast register as an lvalue.  This is used internally,\n");
   EMIT("   always with a literal index . */\n");
