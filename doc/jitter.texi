@@ -1814,6 +1814,8 @@ The recommended way of using Jitter right now is @emph{sub-package mode}:
 @cindex syntax
 @cindex specification syntax
 
+@c FIXME: sectioning is questionable in this chapter.  Some sub-sub-sections should become much more prominent.
+
 @subsection Header
 @cindex header, VM specification
 
@@ -1826,8 +1828,145 @@ The recommended way of using Jitter right now is @emph{sub-package mode}:
 @cindex meta-instruction, header
 
 @subsubsection Meta-instruction properties
+@table @code
+@item non-relocatable
+@item cold
+@item caller
+@item callee
+@end table
+
+@fixme{Talk about @code{JITTER_LINK} and branch-and-link branches.}
+
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+Talk about @code{JITTER_LINK} and branch-and-link branches.
+
 
 @subsubsection Embedding C code in meta-instructions
+
+@subsubsection C macros available to VM instructions
+@table @code
+@item JITTER_SPECIALIZED_INSTRUCTION_OPCODE
+
+@item JITTER_SPECIALIZED_INSTRUCTION_NAME
+@fixme{This may be a bad idea.  It is very difficult to use correctly
+with replicated code, out of non-relocatable instructions.  A good use of
+this is for comments in inline assembly.}
+
+@item JITTER_SPECIALIZED_INSTRUCTION_MANGLED_NAME
+@end table
+
+@table @code
+@item JITTER_ARG@var{i}
+@item JITTER_ARGP@var{i}
+@item JITTER_ARGU@var{i}
+@item JITTER_ARGN@var{i}
+@item JITTER_ARGF@var{i}
+@end table
+
+@table @code
+@item JITTER_FAST_REGISTER(class, index)
+@item JITTER_FAST_REGISTER_@var{c}_@var{i}
+@end table
+
+/* Expand to the i-th register, which must be a slow register, as an lvalue.
+   The given index must be a register index counting from 0 and including fast
+   regusters as well, if there are any.  For example if an r class had 3 fast
+   registers then the first slow register would be %r3, to be accessed as
+   JITTER_SLOW_REGISTER(r, 3).  It would be invalid to access %r0, %r1 and
+   %r2 which this macro, as %r0, %r1 and %r2 would be fast. */
+@table @code
+@item JITTER_SLOW_REGISTER_@var{c}_@var{i}
+@end table
+/* It's not possible to have a single macro JITTER_REGISTER taking an index and
+   expanding to either a fast or a slow register lvalue, due to CPP conditional
+   limitations.  This restriction is unfortunate, but we have to live with it
+   as long as we don't switch to a different preprocessor.
+   What we can have is a set of zero-argument macros each expanding to a register
+   lvalue, for *a limited number* of registers.  Here we define access macros for
+   every fast register plus a reasonable number (currently 32) of slow registers,
+   per class. */
+@table @code
+@item JITTER_REGISTER_@var{c}_@var{i}
+@end table
+for every class @var{c} and for
+enough indices @var{i} to cover every fast register and 32 slow registers.
+
+@table @code
+@item JITTER_BRANCH(@var{where})
+@item JITTER_BRANCH_FAST(@var{where})
+@end table
+
+@table @code
+@item JITTER_BRANCH_AND_LINK(@var{where})
+@item JITTER_BRANCH_FAST_AND_LINK(@var{where})
+@end table
+
+@table @code
+@item JITTER_LINK
+@end table
+
+@table @code
+@item JITTER_BRANCH_FAST_IF_ZERO(@var{e0}, @var{where})
+@item JITTER_BRANCH_FAST_IF_NONZERO(@var{e0}, @var{where})
+@item JITTER_BRANCH_FAST_IF_POSITIVE(@var{e0}, @var{where})
+@item JITTER_BRANCH_FAST_IF_NONPOSITIVE(@var{e0}, @var{where})
+@item JITTER_BRANCH_FAST_IF_NEGATIVE(@var{e0}, @var{where})
+@item JITTER_BRANCH_FAST_IF_NONNEGATIVE(@var{e0}, @var{where})
+@end table
+@fixme{Document or possibly even remove the non-fast variants of these.}
+
+@table @code
+@item JITTER_BRANCH_FAST_IF_EQUAL(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_NOTEQUAL(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_LESS_SIGNED(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_LESS_UNSIGNED(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_GREATER_SIGNED(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_NOTGREATER_SIGNED(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED(@var{e0}, @var{e1}, @var{where})
+@end table
+@fixme{Document or possibly even remove the non-fast variants of these.}
+
+@table @code
+@item JITTER_BRANCH_FAST_IF_AND(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_NAND(@var{e0}, @var{e1}, @var{where})
+@end table
+@fixme{Document or possibly even remove the non-fast variants of these.}
+
+@table @code
+@item JITTER_BRANCH_FAST_IF_NEGATE_OVERFLOWS(@var{e0} @var{where})
+@item JITTER_BRANCH_FAST_IF_PLUS_OVERFLOWS(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_MINUS_OVERFLOWS(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_TIMES_OVERFLOWS(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_DIVIDED_OVERFLOWS(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_REMAINDER_OVERFLOWS(@var{e0}, @var{e1}, @var{where})
+@end table
+@fixme{Document or possibly even remove the non-fast variants of these.}
+
+@table @code
+@item JITTER_NEGATE_BRANCH_FAST_IF_OVERFLOW(@var{et}, @var{e0}, @var{where})
+@item JITTER_PLUS_BRANCH_FAST_IF_OVERFLOW(@var{et}, @var{e0}, @var{e1}, @var{where})
+@item JITTER_MINUS_BRANCH_FAST_IF_OVERFLOW(@var{et}, @var{e0}, @var{e1}, @var{where})
+@item JITTER_TIMES_BRANCH_FAST_IF_OVERFLOW(@var{et}, @var{e0}, @var{e1}, @var{where})
+@item JITTER_DIVIDED_BRANCH_FAST_IF_OVERFLOW(@var{et}, @var{e0}, @var{e1}, @var{where})
+@item JITTER_REMAINDER_BRANCH_FAST_IF_OVERFLOW(@var{et}, @var{e0}, @var{e1}, @var{where})
+@end table
+@fixme{Document or possibly even remove the non-fast variants of these.}
+
+@fixme{document stacks operations}
 
 @c @@@@@@@
 @node Instruction rewriting
