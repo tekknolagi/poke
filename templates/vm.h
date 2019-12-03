@@ -601,16 +601,14 @@ vmprefix_vm_configuration;
 #define vmprefix_set_routine_option_optimization_rewriting \
   jitter_set_mutable_routine_option_optimization_rewriting
 
-/* Printing and disassembling: unified API. */
+/* Printing and disassembling: unified API.  These do not follow the pattern of
+   the rest: wrapped identifiers here are the names of C functions specific to
+   the unified API */
 #define vmprefix_routine_print \
-  jitter_mutable_routine_print
-#define vmprefix_disassemble_routine                                       \
-  /* This does not follow the pattern of the rest: the wrapped identifier  \
-     here is the name of a C function specific to the unified API. */      \
+  jitter_routine_print
+#define vmprefix_disassemble_routine \
   jitter_disassemble_routine
-#define vmprefix_disassemble_routine_to                                    \
-  /* This does not follow the pattern of the rest: the wrapped identifier  \
-     here is the name of a C function specific to the unified API. */      \
+#define vmprefix_disassemble_routine_to \
   jitter_disassemble_routine_to
 
 /* Unified routine construction API. */
