@@ -688,6 +688,8 @@ AC_CHECK_FUNCS([getrlimit setrlimit alarm])
 # communicating with an objdump process.
 AC_CHECK_FUNCS([popen pclose])
 
+# Check for a sane signal-handling API.
+AC_CHECK_FUNCS([sigaction])
 
 
 # System-dependent configuration.
@@ -1804,6 +1806,8 @@ jitter_define_prefixed_feature_macro([ac_cv_func_flockfile], [yes],
                                      [HAVE_FLOCKFILE])
 jitter_define_prefixed_feature_macro([ac_cv_func_popen], [yes],
                                      [HAVE_POPEN])
+jitter_define_prefixed_feature_macro([ac_cv_func_sigaction], [yes],
+                                     [HAVE_SIGACTION])
 
 
 # Output.

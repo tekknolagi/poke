@@ -90,6 +90,11 @@ jitter_routine;
 void
 jitter_destroy_routine (jitter_routine r);
 
+/* Like jitter_mutable_routine_print , for the unified routine API. */
+void
+jitter_routine_print (FILE *out, const jitter_routine r)
+  __attribute__ ((nonnull (1, 2)));
+
 /* Like jitter_disassemble_excecutable_routine , for the unified routine API. */
 void
 jitter_disassemble_routine (const jitter_routine r, bool raw,

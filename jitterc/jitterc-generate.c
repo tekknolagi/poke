@@ -1578,6 +1578,9 @@ jitterc_emit_state_h (const struct jitterc_vm *vm)
   EMIT("/* A struct holding both the backing and the runtime part of the VM state. */\n");
   EMIT("struct vmprefix_state\n");
   EMIT("{\n");
+  EMIT("  /* Pointers to the previous and next VM state for this VM. */\n");
+  EMIT("  struct jitter_list_links links;\n");
+  EMIT("\n");
   EMIT("  /* Each state data structure contains its backing. */\n");
   EMIT("  struct vmprefix_state_backing vmprefix_state_backing;\n");
   EMIT("\n");
@@ -1613,6 +1616,9 @@ jitterc_emit_state (const struct jitterc_vm *vm)
   EMIT("    = jitter_xmalloc (VMPREFIX_ARRAY_SIZE(jitter_state_backing\n");
   EMIT("                         ->jitter_slow_register_no_per_class));\n");
   EMIT("\n");
+  EMIT("  /* Initialize special-purpose data. */\n");
+  EMIT("  vmprefix_initialize_special_purpose_data (VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA (jitter_state_backing->jitter_array));\n");
+  EMIT("\n");
 
   /* Emit initialization for stacks. */
   jitterc_emit_stack_initializations (f, vm);
@@ -1620,18 +1626,28 @@ jitterc_emit_state (const struct jitterc_vm *vm)
   EMIT("  /* User code for state initialization. */\n");
   EMIT("%s\n", vm->state_initialization_c_code);
   EMIT("  /* End of the user code for state initialization. */\n");
+  EMIT("\n");
+  EMIT("  /* Link this new state to the list of states. */\n");
+  EMIT("  JITTER_LIST_LINK_LAST (vmprefix_state, links, & vmprefix_vm->states, jitter_state);\n");
+  EMIT("\n");
   EMIT("}\n");
   EMIT("\n");
 
   EMIT("void\n");
   EMIT("vmprefix_state_finalize (struct vmprefix_state *jitter_state)\n");
   EMIT("{\n");
+  EMIT("  /* Unlink this new state from the list of states. */\n");
+  EMIT("  JITTER_LIST_UNLINK (vmprefix_state, links, & vmprefix_vm->states, jitter_state);\n");
+  EMIT("\n");
   EMIT("  struct vmprefix_state_backing * const jitter_state_backing\n");
   EMIT("    __attribute__ ((unused))\n");
   EMIT("    = & jitter_state->vmprefix_state_backing;\n");
   EMIT("  struct vmprefix_state_runtime * const jitter_state_runtime\n");
   EMIT("    __attribute__ ((unused))\n");
   EMIT("    = & jitter_state->vmprefix_state_runtime;\n");
+  EMIT("\n");
+  EMIT("  /* Finalize special-purpose data. */\n");
+  EMIT("  vmprefix_finalize_special_purpose_data (VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA (jitter_state_backing->jitter_array));\n");
   EMIT("\n");
 
   /* Emit finalization for stacks. */
@@ -1815,12 +1831,10 @@ jitterc_emit_register_access_macros_h (const struct jitterc_vm *vm)
    the register index as the argument.
 
    The slow-register access macro yields an array access with an index known at
-   compile time.
-
-   FIXME: this will need generalization when I introduce register classes. */
+   compile time. */
 static void
 jitterc_emit_executor_register_access_macros (FILE *f,
-                                                 const struct jitterc_vm *vm)
+                                              const struct jitterc_vm *vm)
 {
   EMIT("/* Expand to the i-th fast register as an lvalue.  This is used internally,\n");
   EMIT("   always with a literal index . */\n");
@@ -3323,6 +3337,23 @@ jitterc_emit_vm_name_macros_vm1 (const struct jitterc_vm *vm)
   jitterc_fclose (f);
 }
 
+/* Emit access macros for special-purpose data, to be used from VM code. */
+static void
+jitterc_emit_executor_special_purpose_state_data_access_macros
+   (FILE *f, const struct jitterc_vm *vm)
+{
+  EMIT("/* Expand to an l-value evaluating to the pending_notification field for\n");
+  EMIT("   the current state. */\n");
+  EMIT("#define JITTER_PENDING_NOTIFICATIONS  \\\n");
+  EMIT("  (VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA->pending_notifications)\n");
+  EMIT("/* Expand to an l-value evaluating to the pending field of the struct\n");
+  EMIT("   jitter_signal_notification element for the given signal, for the\n");
+  EMIT("   current state. */\n");
+  EMIT("#define JITTER_PENDING_SIGNAL_NOTIFICATION(signal_id)  \\\n");
+  EMIT("  ((VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA->pending_signal_notifications + (signal_id))->pending)\n");
+  EMIT("\n");
+}
+
 static void
 jitterc_emit_executor (const struct jitterc_vm *vm)
 {
@@ -3376,6 +3407,9 @@ jitterc_emit_executor (const struct jitterc_vm *vm)
   EMIT("#define JITTER_FAST_BRANCH_PREFIX vmprefix_\n\n");
 
   jitterc_emit_vm_name_macros (f, vm);
+
+  /* Emit macros to access special-purpose state data. */
+  jitterc_emit_executor_special_purpose_state_data_access_macros (f, vm);
 
   /* Emit register-access macros. */
   jitterc_emit_executor_register_access_macros (f, vm);

@@ -48,6 +48,16 @@ jitter_destroy_routine (jitter_routine r)
 }
 
 void
+jitter_routine_print (FILE *out, const jitter_routine r)
+{
+  /* Labels must be resolved before we can print. */
+  jitter_routine_make_executable_if_needed (r);
+
+  /* Now printing is possible. */
+  jitter_mutable_routine_print (out, r);
+}
+
+void
 jitter_disassemble_routine (const jitter_routine r, bool raw,
                             const char *objdump_name,
                             const char *objdump_options_or_NULL)

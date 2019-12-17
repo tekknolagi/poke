@@ -27,6 +27,7 @@
 #include <jitter/jitter.h>
 #include <jitter/jitter-mutable-routine.h>
 #include <jitter/jitter-patch-in.h>
+#include <jitter/jitter-list.h>
 
 
 
@@ -149,6 +150,9 @@ struct jitter_vm
   /* Rewrite an instruction.  This points to the vmprefix_rewrite function declared
      in templates/vm.h and implemented in Jitter-generated code. */
   void (*rewrite) (struct jitter_mutable_routine *p);
+
+  /* A linked list of all the existing states for this VM. */
+  struct jitter_list_header states;
 };
 
 

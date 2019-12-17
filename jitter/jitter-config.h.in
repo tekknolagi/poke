@@ -95,6 +95,7 @@
 #undef JITTER_HAVE_ALARM
 #undef JITTER_HAVE_FLOCKFILE
 #undef JITTER_HAVE_POPEN
+#undef JITTER_HAVE_SIGACTION
 
 
 /* External library availability.

@@ -126,6 +126,22 @@ end
 
 late-c
   code
+/* See install-signal-handler below. */
+static void
+jitter_my_signal_handler (int signal_number)
+{
+  struct vmprefix_state *s;
+  /* For every state... */
+  VMPREFIX_FOR_EACH_STATE (s)
+    {
+      /* ...Mark the signal signal_number as pending... */
+      VMPREFIX_STATE_AND_SIGNAL_TO_PENDING_SIGNAL_NOTIFICATION
+         (s, signal_number) = true;
+      /* ...And record the fact that there is at least one notification to
+         handle. */
+      VMPREFIX_STATE_TO_PENDING_NOTIFICATIONS (s) = true;
+    }
+}
   end
 end
 
@@ -1151,6 +1167,56 @@ instruction bulgeforth ()
     jitter_uint element_no = JITTER_TOP_STACK ().fixnum;
     JITTER_DROP_STACK();
     JITTER_BULGE_STACK (element_no);
+  end
+end
+
+
+## Safe-point, notification and signal instructions.
+#################################################################
+
+# This is not very useful to do in a VM instruction; in normal production
+# code this would belong to initialization code, written directly in C.  But
+# having a VM instruction is convenient for testing.
+instruction install-signal-handler ()
+  non-relocatable
+  code
+    /* Handle SIGINT, using either... */
+#if defined (JITTER_HAVE_SIGACTION)
+    /* ...The modern, better sigaction API... */
+    struct sigaction action;
+    sigaction (SIGINT, NULL, & action);
+    action.sa_handler = jitter_my_signal_handler;
+    sigaction (SIGINT, & action, NULL);
+#else
+    /* ...Or the traditional, inferior API. */
+    signal (SIGINT, jitter_handle_signal);
+#endif
+  end
+end
+
+instruction set-pending ()
+  code
+    JITTER_PENDING_NOTIFICATIONS = true;
+  end
+end
+
+instruction handle-pending ()
+  non-relocatable
+  code
+    int i;
+    for (i = 0; i < JITTER_SIGNAL_NO; i ++)
+      if (JITTER_PENDING_SIGNAL_NOTIFICATION (i))
+        {
+          printf ("Handling signal %i\n", (int) i);
+          JITTER_PENDING_SIGNAL_NOTIFICATION (i) = false;
+        }
+    JITTER_PENDING_NOTIFICATIONS = false;
+  end
+end
+
+instruction safe-point (?f)
+  code
+    JITTER_BRANCH_FAST_IF_NONZERO (JITTER_PENDING_NOTIFICATIONS, JITTER_ARGF0);
   end
 end
 
