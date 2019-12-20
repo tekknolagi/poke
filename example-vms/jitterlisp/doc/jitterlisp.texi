@@ -306,7 +306,7 @@ relying on a Jitter virtual machine for compiled code.
 @cindex Jitter
 @cindex sub-project
 @c @cindex @ @epsilonzero{} @c The initial forced space is less ugly than the alternative.
-Jitter (@pxref{Top,,, jitter, The Jitter Manual}) was born out of an
+Jitter (@pxref{Top,,, jitter, The Jitter Manual}) was borne out of an
 attempt to optimize the programming language GNU epsilon
 (@pxref{Top,,, epsilon, The GNU epsilon Manual}), my main long-term
 project.  Dissatisfied with the speedup provided by a simple
@@ -750,11 +750,9 @@ readable git repository, is on my web site at the URL
 
 @cindex branch, git
 @cindex git branch
-@cindex @code{jitterlisp}, git branch
 @cindex @code{master}, git branch
-As of early 2019 JitterLisp's development takes place on the
-@code{jitterlisp} git branch, to be merged into @code{master} as soon
-as the code approaches a stable form.
+As of 2019 JitterLisp's development takes place on the
+main git branch named @code{master}.
 
 @cindex feedback
 @cindex contacting the author
@@ -1521,11 +1519,11 @@ twice
   (letrec ((my-even? (lambda (n)
                        (cond ((= n 0)  #t)
                              ((= n 1)  #f)
-                             (else     (odd? (- n 1))))))
+                             (else     (my-odd? (- n 1))))))
            (my-odd?  (lambda (n)
                        (cond ((= n 0)  #f)
                              ((= n 1)  #t)
-                             (else     (even? (- n 1)))))))
+                             (else     (my-even? (- n 1)))))))
     my-even?))
 (lambda () (letrec ((f 1) (g 2)) f))
   @result{}
