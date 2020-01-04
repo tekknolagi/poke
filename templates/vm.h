@@ -359,7 +359,37 @@ struct jitter_special_purpose_state_data
    FIXME: define the bias as a value appropriate to each architecture.  I think
    I should just move the definition to jitter-machine.h and provide a default
    here, in case the definition is missing on some architecture. */
-#define JITTER_ARRAY_BIAS 0//(((jitter_int) 1 << 15))//(((jitter_int) 1 << 31))//0//0//16//0
+
+/* FIXME: Horrible, horrible, horrible temporary workaround!
+
+   This is a temporary workaround, very ugly and fragile, to compensate
+   a limitation in jitter-specialize.c , which I will need to rewrite anyway.
+   The problem is that jitter-specialize.c patches snippets to load non-label
+   residuals in a VM-independent way based only on slow-register/memory residual
+   indices, which is incorrect.  By using this particular bias I am cancelling
+   that error.
+   Test case, on a machine having only one register residual and a VM having just
+     one fast register:
+     [luca@moore ~/repos/jitter/_build/native-gcc-9]$ Q=bin/uninspired--no-threading; make $Q && echo 'mov 2, %r1' | libtool --mode=execute valgrind $Q --disassemble - --print-locations
+   If this bias is wrong the slow-register accesses in mov/nR/%rR will use two
+   different offsets, one for reading and another for writing.  With this
+   workaround they will be the same.
+   Good, with workadound (biased offset 0x0 from the base in %rbx):
+    # 0x4a43d38: mov/nR/%rR 0x2, 0x20 (21 bytes):
+        0x0000000004effb30 41 bc 02 00 00 00    	movl   $0x2,%r12d
+        0x0000000004effb36 48 c7 43 00 20 00 00 00 	movq   $0x20,0x0(%rbx)
+        0x0000000004effb3e 48 8b 13             	movq   (%rbx),%rdx
+        0x0000000004effb41 4c 89 24 13          	movq   %r12,(%rbx,%rdx,1)
+   Bad, with JITTER_ARRAY_BIAS defined as zero: first write at 0x0(%rbx)
+                                                then read at 0x10(%rbx):
+    # 0x4a43d38: mov/nR/%rR 0x2, 0x30 (22 bytes):
+        0x0000000004effb30 41 bc 02 00 00 00    	movl   $0x2,%r12d
+        0x0000000004effb36 48 c7 43 00 30 00 00 00 	movq   $0x30,0x0(%rbx)
+        0x0000000004effb3e 48 8b 53 10          	movq   0x10(%rbx),%rdx
+        0x0000000004effb42 4c 89 24 13          	movq   %r12,(%rbx,%rdx,1) */
+#define JITTER_ARRAY_BIAS \
+  (sizeof (struct jitter_special_purpose_state_data))
+//#define JITTER_ARRAY_BIAS //0//(((jitter_int) 1 << 15))//(((jitter_int) 1 << 31))//0//0//16//0
 
 /* Array-based globals are not implemented yet.  For the purpose of computing
    Array offsets I will say they are zero. */
