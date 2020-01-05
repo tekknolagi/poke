@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in .
-# Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
+# Copyright (C) 2016, 2017, 2018, 2019, 2020 Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -630,8 +630,11 @@ lib_libjitter_la_LIBADD = \
 if JITTER_SUBPACKAGE
 # A generic way of extracting a non-Libtool static library file from its Libtool
 # counterpart.
+# It would be nice to call libtool with -Wnone , but that is not supported by
+# older versions, such as the ones shipping with OpenBSD as of early 2020
+# (reported by Alfred M. Szmidt).
 .la.a:
-	$(LIBTOOL) -Wnone --mode=install cp $< $(abs_top_builddir)/$@
+	$(LIBTOOL) --mode=install cp $< $(abs_top_builddir)/$@
 	$(LIBTOOL) --finish $(abs_top_builddir)/lib
 
 # For every enabled dispatch add one library.
@@ -1707,6 +1710,25 @@ dvi: missinghardcopytools
 ps: missinghardcopytools
 pdf: missinghardcopytools
 endif # ! JITTER_HAVE_TEXI2DVI
+
+
+# Texinfo documentation or lack thereof in sub-package mode.
+# ################################################################
+
+# In sub-package mode it is better not to even bother building Info
+# documentation.  It is a waste of time and a source of incompatibilities with
+# old Texinfo versions, particularly when downloading Jitter from git -- which
+# is in fact the way sub-package mode is used.
+
+if JITTER_SUBPACKAGE
+# Unfortunately it does not seem to be possible to disable TEXINFOS from
+# Automake conditionals, but this workaround is easy.
+doc/jitter.info:
+	touch "$@"
+example-vms/jitterlisp/doc/jitterlisp.info:
+	touch "$@"
+info: doc/jitter.info example-vms/jitterlisp/doc/jitterlisp.info
+endif # JITTER_SUBPACKAGE
 
 
 # Man pages

@@ -1,7 +1,6 @@
 /* Jitter: host configuration header to install.
 
-   Copyright (C) 2017 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -144,6 +143,9 @@
 
 /* Define if the language supports computed goto in the style of GNU C. */
 #undef JITTER_HAVE_GNU_C_COMPUTED_GOTO
+
+/* Define if the compiler supports alignas. */
+#undef JITTER_HAVE_ALIGNAS
 
 /* Define if the builtins for handling overflow are available. */
 #undef JITTER_HAVE_GCC_OVERFLOW_CHECKING

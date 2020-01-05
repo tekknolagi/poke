@@ -1,5 +1,5 @@
 /* Jitter: header supplying functions and macros which some systems lack.
-   Copyright (C) 2017, 2019 Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -24,6 +24,20 @@
 #include <jitter/jitter-config.h>
 #include <stdio.h>
 
+
+/* Alignment qualifiers.
+ * ************************************************************************** */
+
+/* If alignas is missing I can emulate it with a GNU C attribute.  In practice
+   alignas is only used (in jitter-heap.h and friends) with GCC, so the issue is
+   just supporting old versions. */
+#if ! defined (JITTER_HAVE_ALIGNAS)
+# define alignas(thing) __attribute__((aligned (thing)))
+# define alignof __alignof__
+#endif // ! defined (JITTER_HAVE_ALIGNAS)
+
+
+
 
 /* GNU C attributes.
  * ************************************************************************** */
@@ -58,12 +72,12 @@
 
 /* Do nothing. */
 void
-flockfile (FILE *f)
+flockfile ()
   __attribute__ ((nonnull (1)));
 
 /* Do nothing. */
 void
-flockfile (FILE *f)
+funlockfile ()
   __attribute__ ((nonnull (1)));
 
 #endif // #ifndef JITTER_MISSING_H_

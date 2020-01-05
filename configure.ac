@@ -635,6 +635,20 @@ if test "x$ac_cv_have_gnu_c_computed_goto" = "xyes"; then
             [Define if the compiler supports GNU C's computed goto .])
 fi
 
+# Check for alignas.
+AC_CACHE_CHECK([for alignas], [ac_cv_have_alignas],
+  [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM(
+        [#include <stdalign.h>],
+        [[struct s { alignas(16) int i; } foo;
+          return foo.i = 42;]])],
+     [ac_cv_have_alignas=yes],
+     [ac_cv_have_alignas=no])])
+if test "x$ac_cv_have_alignas" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_ALIGNAS], [1],
+            [Define if the compiler supports alignas .])
+fi
+
 
 # Check for GCC attributes.
 ################################################################

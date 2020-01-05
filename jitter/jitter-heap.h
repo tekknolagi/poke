@@ -1,6 +1,7 @@
 /* Jitter: memory heap data structure header.
 
    Copyright (C) 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -22,7 +23,11 @@
 #ifndef JITTER_HEAP_H_
 #define JITTER_HEAP_H_
 
-#include <stdalign.h>  /* For alignas. */
+#include <jitter/jitter-config.h> /* For feature macros. */
+
+#if defined (JITTER_HAVE_ALIGNAS)
+# include <stdalign.h>  /* For alignas. */
+#endif // defined (JITTER_HAVE_ALIGNAS)
 #include <stddef.h>    /* For offsetof. */
 
 #include <jitter/jitter.h>
