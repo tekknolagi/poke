@@ -138,6 +138,13 @@
 /* Availability of GNU C features.
  * ************************************************************************** */
 
+/* Define if the compiler is actually GCC, rather then some other compiler
+   falsely claiming compatibility. */
+#undef JITTER_HAVE_ACTUAL_GCC
+
+/* Define if the language supports computed goto in the style of GNU C. */
+#undef JITTER_HAVE_GNU_C_COMPUTED_GOTO
+
 /* Define if the builtins for handling overflow are available. */
 #undef JITTER_HAVE_GCC_OVERFLOW_CHECKING
 

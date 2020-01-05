@@ -1,7 +1,7 @@
 ## This is an -*- Autoconf -*- file to be processed with autoconf
 ## to obtain a configure script.
 
-## Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
+## Copyright (C) 2016, 2017, 2018, 2019, 2020 Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -80,6 +80,89 @@ jitter_abs_top_builddir="$(pwd)"
 cd "${srcdir}"
 jitter_abs_top_srcdir="$(pwd)"
 cd "${jitter_abs_top_builddir}"
+
+
+# Utility functions for configure.
+################################################################
+
+# Check for tr, using very early.
+AC_PATH_PROG([JITTER_TR], [tr])
+if test "x$JITTER_TR" = "x"; then
+  AC_MSG_ERROR([you need the Unix tr utility])
+fi
+
+# Output stdin, translating every lower-case ASCII character into its upper-case
+# version, and - into _; every other character is left unchanged.
+jitter_lowercase_characters='abcdefghijklmnopqrstuvwxyz-'
+jitter_uppercase_characters='ABCDEFGHIJKLMNOPQRSTUVWXYZ_'
+jitter_to_upper ()
+{
+  $JITTER_TR "$jitter_lowercase_characters" "$jitter_uppercase_characters"
+}
+
+# Perform a translation which is the reverse of the one in jitter_to_upper .
+jitter_to_lower ()
+{
+  $JITTER_TR "$jitter_uppercase_characters" "$jitter_lowercase_characters"
+}
+
+# If the given $CC command-line option is supported (its actual effect is not
+# tested) then append the option, after a space, to the named shell veriable.
+# Two arguments: the name of a shell variable to possibly modify, and a
+# candidate $CC option.
+jitter_check_cc_option ()
+{
+  jitter_flag_variable_name="$1"
+  jitter_compiler_option="$2"
+
+  # We cache the result of an option being supported (as "yes" or "no") in a
+  # shell variable named after the option.  Read the appropriate variable for
+  # $jitter_compiler_option into jitter_cached_value .
+  jitter_variable_name="jitter_cc_option_supported_"AS_TR_SH($jitter_compiler_option)
+  AS_VAR_COPY([jitter_cached_value], [$jitter_variable_name])
+
+  # If we lack a cached value then perform the test, and set jitter_result ;
+  # otherwise set jitter_result from the cached value.
+  if test "x$jitter_cached_value" = "x"; then
+    AC_MSG_CHECKING([if $CC supports the option $jitter_compiler_option])
+    if $CC \
+         -c -o test.o \
+         "$jitter_compiler_option" \
+         "$srcdir/build-aux/trivial-source.c" \
+           > /dev/null \
+           2> /dev/null; then
+      jitter_result=yes
+    else
+      jitter_result=no
+    fi
+    AS_VAR_SET([$jitter_variable_name], [$jitter_result])
+    AC_MSG_RESULT([$jitter_result])
+  else
+    jitter_result="$jitter_cached_value"
+  fi
+
+  # Now $jitter_result is either "yes" or "no".  Use it to decide whether to
+  # append the option to the flag variable.
+  if test "x$jitter_result" = "xyes"; then
+    AS_VAR_COPY([jitter_flag_variable_old_value], [$jitter_flag_variable_name])
+    AS_VAR_SET([$jitter_flag_variable_name],
+               "$jitter_flag_variable_old_value $jitter_compiler_option")
+  fi
+}
+
+# Like jitter_check_cc_option , but working on zero or more $CC candidate options.
+# One or more arguments: the first is the name of a shell variable, as in the
+# first argument of jitter_check_cc_option ; all the other arguments are individual
+# candidate $CC options.
+jitter_check_cc_options ()
+{
+  jitter_flag_variable_name="$1"
+  shift
+
+  for jitter_compiler_option in $@; do
+    jitter_check_cc_option "$jitter_flag_variable_name" "$jitter_compiler_option"
+  done
+}
 
 
 # Sub-package mode support.
@@ -232,6 +315,49 @@ AC_TYPE_SIZE_T
 AC_SUBST([SIZEOF_VOID_P], [$ac_cv_sizeof_void_p])
 
 
+# Check for a compiler which is actually GCC, and for versions.
+################################################################
+
+# This check for specific versions is not really in the spirit of Autoconf,
+# but is necessary on cross configuration and when the feature to test cannot
+# be observed in a simple or deterministic enough way.
+
+# Some compilers claim to be GCC in feature macro, but they actually lie.
+# Jitter's advanced dispatches require some features present in the actual GNU
+# Compiler Collection, and not its imitations.
+# Define a substitution ("yes" or "no"), CPP feature macro (1 or undefiend) and
+# Automake conditional, all named JITTER_HAVE_ACTUAL_GCC.
+AC_MSG_CHECKING([if the compiler is *really* GCC])
+if test "x$GCC" = ''; then
+  JITTER_HAVE_ACTUAL_GCC=no
+  AC_MSG_RESULT([no])
+elif ! ${CC} --version > /dev/null 2> /dev/null; then
+  AC_MSG_RESULT([no (something not supporting --version)])
+  JITTER_HAVE_ACTUAL_GCC=no
+else
+  JITTER_CLAIMED_GCC_VERSION=$(${CC} --version | jitter_to_lower)
+  # Clang does not play well with inline Gas assembly the way it is used in
+  # Jitter.  However it does support computed goto, which is enough for
+  # direct-threading dispatch.
+  if echo "$JITTER_CLAIMED_GCC_VERSION" | grep 'clang' > /dev/null 2> /dev/null; then
+    AC_MSG_RESULT([no (clang pretending to be GCC)])
+    JITTER_HAVE_ACTUAL_GCC=no
+  # If other compilers lie in a way similar to Clang and cause problems in a
+  # similar way I can add checks here.
+  else
+    AC_MSG_RESULT([yes])
+    JITTER_HAVE_ACTUAL_GCC=yes
+  fi
+fi
+AC_SUBST([JITTER_HAVE_ACTUAL_GCC])
+if test "x$JITTER_HAVE_ACTUAL_GCC" = 'xyes'; then
+  AC_DEFINE_UNQUOTED([JITTER_HAVE_ACTUAL_GCC], [${JITTER_HAVE_ACTUAL_GCC}],
+                     [Defined if the host assembler is the GNU assembler.])
+fi
+AM_CONDITIONAL([JITTER_HAVE_ACTUAL_GCC],
+               [test "x$JITTER_HAVE_ACTUAL_GCC" = 'xyes'])
+
+
 # Check for the GNU assembler.
 ################################################################
 
@@ -312,12 +438,6 @@ else
   AC_DEFINE_UNQUOTED([JITTER_CROSS_OBJDUMP],
                      ["$JITTER_CROSS_OBJDUMP"],
                      [name of the cross-objdump utility from GNU binutils])
-fi
-
-# Check for tr, using by configure.
-AC_PATH_PROG([JITTER_TR], [tr])
-if test "x$JITTER_TR" = "x"; then
-  AC_MSG_ERROR([you need the Unix tr utility])
 fi
 
 # Check for flex.
@@ -417,83 +537,6 @@ JITTER_CHECK_TESTSUITE_PROGS([JITTER_DIRNAME], [dirname])
 AC_PATH_PROGS([JITTER_TIMEOUT], [timeout])
 
 
-# Utility functions for configure.
-################################################################
-
-# Output stdin, translating every lower-case ASCII character into its upper-case
-# version, and - into _; every other character is left unchanged.
-jitter_lowercase_characters='abcdefghijklmnopqrstuvwxyz-'
-jitter_uppercase_characters='ABCDEFGHIJKLMNOPQRSTUVWXYZ_'
-jitter_to_upper ()
-{
-  $JITTER_TR "$jitter_lowercase_characters" "$jitter_uppercase_characters"
-}
-
-# Perform a translation which is the reverse of the one in jitter_to_upper .
-jitter_to_lower ()
-{
-  $JITTER_TR "$jitter_uppercase_characters" "$jitter_lowercase_characters"
-}
-
-# If the given $CC command-line option is supported (its actual effect is not
-# tested) then append the option, after a space, to the named shell veriable.
-# Two arguments: the name of a shell variable to possibly modify, and a
-# candidate $CC option.
-jitter_check_cc_option ()
-{
-  jitter_flag_variable_name="$1"
-  jitter_compiler_option="$2"
-
-  # We cache the result of an option being supported (as "yes" or "no") in a
-  # shell variable named after the option.  Read the appropriate variable for
-  # $jitter_compiler_option into jitter_cached_value .
-  jitter_variable_name="jitter_cc_option_supported_"AS_TR_SH($jitter_compiler_option)
-  AS_VAR_COPY([jitter_cached_value], [$jitter_variable_name])
-
-  # If we lack a cached value then perform the test, and set jitter_result ;
-  # otherwise set jitter_result from the cached value.
-  if test "x$jitter_cached_value" = "x"; then
-    AC_MSG_CHECKING([if $CC supports the option $jitter_compiler_option])
-    if $CC \
-         -c -o test.o \
-         "$jitter_compiler_option" \
-         "$srcdir/build-aux/trivial-source.c" \
-           > /dev/null \
-           2> /dev/null; then
-      jitter_result=yes
-    else
-      jitter_result=no
-    fi
-    AS_VAR_SET([$jitter_variable_name], [$jitter_result])
-    AC_MSG_RESULT([$jitter_result])
-  else
-    jitter_result="$jitter_cached_value"
-  fi
-
-  # Now $jitter_result is either "yes" or "no".  Use it to decide whether to
-  # append the option to the flag variable.
-  if test "x$jitter_result" = "xyes"; then
-    AS_VAR_COPY([jitter_flag_variable_old_value], [$jitter_flag_variable_name])
-    AS_VAR_SET([$jitter_flag_variable_name],
-               "$jitter_flag_variable_old_value $jitter_compiler_option")
-  fi
-}
-
-# Like jitter_check_cc_option , but working on zero or more $CC candidate options.
-# One or more arguments: the first is the name of a shell variable, as in the
-# first argument of jitter_check_cc_option ; all the other arguments are individual
-# candidate $CC options.
-jitter_check_cc_options ()
-{
-  jitter_flag_variable_name="$1"
-  shift
-
-  for jitter_compiler_option in $@; do
-    jitter_check_cc_option "$jitter_flag_variable_name" "$jitter_compiler_option"
-  done
-}
-
-
 # Libtool support.
 ################################################################
 
@@ -572,6 +615,25 @@ fi # if test "x$jitter_check_readline" = "xyes"
 
 # Check for headers.
 ################################################################
+
+
+# Check for C language features.
+################################################################
+
+# Check for computed goto.
+AC_CACHE_CHECK([for GNU C-style computed goto], [ac_cv_have_gnu_c_computed_goto],
+  [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM(
+        [],
+        [[  goto * && there;
+          there:
+            return 0;]])],
+     [ac_cv_have_gnu_c_computed_goto=yes],
+     [ac_cv_have_gnu_c_computed_goto=no])])
+if test "x$ac_cv_have_gnu_c_computed_goto" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_GNU_C_COMPUTED_GOTO], [1],
+            [Define if the compiler supports GNU C's computed goto .])
+fi
 
 
 # Check for GCC attributes.
@@ -740,7 +802,9 @@ automatically found. (default: auto)]),
               jitter_enable_host_assembly="auto")
 AC_MSG_RESULT([$jitter_enable_host_assembly])
 
-# Check whether we have assembly support for the host architecture.
+# Check whether we have assembly support for the host architecture, and an
+# actual GCC to compile it.
+#
 # For the architectures we know, also define sensible options for objdump --
 # some of these are necessary, others a matter of preference.  When the
 # architecture is unknown some default is guessed.
@@ -753,7 +817,8 @@ AC_MSG_RESULT([$jitter_enable_host_assembly])
 # An architecture name given by the user will be used in place of the
 # detected $host_cpu .
 # At the end of the case statement jitter_has_host_assembly will be defined.
-if test "x$jitter_enable_host_assembly" = "xno"; then \
+if test "x$jitter_enable_host_assembly" = 'xno' \
+   || test "x$JITTER_HAVE_ACTUAL_GCC" = 'xno'; then \
   default_host_cpu="no-assembly"
 elif test "x$jitter_enable_host_assembly" = "xauto"; then
   default_host_cpu="$host_cpu"
@@ -1192,11 +1257,11 @@ AC_MSG_RESULT([$jitter_enable_dispatch_switch$jitter_subpackage_disclaimer])
 # Is the direct-threading dispatch enabled?  Check the default and the configure
 # command-line option.
 AC_MSG_CHECKING([if direct-threading dispatch is enabled])
-default=$(test "x$GCC" = "xyes" && echo yes || echo no)
+default=$(test "x$ac_cv_have_gnu_c_computed_goto" = "xyes" && echo yes || echo no)
 AC_ARG_ENABLE([dispatch-direct-threading],
               AS_HELP_STRING([--enable-dispatch-direct-threading],
               [enable direct-threading dispatch: default yes if and
-only if GCC or a compiler claiming to be GCC is used]),
+only if the compiler supports computed goto]),
               jitter_enable_dispatch_direct_threading="$enableval",
               jitter_enable_dispatch_direct_threading="$default")
 if test "x$jitter_enable_dispatch_direct_threading" = "xyes"; then
@@ -1209,12 +1274,12 @@ AC_MSG_RESULT([$jitter_enable_dispatch_direct_threading$jitter_subpackage_discla
 # configure command-line option.
 AC_MSG_CHECKING([if minimal-threading dispatch is enabled])
 # FIXME: reenable this when I make defect handling reliable.
-#default=$(test "x$GCC" = "xyes" && echo yes || echo no)
+#default=$(test "x$JITTER_HAVE_ACTUAL_GCC" = "xyes" && echo yes || echo no)
 default=no
 AC_ARG_ENABLE([dispatch-minimal-threading],
               AS_HELP_STRING([--enable-dispatch-minimal-threading],
               [enable minimal threading dispatch: default yes if and
-only if GCC or a compiler claiming to be GCC is used]),
+only if GCC (not an imitation) is used]),
               jitter_enable_dispatch_minimal_threading="$enableval",
               jitter_enable_dispatch_minimal_threading="$default")
 if test "x$jitter_enable_dispatch_minimal_threading" = "xyes"; then
@@ -1232,7 +1297,7 @@ fi
 # Is the no-threading dispatch enabled?  Check the default and the configure
 # command-line option.
 AC_MSG_CHECKING([if no-threading dispatch is enabled])
-if    test "x$GCC" = "xyes" \
+if    test "x$JITTER_HAVE_ACTUAL_GCC" = "xyes" \
    && test "x$jitter_has_host_assembly" = "xyes" \
    && test "x$jitter_host_os_is_elf" = "xyes"; then
   # FIXME: reenable this when I make defect handling reliable.
@@ -1244,7 +1309,7 @@ fi
 AC_ARG_ENABLE([dispatch-no-threading],
               AS_HELP_STRING([--enable-dispatch-no-threading],
               [enable no-threading dispatch: default yes if and
-only if GCC or a compiler claiming to be GCC is used, the host
+only if GCC (not an imitation) is used, the host
 architecture has assembly support, and the binary format is ELF]),
               jitter_enable_dispatch_no_threading="$enableval",
               jitter_enable_dispatch_no_threading="$default")
