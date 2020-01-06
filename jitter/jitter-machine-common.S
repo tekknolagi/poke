@@ -1,6 +1,7 @@
 /* VM library: macros to be optionally included in architecture-specific asm.
 
    Copyright (C) 2017, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -45,6 +46,18 @@
 /* We use CPP token concatenation here.  The header contains CPP macro
    definitions only, and is safe to use from assembly. */
 #include <jitter/jitter-cpp.h>
+
+
+/* Expand to nothing if we have no assembly support.
+ * ************************************************************************** */
+
+/* If in this configuration the assembler is not Gas or we do not know its
+   syntax or either configure or the user has decided to disable assembly
+   support, for any reason, expand the rest of this file to whitespace only. */
+
+#ifdef JITTER_HAVE_ASSEMBLY
+
+/* If we arrived here we can acually use assembly. */
 
 
 
@@ -278,5 +291,7 @@ jitter_asm_enter_section .data, 3
         jitter_asm_word jitter_native_&\snippet_name&_name
 jitter_asm_exit_section
 .endm
+
+#endif // #ifdef JITTER_HAVE_ASSEMBLY
 
 #endif // #ifndef MACHINE_COMMON_S_
