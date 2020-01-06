@@ -357,6 +357,20 @@ fi
 AM_CONDITIONAL([JITTER_HAVE_ACTUAL_GCC],
                [test "x$JITTER_HAVE_ACTUAL_GCC" = 'xyes'])
 
+# If the compiler is actually GCC I can check its version as well.
+if test "x$JITTER_HAVE_ACTUAL_GCC" = 'xyes'; then
+  AC_MSG_CHECKING([for GCC's version])
+  JITTER_GCC_MAJOR_VERSION=$(echo '__GNUC__' | "$CC" -P -E -)
+  JITTER_GCC_MINOR_VERSION=$(echo '__GNUC_MINOR__' | "$CC" -P -E -)
+  JITTER_GCC_PATCHLEVEL_VERSION=$(echo '__GNUC_PATCHLEVEL__' | "$CC" -P -E -)
+  JITTER_GCC_COMBINED_VERSION=$(( ${JITTER_GCC_MAJOR_VERSION} * 10000 + ${JITTER_GCC_MINOR_VERSION} * 100 + ${JITTER_GCC_PATCHLEVEL_VERSION}))
+  AC_MSG_RESULT([major ${JITTER_GCC_MAJOR_VERSION}, minor ${JITTER_GCC_MINOR_VERSION}, patchlevel ${JITTER_GCC_PATCHLEVEL_VERSION}, combined ${JITTER_GCC_COMBINED_VERSION}])
+fi
+
+# FIXME: the GCC version will be useful in advanced dispatches to enable or
+# disable features which are too difficult to check for at configure time,
+# particularly when cross-compiling.
+
 
 # Check for the GNU assembler.
 ################################################################
