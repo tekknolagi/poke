@@ -1,6 +1,6 @@
 /* Jittery structured language example: Bison parser.
 
-   Copyright (C) 2016, 2017, 2019 Luca Saiu
+   Copyright (C) 2016, 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jitter structured-language example, distributed
@@ -146,19 +146,14 @@ structured_with_optional_initialization (structured_variable v,
 %}
 
 /* We need a recent enough version of GNU Bison. */
-%require "2.3b" /* This is the first version supporting %define api.pure . */
+%require "3.0" /* 2.3b was the first version supporting %define api.pure ,
+                  but such old versions have not been tested in a long time,
+                  and now Bison (as of 3.5) refuses to accept the "b" suffix
+                  in requirements.  It appears that 2.3b was not an official
+                  release. */
 
 /* Use a prefix different from the default "yy" for the API. */
-%name-prefix "structured_" /* FIXME: use a different prefix and find a way
-                              of linking together several Bison/Flex
-                              parsers and scanners (even if I don't need that
-                              for the generator); I think I currently have
-                              a problem with the Flex part. */
-
-// FIXME: the Bison documentation says that this is obsolete.  I should use
-// %define api.prefix {structured_}
-// instead.  That will let me use more than one Bison parser in the
-// same executable.
+%define api.prefix {structured_}
 
 /* Generate a header file. */
 %defines

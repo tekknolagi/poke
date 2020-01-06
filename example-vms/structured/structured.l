@@ -1,7 +1,7 @@
 /* Jittery structured language example: Flex scanner.
 
    Copyright (C) 2016, 2017 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Updated in 2019 and 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jitter structured-language example, distributed
@@ -42,6 +42,9 @@ static int input  (yyscan_t yyscanner)
 static void yyunput (int c, char * yy_bp , yyscan_t yyscanner)
   __attribute__ ((unused));
 
+/* Provide aliases for a few identifiers not renamed by %option prefix. */
+#define YYSTYPE STRUCTURED_STYPE
+#define YYLTYPE STRUCTURED_LTYPE
 %}
 
 

@@ -326,6 +326,14 @@ tests_unit_heap_test_CPPFLAGS = \
 endif # if JITTER_ENABLE_TEST_SUITE
 
 
+# Bison flags.
+# ################################################################
+
+# Recent versions of Bison generate a lot of Yacc-compatibility warnings by
+# default, which are just a distraction for Jitter.
+BISONFLAGS = -Wno-yacc
+
+
 # jitterc frontend.
 # ################################################################
 
@@ -336,7 +344,7 @@ FRONTEND_GENERATED_FILES += \
   jitterc/jitterc-parser.c jitterc/jitterc-parser.h \
   jitterc/jitterc-scanner.c jitterc/jitterc-scanner.h
 $(srcdir)/jitterc/jitterc-parser.c: jitterc/jitterc.y
-	$(YACC) -o "$@" "$(srcdir)/jitterc/jitterc.y"
+	$(YACC) $(BISONFLAGS) -o "$@" "$(srcdir)/jitterc/jitterc.y"
 $(srcdir)/jitterc/jitterc-parser.h: jitterc/jitterc-parser.c
 $(srcdir)/jitterc/jitterc-scanner.c: jitterc/jitterc.l
 	$(LEX) --header-file=$(srcdir)/jitterc/jitterc-scanner.h -o"$@" \
@@ -436,7 +444,7 @@ FRONTEND_GENERATED_FILES += \
    jitter/jitter-routine-parser.c jitter/jitter-routine-parser.h \
    jitter/jitter-routine-scanner.c jitter/jitter-routine-scanner.h
 $(srcdir)/jitter/jitter-routine-parser.c: jitter/jitter-routine.y
-	$(YACC) -o "$@" "$(srcdir)/jitter/jitter-routine.y"
+	$(YACC) $(BISONFLAGS) -o "$@" "$(srcdir)/jitter/jitter-routine.y"
 $(srcdir)/jitter/jitter-routine-parser.h: jitter/jitter-routine-parser.c
 $(srcdir)/jitter/jitter-routine-scanner.c: jitter/jitter-routine.l
 	$(LEX) --header-file=$(srcdir)/jitter/jitter-routine-scanner.h -o"$@" \
@@ -1116,7 +1124,7 @@ FRONTEND_GENERATED_FILES += \
   example-vms/structured/structured-parser.c \
   example-vms/structured/structured-parser.h
 $(srcdir)/example-vms/structured/structured-parser.c: example-vms/structured/structured.y
-	$(YACC) -o "$@" "$(srcdir)/example-vms/structured/structured.y"
+	$(YACC) $(BISONFLAGS) -o "$@" "$(srcdir)/example-vms/structured/structured.y"
 $(srcdir)/example-vms/structured/structured-parser.h: example-vms/structured/structured-parser.c
 $(srcdir)/example-vms/structured/structured-scanner.c: example-vms/structured/structured.l
 	$(LEX) --header-file="$(srcdir)/example-vms/structured/structured-scanner.h" -o"$@" \

@@ -1,7 +1,7 @@
 /* Jitter: Flex scanner.
 
    Copyright (C) 2016, 2017, 2018 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Updated in 2019 and 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -79,6 +79,10 @@ jitterc_strip_code (char *text)
      beginning.  We want to skip as many characters. */
   return text + i;
 }
+
+/* Provide aliases for a few identifiers not renamed by %option prefix. */
+#define YYSTYPE JITTERC_STYPE
+#define YYLTYPE JITTERC_LTYPE
 
 %}
 

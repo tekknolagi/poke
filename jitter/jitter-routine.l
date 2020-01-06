@@ -1,7 +1,7 @@
 /* VM-independent routine code frontend: flex scanner.
 
    Copyright (C) 2016, 2017 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Updated in 2019 and 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -30,6 +30,10 @@
     __attribute__ ((unused));
   static void yyunput (int c, char * yy_bp , yyscan_t yyscanner)
     __attribute__ ((unused));
+
+/* Provide aliases for a few identifiers not renamed by %option prefix. */
+#define YYSTYPE JITTER_STYPE
+#define YYLTYPE JITTER_LTYPE
 %}
 %option bison-bridge bison-locations nodefault noyywrap prefix="jitter_"
 %option reentrant yylineno
