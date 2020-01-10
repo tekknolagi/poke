@@ -1732,9 +1732,9 @@ if JITTER_SUBPACKAGE
 # Unfortunately it does not seem to be possible to disable TEXINFOS from
 # Automake conditionals, but this workaround is easy.
 doc/jitter.info:
-	touch "$@"
+	$(MKDIR_P) `dirname "$@"` && touch "$@"
 example-vms/jitterlisp/doc/jitterlisp.info:
-	touch "$@"
+	$(MKDIR_P) `dirname "$@"` && touch "$@"
 info: doc/jitter.info example-vms/jitterlisp/doc/jitterlisp.info
 endif # JITTER_SUBPACKAGE
 
