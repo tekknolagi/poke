@@ -116,7 +116,7 @@ vmprefix_state_finalize (struct vmprefix_state *state)
 /* The header of a doubly-linked list linking every state for the vmprefix VM
    together.  This global is automatically wrapped, and therefore also
    accessible from VM instruction code. */
-struct jitter_list_header * const
+extern struct jitter_list_header * const
 vmprefix_states;
 
 /* A pointer to the current state, only accessible from VM code.  This is usable
