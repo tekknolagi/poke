@@ -932,9 +932,9 @@ fi
 # Check if assembly support exists for the host machine.
 ################################################################
 
-# The Automake conditional JITTER_HAVE_ASSEMBLY will be true iff there is support for
-# the host machine.  If so JITTER_ASSEMBLY_SUBDIRECTORY will be AC_SUBST'ed to be
-# the subdirectory holding configuration-specific files.
+# The CPP feature macro JITTER_HAVE_ASSEMBLY will be defined iff there is
+# support for the host machine.  If so JITTER_ASSEMBLY_SUBDIRECTORY will be
+# AC_SUBST'ed to be the subdirectory holding configuration-specific files.
 if test "x$jitter_has_host_assembly" = "xyes"; then
    AC_SUBST([JITTER_ASSEMBLY_SUBDIRECTORY])
    AC_DEFINE_UNQUOTED([JITTER_HAVE_ASSEMBLY], [1],
@@ -948,11 +948,9 @@ else
    # Thanks to this trick I can use variables inside pathnames within
    # Makefile.am , which makes the code a lot simpler.  Notice that in this case
    # the CPP feature macro definition JITTER_HAVE_ASSEMBLY remains undefined,
-   # and the Automake conditional JITTER_HAVE_ASSEMBLY remains false.
+   # and the Automake conditional JITTER_ENABLE_ASSEMBLY remains false.
    AC_SUBST([JITTER_ASSEMBLY_SUBDIRECTORY], [dummy])
 fi
-AM_CONDITIONAL([JITTER_HAVE_ASSEMBLY],
-               [test "x$jitter_has_host_assembly" = "xyes"])
 
 
 # Configuration-dependent features not directly relying on assembly support.
@@ -1031,7 +1029,6 @@ AS_CASE([$host_os],
 AC_MSG_RESULT([$jitter_host_os_is_elf])
 
 # Determine whether the host OS uses the COFF binary format.
-
 # Again, this is crude but should suffice.
 AC_MSG_CHECKING([if the host OS uses the COFF binary format])
 AS_CASE([$host_os],
@@ -1042,8 +1039,17 @@ AS_CASE([$host_os],
           [jitter_host_os_is_coff=no])
 AC_MSG_RESULT([$jitter_host_os_is_coff])
 
+# Determine whether the host OS uses the Mach-O binary format.
+# Once more, this is crude but enough for the common case.
+AC_MSG_CHECKING([if the host OS uses the Mach-O binary format])
+AS_CASE([$host_os],
+        [*darwin*],
+          [jitter_host_os_is_macho=yes],
+          [jitter_host_os_is_macho=no])
+AC_MSG_RESULT([$jitter_host_os_is_macho])
+
 # Define C feature macros telling whether we can rely on the binary format
-# being ELF, or COFF.
+# being one of the supported ones.
 if test "x$jitter_host_os_is_elf" = "xyes"; then
   AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_ELF], [1],
                      [Define to 1 iff the host OS uses the ELF format])
@@ -1052,6 +1058,22 @@ if test "x$jitter_host_os_is_coff" = "xyes"; then
   AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_COFF], [1],
                      [Define to 1 iff the host OS uses the COFF format])
 fi
+if test "x$jitter_host_os_is_macho" = "xyes"; then
+  AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_MACHO], [1],
+                     [Define to 1 iff the host OS uses the MACHO format])
+fi
+AC_MSG_CHECKING([if the host OS uses a known binary format])
+if test "x$jitter_host_os_is_elf" = "xyes" \
+   || test "x$jitter_host_os_is_coff" = "xyes"; then
+  jitter_have_known_binary_format='yes'
+   # FIXME: If I ever add support for Mach-O sections I will need another
+   #        clause in the condition above.
+  AC_DEFINE_UNQUOTED([JITTER_HAVE_KNOWN_BINARY_FORMAT], [1],
+                     [Define to 1 iff we can handle globals/sections in asm])
+else
+  jitter_have_known_binary_format='no'
+fi
+AC_MSG_RESULT([$jitter_have_known_binary_format])
 
 
 # Recognize specific operating systems.
@@ -1466,6 +1488,28 @@ else
                      [Defined if $jitter_best_dispatch_model is the best
                       enabled dispatching model.])
 fi
+
+
+# Automake conditional enabling assembly.
+############################################################################
+
+# Define an Automake conditional stating whether the assembly support, which may
+# be present or not, is to be used.  This is particularly important for
+# combinations of supported architectures and unsupported binary formats.
+AC_MSG_CHECKING([if we are actually using any assembly support])
+if test "x$jitter_has_host_assembly" = "xyes" \
+   && test "x$jitter_have_known_binary_format" = 'xyes' \
+   && (test "x$jitter_enable_dispatch_minimal_threading" = 'xyes' \
+       || test "x$jitter_enable_dispatch_no_threading" = 'xyes'); then
+   jitter_enable_assembly=yes
+   AC_DEFINE_UNQUOTED([JITTER_ENABLE_ASSEMBLY], [1],
+                      [Define iff assembly support is to be actually used])
+else
+   jitter_enable_assembly=no
+fi
+AM_CONDITIONAL([JITTER_ENABLE_ASSEMBLY],
+               [test "x$jitter_enable_assembly" = 'xyes'])
+AC_MSG_RESULT([$jitter_enable_assembly])
 
 
 # Installation paths, relative to installation prefixes.

@@ -55,7 +55,7 @@
    syntax or either configure or the user has decided to disable assembly
    support, for any reason, expand the rest of this file to whitespace only. */
 
-#ifdef JITTER_HAVE_ASSEMBLY
+#if defined (JITTER_HAVE_ASSEMBLY) && defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
 
 /* If we arrived here we can acually use assembly. */
 
@@ -292,6 +292,6 @@ jitter_asm_enter_section .data, 3
 jitter_asm_exit_section
 .endm
 
-#endif // #ifdef JITTER_HAVE_ASSEMBLY
+#endif // #if defined (JITTER_HAVE_ASSEMBLY) && defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
 
 #endif // #ifndef MACHINE_COMMON_S_

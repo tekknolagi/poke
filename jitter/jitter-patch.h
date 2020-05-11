@@ -1,6 +1,7 @@
 /* VM library: native code patching, machine-independent header file.
 
    Copyright (C) 2017, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -26,7 +27,7 @@
 /* Ignore the rest of this file if we have no host assembly support.
  * ************************************************************************** */
 
-/* Import the preprocessor definition of JITTER_HAVE_ASSEMBLY , if any. */
+/* Import the preprocessor definition of JITTER_ENABLE_ASSEMBLY , if any. */
 #include <jitter/jitter.h>
 
 /* Here we need to know whether a <jitter/machine/jitter-machine.h> exists for
@@ -34,8 +35,8 @@
    sizes and endianness, and it is convenient to include the configuration file
    here rather than in every machine-specific file. */
 
-/* If there is no assembly support ignore the rest of this file. */
-#ifdef JITTER_HAVE_ASSEMBLY
+/* If we are not using assembly support ignore the rest of this file. */
+#ifdef JITTER_ENABLE_ASSEMBLY
 
 
 
@@ -256,5 +257,5 @@ jitter_fits_in_bits_zero_extended (uint64_t word, unsigned bit_no);
 bool
 jitter_fits_in_bits_sign_extended (uint64_t word, unsigned bit_no);
 
-#endif // #ifdef JITTER_HAVE_ASSEMBLY
+#endif // #ifdef JITTER_ENABLE_ASSEMBLY
 #endif // #ifndef JITTER_MACHINE_INDEPENDENT_PATCH_

@@ -1,6 +1,7 @@
 /* Jitter: generator implementation.
 
    Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -3375,10 +3376,10 @@ jitterc_emit_executor (const struct jitterc_vm *vm)
   EMIT("#define JITTER_THIS_CAN_INCLUDE_JITTER_EXECUTOR_H\n");
   EMIT("#include <jitter/jitter-executor.h>\n\n");
 
-  EMIT("#ifdef JITTER_HAVE_ASSEMBLY\n");
+  EMIT("#ifdef JITTER_ENABLE_ASSEMBLY\n");
   EMIT("#include <jitter/jitter-machine-common.h>\n");
   EMIT("#include <jitter/machine/jitter-machine.h>\n");
-  EMIT("#endif // #ifdef JITTER_HAVE_ASSEMBLY\n");
+  EMIT("#endif // #ifdef JITTER_ENABLE_ASSEMBLY\n");
 
   EMIT("#include <jitter/jitter-fatal.h>\n");
   EMIT("#include <jitter/jitter-malloc.h>\n\n");

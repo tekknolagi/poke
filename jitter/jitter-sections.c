@@ -1,6 +1,7 @@
 /* Jitter: section implementation.
 
    Copyright (C) 2018 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -19,6 +20,12 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
-#include <jitter/jitter-sections.h>
+/* Include feature macros definitions. */
+#include <jitter/jitter.h>
+
+/* Include the header, only if we have support. */
+#if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
+# include <jitter/jitter-sections.h>
+#endif // #if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
 
 /* Nothing yet. */

@@ -42,10 +42,10 @@
    concatenation. */
 #include <jitter/jitter-cpp.h>
 
-/* Include the machine-specific header, if one exists for the host machine. */
-#ifdef JITTER_ASSEMBLY_SUBDIRECTORY
+/* Include the machine-specific header, if we are actually using assembly. */
+#ifdef JITTER_ENABLE_ASSEMBLY
 # include <jitter/machine/jitter-machine.h>
-#endif // #ifdef JITTER_ASSEMBLY_SUBDIRECTORY
+#endif // #ifdef JITTER_ENABLE_ASSEMBLY
 
 
 

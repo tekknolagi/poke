@@ -1,6 +1,7 @@
 /* VM library: main VM C file template.
 
    Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -175,13 +176,13 @@ JITTER_DISPATCH_DEPENDENT_GLOBAL_NAME;
 /* Low-level debugging features relying on assembly: data locations.
  * ************************************************************************** */
 
-#ifndef JITTER_DISPATCH_SWITCH
+#if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT) && ! defined (JITTER_DISPATCH_SWITCH)
 /* A declaration for data locations, as visible from C.  The global is defined in
    assembly in its own separate section thru the machinery in
    jitter/jitter-sections.h . */
 extern const char
 JITTER_DATA_LOCATION_NAME(vmprefix) [];
-#endif // #ifndef JITTER_DISPATCH_SWITCH
+#endif // #if ...
 
 void
 vmprefix_dump_data_locations (FILE *output)
@@ -367,7 +368,11 @@ vmprefix_initialize (void)
       the_vmprefix_vm.threads = (jitter_thread *)vmprefix_threads;
       the_vmprefix_vm.thread_sizes = (long *) vmprefix_thread_sizes;
       the_vmprefix_vm.threads_validated = vmprefix_threads_validated;
+#if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
       the_vmprefix_vm.data_locations = JITTER_DATA_LOCATION_NAME(vmprefix);
+#else
+      the_vmprefix_vm.data_locations = NULL;
+#endif // #if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
 #endif // #ifndef JITTER_DISPATCH_SWITCH
 
       the_vmprefix_vm.specialized_instruction_residual_arities

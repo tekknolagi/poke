@@ -59,6 +59,11 @@
  * ************************************************************************** */
 
 #undef JITTER_HAVE_ASSEMBLY
+#undef JITTER_ENABLE_ASSEMBLY
+
+/* Define if we know how to do things like switching sections and defining
+   globals from inline assembly for this configuration. */
+#undef JITTER_HAVE_KNOWN_BINARY_FORMAT
 
 /* It is convenient to let C code access the architecture name. */
 #undef JITTER_ASSEMBLY_SUBDIRECTORY
@@ -79,6 +84,7 @@
 /* Binary format. */
 #undef JITTER_HOST_OS_IS_ELF
 #undef JITTER_HOST_OS_IS_COFF
+#undef JITTER_HOST_OS_IS_MACHO
 #undef JITTER_HAVE_SECTION_NOTE_GNU_STACK
 
 /* Assembler flavor. */

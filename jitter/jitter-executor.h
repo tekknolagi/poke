@@ -1,6 +1,7 @@
 /* Jitter: runtime VM-independent header for generated executors.
 
    Copyright (C) 2016, 2017, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -52,7 +53,9 @@
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-fast-branch.h>
-#include <jitter/jitter-sections.h>
+#if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
+# include <jitter/jitter-sections.h>
+#endif // #if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
 
 
 /* Consistency check.

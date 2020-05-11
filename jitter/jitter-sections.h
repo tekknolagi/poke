@@ -1,6 +1,7 @@
 /* Jitter: section header.
 
    Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -86,18 +87,6 @@
   ".ifgt (" JITTER_STRINGIFY(size) ")\n"                                     \
   "  .skip " JITTER_STRINGIFY(size) ", " JITTER_ASM_PATCH_IN_FILL_BYTE "\n"  \
   ".endif\n"
-
-
-
-
-/* Define a feature macro iff we support sections.
- * ************************************************************************** */
-
-/* Here we rely on system-specific sections as defined by the assembler and
-   linker; currently the system must be ELF. */
-#if defined(JITTER_HOST_OS_IS_ELF) || defined(JITTER_HOST_ASSEMBLER_IS_GNU)
-# define JITTER_HAVE_SECTIONS 1
-#endif // enough functionality for Jitter's sections mechanism
 
 
 

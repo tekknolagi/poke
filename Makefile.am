@@ -670,10 +670,11 @@ endif # JITTER_SUBPACKAGE
 # Native-code libjitter sources for supported architectures.
 # ################################################################
 
-# Only if the host architecture is supported, as detected by configure, we add
-# architecture-dependent sources from the appropriate directory to libjitter and
-# to the installed headers.
-if JITTER_HAVE_ASSEMBLY
+# Only if architecture-specific files are actually enabled (the question is
+# about being enabled, not being supported) we add architecture-dependent
+# sources from the appropriate directory to libjitter and to the installed
+# headers.
+if JITTER_ENABLE_ASSEMBLY
   # Search included file in "machine/@JITTER_ASSEMBLY_SUBDIRECTORY@" , so that
   # including <jitter/machine/FILE> from a source will find
   # machine/@JITTER_ASSEMBLY_SUBDIRECTORY@/jitter/machine/FILE .  This is only
@@ -694,7 +695,7 @@ if JITTER_HAVE_ASSEMBLY
   # for reserving registers.
   jittermachineinclude_HEADERS += \
     machine/@JITTER_ASSEMBLY_SUBDIRECTORY@/jitter/machine/jitter-machine.h
-endif # if JITTER_HAVE_ASSEMBLY
+endif # if JITTER_ENABLE_ASSEMBLY
 
 # All the source files for every architecture have to be distributed,
 # independently from which ones we use, if any, in the current configuration.

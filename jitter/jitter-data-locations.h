@@ -1,6 +1,6 @@
 /* Jitter: data locations: header.
 
-   Copyright (C) 2019 Luca Saiu
+   Copyright (C) 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -26,7 +26,9 @@
 #include <stdbool.h>
 
 #include <jitter/jitter.h>
-#include <jitter/jitter-sections.h>
+#if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
+# include <jitter/jitter-sections.h>
+#endif // #if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
 #include <jitter/jitter-vm.h>
 
 
@@ -101,61 +103,74 @@ jitter_dump_data_locations (FILE *output, const struct jitter_vm *vm)
 
    This functionality is used by machine-generated code. */
 
-/* The subsection number for data locations. */
-#define JITTER_ASM_DATA_LOCATION_SUBSECTION  \
-  "12"
+/* This functionality is not actually available if the host binary format is not
+   supported.  In that case, define compatibility stubs. */
+#if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
+  /* Data locations are actually supported. */
 
-/* The name of the global variable holding data prefixes. */
-#define JITTER_DATA_LOCATION_NAME(_jitter_vm_the_prefix) \
-  JITTER_CONCATENATE_TWO(_jitter_vm_the_prefix, _data_locations)
+  /* The name of the global variable holding data prefixes. */
+# define JITTER_DATA_LOCATION_NAME(_jitter_vm_the_prefix)  \
+    JITTER_CONCATENATE_TWO(_jitter_vm_the_prefix, _data_locations)
 
-/* Begin the global definition for data locations for the VM with the given
-   vmprefix.  This temporarily enters the appropriate subsection, emits a symbol
-   definition, and pops back to the previous subsection.  Between a call to this
-   macro and a call to JITTER_DATA_LOCATION_FOOTER the user is supposed to emit
-   location data for every datum, in some predictable order.  The defined global
-   is only one. */
-#define JITTER_DATA_LOCATION_HEADER(_jitter_vm_the_prefix)              \
-  asm volatile (/* Generate the identifier definition in assembly. */   \
-                JITTER_ASM_OPEN_DEFINITION(                             \
-                   JITTER_ASM_DATA_LOCATION_SUBSECTION,                 \
-                   JITTER_DATA_LOCATION_NAME(_jitter_vm_the_prefix)))
-/* End the global definition for data locations, for the VM with the given
-   vmprefix.  This enters, and then exits, the appropriate subsection. */
-#define JITTER_DATA_LOCATION_FOOTER(_jitter_vm_the_prefix)             \
-  asm volatile (/* Emit the final empty string as "\0". */             \
-                JITTER_ASM_ENTER_SUBSECTION(                           \
-                   JITTER_ASM_DATA_LOCATION_SUBSECTION)                \
-                  ".byte 0\n\t"                                        \
-                JITTER_ASM_EXIT_SUBSECTION                             \
-                /* Close the identifier definition in assembly. */     \
-                JITTER_ASM_CLOSE_DEFINITION(                           \
-                   JITTER_ASM_DATA_LOCATION_SUBSECTION,                \
-                   JITTER_DATA_LOCATION_NAME(_jitter_vm_the_prefix)))
+  /* The subsection number for data locations. */
+# define JITTER_ASM_DATA_LOCATION_SUBSECTION  \
+    "12"
 
-/* Emit the location for the given datum with the given name as two
-   '\0'-terminated strings, in the data location subsection.
-   For example, if foo is a local variable currently kept in some hardware
-   register named $r10, then the macro call
-     JITTER_DATA_LOCATION_DATUM("the foo variable", foo);
-   will emit
-     .asciz "the foo variable"
-     .asciz "$r10"
-   in the data location subsection.
-   Notice that:
-   - name_as_string is emitted as is in an extended-asm template,
-     therefore any '%' character must be escaped as "%%";
-   - name_as_string_literal must never be an empty string, since an
-     empty string terminates the entire data structure. */
-#define JITTER_DATA_LOCATION_DATUM(name_as_string_literal, datum)            \
-  asm volatile (JITTER_ASM_ENTER_SUBSECTION(                                 \
-                   JITTER_ASM_DATA_LOCATION_SUBSECTION)                      \
-                "\n" JITTER_ASM_COMMENT_PREFIX                               \
-                     name_as_string_literal " " JITTER_STRINGIFY(datum) "\n" \
-                ".asciz \"" name_as_string_literal "\"\n"                    \
-                ".asciz \"%[datum_from_asm]\"\n\t"                           \
-                JITTER_ASM_EXIT_SUBSECTION                                   \
-                : /* outputs */                                              \
-                : [datum_from_asm] "X" (datum) /* inputs */)
+  /* Begin the global definition for data locations for the VM with the given
+     vmprefix.  This temporarily enters the appropriate subsection, emits a symbol
+     definition, and pops back to the previous subsection.  Between a call to this
+     macro and a call to JITTER_DATA_LOCATION_FOOTER the user is supposed to emit
+     location data for every datum, in some predictable order.  The defined global
+     is only one. */
+# define JITTER_DATA_LOCATION_HEADER(_jitter_vm_the_prefix)              \
+    asm volatile (/* Generate the identifier definition in assembly. */  \
+                  JITTER_ASM_OPEN_DEFINITION(                            \
+                     JITTER_ASM_DATA_LOCATION_SUBSECTION,                \
+                     JITTER_DATA_LOCATION_NAME(_jitter_vm_the_prefix)))
+
+  /* End the global definition for data locations, for the VM with the given
+     vmprefix.  This enters, and then exits, the appropriate subsection. */
+# define JITTER_DATA_LOCATION_FOOTER(_jitter_vm_the_prefix)              \
+    asm volatile (/* Emit the final empty string as "\0". */             \
+                  JITTER_ASM_ENTER_SUBSECTION(                           \
+                     JITTER_ASM_DATA_LOCATION_SUBSECTION)                \
+                    ".byte 0\n\t"                                        \
+                  JITTER_ASM_EXIT_SUBSECTION                             \
+                  /* Close the identifier definition in assembly. */     \
+                  JITTER_ASM_CLOSE_DEFINITION(                           \
+                     JITTER_ASM_DATA_LOCATION_SUBSECTION,                \
+                     JITTER_DATA_LOCATION_NAME(_jitter_vm_the_prefix)))
+
+  /* Emit the location for the given datum with the given name as two
+     '\0'-terminated strings, in the data location subsection.
+     For example, if foo is a local variable currently kept in some hardware
+     register named $r10, then the macro call
+       JITTER_DATA_LOCATION_DATUM("the foo variable", foo);
+     will emit
+       .asciz "the foo variable"
+       .asciz "$r10"
+     in the data location subsection.
+     Notice that:
+     - name_as_string is emitted as is in an extended-asm template,
+       therefore any '%' character must be escaped as "%%";
+     - name_as_string_literal must never be an empty string, since an
+       empty string terminates the entire data structure. */
+# define JITTER_DATA_LOCATION_DATUM(name_as_string_literal, datum)             \
+    asm volatile (JITTER_ASM_ENTER_SUBSECTION(                                 \
+                     JITTER_ASM_DATA_LOCATION_SUBSECTION)                      \
+                  "\n" JITTER_ASM_COMMENT_PREFIX                               \
+                       name_as_string_literal " " JITTER_STRINGIFY(datum) "\n" \
+                  ".asciz \"" name_as_string_literal "\"\n"                    \
+                  ".asciz \"%[datum_from_asm]\"\n\t"                           \
+                  JITTER_ASM_EXIT_SUBSECTION                                   \
+                  : /* outputs */                                              \
+                  : [datum_from_asm] "X" (datum) /* inputs */)
+#else // ! defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
+  /* Use dummy macros emitting no data locations, for compatibility. */
+# define JITTER_DATA_LOCATION_HEADER(_jitter_vm_the_prefix)         /* Nothing. */
+# define JITTER_DATA_LOCATION_FOOTER(_jitter_vm_the_prefix)         /* Nothing. */
+# define JITTER_DATA_LOCATION_DATUM(name_as_string_literal, datum)  /* Nothing. */
+#endif // #if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
+
 
 #endif // #ifndef JITTER_DATA_LOCATIONS_H_

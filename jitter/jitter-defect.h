@@ -1,6 +1,7 @@
 /* Jitter: defective VM instruction header.
 
    Copyright (C) 2018 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -29,8 +30,10 @@
    dispatching model. */
 #include <jitter/jitter.h>
 
-/* Include sectioning macros. */
-#include <jitter/jitter-sections.h>
+/* Include sectioning macros, if they are supported. */
+#if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
+# include <jitter/jitter-sections.h>
+#endif // #if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
 
 /* The debugging facility relies on standard I/O. */
 #include <stdio.h>

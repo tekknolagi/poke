@@ -1,6 +1,7 @@
 /* VM library: native code patching, machine-independent part.
 
    Copyright (C) 2017, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -24,8 +25,8 @@
 
 #include <jitter/jitter.h>
 
-/* If there is no assembly support ignore the rest of this file. */
-#ifdef JITTER_HAVE_ASSEMBLY
+/* If we are not using assembly support ignore the rest of this file. */
+#ifdef JITTER_ENABLE_ASSEMBLY
 
 
 
@@ -181,4 +182,4 @@ jitter_fits_in_bits_sign_extended (uint64_t original, unsigned bit_no)
   return sign_extended == original;
 }
 
-#endif // #ifdef JITTER_HAVE_ASSEMBLY
+#endif // #ifdef JITTER_ENABLE_ASSEMBLY

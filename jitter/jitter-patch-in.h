@@ -1,6 +1,7 @@
 /* Jitter: patch-in header.
 
    Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -30,8 +31,10 @@
    dispatching model. */
 #include <jitter/jitter.h>
 
-/* Include sectioning macros. */
-#include <jitter/jitter-sections.h>
+/* Include sectioning macros, if we have section support for this platform. */
+#if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
+# include <jitter/jitter-sections.h>
+#endif // #if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
 
 
 
