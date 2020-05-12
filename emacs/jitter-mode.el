@@ -305,7 +305,7 @@ Right now the mode only provides font-locking support.
        1 font-lock-function-name-face t)
 
       ;; Highlight keywords.
-      ("\\<\\(vm\\|set\\|register-class\\|stack\\|tos-stack\\|ntos-stack\\|early-header-c\\|late-header-c\\|printer-c\\|rewriter-c\\|early-c\\|late-c\\|initialization-c\\|finalization-c\\|state-struct-backing-c\\|state-struct-runtime-c\\|state-initialization-c\\|state-finalization-c\\|instruction-beginning-c\\|instruction-end-c\\|wrapped-functions\\|wrapped-globals\\|instruction\\|hot\\|cold\\|relocatable\\|non-relocatable\\|caller\\|callee\\|code\\|end\\)\\>"
+      ("\\<\\(vm\\|set\\|register-class\\|stack\\|tos-stack\\|ntos-stack\\|initial-header-c\\|early-header-c\\|late-header-c\\|printer-c\\|rewriter-c\\|early-c\\|late-c\\|initialization-c\\|finalization-c\\|state-struct-backing-c\\|state-struct-runtime-c\\|state-initialization-c\\|state-finalization-c\\|instruction-beginning-c\\|instruction-end-c\\|wrapped-functions\\|wrapped-globals\\|instruction\\|hot\\|cold\\|relocatable\\|non-relocatable\\|caller\\|callee\\|code\\|end\\)\\>"
        (0 font-lock-keyword-face nil))
 
       ;; Highlight rule names.

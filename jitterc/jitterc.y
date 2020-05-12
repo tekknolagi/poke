@@ -1,7 +1,7 @@
 /* Jitter: Bison parser.
 
    Copyright (C) 2016, 2017, 2018, 2020 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Updated in 2019 and 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -249,6 +249,7 @@ jitterc_parse_file (const char *input_file_name, bool generate_line);
 
 %token VM END CODE /*END_CODE*/ STRING
 %token SET NTOS_STACK TOS_STACK
+%token INITIAL_HEADER_C
 %token EARLY_HEADER_C LATE_HEADER_C
 %token PRINTER_C REWRITER_C
 %token EARLY_C LATE_C INITIALIZATION_C FINALIZATION_C
@@ -338,7 +339,9 @@ stack_declaration:
 ;
 
 c_section:
-  EARLY_HEADER_C code END /*EARLY_HEADER_C*/
+  INITIAL_HEADER_C code END /*INITIAL_HEADER_C*/
+    { JITTERC_APPEND_CODE(vm->initial_header_c_code, & $2); }
+| EARLY_HEADER_C code END /*EARLY_HEADER_C*/
     { JITTERC_APPEND_CODE(vm->early_header_c_code, & $2); }
 | LATE_HEADER_C code END /*LATE_HEADER_C*/
     { JITTERC_APPEND_CODE(vm->late_header_c_code, & $2); }

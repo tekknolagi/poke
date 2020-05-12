@@ -193,6 +193,7 @@ CODECONTENTLINEMIDDLE3 end{LINEWHITESPACE}?[^\ \t\n\r\f#][^\n\r\f]*
 "stack"                   { return NTOS_STACK; }
 "tos-stack"               { return TOS_STACK; }
 
+"initial-header-c"        { return INITIAL_HEADER_C; }
 "early-header-c"          { return EARLY_HEADER_C; }
 "late-header-c"           { return LATE_HEADER_C; }
 "printer-c"               { return PRINTER_C; }

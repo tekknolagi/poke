@@ -1,7 +1,6 @@
 /* Jitter: generator implementation.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -142,6 +141,25 @@ jitterc_fopen_a_basename (const struct jitterc_vm *vm,
   return res;
 }
 
+static FILE *
+jitterc_fopen_w_or_a_and_remember_basename (const struct jitterc_vm *vm,
+                                            const char *basename,
+                                            const char letter)
+{
+  gl_list_add_last (vm->written_file_names,
+                    jitter_clone_string (basename));
+  char *pathname = jitterc_pathname (vm, basename);
+  FILE *res;
+  if (letter == 'w')
+    res = jitterc_fopen_w_pathname (pathname);
+  else if (letter == 'a')
+    res = jitterc_fopen_a_pathname (pathname);
+  else
+    jitter_fatal ("jitterc_fopen_w_or_a_and_remember_basename: wrong letter");
+  free (pathname);
+  return res;
+}
+
 /* Return a new file stream open for writing; the given file basename is
    appended to the temporary output directory of the VM whose pointer is given,
    and the file basename is copied to the written_file_names list in the VM, so
@@ -151,12 +169,16 @@ static FILE *
 jitterc_fopen_w_and_remember_basename (const struct jitterc_vm *vm,
                                        const char *basename)
 {
-  gl_list_add_last (vm->written_file_names,
-                    jitter_clone_string (basename));
-  char *pathname = jitterc_pathname (vm, basename);
-  FILE *res = jitterc_fopen_w_pathname (pathname);
-  free (pathname);
-  return res;
+  return jitterc_fopen_w_or_a_and_remember_basename (vm, basename, 'w');
+}
+
+/* Like jitterc_fopen_w_and_remember_basename, but append instead of
+   overwriting in case the file already exists. */
+static FILE *
+jitterc_fopen_a_and_remember_basename (const struct jitterc_vm *vm,
+                                       const char *basename)
+{
+  return jitterc_fopen_w_or_a_and_remember_basename (vm, basename, 'a');
 }
 
 /* Close the given stream, failing fatally in case of errors.  This works for
@@ -198,6 +220,18 @@ jitterc_mkdir (const char *pathname)
 
 
 /* Simple source generation. */
+
+/* Emit verbatim text to the output, without any added whitespace.  This
+   is useful to emit comments or C code. */
+static void
+jitterc_emit_text_to_stream (const struct jitterc_vm *vm,
+                             const char *file_basename,
+                             const char *text)
+{
+  FILE *f = jitterc_fopen_a_basename (vm, file_basename);
+  EMIT ("%s", text);
+  jitterc_fclose (f);
+}
 
 /* Emit user-specified code.  FIXME: use this everywhere and find some way of
    handling #line directives out of user code. */
@@ -243,6 +277,15 @@ jitterc_emit_vm_name (const struct jitterc_vm *vm)
   EMIT("#define VMPREFIX_VM_NAME JITTER_STRINGIFY(%s)\n", name);
   EMIT("\n");
   jitterc_fclose (f);
+}
+
+/* Emit the initial part of the user-specified code for the header.  This user code
+   comes before everything, even before standard #include directives. */
+static void
+jitterc_emit_initial_header_c (const struct jitterc_vm *vm)
+{
+  jitterc_emit_user_c_code (vm, "vm.h", vm->initial_header_c_code,
+                            "initial header");
 }
 
 /* Emit the early part of the user-specified code for the header. */
@@ -3448,7 +3491,7 @@ jitterc_copy_file_to_tmp (struct jitterc_vm *vm,
                           const char *to_basename,
                           const char *from_pathname)
 {
-  FILE *to_stream = jitterc_fopen_w_and_remember_basename (vm, to_basename);
+  FILE *to_stream = jitterc_fopen_a_and_remember_basename (vm, to_basename);
   FILE *from_stream = jitterc_fopen_r_pathname (from_pathname);
   while (! feof (from_stream))
     {
@@ -3685,6 +3728,15 @@ jitterc_generate (struct jitterc_vm *vm,
   if (mkdtemp (vm->tmp_directory) == NULL)
     jitter_fatal ("could not make the temporary directory %s",
                    vm->tmp_directory);
+
+  /* Emit the code part coming *before* templates. */
+  jitterc_emit_text_to_stream (vm, "vm.h",
+                               "/* This code is machine-generated.\n"
+                               "   See its source for license information.\n"
+                               "   This software is derived from software\n"
+                               "   distributed under the GNU GPL version 3\n"
+                               "   or later. */\n");
+  jitterc_emit_initial_header_c (vm);
 
   /* Copy all the templates to the temporary directory. */
   jitterc_copy_templates_to_tmp (vm, generate_frontend);

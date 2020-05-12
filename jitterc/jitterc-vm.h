@@ -1,6 +1,7 @@
 /* Jitter: header for VM generation-time data structures.
 
    Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -688,7 +689,7 @@ struct jitterc_vm
 
   /* These are strings, always malloc-allocated and always non-NULL.  They are
      copied verbatim into the generated C code, in the appropriate places. */
-  char *early_header_c_code, *late_header_c_code,
+  char *initial_header_c_code, *early_header_c_code, *late_header_c_code,
        *printer_c_code, *rewriter_c_code,
        *early_c_code, *before_main_c_code,
        *initialization_c_code, *finalization_c_code,

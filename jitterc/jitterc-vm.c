@@ -1,6 +1,7 @@
 /* Jitter: VM generation-time data structures.
 
    Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -152,6 +153,7 @@ jitterc_make_vm (void)
 
   /* These need to be heap-allocated and distinct from one another, since we may
      concatenate an old part with something new and free the two parts. */
+  res->initial_header_c_code = jitter_clone_string ("");
   res->early_header_c_code = jitter_clone_string ("");
   res->late_header_c_code = jitter_clone_string ("");
   res->printer_c_code = jitter_clone_string ("");
