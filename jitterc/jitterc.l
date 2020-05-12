@@ -194,6 +194,10 @@ CODECONTENTLINEMIDDLE3 end{LINEWHITESPACE}?[^\ \t\n\r\f#][^\n\r\f]*
 "tos-stack"               { return TOS_STACK; }
 
 "initial-header-c"        { return INITIAL_HEADER_C; }
+"initial-vm1-c"           { return INITIAL_VM1_C; }
+"initial-vm2-c"           { return INITIAL_VM2_C; }
+"initial-vm-main-c"       { return INITIAL_VM_MAIN_C; }
+"initial-vmmain-c"        { /* An alias. */ return INITIAL_VM_MAIN_C; }
 "early-header-c"          { return EARLY_HEADER_C; }
 "late-header-c"           { return LATE_HEADER_C; }
 "printer-c"               { return PRINTER_C; }

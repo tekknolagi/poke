@@ -1,6 +1,7 @@
 ;;; jitter-mode.el --- Major mode for editing Jitter VM specifications.
 
 ;; Copyright (C) 2017, 2018, 2019 Luca Saiu
+;; Updated in 2020 by Luca Saiu
 ;; Written by Luca Saiu
 
 ;; Maintainer: Luca Saiu
@@ -305,7 +306,8 @@ Right now the mode only provides font-locking support.
        1 font-lock-function-name-face t)
 
       ;; Highlight keywords.
-      ("\\<\\(vm\\|set\\|register-class\\|stack\\|tos-stack\\|ntos-stack\\|initial-header-c\\|early-header-c\\|late-header-c\\|printer-c\\|rewriter-c\\|early-c\\|late-c\\|initialization-c\\|finalization-c\\|state-struct-backing-c\\|state-struct-runtime-c\\|state-initialization-c\\|state-finalization-c\\|instruction-beginning-c\\|instruction-end-c\\|wrapped-functions\\|wrapped-globals\\|instruction\\|hot\\|cold\\|relocatable\\|non-relocatable\\|caller\\|callee\\|code\\|end\\)\\>"
+      ;;("\\<\\(vm\\|set\\|register-class\\|stack\\|tos-stack\\|ntos-stack\\|initial-header-c\\|initial-vm-main-c\\|initial-vm-1-c\\|initial-vm-2-c\\|initial-vmmain-c\\|printer-c\\|rewriter-c\\|early-c\\|late-c\\|initialization-c\\|finalization-c\\|state-struct-backing-c\\|state-struct-runtime-c\\|state-initialization-c\\|state-finalization-c\\|instruction-beginning-c\\|instruction-end-c\\|wrapped-functions\\|wrapped-globals\\|instruction\\|hot\\|cold\\|relocatable\\|non-relocatable\\|caller\\|callee\\|code\\|end\\)\\>"
+      ("\\(set\\|register-class\\|stack\\|tos-stack\\|ntos-stack\\|initial-header-c\\|initial-vm-main-c\\|initial-vm1-c\\|initial-vm2-c\\|initial-vmmain-c\\|printer-c\\|rewriter-c\\|early-c\\|late-c\\|initialization-c\\|finalization-c\\|state-struct-backing-c\\|state-struct-runtime-c\\|state-initialization-c\\|state-finalization-c\\|instruction-beginning-c\\|instruction-end-c\\|wrapped-functions\\|wrapped-globals\\|instruction\\|hot\\|cold\\|relocatable\\|non-relocatable\\|caller\\|callee\\|code\\|end\\|vm\\)"
        (0 font-lock-keyword-face nil))
 
       ;; Highlight rule names.

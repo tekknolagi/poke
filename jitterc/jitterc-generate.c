@@ -165,6 +165,7 @@ jitterc_fopen_w_or_a_and_remember_basename (const struct jitterc_vm *vm,
    and the file basename is copied to the written_file_names list in the VM, so
    that the written file can be moved later to the actual output directory if
    everything succeeds. */
+__attribute__ ((unused))
 static FILE *
 jitterc_fopen_w_and_remember_basename (const struct jitterc_vm *vm,
                                        const char *basename)
@@ -287,6 +288,27 @@ jitterc_emit_initial_header_c (const struct jitterc_vm *vm)
   jitterc_emit_user_c_code (vm, "vm.h", vm->initial_header_c_code,
                             "initial header");
 }
+
+/* Like jitterc_emit_initial_header_c for the other generated files. */
+static void
+jitterc_emit_initial_vm1_c (const struct jitterc_vm *vm)
+{
+  jitterc_emit_user_c_code (vm, "vm1.c", vm->initial_vm1_c_code,
+                            "initial vm1");
+}
+static void
+jitterc_emit_initial_vm2_c (const struct jitterc_vm *vm)
+{
+  jitterc_emit_user_c_code (vm, "vm2.c", vm->initial_vm2_c_code,
+                            "initial vm2");
+}
+static void
+jitterc_emit_initial_vm_main_c (const struct jitterc_vm *vm)
+{
+  jitterc_emit_user_c_code (vm, "vm-main.c", vm->initial_vm_main_c_code,
+                            "initial vm-main");
+}
+
 
 /* Emit the early part of the user-specified code for the header. */
 static void
@@ -3401,7 +3423,7 @@ jitterc_emit_executor_special_purpose_state_data_access_macros
 static void
 jitterc_emit_executor (const struct jitterc_vm *vm)
 {
-  FILE *f = jitterc_fopen_w_and_remember_basename (vm, "vm2.c");
+  FILE *f = jitterc_fopen_a_and_remember_basename (vm, "vm2.c");
   EMIT("//#include <config.h>\n\n");
 
   EMIT("#include <stdbool.h>\n");
@@ -3730,13 +3752,23 @@ jitterc_generate (struct jitterc_vm *vm,
                    vm->tmp_directory);
 
   /* Emit the code part coming *before* templates. */
-  jitterc_emit_text_to_stream (vm, "vm.h",
-                               "/* This code is machine-generated.\n"
-                               "   See its source for license information.\n"
-                               "   This software is derived from software\n"
-                               "   distributed under the GNU GPL version 3\n"
-                               "   or later. */\n");
+  const char *initial_comment
+    = "/* This code is machine-generated.  See its source for license\n"
+      "   information. This software is derived from software\n"
+      "   distributed under the GNU GPL version 3 or later. */\n\n";
+  jitterc_emit_text_to_stream (vm, "vm.h",  initial_comment);
   jitterc_emit_initial_header_c (vm);
+  jitterc_emit_text_to_stream (vm, "vm1.c",  initial_comment);
+  jitterc_emit_initial_vm1_c (vm);
+  jitterc_emit_text_to_stream (vm, "vm2.c",  initial_comment);
+  jitterc_emit_initial_vm2_c (vm);
+  if (generate_frontend)
+    {
+      /* Nothing is really customizable in vm-main.c ; but I can emit user code,
+         and only that, if vm-main.c is actually used. */
+      jitterc_emit_text_to_stream (vm, "vm-main.c",  initial_comment);
+      jitterc_emit_initial_vm_main_c (vm);
+    }
 
   /* Copy all the templates to the temporary directory. */
   jitterc_copy_templates_to_tmp (vm, generate_frontend);
@@ -3754,7 +3786,8 @@ jitterc_generate (struct jitterc_vm *vm,
   jitterc_emit_register_access_macros_h (vm);
   jitterc_emit_late_header_c (vm);
   jitterc_emit_header_closing (vm);
-  /* From this point on the generated code goes to non-header C files. */
+
+  /* From this point on the generated code goes to vm1.c . */
   jitterc_emit_vm_name_macros_vm1 (vm);
   jitterc_emit_printer_c (vm);
   jitterc_emit_meta_instructions (vm);
@@ -3770,6 +3803,8 @@ jitterc_generate (struct jitterc_vm *vm,
   jitterc_emit_rewriter (vm);
   jitterc_emit_specializer (vm);
   jitterc_emit_state (vm);
+
+  /* From this point on the generated code goes to vm2.c . */
   jitterc_emit_executor (vm);
 
   /* Move files from the temporary directory to their actual destination,

@@ -249,7 +249,7 @@ jitterc_parse_file (const char *input_file_name, bool generate_line);
 
 %token VM END CODE /*END_CODE*/ STRING
 %token SET NTOS_STACK TOS_STACK
-%token INITIAL_HEADER_C
+%token INITIAL_HEADER_C INITIAL_VM1_C INITIAL_VM2_C INITIAL_VM_MAIN_C
 %token EARLY_HEADER_C LATE_HEADER_C
 %token PRINTER_C REWRITER_C
 %token EARLY_C LATE_C INITIALIZATION_C FINALIZATION_C
@@ -341,6 +341,12 @@ stack_declaration:
 c_section:
   INITIAL_HEADER_C code END /*INITIAL_HEADER_C*/
     { JITTERC_APPEND_CODE(vm->initial_header_c_code, & $2); }
+| INITIAL_VM1_C code END /*INITIAL_VM1_C*/
+    { JITTERC_APPEND_CODE(vm->initial_vm1_c_code, & $2); }
+| INITIAL_VM2_C code END /*INITIAL_VM2_C*/
+    { JITTERC_APPEND_CODE(vm->initial_vm2_c_code, & $2); }
+| INITIAL_VM_MAIN_C code END /*INITIAL_VM_MAIN_C*/
+    { JITTERC_APPEND_CODE(vm->initial_vm_main_c_code, & $2); }
 | EARLY_HEADER_C code END /*EARLY_HEADER_C*/
     { JITTERC_APPEND_CODE(vm->early_header_c_code, & $2); }
 | LATE_HEADER_C code END /*LATE_HEADER_C*/
