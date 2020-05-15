@@ -79,6 +79,9 @@
 #undef JITTER_HOST_OS_IS_GNU
 #undef JITTER_HOST_OS_IS_GNU_HURD   /* FIXME: recognize this. */
 #undef JITTER_HOST_OS_IS_GNU_LINUX  /* FIXME: recognize this. */
+#undef JITTER_HOST_OS_IS_FREEBSD
+#undef JITTER_HOST_OS_IS_NETBSD
+#undef JITTER_HOST_OS_IS_OPENBSD
 #undef JITTER_HOST_OS_IS_WINDOWS
 
 /* Binary format. */
@@ -147,6 +150,12 @@
    falsely claiming compatibility. */
 #undef JITTER_HAVE_ACTUAL_GCC
 
+/* Define to the GCC version, when GCC is being used. */
+#undef JITTER_GCC_MAJOR_VERSION
+#undef JITTER_GCC_MINOR_VERSION
+#undef JITTER_GCC_PATCHLEVEL_VERSION
+#undef JITTER_GCC_COMBINED_VERSION
+
 /* Define if the language supports computed goto in the style of GNU C. */
 #undef JITTER_HAVE_GNU_C_COMPUTED_GOTO
 
@@ -155,6 +164,9 @@
 
 /* Define if the builtins for handling overflow are available. */
 #undef JITTER_HAVE_GCC_OVERFLOW_CHECKING
+
+/* Define if __builtin_unreachable is available. */
+#undef JITTER_HAVE_GCC_BUILTIN_UNREACHABLE
 
 /* Define if the C compilers supports GNU C attributes. */
 #undef JITTER_HAVE_GNU_C_ATTRIBUTE

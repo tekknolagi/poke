@@ -62,6 +62,19 @@
 
 
 
+/* GCC builtins.
+ * ************************************************************************** */
+
+/* Non-GCC compilers or very old GCCs miss the __bultin_unreachable builtin. */
+#if ! defined (JITTER_HAVE_GCC_BUILTIN_UNREACHABLE)
+# define __builtin_unreachable()                          \
+    /* It is acceptable to compile this into nothing. */  \
+    do { /* Nothing*/ } while (false)
+#endif /* #if ! defined (JITTER_HAVE_GCC_BUILTIN_UNREACHABLE) */
+
+
+
+
 /* I/O functions.
  * ************************************************************************** */
 

@@ -56,6 +56,9 @@
 #if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
 # include <jitter/jitter-sections.h>
 #endif // #if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
+#if defined (JITTER_ENABLE_ASSEMBLY)
+# include <jitter/machine/jitter-machine.h>
+#endif //#if defined (JITTER_ENABLE_ASSEMBLY)
 
 
 /* Consistency check.

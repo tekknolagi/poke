@@ -164,6 +164,14 @@ jitter_check_cc_options ()
   done
 }
 
+# Preprocess stdin into stdout using the C preprocessor.  Cut out any line starting
+# with "#" and whitespace-only lines.
+# This is mostly intended to check the expansion of single macros.
+jitter_cpp_preprocess ()
+{
+  $CC -E - | grep -v '^@%:@' | grep -v '^@<:@ \t\n\r@:>@*$'
+}
+
 
 # Sub-package mode support.
 ################################################################
@@ -248,7 +256,7 @@ AC_CHECK_TOOLS([AR], [gcc-ar ar])
 gl_EARLY
 
 # Make sure the compiler supports a recent version of C.  Without this I
-# has problem on OpenBSD, which ships with a very old GCC.
+# have problem on OpenBSD, which ships with a very old GCC.
 AC_PROG_CC_C99
 
 # Check that we can use -c and -o together with the compiler.  I currently don't
@@ -352,7 +360,7 @@ fi
 AC_SUBST([JITTER_HAVE_ACTUAL_GCC])
 if test "x$JITTER_HAVE_ACTUAL_GCC" = 'xyes'; then
   AC_DEFINE_UNQUOTED([JITTER_HAVE_ACTUAL_GCC], [${JITTER_HAVE_ACTUAL_GCC}],
-                     [Defined if the host assembler is the GNU assembler.])
+                     [Defined if using GCC and not something "compatibile".])
 fi
 AM_CONDITIONAL([JITTER_HAVE_ACTUAL_GCC],
                [test "x$JITTER_HAVE_ACTUAL_GCC" = 'xyes'])
@@ -360,10 +368,23 @@ AM_CONDITIONAL([JITTER_HAVE_ACTUAL_GCC],
 # If the compiler is actually GCC I can check its version as well.
 if test "x$JITTER_HAVE_ACTUAL_GCC" = 'xyes'; then
   AC_MSG_CHECKING([for GCC's version])
-  JITTER_GCC_MAJOR_VERSION=$(echo '__GNUC__' | "$CC" -P -E -)
-  JITTER_GCC_MINOR_VERSION=$(echo '__GNUC_MINOR__' | "$CC" -P -E -)
-  JITTER_GCC_PATCHLEVEL_VERSION=$(echo '__GNUC_PATCHLEVEL__' | "$CC" -P -E -)
+  JITTER_GCC_MAJOR_VERSION=$(echo '__GNUC__' | jitter_cpp_preprocess)
+  JITTER_GCC_MINOR_VERSION=$(echo '__GNUC_MINOR__' | jitter_cpp_preprocess)
+  JITTER_GCC_PATCHLEVEL_VERSION=$(echo '__GNUC_PATCHLEVEL__' | jitter_cpp_preprocess)
   JITTER_GCC_COMBINED_VERSION=$(( ${JITTER_GCC_MAJOR_VERSION} * 10000 + ${JITTER_GCC_MINOR_VERSION} * 100 + ${JITTER_GCC_PATCHLEVEL_VERSION}))
+  AC_DEFINE_UNQUOTED([JITTER_GCC_MAJOR_VERSION],
+                     [${JITTER_GCC_MAJOR_VERSION}],
+                     [The GCC major version, if GCC is being used])
+  AC_DEFINE_UNQUOTED([JITTER_GCC_MINOR_VERSION],
+                     [${JITTER_GCC_MINOR_VERSION}],
+                     [The GCC minor version, if GCC is being used])
+  AC_DEFINE_UNQUOTED([JITTER_GCC_PATCHLEVEL_VERSION],
+                     [${JITTER_GCC_PATCHLEVEL_VERSION}],
+                     [The GCC patchlevel version, if GCC is being used])
+  AC_DEFINE_UNQUOTED([JITTER_GCC_COMBINED_VERSION],
+                     [${JITTER_GCC_COMBINED_VERSION}],
+                     [The GCC version as a combined integer, if GCC is being
+                     used])
   AC_MSG_RESULT([major ${JITTER_GCC_MAJOR_VERSION}, minor ${JITTER_GCC_MINOR_VERSION}, patchlevel ${JITTER_GCC_PATCHLEVEL_VERSION}, combined ${JITTER_GCC_COMBINED_VERSION}])
 fi
 
@@ -740,6 +761,23 @@ if test "x$ac_cv_have_gcc_overflow" = "xyes"; then
             [Define if __builtin_add_overflow_p and friends are usable.])
 fi
 
+# Very old GCCs or non-GCC compilers will not have __builtin_unreachable.
+AC_CACHE_CHECK([for GCC __builtin_unreachable],
+  [ac_cv_have_gcc_builtin_unreachable],
+  [AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM(
+        [[]],
+        [[volatile int foo = 0;
+          if (foo)
+            __builtin_unreachable ();
+        ]])],
+     [ac_cv_have_gcc_builtin_unreachable=yes],
+     [ac_cv_have_gcc_builtin_unreachable=no])])
+if test "x$ac_cv_have_gcc_builtin_unreachable" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_GCC_BUILTIN_UNREACHABLE], [1],
+            [Define if __builtin_unreachable exists.])
+fi
+
 
 # Check for inline assembly or binary format features.
 ################################################################
@@ -1021,11 +1059,18 @@ AC_MSG_CHECKING([if the host OS uses the ELF binary format])
 AS_CASE([$host_os],
         [*aout*|*coff*],
           [jitter_host_os_is_elf=no],
-        [gnu*|linux-gnu*|*elf*],
-          [jitter_host_os_is_elf=yes],
+        # Do not add GNU systems as a special case: very old GNU/Linux systems
+        # use non-ELF formats, and GNU is covered by the fallback case below in
+        # any case.
         [*uclibc*],
           [jitter_host_os_is_elf=yes],
-          [jitter_host_os_is_elf=no])
+        # Fallback: check for the __ELF__ macro suppored by GCC's preprocessor
+        # and by other preprocessors trying to be compatible with it.  When the
+        # macro use survives preprocessing we deduce the macro is *not* defined.
+          [jitter_host_os_is_elf=$( (echo __ELF__ | jitter_cpp_preprocess \
+                                       | grep __ELF__ 2> /dev/null) \
+                                     && echo no \
+                                     || echo yes)])
 AC_MSG_RESULT([$jitter_host_os_is_elf])
 
 # Determine whether the host OS uses the COFF binary format.
@@ -1080,13 +1125,33 @@ AC_MSG_RESULT([$jitter_have_known_binary_format])
 ################################################################
 
 # Recognize specific operating systems or kernels by library features, without
-# trusting the triplet.
-
+# trusting the triplet...
 AC_CHECK_FUNCS([VirtualAlloc VirtualProtect])
 if test "x$ac_cv_func_VirtualAlloc" = "xyes" \
    && test "x$ac_cv_func_VirtualProtect" = "xyes"; then
   AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_WINDOWS], [1],
                      [Define to 1 iff the host system is windows])
+fi
+
+# ...and some other systems that are more difficult to match by the triplet.
+jitter_host_os_is_freebsd='no'
+jitter_host_os_is_openbsd='no'
+jitter_host_os_is_netbsd='no'
+AS_CASE([$host_os],
+        [*freebsd*],  [jitter_host_os_is_freebsd='yes'],
+        [*netbsd*],   [jitter_host_os_is_netbsd='yes'],
+        [*openbsd*],  [jitter_host_os_is_openbsd='yes'])
+if test "x$jitter_host_os_is_freebsd" = 'xyes'; then
+  AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_FREEBSD], [1],
+                     [Define to 1 iff the host system is FreeBSD])
+fi
+if test "x$jitter_host_os_is_netbsd" = 'xyes'; then
+  AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_NETBSD], [1],
+                     [Define to 1 iff the host system is NetBSD])
+fi
+if test "x$jitter_host_os_is_openbsd" = 'xyes'; then
+  AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_OPENBSD], [1],
+                     [Define to 1 iff the host system is OpenBSD])
 fi
 
 
@@ -1551,7 +1616,14 @@ for dispatch_model in $jitter_enabled_dispatch_models; do
   # LTO, impressive as it is in general, is a bad match for Jitter, for
   # correctness reasons on complex dispatches and for performance reasons with
   # switch and direct-threading dispatches.
-  jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-lto
+  if test "x$jitter_host_os_is_netbsd" != 'xyes'; then
+    # NetBSD, at least version 9, has a problem with this option, as the
+    # compiler (a custom variant of GCC 7.4.0) accepts the option but then fails
+    # at link time.  I noticed this with NetBSD version 9.  I may want to
+    # conditionalize differently in the future if other versions actually
+    # supporting LTO come out.
+    jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-lto
+  fi
 
   # Experimental: disable debugging options which appear to be expensive at
   # compile time.

@@ -1,6 +1,7 @@
 /* VM library: assembly support for x86_64 .
 
    Copyright (C) 2017, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -154,8 +155,10 @@ jitter_snippet set_32bit_sign_extended_residual_memory,   \
                       # L:
    An offset of zero, like in the example, would jump to the address
    immediately following the jmp instruction. */
-jitter_snippet jump_unconditional_32bit_offset,  \
-           <jmp.d32 0>
+jitter_snippet jump_unconditional_32bit_offset,                             \
+           /* <jmp.d32 0> would be nicer, but this syntax is not supported  \
+              by old binutils. */                                           \
+           <.byte 0xe9, 0, 0, 0, 0>
 
 /* The point after a conditional branch, relative (to the end of the branch
    instruction) with a 32-bit signed offset.  The previous part, *not*
