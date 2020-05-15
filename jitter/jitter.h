@@ -292,6 +292,24 @@ problems.  See the source code for more information."
 # error "unknown dispatching model.  This should never happen."
 #endif // #if defined(JITTER_DISPATCH_...)
 
+/* Sanity check: do not use advanced dispatching models on a system missing
+   prerequisites.  It is friendlier to fail here than with some mysterious
+   compilation error later. 
+   It is more helpful to have separate checks, so that the user knows what
+   the exact missing requirement is. */
+#if (defined (JITTER_DISPATCH_MINIMAL_THREADING) \
+     || defined (JITTER_DISPATCH_NO_THREADING))  \
+    && ! defined (JITTER_ENABLE_ASSEMBLY)
+# error "Invalid configuration: you cannot use minimal-threading or"
+# error "no-threading when assembly is unimplemented or disabled."
+#endif // advanced dispatch && ! supported-binary-format
+#if (defined (JITTER_DISPATCH_MINIMAL_THREADING) \
+     || defined (JITTER_DISPATCH_NO_THREADING))  \
+    && ! defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
+# error "Invalid configuration: you cannot use minimal-threading or"
+# error "no-threading when the binary format is unsupported."
+#endif // advanced dispatch && ! assembly
+
 
 
 

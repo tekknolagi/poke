@@ -655,8 +655,45 @@ fi # if test "x$jitter_check_readline" = "xyes"
 # Check for C language features.
 ################################################################
 
-# Check for computed goto.
-AC_CACHE_CHECK([for GNU C-style computed goto], [ac_cv_have_gnu_c_computed_goto],
+# Check for mixed declarations and statements, which have been standards in C
+# since 1999 and widely supported even earlier.
+AC_CACHE_CHECK([for C99 mixed declarations and statements],
+  [ac_cv_have_mixed_declarations_and_statements],
+  [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM(
+        [],
+        [[int a = 10;
+          a ++;
+          int b = 7;
+          b += a;
+          return a + b;]])],
+     [ac_cv_have_mixed_declarations_and_statements=yes],
+     [ac_cv_have_mixed_declarations_and_statements=no])])
+if test "x$ac_cv_have_mixed_declarations_and_statements" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_MIXED_DECLARATIONS_AND_STATEMENTS], [1],
+            [Define if the compiler supports mixing declarations and statements])
+else
+  AC_MSG_WARN([This compiler does not support mixing C declarations and
+statements.  It must be extremely old, and it will probably never be
+supported by Jitter.  Trying to go on anyway, but expect disasters.])
+fi
+
+# Check for statement expressions in the style of GNU C.
+AC_CACHE_CHECK([for GNU C statement expressions],
+  [ac_cv_have_gnu_c_statement_expressions],
+  [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM(
+        [],
+        [[return ({int a = 10; a -= 10; a;});]])],
+     [ac_cv_have_gnu_c_statement_expressions=yes],
+     [ac_cv_have_gnu_c_statement_expressions=no])])
+if test "x$ac_cv_have_gnu_c_statement_expressions" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_GNU_C_STATEMENT_EXPRESSIONS], [1],
+            [Define if the compiler supports GNU C's statement expressions.])
+fi
+
+# Check for computed goto in the style of GNU C.
+AC_CACHE_CHECK([for GNU C computed goto], [ac_cv_have_gnu_c_computed_goto],
   [AC_COMPILE_IFELSE(
      [AC_LANG_PROGRAM(
         [],
@@ -682,6 +719,42 @@ AC_CACHE_CHECK([for alignas], [ac_cv_have_alignas],
 if test "x$ac_cv_have_alignas" = "xyes"; then
   AC_DEFINE([JITTER_HAVE_ALIGNAS], [1],
             [Define if the compiler supports alignas .])
+fi
+
+# Check for GNU C's inline asm with modern syntax.
+AC_CACHE_CHECK([for GNU C inline asm with modern syntax],
+  [ac_cv_have_gnu_c_inline_asm],
+  [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM(
+        [],
+        [[int to, from = 42;
+          asm ("/* Pretend to set %[the_to] reading from %[the_from] . */"
+               : [the_to] "=r" (to)
+               : [the_from] "r" (from));
+          return to;]])],
+     [ac_cv_have_gnu_c_inline_asm=yes],
+     [ac_cv_have_gnu_c_inline_asm=no])])
+if test "x$ac_cv_have_gnu_c_inline_asm" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_GNU_C_INLINE_ASM], [1],
+            [Define if the compiler supports GNU C's asm goto .])
+fi
+
+# Check for GNU C's asm goto.
+AC_CACHE_CHECK([for GNU C asm goto], [ac_cv_have_gnu_c_asm_goto],
+  [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM(
+        [],
+        [[here:
+            asm goto ("/* Pretend to do something. */"
+                       : : : : here, there);
+            return 1;
+          there:
+            return 12;]])],
+     [ac_cv_have_gnu_c_asm_goto=yes],
+     [ac_cv_have_gnu_c_asm_goto=no])])
+if test "x$ac_cv_have_gnu_c_asm_goto" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_GNU_C_ASM_GOTO], [1],
+            [Define if the compiler supports GNU C's asm goto .])
 fi
 
 
@@ -1051,14 +1124,16 @@ fi
 
 # Determine whether the host OS uses the ELF binary format.
 
-# This is crude but probably sufficient for the currently supported
-# configurations.  This check should guess correctly in the case of modern GNU
-# systems, all using ELF, and conservatively assume that ELF is not used in most
-# other cases.
+# This is crude in many cases but probably sufficient for most configurations.
 AC_MSG_CHECKING([if the host OS uses the ELF binary format])
 AS_CASE([$host_os],
+        # We know that some systems are not ELF...
         [*aout*|*coff*],
           [jitter_host_os_is_elf=no],
+        # ...Others, with "ELF" in the system name, definitely are.
+        [*elf*],
+          [jitter_host_os_is_elf=yes],
+        # Specific known-ELF systems.
         # Do not add GNU systems as a special case: very old GNU/Linux systems
         # use non-ELF formats, and GNU is covered by the fallback case below in
         # any case.
@@ -1072,6 +1147,32 @@ AS_CASE([$host_os],
                                      && echo no \
                                      || echo yes)])
 AC_MSG_RESULT([$jitter_host_os_is_elf])
+
+# In case we found the ELF format, compile a little snippet to make sure that
+# the GNU Assembler section stack machinery works, including subsection numbers
+# after section names.  This is not supported by old binutils, and we
+# critically depend on it for advanced dispatches on ELF systems.
+if test "x$jitter_host_os_is_elf" = 'xyes' \
+   && test "x$JITTER_GNU_ASSEMBLER" != 'xno'; then
+  AC_CACHE_CHECK([if the assembler recognizes .pushsection with a subsection],
+    [ac_cv_jitter_elf_subsection_stack],
+    [AC_LINK_IFELSE(
+       [AC_LANG_PROGRAM(
+          [[]],
+          [[asm volatile (".pushsection .text, 10");
+            asm volatile (".byte 1, 2, 3, 4");
+            asm volatile (".popsection");]])],
+       [ac_cv_jitter_elf_subsection_stack=yes],
+       [ac_cv_jitter_elf_subsection_stack=no])])
+  # Change jitter_host_os_is_elf: what we just discovered determines if
+  # we can actually use ELF, or if the support is not adequate.
+  jitter_host_os_is_elf="$ac_cv_jitter_elf_subsection_stack"
+  if test "x$jitter_host_os_is_elf" = 'xyes'; then
+    AC_MSG_NOTICE([We can actually use ELF: good.])
+  else
+    AC_MSG_WARN([We cannot really use ELF on this platform])
+  fi
+fi
 
 # Determine whether the host OS uses the COFF binary format.
 # Again, this is crude but should suffice.

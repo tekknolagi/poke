@@ -94,15 +94,43 @@
  * ************************************************************************** */
 
 /* The macros provide a way of entering a given subsection, and exiting back to
-   .text .  This is a trivial wrapper over assembly functionality.
+   .text .  This is a simple wrapper over assembly functionality.
 
-   The section stack functionality Gas provided is unfortunately only available
-   on ELF systems.  For this reason, instead of the notion of temporarily entering
-   a different subsection and then returning to the subsection which used to be
-   current, earlier, we simply always go back to .text.  This is crude but
-   simple and portable.
-   In order to be even more portable, this code will be easy to extend in order
-   to support other assemblers in the future, should the need arise. */
+   ELF systems provide a very simple and elegant functionality based on LIFO
+   logic, where a subsection can be entered and just exited; at exit, the current
+   subsection reverts to the one which was active before entering.
+   This functionality is simple and elegant, but unfortunately not portable
+   to non-ELF systems.  However, since we don't really need our temporary
+   subsection switches to nest, we can use a crude but more portable support
+   from Gas on non-ELF systems and still get some of the functionality.
+
+   The problem of switching subsections without the section stack on ELF is that
+   debug informations interfere with this mechanism, and Gas complains with
+   messages such as:
+     Error: CFI instruction used without previous .cfi_startproc
+     Error: .cfi_endproc without corresponding .cfi_startproc
+     Error: previous CFI entry not closed (missing .cfi_endproc)
+   and, as a consequence,
+     Error: .size expression for XXXX does not evaluate to a constant
+
+   For this reason we many need specific ELF support for some dispatches.
+   Anyway some other functionality (such as locations: see
+   jitter-data-locations.h) will be available even based on a simpler
+   mechanism. */
+
+
+
+
+/* Section-changing macros: the ELF solution.
+ * ************************************************************************** */
+
+/* Macros to enter and exit a subsection, expanding to literal assembly
+   templates.  This is the solution relying on ELF.  The given section name must
+   expand to a literal string. */
+#define JITTER_ASM_ENTER_SUBSECTION_ELF(_jitter_section_name)  \
+  "\n.pushsection .rodata, " _jitter_section_name "\n\t"
+#define JITTER_ASM_EXIT_SUBSECTION_ELF  \
+  "\n.popsection\n\t"
 
 
 
@@ -137,14 +165,20 @@
 
 /* Macros to enter and exit a subsection, expanding to literal assembly
    templates.  The section name must expand to a literal string. */
-#if defined(JITTER_HOST_ASSEMBLER_IS_GNU)
+
+#if defined(JITTER_HOST_OS_IS_ELF)
+# define JITTER_ASM_ENTER_SUBSECTION(_jitter_section_name)  \
+    JITTER_ASM_ENTER_SUBSECTION_ELF(_jitter_section_name)
+# define JITTER_ASM_EXIT_SUBSECTION  \
+    JITTER_ASM_EXIT_SUBSECTION_ELF
+#elif defined(JITTER_HOST_ASSEMBLER_IS_GNU)
 # define JITTER_ASM_ENTER_SUBSECTION(_jitter_section_name)  \
     JITTER_ASM_ENTER_SUBSECTION_GAS(_jitter_section_name)
 # define JITTER_ASM_EXIT_SUBSECTION  \
     JITTER_ASM_EXIT_SUBSECTION_GAS
 #else
-# error "Not using the GNU assembler.  This will not work and you should not"
-# error "have included this header."
+# error "Not using ELF, nor the GNU assembler.  This will not work and you"
+# error "should not have included this header."
 #endif
 
 

@@ -84,7 +84,9 @@
 #undef JITTER_HOST_OS_IS_OPENBSD
 #undef JITTER_HOST_OS_IS_WINDOWS
 
-/* Binary format. */
+/* Binary format.  ELF support may be disabled even on ELF systems, if te tools
+   are old enough not to support .pushsection / .popsection with subsection
+   numbers. */
 #undef JITTER_HOST_OS_IS_ELF
 #undef JITTER_HOST_OS_IS_COFF
 #undef JITTER_HOST_OS_IS_MACHO
@@ -156,8 +158,24 @@
 #undef JITTER_GCC_PATCHLEVEL_VERSION
 #undef JITTER_GCC_COMBINED_VERSION
 
+/* Define if the language supports mixing declarations and statements, as
+   standard in C since 1999 and widely supported even earlier.  If this is not
+   defined I expect major problems, and the compiler will not be supported.
+   This is mostly intended to be checked in bug reports. */
+#undef JITTER_HAVE_MIXED_DECLARATIONS_AND_STATEMENTS
+
+/* Define if the language supports statement expressions in the style of GNU C. */
+#undef JITTER_HAVE_GNU_C_STATEMENT_EXPRESSIONS
+
 /* Define if the language supports computed goto in the style of GNU C. */
 #undef JITTER_HAVE_GNU_C_COMPUTED_GOTO
+
+/* Define if the language GNU C's inline asm, including the modern syntax for
+   named operands. */
+#undef JITTER_HAVE_GNU_C_INLINE_ASM
+
+/* Define if the language supports asm goto in the style of GNU C. */
+#undef JITTER_HAVE_GNU_C_ASM_GOTO
 
 /* Define if the compiler supports alignas. */
 #undef JITTER_HAVE_ALIGNAS

@@ -1,6 +1,7 @@
 /* Jittery structured language example: main.
 
    Copyright (C) 2017, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jitter structured-language example, distributed
@@ -98,7 +99,7 @@ structured_help (void)
   printf ("Usage: %s [OPTION...] FILE.structured\n", structured_program_name);
   printf ("   or: %s [OPTION...] -\n", structured_program_name);
   printf ("Run a structured-language program on a Jittery VM, using the\n");
-  printf (JITTER_DISPATCH_NAME_STRING " dispatching model.\n");
+  printf (JITTER_DISPATCH_NAME_STRING " dispatch.\n");
 
   structured_help_section ("Debugging options");
   printf ("      --disassemble                print hardware machine instructions\n");
@@ -148,8 +149,9 @@ structured_help (void)
 static void
 structured_version (void)
 {
-  printf ("structured (" JITTER_PACKAGE_NAME ") " JITTER_PACKAGE_VERSION "\n");
-  printf ("Copyright (C) 2017 Luca Saiu.\n");
+  printf ("structured (" JITTER_DISPATCH_NAME_STRING " dispatch) ("
+          JITTER_PACKAGE_NAME " " JITTER_PACKAGE_VERSION ")\n");
+  printf ("Copyright (C) 2017-2020 Luca Saiu.\n");
   printf ("Jitter comes with ABSOLUTELY NO WARRANTY.\n");
   printf ("You may redistribute copies of Jitter under the terms of the GNU\n"
           "General Public License, version 3 or any later version published\n"

@@ -1,7 +1,6 @@
 /* Jitter: patch-in header.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -43,17 +42,17 @@
  * ************************************************************************** */
 
 /* First include the machine header which may contain a CPP definition of
-   JITTER_MACHINE_SUPPORTS_PATCH_IN ; if we don't even have a machine header or
-   it's disabled (which is to say if JITTER_HAVE_ASSEMBLY is not defined), or if
-   the dispatching model is different from no-threading then patch-ins are
-   always disabled. */
-#if defined(JITTER_HAVE_ASSEMBLY) && defined(JITTER_DISPATCH_NO_THREADING)
+   JITTER_MACHINE_SUPPORTS_PATCH_IN ; this only makes sense if the dispatch is
+   no-threading, which is only possible if assembly is enabled.
+   If the dispatch is different from no-threading patch-ins are always
+   disabled. */
+#if defined(JITTER_DISPATCH_NO_THREADING)
 # include <jitter/jitter-machine-common.h>
 # include <jitter/machine/jitter-machine.h>
 # ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN
 #   define JITTER_HAVE_PATCH_IN 1
 # endif // #ifdef JITTER_MACHINE_SUPPORTS_PATCH_IN
-#endif //#if defined(JITTER_HAVE_ASSEMBLY) && defined(JITTER_DISPATCH_NO_THREADING)
+#endif //#if defined(JITTER_DISPATCH_NO_THREADING)
 
 /* The rest of this header expands to nothing if patch-ins are not supported in
    this configuration. */
