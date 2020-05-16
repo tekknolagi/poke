@@ -206,11 +206,10 @@ jitter_run_case_checking_output ()
     # its output and the expected output as a failure.
     jitter_command_line="$@"
     echo "$jitter_command_line" > "$jitter_command_line_file"
-    # The multiple piped substitutions are clumsy, but this solution avoids
-    # portability issues.  Some limited versions of sed do not like '\n' in
-    # the replacement part: inserting a literal newline is asking for trouble.
-    # Having '$' as a forbidden character in the expected output of a testcase
-    # is not a terribly important limitation.
+    # The normalization performed by tests/filter-test-case-output is described
+    # in the long comment at the beginning of tests/filter-test-case-output.c ,
+    # along with a rationale for the filter being written in C.
+    filter="@abs_top_builddir@/tests/filter-test-case-output@EXEEXT@"
     jitter_result=$( ( ($jitter_timeout_command $jitter_command_line) \
                           < /dev/null \
                           > "$jitter_stdout_file" \
@@ -219,10 +218,9 @@ jitter_run_case_checking_output ()
                         && if test "x$(cat $jitter_stdout_file)y" = "xy"; then \
                               echo "" > "$jitter_stdout_file"; \
                            fi \
-                        && (  @JITTER_TR@ -d '\r' < "$jitter_stdout_file" \
-                            | @JITTER_TR@ '\n' '/' \
-                            | @SED@ 's@/$@$@' \
-                            | @JITTER_TR@ '$' '\n' \
+                        && (cat "$jitter_stdout_file" \
+                            | @JITTER_EMULATOR@ "$filter" \
+                            | @JITTER_TR@ -d '\r' \
                             | @JITTER_CMP@ -s - \
                                               "$jitter_expected_stdout_file")) \
                      && echo 'ok' || echo 'not ok')

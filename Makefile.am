@@ -1922,6 +1922,7 @@ if JITTER_ENABLE_TEST_SUITE
     tests/structured/programs.test
   # Programs used by test scripts.  FIXME: remove tests/elementary/uninspired-init-fini .
   check_PROGRAMS += \
+     tests/filter-test-case-output \
      $(PROGRAMS_UNINSPIRED) $(PROGRAMS_STRUCTURED)
 
   # # Programs used by test scripts.  FIXME: remove tests/elementary/uninspired-init-fini .
@@ -1958,6 +1959,13 @@ else # JITTER_ENABLE_TEST_SUITE is false
 	  @echo 'The test suite has been disabled at configure time.'
 	  @exit 1
 endif # if JITTER_ENABLE_TEST_SUITE
+
+# Test suite output filter.
+tests_filter_test_case_output_SOURCES = tests/filter-test-case-output.c
+tests_filter_test_case_output_LDADD = $(LDADD_FOR_GNULIB)
+tests_filter_test_case_output_CPPFLAGS = \
+  $(CPPFLAGS_FOR_GNULIB) $(AM_CPPFLAGS) $(CPPFLAGS_FOR_PATHS) \
+  $(CPPFLAGS_FOR_INTERNAL_USE)
 
 # JitterLisp test cases.
 if JITTER_ENABLE_TEST_SUITE
