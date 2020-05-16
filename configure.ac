@@ -1310,14 +1310,17 @@ AC_SUBST([JITTER_EMULATOR], $jitter_with_emulator)
 # is a usable emulator.  Still, there is very little gain in doing this and lots
 # of gratuitous headaches when using the missing script with an emulator.  I
 # will keep things simple for now.
+# For the same reason, and to reduce wasted time, do not bother bulding man
+# pages in sub-package mode.
 AC_MSG_CHECKING([if we should use help2man to rebuild man pages])
 if    test "x$jitter_cross_compiling" != "xyes" \
-   && test "x$jitter_has_help2man"    =  "xyes"; then
+   && test "x$jitter_has_help2man"    =  "xyes" \
+   && test "x$JITTER_SUBPACKAGE" = 'x'; then
    jitter_can_rebuild_man_pages="yes"
    AC_MSG_RESULT([yes])
 else
    jitter_can_rebuild_man_pages="no"
-   AC_MSG_RESULT([no (cross-compiling or no help2man)])
+   AC_MSG_RESULT([no (cross-compiling, or no help2man, or sub-package mode)])
 fi
 AM_CONDITIONAL([JITTER_CAN_REBUILD_MAN_PAGES],
                [test "x$jitter_can_rebuild_man_pages" = "xyes"])
