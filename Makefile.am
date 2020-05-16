@@ -399,10 +399,21 @@ SUFFIXES += .in.m4sh .in
 # This cannot work on a machine without autom4te installed (autom4te comes with
 # Autoconf), so we intentionally fail in that case.
 if JITTER_HAVE_AUTOM4TE
-.in.m4sh.in: m4-utility/jitter-script.m4sh
+# Unfortunately (thanks to Bruno Haible for noticing) Make does not allow
+# dependencies on suffix rules and GNU Make in fact ignores such dependencies:
+# therefore writing
+#    .in.m4sh.in: $(top_srcdir)/m4-utility/jitter-script.m4sh
+# , as I was previously doing, was pointless.
+# Therefore, this is the best we can do:
+# First part: generic suffix rule.
+.in.m4sh.in:
 	$(AUTOM4TE) \
           --language=M4sh --prepend-include="$(top_srcdir)/m4-utility" \
           --output="$@" "$^"
+# Second part: explicit dependencies.  At least the body can be factored thanks
+# to the suffix rule.
+bin/jitter-config.in: $(top_srcdir)/m4-utility/jitter-script.m4sh
+scripts/generate-fast-branches.in: $(top_srcdir)/m4-utility/jitter-script.m4sh
 else
 .in.m4sh.in:
 	@echo "cannot rebuild $@ without autom4te"
