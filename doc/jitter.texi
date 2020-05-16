@@ -2,6 +2,7 @@
 
 @c This file is part of the Jitter manual.
 @c Copyright (C) 2017, 2019  Luca Saiu
+@c Updated in 2020 by Luca Saiu
 @c Written by Luca Saiu
 
 @c Permission is granted to copy, distribute and/or modify this
@@ -25,6 +26,15 @@
 
 @syncodeindex pg cp
 @documentencoding UTF-8
+@c As Bruno Haible told me, @documentlanguage is recommended against for
+@c English and leaving it out might in fact make builds easier on some
+@c older systems:
+@c   https://lists.gnu.org/archive/html/bug-bison/2019-05/msg00034.html
+@c
+@c I am leaving this comment mostly as a note for myself, in case I forget
+@c about this later and wanted to specify the language in a bout of pedantry.
+@c
+@c @documentlanguage en   @c No: see above.
 
 @afourpaper
 @ignore
