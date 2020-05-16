@@ -1,6 +1,7 @@
 ## An uninspired and unoriginal Jitter VM, useful as an example.
 
 ## Copyright (C) 2016, 2017, 2019 Luca Saiu
+## Updated in 2020 by Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -1189,7 +1190,7 @@ instruction install-signal-handler ()
     sigaction (SIGINT, & action, NULL);
 #else
     /* ...Or the traditional, inferior API. */
-    signal (SIGINT, jitter_handle_signal);
+    signal (SIGINT, jitter_my_signal_handler);
 #endif
   end
 end
