@@ -1284,15 +1284,15 @@ $(srcdir)/example-vms/jitterlisp/jitterlisp-constant-strings.c: example-vms/jitt
          echo; \
          echo "const char *jitterlisp_library_string ="; \
          cat "$(srcdir)/example-vms/jitterlisp/jitterlisp-library.lisp" \
-          | sed $(JITTERLISP_SED_STRINGIFY); \
+          | @SED@ $(JITTERLISP_SED_STRINGIFY); \
          echo ";"; \
          echo "const char *jitterlisp_no_warranty ="; \
          cat "$(srcdir)/NO-WARRANTY" \
-          | sed $(JITTERLISP_SED_STRINGIFY); \
+          | @SED@ $(JITTERLISP_SED_STRINGIFY); \
          echo ";"; \
          echo "const char *jitterlisp_gpl ="; \
          cat "$(srcdir)/COPYING" \
-          | sed $(JITTERLISP_SED_STRINGIFY); \
+          | @SED@ $(JITTERLISP_SED_STRINGIFY); \
          echo ";") \
           > "$@"
 

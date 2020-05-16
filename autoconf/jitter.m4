@@ -1,5 +1,6 @@
 # Autoconf macros for Jitter.
 # Copyright (C) 2017, 2018, 2019 Luca Saiu
+# Updated in 2020 by Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -532,6 +533,9 @@ fi
 # already installed copy of Jitter as a dependency.
 AC_DEFUN([AC_JITTER_SUBPACKAGE], [
 
+# We are going to use sed below.
+AC_REQUIRE([AC_PROG_SED])
+
 # Notice that in this case it makes no sense to support the command-line option
 # --with-jitter , and therefore this macro does not depend on
 # AC_JITTER_WITH_JITTER_COMMAND_LINE_OPTION .
@@ -566,7 +570,7 @@ fi
 
 # The "jitter" C generator may not exist yet, but it can be built and its future
 # full path is known.
-JITTER="$(echo $JITTER_CONFIG | sed 's/-config$//')$EXEEXT"
+JITTER="$(echo $JITTER_CONFIG | $SED 's/-config$//')$EXEEXT"
 AC_SUBST([JITTER], [$JITTER])
 AC_MSG_NOTICE([jitter will be built at $JITTER])
 
