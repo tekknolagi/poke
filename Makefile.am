@@ -1766,29 +1766,39 @@ dist_man1_MANS += \
   jitterc/jitter.1
 
 # Rules for always-installed programs.
-if JITTER_CAN_REBUILD_MAN_PAGES
-  # Man pages are built from executables, but help2man's documentation
-  # recommends to express a dependency from the *source* file instead, so as not
-  # to force the user to have help2man installed.  This is sensible, but this
-  # solution based on an Automake conditional is even better and allows for more
-  # precise control and, importantly, parallel building.
-  jitterc/jitter.1: bin/jitter$(EXEEXT)
-	  $(HELP2MAN_WITH_OPTIONS) --output=$@ "$(JITTER_EMULATOR) bin/jitter$(EXEEXT)"
-  bin/jitter-config.1: bin/jitter-config
-	  $(HELP2MAN_WITH_OPTIONS) --output=$@ bin/jitter-config
-else # ! JITTER_CAN_REBUILD_MAN_PAGES
-  # We can't build real man pages on this system, so we just distribute copies
-  # of a single stub page.
-  # Notice that these rule don't fire for users building from a distributed
-  # source tarball, unless they modify the stub page: source tarballs already
-  # contain pre-generated man pages (presumably not copied from the stub), and
-  # an actual man pages never becomes older than the stub unless the user
-  # touches the stub.
-  jitterc/jitter.1: doc/missing-man-page.1
-	cp "$(srcdir)/doc/missing-man-page.1" "$@"
-  bin/jitter-config.1: doc/missing-man-page.1
-	cp "$(srcdir)/doc/missing-man-page.1" "$@"
-endif # JITTER_CAN_REBUILD_MAN_PAGES
+if JITTER_SUBPACKAGE
+  # See the comment above about Info documentation.  I could avoid these
+  # somewhat ugly nested conditionals, but then make would warn about
+  # overridden rules.
+  jitterc/jitter.1:
+	$(MKDIR_P) `dirname "$@"` && touch "$@"
+  bin/jitter-config.1:
+	$(MKDIR_P) `dirname "$@"` && touch "$@"
+else
+  if JITTER_CAN_REBUILD_MAN_PAGES
+    # Man pages are built from executables, but help2man's documentation
+    # recommends to express a dependency from the *source* file instead, so as not
+    # to force the user to have help2man installed.  This is sensible, but this
+    # solution based on an Automake conditional is even better and allows for more
+    # precise control and, importantly, parallel building.
+    jitterc/jitter.1: bin/jitter$(EXEEXT)
+	    $(HELP2MAN_WITH_OPTIONS) --output=$@ "$(JITTER_EMULATOR) bin/jitter$(EXEEXT)"
+    bin/jitter-config.1: bin/jitter-config
+	    $(HELP2MAN_WITH_OPTIONS) --output=$@ bin/jitter-config
+  else # ! JITTER_CAN_REBUILD_MAN_PAGES
+    # We can't build real man pages on this system, so we just distribute copies
+    # of a single stub page.
+    # Notice that these rule don't fire for users building from a distributed
+    # source tarball, unless they modify the stub page: source tarballs already
+    # contain pre-generated man pages (presumably not copied from the stub), and
+    # an actual man pages never becomes older than the stub unless the user
+    # touches the stub.
+    jitterc/jitter.1: doc/missing-man-page.1
+	  cp "$(srcdir)/doc/missing-man-page.1" "$@"
+    bin/jitter-config.1: doc/missing-man-page.1
+	  cp "$(srcdir)/doc/missing-man-page.1" "$@"
+  endif # JITTER_CAN_REBUILD_MAN_PAGES
+endif # ! JITTER_SUBPACKAGE
 
 # A user target to build man pages.
 mans: $(dist_man1_MANS)
