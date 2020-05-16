@@ -1143,7 +1143,7 @@ AS_CASE([$host_os],
         # and by other preprocessors trying to be compatible with it.  When the
         # macro use survives preprocessing we deduce the macro is *not* defined.
           [jitter_host_os_is_elf=$( (echo __ELF__ | jitter_cpp_preprocess \
-                                       | grep __ELF__ 2> /dev/null) \
+                                       | grep __ELF__ > /dev/null) \
                                      && echo no \
                                      || echo yes)])
 AC_MSG_RESULT([$jitter_host_os_is_elf])
