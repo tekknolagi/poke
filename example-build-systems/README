@@ -1,0 +1,92 @@
+Copyright (C) 2017-2020 Luca Saiu
+Written by Luca Saiu
+
+This file is part of the Jitter build system examples, distributed
+along with Jitter under the same license.
+
+Jitter is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Jitter is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+About this README file
+======================
+
+This file is kept in the example-build-systems/ directory within the Jitter
+sources.  It is also copied inside the source directory of each build system
+example, as it is not worth to maintain a different README for each build system
+example when the information contained is essentially the same for all.
+
+
+About the structured language example
+=====================================
+
+This is a simple example of a structured high-level language running on a
+Jittery VM.
+
+The example includes a reasonable GNU-style build system, meant as a simple
+example for users of Jitter, in two versions: one using GNU Libtool and a
+library for the VM runtime, and other just linking the Jitter runtime and object
+files into one executable.  Both versions use Jitter in sub-package mode.
+
+The structured-language build system in this directory relies on Autoconf and
+Automake but avoids, just for simplicity, Gnulib, Texinfo and help2man.
+Support for those tools could be added here in a perfectly canonical way, and in
+fact they are all used in the Jitter build system itself, but this example is
+meant to be minimal.
+
+The main Jitter build system does not serve as a good example for the final
+user who can afford to only deal with an already configured and installed
+Jitter, which makes her task quite a lot simpler.
+
+
+Documentation about Jitter and build systems
+============================================
+
+The Jitter manual explains about how to build Jittery VMs and embedding them in
+build systems for other software, both using the GNU style and simpler makefiles
+or one-off scripts.  [FIXME: not yet, but that will be added].
+
+
+Generating files
+================
+
+The directory example-build-systems/ within the Jitter source distribution
+contains a script named "bootstrap".
+
+Running bootstrap will generate or copy, for each example subdirectory, the
+files required to build it such as a configure script, Makefile.in and some
+documentation.
+
+The example build systems follow the GNU Coding standards, and make use of
+Autoconf and Automake.  It is possible to generate tarballs with
+  make dist
+.
+
+
+Subdirectories
+==============
+
+The current build system examples distributed with Jitter are:
+
+* structured-simple/
+    An sample program using Jitter in sub-package mode, linking the Jitter
+    runtime to the main program as a library.  This example uses Autoconf
+    and Automake, but not Libtool.
+
+* structured-with-library/
+    An sample program using Jitter in sub-package mode, linking the Jitter
+    runtime to a convenience library which contains the Jitter runtime.  This
+    example uses Autoconf, Automake and Libtool.
+
+Once bootstrapped the build system in each subdirectory follows the GNU style,
+and in particular supports the 'distcheck' make target.

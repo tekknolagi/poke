@@ -1,7 +1,7 @@
-Copyright (C) 2017 Luca Saiu
+Copyright (C) 2017-2020 Luca Saiu
 Written by Luca Saiu
 
-This file is part of the Jitter structured-language example, distributed
+This file is part of the Jitter build system examples, distributed
 along with Jitter under the same license.
 
 Jitter is free software: you can redistribute it and/or modify
@@ -18,4 +18,4 @@ You should have received a copy of the GNU General Public License
 along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
 
 
-A ChangeLog is not actually maintained for this trivial example.
+News are not actually maintained for this trivial example.

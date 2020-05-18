@@ -18,6 +18,29 @@
 # along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
 
 
+# A remark about libraries
+# ################################################################
+
+# The Jitter runtime consists of one library per dispatch, of which the
+# default-dispatch library is also provided with a different name.  Such
+# libraries are built internally by joining together several Libtool convenience
+# libraries (please search for "convenience library" in the GNU Libtool and the
+# GNU Automake manuals: the phrase has a precise meaning), and are themselves
+# built as convenience libraries.
+
+# This allows to link the Jitter runtime both statically and dynamially and,
+# which is important, to build a larger *library* instead of a program
+# containing the Jitter runtime.  I expect such larger libraries to be
+# a common use case, when the user abstract functionality built on top of a
+# Jittery VM into a different software object intended for the user, with a
+# simple API.
+
+# Since the libraries built here are all convenience libraries I cannot use the
+# name "convenience" to distinguish some intermediate part from one of the final
+# runtimes.  I will call "partial" the libraries which are not useful without
+# other parts added.
+
+
 # Global configration.
 # ################################################################
 
@@ -33,6 +56,7 @@ EXTRA_LTLIBRARIES =
 EXTRA_PROGRAMS =
 SUFFIXES =
 TESTS =
+lib_LTLIBRARIES =
 bin_PROGRAMS =
 bin_SCRIPTS =
 check_PROGRAMS =
@@ -44,8 +68,6 @@ dist_template_DATA =
 info_TEXINFOS =
 jitterinclude_HEADERS =
 jittermachineinclude_HEADERS =
-lib_LTLIBRARIES =
-noinst_LTLIBRARIES =
 noinst_PROGRAMS =
 
 if JITTER_SUBPACKAGE
@@ -130,17 +152,17 @@ EXTRA_DIST += build-aux/gnulib-cache.m4
 # relying on the order of libraries in a link command line, where having the
 # extension files as part of the Jitter utility library wouldn't work.
 EXTRA_LTLIBRARIES += \
-  lib/libgnulib-extension--convenience.la
-lib_libgnulib_extension__convenience_la_SOURCES = \
+  lib/libgnulib-extension--partial.la
+lib_libgnulib_extension__partial_la_SOURCES = \
   jitter/jitter-missing.h jitter/jitter-missing.c
-lib_libgnulib_extension__convenience_la_CPPFLAGS = \
+lib_libgnulib_extension__partial_la_CPPFLAGS = \
   $(CPPFLAGS_FOR_GNULIB)
 EXTRA_LTLIBRARIES += \
-  lib/libgnulib--convenience.la
-lib_libgnulib__convenience_la_SOURCES =
-lib_libgnulib__convenience_la_LIBADD = \
+  lib/libgnulib--partial.la
+lib_libgnulib__partial_la_SOURCES =
+lib_libgnulib__partial_la_LIBADD = \
   gnulib-local/libgnulib.la \
-  lib/libgnulib-extension--convenience.la
+  lib/libgnulib-extension--partial.la
 
 # If the project used Gnulib for every compilation, as it is normally the case, I
 # would simply do
@@ -150,7 +172,7 @@ lib_libgnulib__convenience_la_LIBADD = \
 # I *could* link libjitter against Gnulib, and that might be a good idea for the
 # future; however Gnulib's CPP include paths would not be used in generated code.
 CPPFLAGS_FOR_GNULIB = -I$(top_builddir)/gnulib-local -I$(top_srcdir)/gnulib-local
-LDADD_FOR_GNULIB = lib/libgnulib--convenience.la
+LDADD_FOR_GNULIB = lib/libgnulib--partial.la
 
 # Allow everything but Gnulib to be built with a single-level Makefile, as I
 # prefer; the only recusrive make invokation we need is for building libgnulib .
@@ -267,15 +289,12 @@ CPPFLAGS_FOR_INTERNAL_USE = \
 
 # This utility library is used both at generation time by jitterc, and at run
 # time by the programs using VMs (see the SOURCES_FOR_LIBJITTER definition
-# below); in practice the user never needs to see it directly, and I prefer to
-# limit the number of libraries to link, so instead of having user programs link
-# lib/libjitterutility--convenience.la I am making it a Libtool convenience
-# library.
+# below); it will be contained within other libraries.
 # Some parts of this, such as jitter-malloc.[ch], are actually redundant when
 # using Gnulib; however we need them at runtime, since the generated code does
 # not rely on Gnulib.
-noinst_LTLIBRARIES += lib/libjitterutility--convenience.la
-lib_libjitterutility__convenience_la_SOURCES = \
+EXTRA_LTLIBRARIES += lib/libjitterutility--partial.la
+lib_libjitterutility__partial_la_SOURCES = \
   jitter/jitter-arithmetic.h \
   jitter/jitter-bitwise.h \
   jitter/jitter-cpp.h \
@@ -290,7 +309,7 @@ lib_libjitterutility__convenience_la_SOURCES = \
   jitter/jitter-print-binary.h jitter/jitter-print-binary.c \
   jitter/jitter-readline.h jitter/jitter-readline.c \
   jitter/jitter-string.h jitter/jitter-string.c
-lib_libjitterutility__convenience_la_CPPFLAGS = \
+lib_libjitterutility__partial_la_CPPFLAGS = \
   $(AM_CPPFLAGS) $(CPPFLAGS_FOR_INTERNAL_USE)
 
 
@@ -319,7 +338,7 @@ if JITTER_ENABLE_TEST_SUITE
   check_PROGRAMS += tests/unit/heap-test
 tests_unit_heap_test_SOURCES = tests/unit/heap-test.c
 tests_unit_heap_test_LDADD = \
-  lib/libjitterutility--convenience.la \
+  lib/libjitterutility--partial.la \
   $(LDADD_FOR_GNULIB)
 tests_unit_heap_test_CPPFLAGS = \
   $(AM_CPPFLAGS) $(CPPFLAGS_FOR_INTERNAL_USE)
@@ -371,7 +390,7 @@ bin_jitter_SOURCES = \
   jitterc/jitterc-parser.c jitterc/jitterc-parser.h \
   jitterc/jitterc-scanner.c jitterc/jitterc-scanner.h
 bin_jitter_LDADD = \
-  lib/libjitterutility--convenience.la \
+  lib/libjitterutility--partial.la \
   $(LDADD_FOR_GNULIB)
 bin_jitter_CPPFLAGS = \
   $(CPPFLAGS_FOR_GNULIB) $(AM_CPPFLAGS) $(CPPFLAGS_FOR_PATHS) \
@@ -561,80 +580,116 @@ jitterinclude_HEADERS += \
   jitter/jitter-stack.h \
   jitter/jitter-vm.h
 
-# Unconditionally define Jitter runtimes as one Libtool convenience library per
-# *existing* dispatching model, including the ones which are disabled and cannot
-# even compile on the current configuration.
-# Each convenience library for an enabled dispatching model will be LIBADDed to
-# the actual library to be installed; moreover the library for the best
+# Unconditionally define Jitter runtimes as one partial library per *possible*
+# dispatch, including the ones which are disabled and cannot even compile on the
+# current configuration.  In order for them not to be built automatically,
+# define them in EXTRA_LTLIBRARY.
+#
+# Each partial runtime library for an *enabled* dispatch will be LIBADDed to one
+# of the non-partial libjitter libraries; moreover the library for the best
 # dispatching model will be LIBADDed to the "default" libjitter library; this
 # avoids one duplicate compilation.
+#
+# Non-partial libraries are still convenience libraries.  Each of those is also
+# embedded in a non-convenience library containing the exact same objects, for
+# installation (unused in sub-package mode).
 
-# Switch-dispatch libjitter convenience library.
-EXTRA_LTLIBRARIES += lib/libjitter--switch--convenience.la
-lib_libjitter__switch__convenience_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
-lib_libjitter__switch__convenience_la_CPPFLAGS = \
+# Switch-dispatch libjitter partial library.
+EXTRA_LTLIBRARIES += lib/libjitter--switch--partial.la
+lib_libjitter__switch__partial_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__switch__partial_la_CPPFLAGS = \
   $(AM_CPPFLAGS) -DJITTER_DISPATCH_SWITCH
 
-# Direct-threading-dispatch libjitter convenience library.
-EXTRA_LTLIBRARIES += lib/libjitter--direct-threading--convenience.la
-lib_libjitter__direct_threading__convenience_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
-lib_libjitter__direct_threading__convenience_la_CPPFLAGS = \
+# Direct-threading-dispatch libjitter partial library.
+EXTRA_LTLIBRARIES += lib/libjitter--direct-threading--partial.la
+lib_libjitter__direct_threading__partial_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__direct_threading__partial_la_CPPFLAGS = \
   $(AM_CPPFLAGS) -DJITTER_DISPATCH_DIRECT_THREADING
 
-# Minimal-threading--convenience-dispatch libjitter convenience library.
-EXTRA_LTLIBRARIES += lib/libjitter--minimal-threading--convenience.la
-lib_libjitter__minimal_threading__convenience_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
-lib_libjitter__minimal_threading__convenience_la_CPPFLAGS = \
+# Minimal-threading--partial-dispatch libjitter partial library.
+EXTRA_LTLIBRARIES += lib/libjitter--minimal-threading--partial.la
+lib_libjitter__minimal_threading__partial_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__minimal_threading__partial_la_CPPFLAGS = \
   $(AM_CPPFLAGS) -DJITTER_DISPATCH_MINIMAL_THREADING
 
-# No-threading--convenience-dispatch libjitter convenience library.
-EXTRA_LTLIBRARIES += lib/libjitter--no-threading--convenience.la
-lib_libjitter__no_threading__convenience_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
-lib_libjitter__no_threading__convenience_la_CPPFLAGS = \
+# No-threading--partial-dispatch libjitter partial library.
+EXTRA_LTLIBRARIES += lib/libjitter--no-threading--partial.la
+lib_libjitter__no_threading__partial_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__no_threading__partial_la_CPPFLAGS = \
   $(AM_CPPFLAGS) -DJITTER_DISPATCH_NO_THREADING
 
-# switch-dispatch libjitter non-convenience library.
+# switch-dispatch libjitter non-partial and non-convenience libraries.
 if JITTER_ENABLE_DISPATCH_SWITCH
-  lib_LTLIBRARIES += lib/libjitter--switch.la
+  EXTRA_LTLIBRARIES += lib/libjitter--switch.la
   lib_libjitter__switch_la_SOURCES =
   lib_libjitter__switch_la_LIBADD = \
-    lib/libjitter--switch--convenience.la \
-    lib/libjitterutility--convenience.la
+    lib/libjitter--switch--partial.la \
+    lib/libjitterutility--partial.la
+  lib_LTLIBRARIES += non-convenience-lib/libjitter--switch.la
+  non_convenience_lib_libjitter__switch_la_SOURCES =
+  non_convenience_lib_libjitter__switch_la_DEPENDENCIES = \
+    lib/libjitter--switch.la
+  non_convenience_lib_libjitter__switch_la_LIBADD = \
+    lib/libjitter--switch.la
 endif # JITTER_ENABLE_DISPATCH_SWITCH
 
-# Direct-threading-dispatch libjitter non-convenience library.
+# Direct-threading-dispatch libjitter non-partial and non-convenience libraries.
 if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
-  lib_LTLIBRARIES += lib/libjitter--direct-threading.la
+  EXTRA_LTLIBRARIES += lib/libjitter--direct-threading.la
   lib_libjitter__direct_threading_la_SOURCES =
   lib_libjitter__direct_threading_la_LIBADD = \
-    lib/libjitter--direct-threading--convenience.la \
-    lib/libjitterutility--convenience.la
+    lib/libjitter--direct-threading--partial.la \
+    lib/libjitterutility--partial.la
+  lib_LTLIBRARIES += non-convenience-lib/libjitter--direct-threading.la
+  non_convenience_lib_libjitter__direct_threading_la_SOURCES =
+  non_convenience_lib_libjitter__direct_threading_la_DEPENDENCIES = \
+    lib/libjitter--direct-threading.la
+  non_convenience_lib_libjitter__direct_threading_la_LIBADD = \
+    lib/libjitter--direct-threading.la
 endif # JITTER_ENABLE_DISPATCH_DIRECT_THREADING
 
-# Minimal-threading-dispatch libjitter non-convenience library.
+# Minimal-threading-dispatch libjitter non-partial and non-convenience libraries.
 if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
-  lib_LTLIBRARIES += lib/libjitter--minimal-threading.la
+  EXTRA_LTLIBRARIES += lib/libjitter--minimal-threading.la
   lib_libjitter__minimal_threading_la_SOURCES =
   lib_libjitter__minimal_threading_la_LIBADD = \
-    lib/libjitter--minimal-threading--convenience.la \
-    lib/libjitterutility--convenience.la
+    lib/libjitter--minimal-threading--partial.la \
+    lib/libjitterutility--partial.la
+  lib_LTLIBRARIES += non-convenience-lib/libjitter--minimal-threading.la
+  non_convenience_lib_libjitter__minimal_threading_la_SOURCES =
+  non_convenience_lib_libjitter__minimal_threading_la_DEPENDENCIES = \
+    lib/libjitter--minimal-threading.la
+  non_convenience_lib_libjitter__minimal_threading_la_LIBADD = \
+    lib/libjitter--minimal-threading.la
 endif # JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
 
-# No-threading-dispatch libjitter non-convenience library.
+# No-threading-dispatch libjitter non-partial and non-convenience libraries.
 if JITTER_ENABLE_DISPATCH_NO_THREADING
-  lib_LTLIBRARIES += lib/libjitter--no-threading.la
+  EXTRA_LTLIBRARIES += lib/libjitter--no-threading.la
   lib_libjitter__no_threading_la_SOURCES =
   lib_libjitter__no_threading_la_LIBADD = \
-    lib/libjitter--no-threading--convenience.la \
-    lib/libjitterutility--convenience.la
+    lib/libjitter--no-threading--partial.la \
+    lib/libjitterutility--partial.la
+  lib_LTLIBRARIES += non-convenience-lib/libjitter--no-threading.la
+  non_convenience_lib_libjitter__no_threading_la_SOURCES =
+  non_convenience_lib_libjitter__no_threading_la_DEPENDENCIES = \
+    lib/libjitter--no-threading.la
+  non_convenience_lib_libjitter__no_threading_la_LIBADD = \
+    lib/libjitter--no-threading.la
 endif # JITTER_ENABLE_DISPATCH_NO_THREADING
 
-# Best-dispatch libjitter non-convenience library.
-lib_LTLIBRARIES += lib/libjitter.la
+# Best-dispatch libjitter non-partial and non-convenience libraries.
+EXTRA_LTLIBRARIES += lib/libjitter.la
 lib_libjitter_la_SOURCES =
 lib_libjitter_la_LIBADD = \
-  lib/libjitter--$(JITTER_BEST_DISPATCHING_MODEL)--convenience.la \
-  lib/libjitterutility--convenience.la
+  lib/libjitter--$(JITTER_BEST_DISPATCHING_MODEL)--partial.la \
+  lib/libjitterutility--partial.la
+lib_LTLIBRARIES += non-convenience-lib/libjitter.la
+non_convenience_lib_libjitter_la_SOURCES =
+non_convenience_lib_libjitter_la_DEPENDENCIES = \
+  lib/libjitter.la
+non_convenience_lib_libjitter_la_LIBADD = \
+  lib/libjitter.la
 
 
 # Non-Libtool static libraries for sub-package mode.
@@ -653,7 +708,8 @@ if JITTER_SUBPACKAGE
 # older versions, such as the ones shipping with OpenBSD as of early 2020
 # (reported by Alfred M. Szmidt).
 .la.a:
-	$(LIBTOOL) --mode=install cp $< $(abs_top_builddir)/$@
+	$(LIBTOOL) --mode=link $(CC) $(CFLAGS) -o $(abs_top_builddir)/$@ $<
+#	$(LIBTOOL) --mode=install cp $< $(abs_top_builddir)/$@  ################################################################################
 	$(LIBTOOL) --finish $(abs_top_builddir)/lib
 
 # For every enabled dispatch add one library.
@@ -672,9 +728,6 @@ endif # JITTER_ENABLE_DISPATCH_NO_THREADING
 
 # Add one more library for the default dispatch, unconditionally.
 noinst_DATA += lib/libjitter.a
-
-# Every other Libtool libraries in Jitter is a convenience library, only used
-# internally for building the libraries above or some program.
 endif # JITTER_SUBPACKAGE
 
 
@@ -1174,31 +1227,10 @@ EXTRA_DIST += \
 # Example VM-assembly routines for the Structured (VM) example, to be
 # distributed.
 EXTRA_DIST += \
-  example-vms/structured/examples/count-down-optimized.structuredvm \
-  example-vms/structured/examples/count-down-unoptimized.structuredvm \
+  example-vms/structured/examples/count-down-opt.structuredvm \
+  example-vms/structured/examples/count-down-nonopt.structuredvm \
   example-vms/structured/examples/euclid-optimized.structuredvm \
   example-vms/structured/examples/euclid-unoptimized.structuredvm
-
-# The jitter.m4 file distributed with the structured example is just taken from
-# Jitter.  We distribute a second copy of it for the structured build system, as
-# an easy example to follow.
-$(srcdir)/example-vms/structured/build-aux/jitter.m4: autoconf/jitter.m4
-	$(mkdir_p) $(srcdir)/example-vms/structured/build-aux || true
-	cp "$^" "$@"
-
-# The structured-language example comes with its own clean build system as an
-# example of an independent software using Jitter.  The sub-build system is not
-# used here, but we have to distribute the files.
-EXTRA_DIST += \
-  example-vms/structured/bootstrap \
-  example-vms/structured/configure.ac \
-  example-vms/structured/Makefile.am \
-  $(srcdir)/example-vms/structured/build-aux/jitter.m4 \
-  example-vms/structured/COPYING \
-  example-vms/structured/README \
-  example-vms/structured/AUTHORS \
-  example-vms/structured/NEWS \
-  example-vms/structured/ChangeLog
 
 
 # Jittery Lisp example.
@@ -1572,15 +1604,15 @@ EXTRA_DIST += \
 # Compatibility files for limited JitterLisp compatibility for
 # Common Lisp and Scheme.
 EXTRA_DIST += \
-  example-vms/jitterlisp/compatibility/common-lisp-compatibility.lisp \
-  example-vms/jitterlisp/compatibility/gambit-compatibility.scm \
-  example-vms/jitterlisp/compatibility/guile-compatibility.scm \
-  example-vms/jitterlisp/compatibility/mit-gnu-scheme-compatibility.scm \
-  example-vms/jitterlisp/compatibility/racket-compatibility.scm \
-  example-vms/jitterlisp/compatibility/scm-compatibility.scm \
-  example-vms/jitterlisp/compatibility/siod-compatibility.scm \
-  example-vms/jitterlisp/compatibility/sisc-compatibility.scm \
-  example-vms/jitterlisp/compatibility/tinyscheme-compatibility.scm
+  example-vms/jitterlisp/compat/common-lisp-compatibility.lisp \
+  example-vms/jitterlisp/compat/gambit-compatibility.scm \
+  example-vms/jitterlisp/compat/guile-compatibility.scm \
+  example-vms/jitterlisp/compat/mit-gnu-scheme-compatibility.scm \
+  example-vms/jitterlisp/compat/racket-compatibility.scm \
+  example-vms/jitterlisp/compat/scm-compatibility.scm \
+  example-vms/jitterlisp/compat/siod-compatibility.scm \
+  example-vms/jitterlisp/compat/sisc-compatibility.scm \
+  example-vms/jitterlisp/compat/tinyscheme-compatibility.scm
 
 # Other files for JitterLisp.
 EXTRA_DIST += example-vms/jitterlisp/THANKS
@@ -1596,6 +1628,28 @@ $(srcdir)/example-vms/jitterlisp/doc/gpl.texi: doc/gpl.texi
 	cp "$<" "$@"
 $(srcdir)/example-vms/jitterlisp/doc/fdl.texi: doc/fdl.texi
 	cp "$<" "$@"
+
+
+# Build examples
+# ################################################################
+
+# These examples using Jitter have their own build system and are not used here.
+# However we still have to distribute them, even if not in bootstrapped form
+# for reasons of space economy.
+
+# The structured-language example comes with its own clean build system as an
+# example of an independent software using Jitter.  The sub-build system is not
+# used here, but we have to distribute the files.
+EXTRA_DIST += \
+  example-build-systems/bootstrap \
+  example-build-systems/NEWS \
+  example-build-systems/ChangeLog \
+  example-build-systems/README \
+  example-build-systems/AUTHORS \
+  example-build-systems/structured-simple/configure.ac \
+  example-build-systems/structured-simple/Makefile.am \
+  example-build-systems/structured-with-library/configure.ac \
+  example-build-systems/structured-with-library/Makefile.am
 
 
 # Brainfuck example VM.

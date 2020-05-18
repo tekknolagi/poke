@@ -31,7 +31,7 @@ AC_PREREQ([2.69])
 AC_INIT([Jittery structured language],
         [1.0],
         [bug-epsilon@gnu.org],
-        [structured],
+        [structured-with-library],
         [http://ageinghacker.net/jitter])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
@@ -48,6 +48,12 @@ AC_CONFIG_MACRO_DIR([build-aux])
 ################################################################
 
 AM_INIT_AUTOMAKE
+
+
+# Libtool initialization.
+################################################################
+
+LT_INIT
 
 
 # Check for the C compiler and its features.

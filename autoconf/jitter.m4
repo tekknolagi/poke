@@ -1,6 +1,5 @@
 # Autoconf macros for Jitter.
-# Copyright (C) 2017, 2018, 2019 Luca Saiu
-# Updated in 2020 by Luca Saiu
+# Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -116,7 +115,7 @@ m4_define([jitter_dispatches],
 # ------------
 # An M4 quoted list of flag names, lower-case with dashes.
 m4_define([jitter_flags],
-          [[cflags], [cppflags], [ldadd], [ldflags]])
+          [[cflags], [cppflags], [ldadd], [ldflags], [libadd]])
 
 
 # Jitter internal Autoconf macros.
@@ -250,11 +249,13 @@ AC_ARG_WITH([jitter],
 # * JITTER_CPPFLAGS            (CPPFLAGS with the default dispatch);
 # * JITTER_LDADD               (LDADD with the default dispatch);
 # * JITTER_LDFLAGS             (LDFLAGS with the default dispatch);
+# * JITTER_LIBADD              (LIBADD with the default dispatch);
 # * for every dispatch $D (in all caps, with underscores separating words):
 #   - JITTER_$D_CFLAGS         (CFLAGS with dispatch $D);
 #   - JITTER_$D_CPPFLAGS       (CPPFLAGS with dispatch $D);
 #   - JITTER_$D_LDADD          (LDADD with dispatch $D);
-#   - JITTER_$D_LDFLAGS        (LDFLAGS with dispatch $D).
+#   - JITTER_$D_LDFLAGS        (LDFLAGS with dispatch $D);
+#   - JITTER_$D_LIBADD         (LIBADD with dispatch $D).
 #
 # When Automake is used, also define the following Automake conditionals
 # for each dispatching model $D (in all caps, with underscores separating

@@ -1,0 +1,149 @@
+#!/bin/sh
+# Copyright (C) 2019, 2020 Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of the Jitter build system examples, distributed along with
+# Jitter under the same license.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Generate the machine-generated part of the independent build system for
+# the structured example included within the Jitter sources and itself
+# using Jitter as a sub-package.
+#
+# This script should work on a sensible Unix system supporting symlinks.
+
+
+# Utility functions.
+################################################################
+
+log ()
+{
+    echo "Progress: $@ ..."
+}
+
+cp_or_fail ()
+{
+    source="$1"
+    destination="$2"
+
+    log "copying ${source} to ${destination}"
+
+    cp ${source} ${destination} \
+        || (echo "FATAL error: could not copy ${source} to ${destination}"; \
+            exit 1)
+}
+
+
+# Global set up.
+################################################################
+
+# Die at the first error.
+set -e
+
+
+# Sanity check.
+################################################################
+
+# Enter the directory containing this script, and perform a basic sanity check
+# to ensure that we are at the right depth inside the Jitter source
+# distribution, as the rest of this script assumes.
+cd $(dirname "$0")
+if ! test -e ../jitter/jitter-config.h.in; then
+    echo "$0: this script, or the structured/ subdirectory, has been moved"
+    echo "from the jitter source directory.  Cannot work."
+    exit 1
+fi
+
+
+# Global definitions.
+################################################################
+
+subs='structured-simple structured-with-library'
+
+
+# Copy files.
+################################################################
+
+for target_directory in $subs; do
+    # Copy source files.
+    for file in structured.jitter                         \
+                structured.y                              \
+                structured.l                              \
+                structured-code-generator.c               \
+                structured-code-generator.h               \
+                structured-code-generator-stack.c         \
+                structured-code-generator-stack.h         \
+                structured-code-generator-register.c      \
+                structured-code-generator-register.h      \
+                structured-main.c                         \
+                structured-syntax.c                       \
+                structured-syntax.h                       \
+                ; do
+        cp_or_fail ../example-vms/structured/${file} ${target_directory}/
+    done
+
+    # Copy examples.
+    mkdir ${target_directory}/examples 2> /dev/null || true
+    for file in ../example-vms/structured/examples/*.structured  \
+                ../example-vms/structured/examples/*.c           \
+                ../example-vms/structured/examples/*.java        \
+                ../example-vms/structured/examples/*.py          \
+                ; do
+        cp_or_fail ${file} ${target_directory}/examples/
+    done
+    
+    # Copy files from this directory.
+    for file in README AUTHORS NEWS ChangeLog; do
+        cp_or_fail ${file} ${target_directory}/
+    done
+
+    # Copy files from the Jitter source directory.
+    for file in COPYING; do
+        cp_or_fail ../${file} ${target_directory}/
+    done
+
+    # Copy files from the Jitter source directory not following the general
+    # pattern.
+    mkdir ${target_directory}/build-aux 2> /dev/null || true
+    cp_or_fail ../autoconf/jitter.m4 ${target_directory}/build-aux/
+
+    # Symlink the Jitter source directory.  A symlink is as good as a
+    # subdirectory for make dist .
+    log "symlinking jitter source directory in ${destination}"
+    cd ${target_directory}/
+    rm jitter
+    ln -s ../.. jitter
+    cd ..
+done
+
+
+
+# Bootstrap from the Autotools.
+################################################################
+
+# Generate what is missing with the utilities from Automake.
+for target_directory in $subs; do
+    cd ${target_directory}/
+    log "running autoreconf in ${target_directory}"
+    autoreconf --symlink --install
+    cd ..
+done
+
+
+# Done.
+################################################################
+
+echo 'Success.  You can now configure the package in each subdirectory.'

@@ -180,6 +180,11 @@ ${help_section_indentation}Compilation/linking flag options:
                              linking the chosen dispatching model library.
                              These flags are to be supplied at link time when
                              linking the Jitter runtime library.
+  --libadd                   Print arguments consisting in Libtool convenience
+                             libraries, to be linked into a library rather than
+                             a program.
+                             These arguments are to be supplied at link time
+                             when linking the Jitter runtime library.
 
 ${help_section_indentation}Installation path options:
   --template-path            Print the directory where template files are
@@ -385,6 +390,9 @@ while test "$#" != "0"; do
         --ldflags)
             no_option_argument
             append_to_output ldflags;;
+        --libadd)
+            no_option_argument
+            append_to_output libadd;;
 
         # Installation path options.
         --template-path)

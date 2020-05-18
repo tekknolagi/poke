@@ -1,5 +1,4 @@
-Copyright (C) 2017 Luca Saiu
-Updated in 2019 by Luca Saiu
+Copyright (C) 2017-2020 Luca Saiu
 Written by Luca Saiu
 
 This file is part of Jitter.
@@ -20,8 +19,9 @@ this software.  If not, see <http://www.gnu.org/licenses/>.
 Obtaining the latest version
 ============================
 
-Jitter is developed on a public git repository.
-[FIXME: not really: add a link when I make it official].
+Jitter is developed on a public git repository, accessible over HTTP at
+  http://git.ageinghacker.net/jitter
+and over ssh to developers.
 
 
 How to compile from a git copy

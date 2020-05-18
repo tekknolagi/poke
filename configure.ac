@@ -1837,6 +1837,16 @@ for dispatch_model in $jitter_enabled_dispatch_models; do
 
   JITTER_FLAGS_LDADD="-ljitter--$dispatch_model"
 
+  if test "x$JITTER_SUBPACKAGE" != 'x'; then
+    JITTER_FLAGS_LIBADD="${jitter_abs_top_builddir}/lib/libjitter--$dispatch_model.la"
+  else
+    # If the library is installed we can avoid specifying an explicit directory
+    # for the convenience library (it would be ${libdir}) and instead rely on
+    # JITTER_FLAGS_LDFLAGS containing the correct -L option.  This prevents
+    # problems with non-installed libararies in non-sub-package mode.
+    JITTER_FLAGS_LIBADD="libjitter--$dispatch_model.la"
+  fi
+
   # Search for Jitter runtime libraries in the right place.
   if test "x$JITTER_SUBPACKAGE" != 'x'; then
     # See the comment above for sub-package mode and include paths.  This case
@@ -1852,6 +1862,7 @@ for dispatch_model in $jitter_enabled_dispatch_models; do
   echo "$JITTER_FLAGS_CFLAGS"   > flags/$dispatch_model/CFLAGS
   echo "$JITTER_FLAGS_LDADD"    > flags/$dispatch_model/LDADD
   echo "$JITTER_FLAGS_LDFLAGS"  > flags/$dispatch_model/LDFLAGS
+  echo "$JITTER_FLAGS_LIBADD"   > flags/$dispatch_model/LIBADD
 
   # Also AC_SUBST flag variables for the best dispatching model, if the best
   # happens to be the one we're handling now.
@@ -1864,6 +1875,8 @@ for dispatch_model in $jitter_enabled_dispatch_models; do
              [$(cat flags/$dispatch_model/LDADD)])
     AC_SUBST([JITTER_LDFLAGS],
              [$(cat flags/$dispatch_model/LDFLAGS)])
+    AC_SUBST([JITTER_LIBADD],
+             [$(cat flags/$dispatch_model/LIBADD)])
 #    AC_SUBST([JITTER_MAKE_FLAGS],
 #             '$(MAKEFLAGS) CFLAGS="$(AM_CFLAGS) $(JITTER_CFLAGS)" CPPFLAGS="$(AM_CPPFLAGS) $(JITTER_CPPFLAGS)" LDFLAGS="$(AM_LDFLAGS) $(JITTER_LDFLAGS)" LDADD="$(JITTER_LDADD)"') # There is no AM_LDADD
   fi
@@ -1881,6 +1894,8 @@ if test "x$jitter_enable_dispatch_switch" = "xyes"; then
            [$(cat flags/switch/LDADD)])
   AC_SUBST([JITTER_SWITCH_LDFLAGS],
            [$(cat flags/switch/LDFLAGS)])
+  AC_SUBST([JITTER_SWITCH_LIBADD],
+           [$(cat flags/switch/LIBADD)])
 #  AC_SUBST([JITTER_SWITCH_MAKE_FLAGS],
 #           '$(MAKEFLAGS) CFLAGS="$(AM_CFLAGS) $(JITTER_SWITCH_CFLAGS)" CPPFLAGS="$(AM_CPPFLAGS) $(JITTER_SWITCH_CPPFLAGS)" LDFLAGS="$(AM_LDFLAGS) $(JITTER_SWITCH_LDFLAGS)" LDADD="$(JITTER_SWITCH_LDADD)"') # There is no AM_LDADD
 fi
@@ -1893,6 +1908,8 @@ if test "x$jitter_enable_dispatch_direct_threading" = "xyes"; then
            [$(cat flags/direct-threading/LDADD)])
   AC_SUBST([JITTER_DIRECT_THREADING_LDFLAGS],
            [$(cat flags/direct-threading/LDFLAGS)])
+  AC_SUBST([JITTER_DIRECT_THREADING_LIBADD],
+           [$(cat flags/direct-threading/LIBADD)])
 #  AC_SUBST([JITTER_DIRECT_THREADING_MAKE_FLAGS],
 #           '$(MAKEFLAGS) CFLAGS="$(AM_CFLAGS) $(JITTER_DIRECT_THREADING_CFLAGS)" CPPFLAGS="$(AM_CPPFLAGS) $(JITTER_DIRECT_THREADING_CPPFLAGS)" LDFLAGS="$(AM_LDFLAGS) $(JITTER_DIRECT_THREADING_LDFLAGS)" LDADD="$(JITTER_DIRECT_THREADING_LDADD)"') # There is no AM_LDADD
 fi
@@ -1905,6 +1922,8 @@ if test "x$jitter_enable_dispatch_minimal_threading" = "xyes"; then
            [$(cat flags/minimal-threading/LDADD)])
   AC_SUBST([JITTER_MINIMAL_THREADING_LDFLAGS],
            [$(cat flags/minimal-threading/LDFLAGS)])
+  AC_SUBST([JITTER_MINIMAL_THREADING_LIBADD],
+           [$(cat flags/minimal-threading/LIBADD)])
 #  AC_SUBST([JITTER_MINIMAL_THREADING_MAKE_FLAGS],
 #           '$(MAKEFLAGS) CFLAGS="$(AM_CFLAGS) $(JITTER_MINIMAL_THREADING_CFLAGS)" CPPFLAGS="$(AM_CPPFLAGS) $(JITTER_MINIMAL_THREADING_CPPFLAGS)" LDFLAGS="$(AM_LDFLAGS) $(JITTER_MINIMAL_THREADING_LDFLAGS)" LDADD="$(JITTER_MINIMAL_THREADING_LDADD)"') # There is no AM_LDADD
 fi
@@ -1917,6 +1936,8 @@ if test "x$jitter_enable_dispatch_no_threading" = "xyes"; then
            [$(cat flags/no-threading/LDADD)])
   AC_SUBST([JITTER_NO_THREADING_LDFLAGS],
            [$(cat flags/no-threading/LDFLAGS)])
+  AC_SUBST([JITTER_NO_THREADING_LIBADD],
+           [$(cat flags/no-threading/LIBADD)])
 #  AC_SUBST([JITTER_NO_THREADING_MAKE_FLAGS],
 #           '$(MAKEFLAGS) CFLAGS="$(AM_CFLAGS) $(JITTER_NO_THREADING_CFLAGS)" CPPFLAGS="$(AM_CPPFLAGS) $(JITTER_NO_THREADING_CPPFLAGS)" LDFLAGS="$(AM_LDFLAGS) $(JITTER_NO_THREADING_LDFLAGS)" LDADD="$(JITTER_NO_THREADING_LDADD)"') # There is no AM_LDADD
 fi
