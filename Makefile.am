@@ -709,7 +709,6 @@ if JITTER_SUBPACKAGE
 # (reported by Alfred M. Szmidt).
 .la.a:
 	$(LIBTOOL) --mode=link $(CC) $(CFLAGS) -o $(abs_top_builddir)/$@ $<
-#	$(LIBTOOL) --mode=install cp $< $(abs_top_builddir)/$@  ################################################################################
 	$(LIBTOOL) --finish $(abs_top_builddir)/lib
 
 # For every enabled dispatch add one library.
