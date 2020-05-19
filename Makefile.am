@@ -592,7 +592,8 @@ jitterinclude_HEADERS += \
 #
 # Non-partial libraries are still convenience libraries.  Each of those is also
 # embedded in a non-convenience library containing the exact same objects, for
-# installation (unused in sub-package mode).
+# installation in non-sub-package mode and in order to have a dependency on the
+# correct convenience libraries in sub-package mode.
 
 # Switch-dispatch libjitter partial library.
 EXTRA_LTLIBRARIES += lib/libjitter--switch--partial.la

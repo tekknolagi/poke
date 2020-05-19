@@ -184,10 +184,12 @@ jitter_cpp_preprocess ()
 # itself: in order to speed up Jitter's compilation and its test suite, only the
 # best available dispatch is enabled.
 
-# In sub-package mode installation does nothing, and dynamic libraries are
-# always disabled.  Libraries meant for the user are built as both Libtool
-# libraries and ordinary static libraries; the user may choose whether to use
-# Libtool in her own super-package.
+# In sub-package mode installation does nothing, and both static and dynamic
+# libraries are always enabled, but only static libraries are actually used.
+# Libraries meant for the user are built as Libtool convenience libraries,
+# suitable to be integrated within other user libraries and compatible with
+# either kind; on modern platforms this means in practice that there is a PIC
+# version built for every compilation unit.
 
 # Sub-package mode is enabled if the environment variable JITTER_SUBPACKAGE is
 # defined to any non-empty value.  This is meant to be defined, and exported, by
@@ -200,7 +202,7 @@ jitter_cpp_preprocess ()
 # Define the feature macro and change the kind of libraries to build by default
 # if sub-package mode is enabled.
 # In case the command line contradicts the default, I will still force static
-# libraries to be enabled and shared libraries to be disabled, just giving a
+# libraries to be enabled and shared libraries to be also enabled, just giving a
 # warning: see "Libtool support" below.
 
 # Define JITTER_SUBPACKAGE as a precious variable, so that it is described by
@@ -217,7 +219,7 @@ if test "x$JITTER_SUBPACKAGE" != 'x'; then
     AC_DEFINE_UNQUOTED([JITTER_SUBPACKAGE], [1],
                        [Jitter is configured in sub-package mode])
     AC_ENABLE_STATIC
-    AC_DISABLE_SHARED
+    AC_ENABLE_SHARED
 fi
 
 # Define an Automake conditional.
@@ -576,8 +578,8 @@ AC_PATH_PROGS([JITTER_TIMEOUT], [timeout])
 ################################################################
 
 # In case this is a sub-package build force static libraries to be enabled and
-# shared libraries to be disabled, even if this is different from what the user
-# asked.
+# shared libraries to be also enabled, even if this is different from what the
+# user asked.  See "Sub-package mode support" above for an explanation.
 # This is reasonable in a sub-package: of course the super-package remains free
 # to choose differently.
 # REMARK: enable_static and enable_shared are not explicitly documented.
@@ -587,8 +589,9 @@ if test "x$JITTER_SUBPACKAGE" != 'x'; then
     enable_static=yes
   fi
   if test "x${enable_shared}" = 'xyes'; then
-    AC_MSG_WARN([forcing shared libraries to be disabled in sub-package mode])
-    enable_shared=no
+    AC_MSG_WARN([forcing shared libraries to be enabled in sub-package mode,
+for compatibility's sake, even if they will not be used])
+    enable_shared=yes
   fi
 fi
 
