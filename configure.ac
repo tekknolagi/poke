@@ -588,9 +588,9 @@ if test "x$JITTER_SUBPACKAGE" != 'x'; then
     AC_MSG_WARN([forcing static libraries to be enabled in sub-package mode])
     enable_static=yes
   fi
-  if test "x${enable_shared}" = 'xyes'; then
-    AC_MSG_WARN([forcing shared libraries to be enabled in sub-package mode,
-for compatibility's sake, even if they will not be used])
+  if test "x${enable_shared}" = 'xno'; then
+    AC_MSG_WARN([forcing shared library compilation to be enabled in sub-package
+mode, for compatibility's sake, even if they will not be used])
     enable_shared=yes
   fi
 fi
