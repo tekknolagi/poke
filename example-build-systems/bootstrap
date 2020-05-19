@@ -124,7 +124,7 @@ for target_directory in $subs; do
     # subdirectory for make dist .
     log "symlinking jitter source directory in ${destination}"
     cd ${target_directory}/
-    rm jitter
+    rm -f jitter
     ln -s ../.. jitter
     cd ..
 done
