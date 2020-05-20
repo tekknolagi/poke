@@ -1,7 +1,6 @@
 /* Jittery structured language example: main.
 
-   Copyright (C) 2017, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the Jitter structured-language example, distributed
@@ -400,8 +399,11 @@ structured_work (struct structured_command_line *cl)
       structuredvm_state_finalize (& s);
     }
 
-  /* Destroy the Jittery routine. */
-  structuredvm_destroy_routine (vmr);
+  /* Destroy the Jittery routine.  Since here the reference count is exactly one
+     by construction structuredvm_destroy_routine would work just as well, but in
+     more complex cases where routines are shared by objects destroyed at multiple
+     times the user will want to unpin, like in this example. */
+  structuredvm_unpin_routine (vmr);
 
   /* Finalize the structured-VM subsystem. */
   structuredvm_finalize ();

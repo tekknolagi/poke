@@ -1,6 +1,6 @@
 /* VM library: specializer.
 
-   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -55,6 +55,7 @@ jitter_initialize_executable_routine (struct jitter_executable_routine *er,
   er->routine = r;
 
   /* Initialize the other fields, where we already have enough information. */
+  er->reference_count = 1;
   er->slow_register_per_class_no = r->slow_register_per_class_no;
 
   /* The remaining fields are still uninitialized. */
@@ -70,6 +71,15 @@ jitter_destroy_executable_routine (struct jitter_executable_routine *er)
   if (r != NULL)
     r->executable_routine = NULL;
 
+  /* Check that the reference count is exactly one.  It is sensible to require
+     that when this function is called by the user the reference count be
+     exactly one; when called by jitter_unpin_executable_routine this field is
+     automatically set to 1 before arriving here, just in order to pass this
+     check. */
+  if (er->reference_count != 1)
+    jitter_fatal ("destroying executable routine with reference count %lu",
+                  er->reference_count);
+
   /* Destroy heap-allocated fields reachable from the compiled routine. */
 #if   (defined(JITTER_DISPATCH_SWITCH)                \
        || defined(JITTER_DISPATCH_DIRECT_THREADING))
@@ -83,6 +93,43 @@ jitter_destroy_executable_routine (struct jitter_executable_routine *er)
 
   /* Release memory for the struct itself. */
   free (er);
+}
+
+
+
+
+/* Reference counting.
+ * ************************************************************************** */
+
+void
+jitter_pin_executable_routine (struct jitter_executable_routine *er)
+{
+  /* Just increment the field.  This operation is easy and fast, as it never
+     involves construction or destruction. */
+  er->reference_count ++;
+}
+
+void
+jitter_unpin_executable_routine (struct jitter_executable_routine *er)
+{
+  /* Decrement the field.  If the new value does not reach zero then we are
+     done. */
+  er->reference_count --;
+  if (er->reference_count > 0)
+    return;
+
+  /* If we arrived here the reference count has reached zero. */
+
+  /* Destroy the mutable companion, if it still exists. */
+  struct jitter_mutable_routine *r = er->routine;
+  if (r != NULL)
+    jitter_destroy_mutable_routine (r);
+
+  /* Destroy the executable routine itself.  Temporarily set the reference count
+     field to one, as the executable destruction function expects, then call the
+     executable destruction function. */
+  er->reference_count = 1;
+  jitter_destroy_executable_routine (er);
 }
 
 

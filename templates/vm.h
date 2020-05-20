@@ -1,6 +1,7 @@
 /* VM library: main header file.
 
    Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -743,6 +744,12 @@ vmprefix_vm_configuration;
 
 /* Destroy a unified routine. */
 #define vmprefix_destroy_routine jitter_destroy_routine
+
+/* Pin a unified routine. */
+#define vmprefix_pin_routine jitter_pin_routine
+
+/* Unpin a unified routine. */
+#define vmprefix_unpin_routine jitter_unpin_routine
 
 /* Print VM configuration. */
 #define vmprefix_print_vm_configuration jitter_print_vm_configuration

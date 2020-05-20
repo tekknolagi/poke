@@ -1,6 +1,6 @@
 /* VM library: specializer header file.
 
-   Copyright (C) 2016, 2017, 2019 Luca Saiu
+   Copyright (C) 2016, 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -55,6 +55,17 @@ struct jitter_executable_routine
      field, non-NULL at initialization, becomes NULL if the original
      non-executable routine is destroyed. */
   struct jitter_mutable_routine *routine;
+
+  /* How many live pointers there are to this executable routine.  This is set
+     to 1 at initialization, then updated manually with
+     jitter_pin_executable_routine and jitter_unpin_executable_routine ,
+     declared below.
+
+     The executable routine is automatically destroyed, along with its companion
+     mutable routine, when the reference count reaches zero.  Notice that, by
+     contrast, when the user explicitly destroys an executable routine its
+     mutable companion is *not* automatically destroyed. */
+  unsigned long reference_count;
 
   /* The following fields, including the ones conditionalized over the
      dispatching mode, have the same meaning as the fields with the same name
@@ -111,10 +122,32 @@ jitter_make_executable_routine (struct jitter_mutable_routine *p)
    routine, and this function will not free the non-executable routine twice.
    After this function is called it is no longer possible to run any code
    belonging to the executable routine, even if execution was already in
-   progress or if the function is called from a VM instruction. */
+   progress or if the function is called from a VM instruction.
+
+   When the user calls this function the reference count of the routine must be
+   exactly one, otherwise this function fails fatally.  About destruction by
+   jitter_unpin_executable_routine and the difference in behaviour compared to a
+   direct use of this function, see the comment about the reference_count struct
+   field above. */
 void
 jitter_destroy_executable_routine (struct jitter_executable_routine *p)
   __attribute__ ((nonnull (1)));
+
+/* Increment the reference_count field of the pointed executable routine,
+   notifying the system that one more reference handled by the user has been
+   added. */
+void
+jitter_pin_executable_routine (struct jitter_executable_routine *er);
+
+/* Decrement the reference_count field of the pointed executable routine,
+   notifying the system that one reference to the executable routine has been
+   destroyed.
+   If the count reaches zero immediately destroy the executable routine and, if
+   still existing, its mutable companion.  Notice that the behavior of
+   jitter_destroy_executable_routine is different, in that
+   jitter_destroy_executable_routine does not destroy the mutable companion. */
+void
+jitter_unpin_executable_routine (struct jitter_executable_routine *er);
 
 
 

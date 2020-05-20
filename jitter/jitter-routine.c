@@ -1,6 +1,6 @@
 /* Jitter: Routine unified API.
 
-   Copyright (C) 2019 Luca Saiu
+   Copyright (C) 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -45,6 +45,18 @@ jitter_destroy_routine (jitter_routine r)
 
   /* Now unconditionally destroy the mutable version as well. */
   jitter_destroy_mutable_routine (r);
+}
+
+void
+jitter_pin_routine (jitter_routine r)
+{
+  jitter_pin_executable_routine (r->executable_routine);
+}
+
+void
+jitter_unpin_routine (jitter_routine r)
+{
+  jitter_unpin_executable_routine (r->executable_routine);
 }
 
 void

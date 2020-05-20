@@ -1,6 +1,6 @@
 /* Jitter: Routine unified API: header.
 
-   Copyright (C) 2019 Luca Saiu
+   Copyright (C) 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -89,6 +89,16 @@ jitter_routine;
    vmprefix_make_routine. */
 void
 jitter_destroy_routine (jitter_routine r);
+
+/* Like jitter_pin_excutable_routine , for the unified routine API. */
+void
+jitter_pin_routine (jitter_routine r)
+  __attribute__ ((nonnull (1)));
+
+/* Like jitter_pin_excutable_routine , for the unified routine API. */
+void
+jitter_unpin_routine (jitter_routine r)
+  __attribute__ ((nonnull (1)));
 
 /* Like jitter_mutable_routine_print , for the unified routine API. */
 void

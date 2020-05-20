@@ -1,6 +1,6 @@
 /* JitterLisp: Jittery VM code generator.
 
-   Copyright (C) 2018, 2019 Luca Saiu
+   Copyright (C) 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -659,11 +659,15 @@ jitterlisp_finalize_closure (void *object, void *client_data)
   struct jitterlisp_compiled_closure * cc
     = & ((struct jitterlisp_closure *) object)->compiled;
 
-  /* Destroy the routine for the closure in both versions, executable and
-     non-executable (if the non-executable version still exists). */
-  jitterlispvm_destroy_executable_routine (cc->executable_routine);
-  if (cc->mutable_routine != NULL)
-    jitterlispvm_destroy_mutable_routine (cc->mutable_routine);
+  // FIXME: the reference counter is not really used yet: this is just a way of destroying the only existing reference.
+  /* Remove a reference to the routine.  If the new reference count drops to
+     zero then destroy both teh executable and mutable (in case that still
+     exists) versions. */
+  jitter_unpin_executable_routine (cc->executable_routine);
+
+  /* Invalidate both pointer fields, just to catch bugs. */
+  cc->executable_routine = NULL;
+  cc->mutable_routine = NULL;
 }
 #endif
 
