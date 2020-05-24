@@ -623,13 +623,18 @@ AM_PATH_LISPDIR
 # I plan to use it more in the future, so it's linked to every program.
 #
 # Anyway, don't check for Readline and refuse to use it if we got
-# --without-readline or --with-readline=no as a configure option.
+# --without-readline or --with-readline=no as a configure option,
+# or if Jitter is being configured in sub-package mode.
 AC_ARG_WITH([readline],
             AS_HELP_STRING([--with-readline],
                            [use GNU ReadLine (default: detected)]),
             jitter_check_readline="$withval",
             jitter_check_readline="yes")
-if test "x$jitter_check_readline" != "xno"; then
+if test "x$JITTER_SUBPACKAGE" != 'x'; then
+  # Readline is just an annoyance in sub-package mode.
+  AC_MSG_NOTICE([not using GNU Readline in sub-package mode: even ignoring
+the command line option])
+elif test "x$jitter_check_readline" != 'xno'; then
   # These seem to be readline dependencies.
   AC_CHECK_LIB([ncurses], [main])
   AC_CHECK_LIB([termcap], [main])
