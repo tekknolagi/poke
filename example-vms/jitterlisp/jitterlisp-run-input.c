@@ -1,6 +1,6 @@
 /* JitterLisp: running from files, C strings, REPL.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -27,14 +27,13 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
-#include <sys/time.h>
 
 #include "jitterlisp.h"
 
 #include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-fatal.h>
 #include <jitter/jitter-string.h> // jitter_clone_string: probably to remove
+#include <jitter/jitter-time.h>
 
 
 
@@ -205,6 +204,7 @@ jitterlisp_repl (void)
   /* Loop: read a form, exit if it's #<eof>, otherwise evaluate it.  In case of
      any error, at either read or evaluation time, just continue with the next
      iteration. */
+  jitter_point_in_time time_before = jitter_point_in_time_make ();
   do
     {
       JITTERLISP_HANDLE_ERRORS(
@@ -212,14 +212,9 @@ jitterlisp_repl (void)
           jitterlisp_object form = jitterlisp_read (rstate);
           if (JITTERLISP_IS_EOF (form))
             goto out;
-          struct timeval time_before;
-          gettimeofday (& time_before, NULL);
+          jitter_time_set_now (time_before);
           jitterlisp_object result = jitterlisp_eval_globally (form);
-          struct timeval time_after;
-          gettimeofday (& time_after, NULL);
-          double elapsed_time
-            = ((time_after.tv_usec * 1e-6 + time_after.tv_sec)
-               - (time_before.tv_usec * 1e-6 + time_before.tv_sec));
+          double elapsed_time = jitter_time_subtract_from_now (time_before);
           /* Print the elapsed time according to the settings. */
           switch (jitterlisp_settings.time)
             {
@@ -255,6 +250,7 @@ jitterlisp_repl (void)
 
   /* We got out of the loop.  Only now we can destroy the reader. */
  out:
+  jitter_point_in_time_destroy (time_before);
   jitterlisp_destroy_reader_state (rstate);
 
   if (jitterlisp_settings.verbose)

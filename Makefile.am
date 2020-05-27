@@ -308,7 +308,8 @@ lib_libjitterutility__partial_la_SOURCES = \
   jitter/jitter-parse-int.h jitter/jitter-parse-int.c \
   jitter/jitter-print-binary.h jitter/jitter-print-binary.c \
   jitter/jitter-readline.h jitter/jitter-readline.c \
-  jitter/jitter-string.h jitter/jitter-string.c
+  jitter/jitter-string.h jitter/jitter-string.c \
+  jitter/jitter-time.h jitter/jitter-time.c
 lib_libjitterutility__partial_la_CPPFLAGS = \
   $(AM_CPPFLAGS) $(CPPFLAGS_FOR_INTERNAL_USE)
 
@@ -331,7 +332,8 @@ jitterinclude_HEADERS += \
   jitter/jitter-parse-int.h \
   jitter/jitter-print-binary.h \
   jitter/jitter-readline.h \
-  jitter/jitter-string.h
+  jitter/jitter-string.h \
+  jitter/jitter-time.h
 
 # Unit tests for libjitterutility.
 if JITTER_ENABLE_TEST_SUITE

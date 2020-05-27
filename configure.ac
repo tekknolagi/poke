@@ -900,6 +900,9 @@ AC_CHECK_FUNCS([popen pclose])
 # Check for a sane signal-handling API.
 AC_CHECK_FUNCS([sigaction])
 
+# Check for optional high-resolution timing functions.
+AC_CHECK_FUNCS([clock_gettime])
+
 
 # System-dependent configuration.
 ################################################################
@@ -2150,6 +2153,8 @@ jitter_define_prefixed_feature_macro([ac_cv_func_popen], [yes],
                                      [HAVE_POPEN])
 jitter_define_prefixed_feature_macro([ac_cv_func_sigaction], [yes],
                                      [HAVE_SIGACTION])
+jitter_define_prefixed_feature_macro([ac_cv_func_clock_gettime], [yes],
+                                     [HAVE_CLOCK_GETTIME])
 
 
 # Output.
