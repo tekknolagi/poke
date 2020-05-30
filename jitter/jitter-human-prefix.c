@@ -112,9 +112,7 @@ jitter_human_readable_with (const struct jitter_human_descriptor *descriptors,
     best = last;
   else
     for (best = descriptors; best != limit; best ++)
-      if (in >= best->value
-          && best + 1 < limit
-          && in < best [1].value)
+      if (in >= best->value && in < best [1].value)
         break;
   
   /* Use the descriptor we chose. */
@@ -124,8 +122,8 @@ jitter_human_readable_with (const struct jitter_human_descriptor *descriptors,
 
 void
 jitter_human_readable (double *out, const char **prefix,
-                          double in,
-                          bool binary)
+                       double in,
+                       bool binary)
 {
   const struct jitter_human_descriptor *descriptors;
   size_t descriptors_no;
@@ -143,7 +141,7 @@ jitter_human_readable (double *out, const char **prefix,
       * out = - * out;
       return;
     }
-  
+
   /* If we arrived here in is non-negative. */
   if (binary)
     jitter_human_readable_with (jitter_human_descriptor_binary,
