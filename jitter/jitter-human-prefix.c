@@ -91,10 +91,10 @@ static const size_t jitter_human_descriptor_binary_no
    pointed array of descriptors in order. */
 static void
 jitter_human_readable_with (const struct jitter_human_descriptor *descriptors,
-                               size_t descriptor_no,
-                               double *out, const char **prefix, double in)
+                            size_t descriptor_no,
+                            double *out, const char **prefix, double in)
 {
-  /* Handle empty descriptor tables. */
+  /* Pendantry: handle empty descriptor tables. */
   if (descriptor_no == 0)
     {
       * out = in;
@@ -102,26 +102,28 @@ jitter_human_readable_with (const struct jitter_human_descriptor *descriptors,
     }
   /* From now on we can be sure that there is at least one descriptor. */
 
-  bool up = in < 1;
-  
   /* Search for the most appropriate unit. */
   const struct jitter_human_descriptor *best;
-  int delta = up ? 1 : -1;
-  const struct jitter_human_descriptor *initial
-    = up ? descriptors : descriptors + descriptor_no - 1;
-  const struct jitter_human_descriptor *limit = initial + delta * descriptor_no;
-  for (best = initial; best != limit; best += delta)
-    if (up && in <= best->value
-        || ! up && in >= best->value)
+  const struct jitter_human_descriptor *limit = descriptors + descriptor_no;
+  const struct jitter_human_descriptor *last = limit - 1;
+  if (in < descriptors->value)
+    best = descriptors;
+  else if (in > last->value)
+    best = last;
+  else
+    for (best = descriptors; best != limit; best ++)
+      if (in >= best->value
+          && best + 1 < limit
+          && in < best [1].value)
         break;
-
+  
   /* Use the descriptor we chose. */
   * out = in / best->value;
   * prefix = best->name;  
 }
 
 void
-jitter_human_readable (double *out, const char **scale,
+jitter_human_readable (double *out, const char **prefix,
                           double in,
                           bool binary)
 {
@@ -131,13 +133,13 @@ jitter_human_readable (double *out, const char **scale,
   if (in == 0)
     {
       * out = 0;
-      * scale = "";
+      * prefix = "";
     }
   /* I do not want to depend on the math library just for the abs function.
      Handle the negative case with a trivial recursive call. */
   else if (in < 0)
     {
-      jitter_human_readable (out, scale, - in, binary);
+      jitter_human_readable (out, prefix, - in, binary);
       * out = - * out;
       return;
     }
@@ -145,10 +147,10 @@ jitter_human_readable (double *out, const char **scale,
   /* If we arrived here in is non-negative. */
   if (binary)
     jitter_human_readable_with (jitter_human_descriptor_binary,
-                                   jitter_human_descriptor_binary_no,
-                                   out, scale, in);
+                                jitter_human_descriptor_binary_no,
+                                out, prefix, in);
   else /* ! binary */
     jitter_human_readable_with (jitter_human_descriptor_decimal,
-                                   jitter_human_descriptor_decimal_no,
-                                   out, scale, in);
+                                jitter_human_descriptor_decimal_no,
+                                out, prefix, in);
 }

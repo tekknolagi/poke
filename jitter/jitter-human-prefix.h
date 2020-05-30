@@ -72,7 +72,7 @@ jitter_human_readable (double *out, const char **scale,
    The following code in the same C block is supposed to use the two automatic
    variables, typically for printing.
    Example:
-     JITTER_HUMAN_READABLE (size, blocks * block_size_in_bytes, true);
+     JITTER_HUMAN_READABLE_ (size, blocks * block_size_in_bytes, true);
      printf ("size: %.2f%sB\n", size, size_prefix); */
 #define JITTER_HUMAN_READABLE_(_jitter_value_name,              \
                                _jitter_value_exp,               \
