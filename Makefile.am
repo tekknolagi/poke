@@ -304,6 +304,7 @@ lib_libjitterutility__partial_la_SOURCES = \
   jitter/jitter-hash.h jitter/jitter-hash.c jitter/jitter-hash-random-table.c \
   jitter/jitter-heap.h jitter/jitter-heap.c \
   jitter/jitter-heap-debug.h jitter/jitter-heap-debug.c \
+  jitter/jitter-human-prefix.h jitter/jitter-human-prefix.c \
   jitter/jitter-list.h jitter/jitter-list.c \
   jitter/jitter-parse-int.h jitter/jitter-parse-int.c \
   jitter/jitter-print-binary.h jitter/jitter-print-binary.c \
@@ -327,6 +328,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-hash.h \
   jitter/jitter-heap.h \
   jitter/jitter-heap-debug.h \
+  jitter/jitter-human-prefix.h \
   jitter/jitter-list.h \
   jitter/jitter-missing.h \
   jitter/jitter-parse-int.h \
