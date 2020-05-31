@@ -65,15 +65,7 @@ static const size_t jitter_human_descriptor_decimal_no
    but for binary prefixes. */
 static const struct jitter_human_descriptor
 jitter_human_descriptor_binary [] =
-  {{1 / 1024. / 1024. / 1024. / 1024. / 1024. / 1024. / 1024. / 1024., "yi"},
-   {1 / 1024. / 1024. / 1024. / 1024. / 1024. / 1024. / 1024.,         "zi"},
-   {1 / 1024. / 1024. / 1024. / 1024. / 1024. / 1024.,                 "ai"},
-   {1 / 1024. / 1024. / 1024. / 1024. / 1024.,                         "fi"},
-   {1 / 1024. / 1024. / 1024. / 1024.,                                 "pi"},
-   {1 / 1024. / 1024. / 1024.,                                         "ni"},
-   {1 / 1024. / 1024.,                                                 "ui"},
-   {1 / 1024.,                                                         "mi"},
-   {1,                                                                 ""},
+  {{1,                                                                 ""},
    {1024.,                                                             "ki"},
    {1024. * 1024.,                                                     "Mi"},
    {1024. * 1024. * 1024.,                                             "Gi"},
@@ -137,11 +129,9 @@ jitter_human_readable (double *out, const char **prefix,
     {
       jitter_human_readable (out, prefix, - in, binary);
       * out = - * out;
-      return;
     }
-
   /* If we arrived here in is non-negative. */
-  if (binary)
+  else if (binary)
     jitter_human_readable_with (jitter_human_descriptor_binary,
                                 jitter_human_descriptor_binary_no,
                                 out, prefix, in);
