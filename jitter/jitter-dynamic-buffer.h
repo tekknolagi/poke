@@ -1,6 +1,6 @@
 /* Jitter: dynamic buffer data structure header.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2020 Luca Saiu
    Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
@@ -41,7 +41,7 @@
    of each element is *not* stored within the data structure, and the user has
    to keep track of such information if needed.
 
-   The dynamically memory region is allocated with malloc , entails some
+   The dynamically memory region is allocated with malloc , which entails some
    alignment restrictions.  No such constraint applies to individual elements,
    which are allocated as demanded by the user without any added padding. */
 
@@ -205,5 +205,80 @@ jitter_dynamic_buffer_extract (struct jitter_dynamic_buffer *db)
 void *
 jitter_dynamic_buffer_extract_trimmed (struct jitter_dynamic_buffer *db)
   __attribute__ ((nonnull (1), returns_nonnull));
+
+
+
+
+/* Macro API.
+ * ************************************************************************** */
+
+/* Some of the functality above is critical for efficiency in some conditions,
+   for example where a dynamic buffer is used as a stack in a tight loop.
+   This is a implementation of some the same functionality provided above,
+   where at least the common fast path will be inlined. */
+
+/* Expand to an expression evaluating to the used size in bytes of the dynamic
+   buffer pointed by the result of the given expression.  
+   The argument may be evaluated more than once. */
+#define JITTER_DYNAMIC_BUFFER_USED_SIZE(_jitter_dynamic_buffer_p)  \
+  ((_jitter_dynamic_buffer_p)->used_size)
+
+/* Expand to a statement changing the used size in bytes of the dynamic buffer
+   pointed by the result of the evaluation of _jitter_dynamic_buffer to be the
+   result of _jitter_dynamic_buffer_new_used_size_in_bytes .  
+   This never performs a reallocation, and therefore is only safe to use to
+   shrink a buffer, and not to grow it.
+   The arguments may be evaluated more than once. */
+#define JITTER_DYNAMIC_BUFFER_REDUCE_USED_SIZE(             \
+   _jitter_dynamic_buffer_p,                                \
+   _jitter_dynamic_buffer_new_used_size_in_bytes)           \
+  do                                                        \
+    {                                                       \
+      (_jitter_dynamic_buffer_p)->used_size                 \
+        = (_jitter_dynamic_buffer_new_used_size_in_bytes);  \
+    }                                                       \
+  while (false)
+
+/* Expand to a statemant which:
+   - evaluates the expression _jitter_dynamic_buffer_p_exp , which must have
+   type struct jitter_dynamic_buffer * , and the expression
+   _jitter_dynamic_buffer_new_element_value_p , which must have as type a
+   pointer to _jitter_dynamic_buffer_new_element_type ;
+   - then pushes a copy of the object pointed by the result of
+   _jitter_dynamic_buffer_new_element_value_p into the dynamic buffer pointed by
+   the result of _jitter_dynamic_buffer_p_exp .
+   The expansion involves no function calls in the common fast path for which
+   it is optimised. */
+#define JITTER_DYNAMIC_BUFFER_PUSH(_jitter_dynamic_buffer_p_exp,                \
+                                   _jitter_dynamic_buffer_new_element_type,     \
+                                   _jitter_dynamic_buffer_new_element_value_p)  \
+  do                                                                            \
+    {                                                                           \
+      struct jitter_dynamic_buffer *_jitter_dynamic_buffer_p                    \
+        = (_jitter_dynamic_buffer_p_exp);                                       \
+      size_t _jitter_dynamic_buffer_new_element_size                            \
+        = sizeof (_jitter_dynamic_buffer_new_element_type);                     \
+      size_t _jitter_dynamic_buffer_p_old_allocated_size                        \
+        = _jitter_dynamic_buffer_p->allocated_size;                             \
+      size_t _jitter_dynamic_buffer_p_old_used_size                             \
+        = _jitter_dynamic_buffer_p->used_size;                                  \
+      size_t _jitter_dynamic_buffer_p_new_used_size                             \
+        = (_jitter_dynamic_buffer_p_old_used_size                               \
+           + _jitter_dynamic_buffer_new_element_size);                          \
+      if (__builtin_expect (_jitter_dynamic_buffer_p_new_used_size              \
+                            > _jitter_dynamic_buffer_p_old_allocated_size,      \
+                            false))                                             \
+        jitter_dynamic_buffer_reserve                                           \
+           (_jitter_dynamic_buffer_p,                                           \
+            _jitter_dynamic_buffer_new_element_size);                           \
+      else                                                                      \
+        _jitter_dynamic_buffer_p->used_size +=                                  \
+          _jitter_dynamic_buffer_new_element_size;                              \
+      * ((_jitter_dynamic_buffer_new_element_type *)                            \
+         ((char *) _jitter_dynamic_buffer_p->region                             \
+          + _jitter_dynamic_buffer_p_old_used_size))                            \
+         = * (_jitter_dynamic_buffer_new_element_value_p);                      \
+    }                                                                           \
+  while (false)
 
 #endif // #ifndef JITTER_DYNAMIC_BUFFER_H_
