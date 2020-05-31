@@ -125,9 +125,7 @@ jitter_human_readable (double *out, const char **prefix,
                        double in,
                        bool binary)
 {
-  const struct jitter_human_descriptor *descriptors;
-  size_t descriptors_no;
-  /* Zero or never require any prefixes. */
+  /* Zero does not require any prefix. */
   if (in == 0)
     {
       * out = 0;
