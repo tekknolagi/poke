@@ -1,6 +1,6 @@
 /* Jitter: doubly linked list as CPP macros: header.
 
-   Copyright (C) 2018 Luca Saiu
+   Copyright (C) 2018, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -122,19 +122,19 @@ struct jitter_list_header
 /* Expand to a sequence of local variable declarations for links and headers, to
    be used in other macros here.  The expansion is meant as part of a larger
    block, and not protected with do..while (false). */
-#define JITTER_LIST_LOCALS_(item_struct_name, item_field_name, header_p,  \
-                            item_p)                                       \
-  struct item_struct_name * const _item __attribute__ ((unused))          \
-    = (item_p);                                                           \
-  struct item_struct_name * const _old_previous __attribute__ ((unused))  \
-    = _item->item_field_name.previous;                                    \
-  struct item_struct_name * const _old_next __attribute__ ((unused))      \
-    = _item->item_field_name.next;                                        \
-  struct jitter_list_header * const _header __attribute__ ((unused))      \
-    = (header_p);                                                         \
-  struct item_struct_name * const _old_first __attribute__ ((unused))     \
-    = _header->first;                                                     \
-  struct item_struct_name * const _old_last __attribute__ ((unused))      \
+#define _JITTER_LIST_LOCALS_(item_struct_name, item_field_name, header_p,  \
+                             item_p)                                       \
+  struct item_struct_name * const _item __attribute__ ((unused))           \
+    = (item_p);                                                            \
+  struct item_struct_name * const _old_previous __attribute__ ((unused))   \
+    = _item->item_field_name.previous;                                     \
+  struct item_struct_name * const _old_next __attribute__ ((unused))       \
+    = _item->item_field_name.next;                                         \
+  struct jitter_list_header * const _header __attribute__ ((unused))       \
+    = (header_p);                                                          \
+  struct item_struct_name * const _old_first __attribute__ ((unused))      \
+    = _header->first;                                                      \
+  struct item_struct_name * const _old_last __attribute__ ((unused))       \
     = _header->last;
 
 #define JITTER_LIST_INITIALIZE_HEADER(header_p)                \
@@ -147,52 +147,55 @@ struct jitter_list_header
   while (false)
 
 // Assume that the pointed item does not belong to the list already.
-#define JITTER_LIST_LINK_FIRST(item_struct_name, item_field_name, header_p,     \
-                               item_p)                                          \
-  do                                                                            \
-    {                                                                           \
-      JITTER_LIST_LOCALS_(item_struct_name, item_field_name, header_p, item_p); \
-      _item->item_field_name.previous = NULL;                                   \
-      _item->item_field_name.next = _old_first;                                 \
-      if (_old_first != NULL)                                                   \
-        _old_first->item_field_name.previous = _item;                           \
-      if (_old_last == NULL)                                                    \
-        _header->last = _item;                                                  \
-      _header->first = _item;                                                   \
-    }                                                                           \
+#define JITTER_LIST_LINK_FIRST(item_struct_name, item_field_name, header_p, \
+                               item_p)                                      \
+  do                                                                        \
+    {                                                                       \
+      _JITTER_LIST_LOCALS_ (item_struct_name, item_field_name, header_p,    \
+                            item_p);                                        \
+      _item->item_field_name.previous = NULL;                               \
+      _item->item_field_name.next = _old_first;                             \
+      if (_old_first != NULL)                                               \
+        _old_first->item_field_name.previous = _item;                       \
+      if (_old_last == NULL)                                                \
+        _header->last = _item;                                              \
+      _header->first = _item;                                               \
+    }                                                                       \
   while (false)
 
 // Assume that the pointed item does not belong to the list already.
-#define JITTER_LIST_LINK_LAST(item_struct_name, item_field_name, header_p,      \
-                              item_p)                                           \
-  do                                                                            \
-    {                                                                           \
-      JITTER_LIST_LOCALS_(item_struct_name, item_field_name, header_p, item_p); \
-      _item->item_field_name.previous = _old_last;                              \
-      _item->item_field_name.next = NULL;                                       \
-      if (_old_last != NULL)                                                    \
-        _old_last->item_field_name.next = _item;                                \
-      if (_old_first == NULL)                                                   \
-        _header->first = _item;                                                 \
-      _header->last = _item;                                                    \
-    }                                                                           \
+#define JITTER_LIST_LINK_LAST(item_struct_name, item_field_name, header_p,  \
+                              item_p)                                       \
+  do                                                                        \
+    {                                                                       \
+      _JITTER_LIST_LOCALS_ (item_struct_name, item_field_name, header_p,    \
+                            item_p);                                        \
+      _item->item_field_name.previous = _old_last;                          \
+      _item->item_field_name.next = NULL;                                   \
+      if (_old_last != NULL)                                                \
+        _old_last->item_field_name.next = _item;                            \
+      if (_old_first == NULL)                                               \
+        _header->first = _item;                                             \
+      _header->last = _item;                                                \
+    }                                                                       \
   while (false)
 
 // Assume that the pointed item does belong to the list.
-#define JITTER_LIST_UNLINK_POSSIBLY_AWNE(always_nonempty, item_struct_name,     \
-                                         item_field_name, header_p, item_p)     \
-  do                                                                            \
-    {                                                                           \
-      JITTER_LIST_LOCALS_(item_struct_name, item_field_name, header_p, item_p); \
-      if ((always_nonempty) || _old_previous != NULL)                           \
-        _old_previous->item_field_name.next = _old_next;                        \
-      if ((always_nonempty) || _old_next != NULL)                               \
-        _old_next->item_field_name.previous = _old_previous;                    \
-      if (! (always_nonempty) && _old_first == _item)                           \
-        _header->first = _old_next;                                             \
-      if (! (always_nonempty) && _old_last == _item)                            \
-        _header->last = _old_previous;                                          \
-    }                                                                           \
+#define JITTER_LIST_UNLINK_POSSIBLY_AWNE(always_nonempty, item_struct_name,  \
+                                         item_field_name, header_p, item_p)  \
+  do                                                                         \
+    {                                                                        \
+      _JITTER_LIST_LOCALS_ (item_struct_name, item_field_name, header_p,     \
+                            item_p);                                         \
+      if ((always_nonempty) || _old_previous != NULL)                        \
+        _old_previous->item_field_name.next = _old_next;                     \
+      if ((always_nonempty) || _old_next != NULL)                            \
+        _old_next->item_field_name.previous = _old_previous;                 \
+      if (! (always_nonempty) && _old_first == _item)                        \
+        _header->first = _old_next;                                          \
+      if (! (always_nonempty) && _old_last == _item)                         \
+        _header->last = _old_previous;                                       \
+    }                                                                        \
   while (false)
 
 #define JITTER_LIST_UNLINK(item_struct_name, item_field_name, header_p, item_p) \
@@ -208,24 +211,25 @@ struct jitter_list_header
 // Assume that the pointed item does belong to the list, and that the pointed
 // new items does not.
 // The old item and the new item *are* allowed to share memory.
-#define JITTER_LIST_REPLACE_POSSIBLY_AWNE(always_nonempty, item_struct_name,    \
-                                          item_field_name, header_p, item_p,    \
-                                          new_item_p)                           \
-  do                                                                            \
-    {                                                                           \
-      JITTER_LIST_LOCALS_(item_struct_name, item_field_name, header_p, item_p); \
-      struct item_struct_name * const _new_item = (new_item_p);                 \
-      _new_item->item_field_name.previous = _old_previous;                      \
-      _new_item->item_field_name.next = _old_next;                              \
-      if ((always_nonempty) || _old_previous != NULL)                           \
-        _old_previous->item_field_name.next = _new_item;                        \
-      if ((always_nonempty) || _old_next != NULL)                               \
-        _old_next->item_field_name.previous = _new_item;                        \
-      if (! (always_nonempty) && _old_first == _item)                           \
-        _header->first = _new_item;                                             \
-      if (! (always_nonempty) && _old_last == _item)                            \
-        _header->last = _new_item;                                              \
-    }                                                                           \
+#define JITTER_LIST_REPLACE_POSSIBLY_AWNE(always_nonempty, item_struct_name,  \
+                                          item_field_name, header_p, item_p,  \
+                                          new_item_p)                         \
+  do                                                                          \
+    {                                                                         \
+      _JITTER_LIST_LOCALS_ (item_struct_name, item_field_name, header_p,      \
+                            item_p);                                          \
+      struct item_struct_name * const _new_item = (new_item_p);               \
+      _new_item->item_field_name.previous = _old_previous;                    \
+      _new_item->item_field_name.next = _old_next;                            \
+      if ((always_nonempty) || _old_previous != NULL)                         \
+        _old_previous->item_field_name.next = _new_item;                      \
+      if ((always_nonempty) || _old_next != NULL)                             \
+        _old_next->item_field_name.previous = _new_item;                      \
+      if (! (always_nonempty) && _old_first == _item)                         \
+        _header->first = _new_item;                                           \
+      if (! (always_nonempty) && _old_last == _item)                          \
+        _header->last = _new_item;                                            \
+    }                                                                         \
   while (false)
 
 #define JITTER_LIST_REPLACE(item_struct_name, item_field_name, header_p,  \
@@ -242,22 +246,23 @@ struct jitter_list_header
                                     item_field_name, header_p, item_p,  \
                                     new_item_p)
 
-#define JITTER_LIST_LINK_BEFORE_POSSIBLY_AWNE(always_nonempty,                  \
-                                              item_struct_name,                 \
-                                              item_field_name, header_p,        \
-                                              item_p, new_item_p)               \
-  do                                                                            \
-    {                                                                           \
-      JITTER_LIST_LOCALS_(item_struct_name, item_field_name, header_p, item_p); \
-      struct item_struct_name * const _new_item = (new_item_p);                 \
-      if ((always_nonempty) || _old_previous != NULL)                           \
-        _old_previous->item_field_name.next = _new_item;                        \
-      _new_item->item_field_name.previous = _old_previous;                      \
-      _new_item->item_field_name.next = _item;                                  \
-      _item->item_field_name.previous = _new_item;                              \
-      if (! (always_nonempty) && _old_first == _item)                           \
-        _header->first = _new_item;                                             \
-    }                                                                           \
+#define JITTER_LIST_LINK_BEFORE_POSSIBLY_AWNE(always_nonempty,            \
+                                              item_struct_name,           \
+                                              item_field_name, header_p,  \
+                                              item_p, new_item_p)         \
+  do                                                                      \
+    {                                                                     \
+      _JITTER_LIST_LOCALS_ (item_struct_name, item_field_name, header_p,  \
+                            item_p);                                      \
+      struct item_struct_name * const _new_item = (new_item_p);           \
+      if ((always_nonempty) || _old_previous != NULL)                     \
+        _old_previous->item_field_name.next = _new_item;                  \
+      _new_item->item_field_name.previous = _old_previous;                \
+      _new_item->item_field_name.next = _item;                            \
+      _item->item_field_name.previous = _new_item;                        \
+      if (! (always_nonempty) && _old_first == _item)                     \
+        _header->first = _new_item;                                       \
+    }                                                                     \
   while (false)
 
 #define JITTER_LIST_LINK_BEFORE(item_struct_name, item_field_name, header_p,  \
@@ -275,26 +280,27 @@ struct jitter_list_header
                                         new_item_p)
 
 
-#define JITTER_LIST_LINK_AFTER_POSSIBLY_AWNE(always_nonempty,                   \
-                                             item_struct_name,                  \
-                                             item_field_name, header_p,         \
-                                             item_p, new_item_p)                \
-  do                                                                            \
-    {                                                                           \
-      JITTER_LIST_LOCALS_(item_struct_name, item_field_name, header_p, item_p); \
-      struct item_struct_name * const _new_item = (new_item_p);                 \
-      _item->item_field_name.next = _new_item;                                  \
-      _new_item->item_field_name.previous = _item;                              \
-      _new_item->item_field_name.next = _old_next;                              \
-      if ((always_nonempty) || _old_next != NULL)                               \
-        _old_next->item_field_name.previous = _new_item;                        \
-      if (! (always_nonempty) && _old_last == _item)                            \
-        _header->last = _new_item;                                              \
-    }                                                                           \
+#define JITTER_LIST_LINK_AFTER_POSSIBLY_AWNE(always_nonempty,             \
+                                             item_struct_name,            \
+                                             item_field_name, header_p,   \
+                                             item_p, new_item_p)          \
+  do                                                                      \
+    {                                                                     \
+      _JITTER_LIST_LOCALS_ (item_struct_name, item_field_name, header_p,  \
+                            item_p);                                      \
+      struct item_struct_name * const _new_item = (new_item_p);           \
+      _item->item_field_name.next = _new_item;                            \
+      _new_item->item_field_name.previous = _item;                        \
+      _new_item->item_field_name.next = _old_next;                        \
+      if ((always_nonempty) || _old_next != NULL)                         \
+        _old_next->item_field_name.previous = _new_item;                  \
+      if (! (always_nonempty) && _old_last == _item)                      \
+        _header->last = _new_item;                                        \
+    }                                                                     \
   while (false)
 
 #define JITTER_LIST_LINK_AFTER(item_struct_name, item_field_name, header_p,  \
-                                item_p, new_item_p)                          \
+                               item_p, new_item_p)                           \
   JITTER_LIST_LINK_AFTER_POSSIBLY_AWNE(false, item_struct_name,              \
                                        item_field_name, header_p, item_p,    \
                                        new_item_p)
@@ -302,7 +308,7 @@ struct jitter_list_header
 /* Same as JITTER_LIST_LINK_AFTER, but assume that the list is
    always-nonempty. */
 #define JITTER_LIST_LINK_AFTER_NONEMPTY(item_struct_name, item_field_name,  \
-                                         header_p, item_p, new_item_p)      \
+                                        header_p, item_p, new_item_p)       \
   JITTER_LIST_LINK_AFTER_POSSIBLY_AWNE(true, item_struct_name,              \
                                        item_field_name, header_p, item_p,   \
                                        new_item_p)
