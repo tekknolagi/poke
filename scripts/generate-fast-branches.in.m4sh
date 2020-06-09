@@ -1,4 +1,4 @@
-#!@SHELL_OR_BIN_SH@
+#!@JITTER_SHELL@
 ## An -*- sh -*- script (to be preprocessed by M4sh and then by config.status:
 ## if the file extension of this file is not .in.m4sh then you are not looking
 ## at the actual source), part of Jitter.
