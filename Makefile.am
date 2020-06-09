@@ -432,7 +432,8 @@ if JITTER_HAVE_AUTOM4TE
 .in.m4sh.in:
 	$(AUTOM4TE) \
           --language=M4sh --prepend-include="$(top_srcdir)/m4-utility" \
-          --output="$@" "$^"
+          --output="$@" "$^" \
+          && "$(top_srcdir)/amend-autom4te-output" "$@"
 # Second part: explicit dependencies.  At least the body can be factored thanks
 # to the suffix rule.
 bin/jitter-config.in: $(top_srcdir)/m4-utility/jitter-script.m4sh
@@ -1751,6 +1752,7 @@ endif # JITTER_ENABLE_DISPATCH_NO_THREADING
 
 EXTRA_DIST += \
   NO-WARRANTY \
+  amend-autom4te-output \
   bootstrap bootstrap.conf \
   build-aux/git-version-gen \
   build-aux/gitlog-to-changelog \
