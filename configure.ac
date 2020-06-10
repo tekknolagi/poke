@@ -290,13 +290,18 @@ else
 fi
 
 # Installed shell scripts will have to work with a Bourne shell on the host
-# system.  In case of native compilation that is simply @CONFIG_SHELL@ as
-# detected here, but for cross-compiled installations we can only guess.
+# system.  In case of native compilation that is simply @SHELL@ as detected
+# here (AS_INIT , called by AC_INIT , sets SHELL to a sensible value), but
+# for cross-compiled installations we can only guess.
+AC_MSG_CHECKING([what shell scripts should use in shebang lines])
 if test "x$jitter_cross_compiling" = "xno"; then
-  AC_SUBST([JITTER_SHELL], [$CONFIG_SHELL])
+  AC_SUBST([JITTER_SHELL], [$SHELL])
+  jitter_comment_about_JITTER_SHELL=''
 else
   AC_SUBST([JITTER_SHELL], [/bin/sh])
+  jitter_comment_about_JITTER_SHELL=' (guessed, for cross-compiling)'
 fi
+AC_MSG_RESULT([$JITTER_SHELL$jitter_comment_about_JITTER_SHELL])
 
 # We have preprocessed assembly files (for some architectures).
 AM_PROG_AS
