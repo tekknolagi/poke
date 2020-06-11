@@ -22,19 +22,20 @@
 # ################################################################
 
 # I want my portable shell scripts to start with an appropriate shebang line,
-# referring the shell JITTER_SHELL expands to; the value for JITTER_SHELL
-# is computed by configure and then replaced by config.status .
+# referring the shell that JITTER_SHEBANG expands to; the value for the
+# substitution JITTER_SHEBANG is computed by configure and then replaced by
+# config.status .
 # The problem with this design is that I cannot just write a shebang line
-# using @JITTER_SHELL@ at the beginning of my source scripts ending in
+# using @JITTER_SHEBANG@ at the beginning of my source scripts ending in
 # .in.m4sh : such a line would not reproduced in the output because of how
 # AS_INIT works: everything in the source before the AS_INIT call (in
 # m4-utility/jitter-script.m4sh , included in my script sources via m4_include
 # ) expands to nothing in the output .in files.
 #
 # In order to work around this issue here I am prepending a comment to what
-# autom4te produces, the first line being of course a shebang referring
-# @JITTER_SHELL@ as the shell; config.status will later substitute
-# @JITTER_SHELL@ with the correct value.
+# autom4te produces, the first line being of course the approprieate shebang
+# as per @JITTER_SHEBANG@ ; config.status will later substitute @JITTER_SHEBANG@
+# with the correct value.
 # Down below in the expansion there will still be the default shebang produced
 # by autom4te , but that will be ignored as an ordinary comment.
 
@@ -60,7 +61,7 @@ handle_gnu_option ()
     cat <<EOF
 Usage: $0 FILE|OPTION
 Amend a shell script template (ending in .in , and generated from an .in.m4sh
-source) by prepending a shebang line using @JITTER_SHELL@ as the shell.
+source) by prepending a shebang line using @JITTER_SHEBANG@ .
 
 Options:
   --help                       print this help
@@ -101,7 +102,7 @@ handle_gnu_option ${file}
 # ################################################################
 
 mv "${file}" "${file}.tmp" \
-  && echo '#!@JITTER_SHELL@' \
+  && echo '@JITTER_SHEBANG@' \
        > "${file}" \
   && echo "# This machine-generated portable shell script is part of Jitter." \
        >> "${file}" \

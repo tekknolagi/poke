@@ -289,19 +289,42 @@ else
    jitter_cross_compiling=yes
 fi
 
+# I never test on weird systems not supporting shebangs.
+AC_SYS_INTERPRETER
+if test "x$interpval" != "xyes"; then
+   AC_MSG_WARN([your system doesn't support shebang.  Trying to go on anyway])
+fi
+
 # Installed shell scripts will have to work with a Bourne shell on the host
-# system.  In case of native compilation that is simply @SHELL@ as detected
+# system.  In case of native compilation that is simply $SHELL as detected
 # here (AS_INIT , called by AC_INIT , sets SHELL to a sensible value), but
 # for cross-compiled installations we can only guess.
-AC_MSG_CHECKING([what shell scripts should use in shebang lines])
-if test "x$jitter_cross_compiling" = "xno"; then
-  AC_SUBST([JITTER_SHELL], [$SHELL])
-  jitter_comment_about_JITTER_SHELL=''
+AC_MSG_CHECKING([what shell scripts should use as their shebang line])
+jitter_warn_about_shebang='no'
+jitter_shebang_prefix='#! '
+if test "x$interpval" != "xyes"; then
+  AC_SUBST([JITTER_SHEBANG], [# Shebang unsupported on this system])
+  jitter_comment_about_JITTER_SHEBANG=' (very primitive shell -- untested)'
+elif test "x$jitter_cross_compiling" = "xno"; then
+  if test "x$SHELL" != 'x'; then
+    AC_SUBST([JITTER_SHEBANG], [$jitter_shebang_prefix$SHELL])
+    jitter_comment_about_JITTER_SHEBANG=''
+  else
+    # Fallback case for systems where AS_INIT for some reason fails to set
+    # $SHELL to a resaonable value.  This should not happen.
+    AC_SUBST([JITTER_SHEBANG], [$jitter_shebang_prefix/bin/sh])
+    jitter_comment_about_JITTER_SHEBANG=' (guessed, as $SHELL is empty)'
+    jitter_warn_about_shebang='yes'
+  fi
 else
-  AC_SUBST([JITTER_SHELL], [/bin/sh])
-  jitter_comment_about_JITTER_SHELL=' (guessed, for cross-compiling)'
+  AC_SUBST([JITTER_SHEBANG], [$jitter_shebang_prefix/bin/sh])
+  jitter_comment_about_JITTER_SHEBANG=' (guessed, for cross-compiling)'
 fi
-AC_MSG_RESULT([$JITTER_SHELL$jitter_comment_about_JITTER_SHELL])
+AC_MSG_RESULT([$JITTER_SHEBANG$jitter_comment_about_JITTER_SHEBANG])
+if test "x$jitter_warn_about_shebang" != 'xno'; then
+  AC_MSG_WARN([the Autoconf logic failed to find a sensible value for SHELL;
+this should never happen.  Trying to proceed anyway with a guess])
+fi
 
 # We have preprocessed assembly files (for some architectures).
 AM_PROG_AS
@@ -429,12 +452,6 @@ fi
 
 # Check for system characteristics.
 ################################################################
-
-# I never test on weird systems not supporting shebangs.
-AC_SYS_INTERPRETER
-if test "x$interpval" != "xyes"; then
-   AC_MSG_WARN([your system doesn't support shebang.  Trying to go on anyway])
-fi
 
 # I never test on systems limiting file name length to 14 characters.
 AC_SYS_LONG_FILE_NAMES
