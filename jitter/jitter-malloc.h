@@ -1,6 +1,6 @@
 /* Jitter: safe malloc wrappers.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -46,16 +46,22 @@
  * ************************************************************************** */
 
 /* Allocate char_no chars with malloc and return its result, as long as it is
-   non-NULL; otherwise fail fatally. */
+   non-NULL (or the requested size is zero); fail fatally if allocation
+   fails.
+   This is a trivial wrapper around malloc which fails fatally on error, instead
+   of returning a result to check.  */
 void *
 jitter_xmalloc (size_t char_no)
-  __attribute__ ((malloc, returns_nonnull));
+  __attribute__ ((malloc));
 
 /* Allocate char_no chars with realloc in place of the pointed buffer and return
-   realloc's result, as long as it is non-NULL; otherwise fail fatally. */
+   realloc's result, as long as it is non-NULL (or the new requested size is
+   zero); fail fatally on reallocation failure.
+   This is a trivial wrapper around realloc which fails fatally on error,
+   instead of returning a result to check.  */
 void *
 jitter_xrealloc (void *previous, size_t char_no)
-  __attribute__ ((returns_nonnull, warn_unused_result));
+  __attribute__ ((warn_unused_result));
 
 
 

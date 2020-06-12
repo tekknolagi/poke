@@ -1,6 +1,6 @@
 /* Jitter: safe malloc wrappers.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -32,6 +32,13 @@
 void *
 jitter_xmalloc (size_t size_in_chars)
 {
+  /* Special case: return NULL if the requested size is zero.  The check for
+     NULL below would fail without this extra check. */
+  if (size_in_chars == 0)
+    return NULL;
+
+  /* If we arrived here then size_in_chars is not zero. */
+
   void *res = malloc (size_in_chars);
   if (res == NULL)
     jitter_fatal ("could not allocate %lu bytes\n",
@@ -43,6 +50,16 @@ jitter_xmalloc (size_t size_in_chars)
 void *
 jitter_xrealloc (void *previous, size_t size_in_chars)
 {
+  /* See the comment in jitter_xmalloc above.  Again I have to also
+     support the case where size_in_chars is zero. */
+  if (size_in_chars == 0)
+    {
+      free (previous);
+      return NULL;
+    }
+
+  /* If we arrived here then size_in_chars is not zero. */
+
   void *res = realloc (previous, size_in_chars);
   if (res == NULL)
     jitter_fatal ("could not reallocate %lu bytes\n",
