@@ -1,6 +1,6 @@
 /* Jitter: dynamic buffer data structure.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -159,6 +159,23 @@ size_t
 jitter_dynamic_buffer_size (const struct jitter_dynamic_buffer *db)
 {
   return db->used_size;
+}
+
+void
+jitter_dynamic_buffer_compact (struct jitter_dynamic_buffer *db,
+                               size_t wiggle_byte_no)
+{
+  /* Do nothing if there are less than wiggle_byte_no bytes free. */
+  if (db->allocated_size - db->used_size <= wiggle_byte_no)
+    return;
+
+  /* If we arrived here then the size is actually shrinking. */
+    
+  /* Make the allocated size equal to the minimum possible, which is to say the
+     number of bytes currently in use, plus the wiggle space.  Then resize the
+     buffer.  jitter_xmalloc is intended to also supports a size of zero. */
+  db->allocated_size = db->used_size + wiggle_byte_no;
+  db->region = jitter_xrealloc (db->region, db->allocated_size);
 }
 
 

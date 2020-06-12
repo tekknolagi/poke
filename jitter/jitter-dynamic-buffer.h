@@ -160,6 +160,21 @@ size_t
 jitter_dynamic_buffer_size (const struct jitter_dynamic_buffer *db)
   __attribute__ ((nonnull (1), pure));
 
+/* Release part of the allocated but not currently used memory for the pointed
+   dynamic buffer, only leaving wiggle_byte_no bytes allocated but not used
+   after the currently used data.  Do nothing if the buffer already has less
+   than wiggle_byte_no bytes available.
+   This does not change the stored data in the used part.
+   Rationale: This function is intended to be called periodically after the
+   dynamic buffer has been pushed and popped to many times, which may have left
+   the allocated memory much larger than needed because of some temporary peak
+   of usage.  The wiggle arguments serves to avoid another resize in a very
+   short time, when the buffer is expected to grow again. */
+void
+jitter_dynamic_buffer_compact (struct jitter_dynamic_buffer *db,
+                               size_t wiggle_byte_no)
+  __attribute__ ((nonnull (1)));
+
 
 
 
