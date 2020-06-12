@@ -100,6 +100,8 @@
  * ************************************************************************** */
 
 /* See configure.ac for the meaning of each macro. */
+
+/* C functions or features. */
 #undef JITTER_HAVE_MMAP_ANONYMOUS
 #undef JITTER_HAVE_SETRLIMIT
 #undef JITTER_HAVE_ALARM
@@ -107,6 +109,20 @@
 #undef JITTER_HAVE_POPEN
 #undef JITTER_HAVE_SIGACTION
 #undef JITTER_HAVE_CLOCK_GETTIME
+#undef JITTER_HAVE_SYSCONF
+#undef JITTER_HAVE_GETPAGESIZE
+
+/* Arguments for sysconf. */
+#undef JITTER_HAVE__SC_PAGESIZE
+#undef JITTER_HAVE__SC_PHYS_PAGES
+#undef JITTER_HAVE__SC_AVPHYS_PAGES
+#undef JITTER_HAVE__SC_NPROCESSORS_CONF
+#undef JITTER_HAVE__SC_NPROCESSORS_ONLN
+#undef JITTER_HAVE__SC_LEVEL1_ICACHE_SIZE
+#undef JITTER_HAVE__SC_LEVEL1_DCACHE_SIZE
+#undef JITTER_HAVE__SC_LEVEL2_CACHE_SIZE
+#undef JITTER_HAVE__SC_LEVEL3_CACHE_SIZE
+#undef JITTER_HAVE__SC_LEVEL4_CACHE_SIZE
 
 
 /* External library availability.

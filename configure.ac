@@ -335,6 +335,11 @@ if test "$GCC" = ""; then
    AC_MSG_WARN([not using GCC.  Trying to go on anyway])
 fi
 
+# Checks for C type support.
+AC_TYPE_LONG_LONG_INT
+AC_TYPE_UNSIGNED_LONG_LONG_INT
+AC_TYPE_LONG_DOUBLE
+
 # Checks for C type sizes.
 AC_CHECK_SIZEOF([void *])
 AC_CHECK_SIZEOF([short])
@@ -344,7 +349,6 @@ AC_CHECK_SIZEOF([long long])
 AC_CHECK_SIZEOF([float])
 AC_CHECK_SIZEOF([double])
 AC_CHECK_SIZEOF([long double])
-AC_TYPE_LONG_DOUBLE
 AC_TYPE_SIZE_T
 
 # By definition we will take the size of a pointer as the host machine "word
@@ -903,11 +907,25 @@ if test "x$ac_cv_have_section_note_gnu_stack" = "xyes"; then
 fi
 
 
-# Check for specific functions in the C library.
-################################################################
+# Check for specific functions or "declarations" in the C library.
+##################################################################
 
-# Check for functions letting me know the page size.
+# Check for functions letting me know the page size and other system
+# parameters.
 AC_CHECK_FUNCS([sysconf getpagesize])
+
+# Check for possible arguments to sysconf.  This defines, for every SYMBOL which
+# is "declared", a shell variable named ac_cv_have_decl_SYMBOL to "yes", where
+# SYMBOL is adapted by capitalizing lower-case letters and replacing each
+# non-alphanumeric character with an underscore.
+AC_CHECK_DECLS([_SC_PAGESIZE,
+                _SC_PHYS_PAGES, _SC_AVPHYS_PAGES,
+                _SC_NPROCESSORS_CONF, _SC_NPROCESSORS_ONLN,
+                _SC_LEVEL1_ICACHE_SIZE, _SC_LEVEL1_DCACHE_SIZE,
+                _SC_LEVEL2_CACHE_SIZE,
+                _SC_LEVEL3_CACHE_SIZE,
+                _SC_LEVEL4_CACHE_SIZE,],,,
+               [[#include <unistd.h>]])
 
 # Check for functions letting me allocate executable space.
 AC_CHECK_FUNCS([mmap64 mmap mremap munmap])
@@ -2175,8 +2193,32 @@ jitter_define_prefixed_feature_macro([ac_cv_func_popen], [yes],
                                      [HAVE_POPEN])
 jitter_define_prefixed_feature_macro([ac_cv_func_sigaction], [yes],
                                      [HAVE_SIGACTION])
+jitter_define_prefixed_feature_macro([ac_cv_func_sysconf], [yes],
+                                     [HAVE_SYSCONF])
+jitter_define_prefixed_feature_macro([ac_cv_func_getpagesize], [yes],
+                                     [HAVE_GETPAGESIZE])
 jitter_define_prefixed_feature_macro([ac_cv_func_clock_gettime], [yes],
                                      [HAVE_CLOCK_GETTIME])
+jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_PAGESIZE], [yes],
+                                     [HAVE__SC_PAGESIZE])
+jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_PHYS_PAGES], [yes],
+                                     [HAVE__SC_PHYS_PAGES])
+jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_AVPHYS_PAGES], [yes],
+                                     [HAVE__SC_AVPHYS_PAGES])
+jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_NPROCESSORS_CONF], [yes],
+                                     [HAVE__SC_NPROCESSORS_CONF])
+jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_NPROCESSORS_ONLN], [yes],
+                                     [HAVE__SC_NPROCESSORS_ONLN])
+jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_LEVEL1_ICACHE_SIZE], [yes],
+                                     [HAVE__SC_LEVEL1_ICACHE_SIZE])
+jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_LEVEL1_DCACHE_SIZE], [yes],
+                                     [HAVE__SC_LEVEL1_DCACHE_SIZE])
+jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_LEVEL2_CACHE_SIZE], [yes],
+                                     [HAVE__SC_LEVEL2_CACHE_SIZE])
+jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_LEVEL3_CACHE_SIZE], [yes],
+                                     [HAVE__SC_LEVEL3_CACHE_SIZE])
+jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_LEVEL4_CACHE_SIZE], [yes],
+                                     [HAVE__SC_LEVEL4_CACHE_SIZE])
 
 
 # Output.
