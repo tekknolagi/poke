@@ -924,7 +924,7 @@ AC_CHECK_DECLS([_SC_PAGESIZE,
                 _SC_LEVEL1_ICACHE_SIZE, _SC_LEVEL1_DCACHE_SIZE,
                 _SC_LEVEL2_CACHE_SIZE,
                 _SC_LEVEL3_CACHE_SIZE,
-                _SC_LEVEL4_CACHE_SIZE,],,,
+                _SC_LEVEL4_CACHE_SIZE],,,
                [[#include <unistd.h>]])
 
 # Check for functions letting me allocate executable space.
