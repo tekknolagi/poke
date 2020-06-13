@@ -1,6 +1,7 @@
 /* Jitter: debugging functions for jitter-heap.
 
    Copyright (C) 2018 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -81,12 +82,12 @@ jitter_heap_debug_block (struct jitter_heap_block *p)
               ((unsigned long) (payload_size + JITTER_HEAP_HEADER_OVERHEAD))
               );
       unsigned misalignment;
-      if ((misalignment = (unsigned long)h % JITTER_HEAP_ALIGNMENT) != 0)
+      if ((misalignment = (jitter_uint) h % JITTER_HEAP_ALIGNMENT) != 0)
         {
           printf ("  ! HEADER MISALIGNED by %uB\n", misalignment);
           res = 1;
         }
-      if ((misalignment = (unsigned long) JITTER_HEAP_THING_TO_PAYLOAD (h)
+      if ((misalignment = (jitter_uint) JITTER_HEAP_THING_TO_PAYLOAD (h)
            % JITTER_HEAP_ALIGNMENT) != 0)
         {
           printf ("  ! PAYLOAD MISALIGNED by %uB\n", misalignment);

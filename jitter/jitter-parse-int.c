@@ -1,6 +1,7 @@
 /* Jitter utility: convenient integer parsing.
 
    Copyright (C) 2017 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -23,6 +24,7 @@
 #include <assert.h>
 
 #include <jitter/jitter.h>
+#include <jitter/jitter-fatal.h>
 #include "jitter-parse-int.h"
 
 
@@ -55,7 +57,10 @@ jitter_string_to_long_long_unsafe_radix (const char *s, unsigned radix)
   jitter_long_long res;
   int conversion_result
     = jitter_string_to_long_long_inconvenient_radix (s, &res, radix);
-  assert (conversion_result == 0);
+  if (conversion_result != 0)
+    jitter_fatal ("could not convert to jitter_long_long with radix %u "
+                  " (this should never happen)",
+                  radix);
   return res;
 }
 
