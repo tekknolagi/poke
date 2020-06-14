@@ -142,11 +142,13 @@ jitter_dynamic_buffer_pop_const (struct jitter_dynamic_buffer *db,
                                  size_t chars_to_release)
   __attribute__ ((returns_nonnull, nonnull (1)));
 
+// FIXME: rationalise name.  This does not return a pointer to char !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 /* Return a pointer to the first unused byte in the dynamic memory region. */
 void*
 jitter_dynamic_buffer_first_unused_char (const struct jitter_dynamic_buffer *db)
   __attribute__ ((returns_nonnull, nonnull (1), pure));
 
+// FIXME: rationalise name.  This does not return a pointer to char !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 /* Like jitter_dynamic_first_unused_char , but return a pointer to constant
    memory. */
 const void*
@@ -231,6 +233,26 @@ jitter_dynamic_buffer_extract_trimmed (struct jitter_dynamic_buffer *db)
    for example where a dynamic buffer is used as a stack in a tight loop.
    This is a implementation of some the same functionality provided above,
    where at least the common fast path will be inlined. */
+
+/* Just like jitter_dynamic_buffer_to_const_pointer .  Expand to an expression,
+   possibly evaluating its argument multiple time.  */
+#define JITTER_DYNAMIC_BUFFER_TO_CONST_POINTER(jitter_dynamic_buffer_p)  \
+  ((const char*)                                                         \
+   ((jitter_dynamic_buffer_p)->region))
+
+/* Just like JITTER_DYNAMIC_BUFFER_TO_CONST_POINTER , but expand to a void *
+   expression instead of a char * expression to allow for implicit type
+   conversion in user code. */
+#define JITTER_DYNAMIC_BUFFER_TO_CONST_VOID_POINTER(jitter_dynamic_buffer_p)  \
+  ((const void*)                                                              \
+   (JITTER_DYNAMIC_BUFFER_TO_CONST_POINTER (jitter_dynamic_buffer_p)))
+
+/* Just like jitter_dynamic_buffer_first_unused_char_const .  Expand to an
+   expression, possibly evaluating its argument multiple time. */
+#define JITTER_DYNAMIC_BUFFER_FIRST_UNUSED_CHAR_CONST(jitter_dynamic_buffer_p)  \
+  ((const void*)                                                                \
+   ((jitter_dynamic_buffer_p)->region                                           \
+    + (jitter_dynamic_buffer_p)->used_size))
 
 /* Expand to an expression evaluating to the used size in bytes of the dynamic
    buffer pointed by the result of the given expression.  
