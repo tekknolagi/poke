@@ -35,7 +35,13 @@
    not use "" characters for sectioning. */
 
 
-/* C types and data representation: type availability, size, endianness.
+/* Data representation.
+ * ************************************************************************** */
+
+#undef JITTER_WORDS_BIGENDIAN
+
+
+/* C types and data representation: type availability, size, alignment.
  * ************************************************************************** */
 
 #undef JITTER_HAVE_LONG_LONG_INT
@@ -52,7 +58,16 @@
 #undef JITTER_SIZEOF_DOUBLE
 #undef JITTER_SIZEOF_LONG_DOUBLE
 
-#undef JITTER_WORDS_BIGENDIAN
+#undef JITTER_ALIGNOF_VOID_P
+#undef JITTER_ALIGNOF_VOID_P_P
+#undef JITTER_ALIGNOF_SHORT
+#undef JITTER_ALIGNOF_INT
+#undef JITTER_ALIGNOF_LONG
+#undef JITTER_ALIGNOF_LONG_LONG
+
+#undef JITTER_ALIGNOF_FLOAT
+#undef JITTER_ALIGNOF_DOUBLE
+#undef JITTER_ALIGNOF_LONG_DOUBLE
 
 
 /* Machine features.

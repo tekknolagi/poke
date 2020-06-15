@@ -1,6 +1,6 @@
 /* Jitter: general-purpose bitwise macro header.
 
-   Copyright (C) 2018, 2019 Luca Saiu
+   Copyright (C) 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -354,5 +354,45 @@
                                   (_jitter_discriminand),         \
                                   (_jitter_else),                 \
                                   (_jitter_then))
+
+
+
+
+/* Pointers and misalignment.
+ * ************************************************************************** */
+
+/* A word-sized bitmask having 1 bits on the right, in the positions which would
+   make a pointer to a word-sized datum be misaligned. */
+#define JITTER_POINTER_MISALIGNMENT_BITS_MASK            \
+  ((((jitter_uint) 1) << JITTER_LG_BYTES_PER_WORD) - 1)
+
+/* A bit mask which is just the one's complement of
+   JITTER_POINTER_MISALIGNMENT_BITS_MASK , having the low bits set to 1 instead
+   of the high bits. */
+#define JITTER_POINTER_NON_MISALIGNMENT_BITS_MASK  \
+  (~ JITTER_POINTER_SET_LOW_BITS_MASK)
+
+/* Given an expression evaluating to a pointer or a word-sized bitmask expand to
+   an expression evaluating to the given expression converted to a bitmask and
+   with the lowest bits masked off so as to form a correct bit configuration for
+   a pointer to an aligned word-sized datum.
+   If the argument is constant then the expansion is constant.
+   This definition is conditional and avoids actually performing the mask
+   operation if pointers are guaranteed to be always aligned by the machine
+   or the ABI.
+   See jitter/jitter-pointer-set.h for the reason why this bizarre macro is
+   in fact useful. */
+#if JITTER_ALIGNOF_VOID_P_P < JITTER_BYTES_PER_WORD
+# define JITTER_UNMISALIGNED_BITMASK(_jitter_uint)                 \
+    /* On this configuration there is the risk of actually having  \
+       misaligned pointers: mask off the low bits. */              \
+    ((jitter_uint) (_jitter_uint) &                                \
+     JITTER_POINTER_NON_MISALIGNMENT_BITS_MASK)
+#else
+# define JITTER_UNMISALIGNED_BITMASK(_jitter_uint)                \
+    /* On this configuration pointers are always aligned: do not  \
+       mask. */                                                   \
+    ((jitter_uint) (_jitter_uint))
+#endif
 
 #endif // #ifndef JITTER_BITWISE_H_

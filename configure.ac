@@ -351,6 +351,20 @@ AC_CHECK_SIZEOF([double])
 AC_CHECK_SIZEOF([long double])
 AC_TYPE_SIZE_T
 
+# Checks for C type alignment.  Checking for those at configure time is more
+# convenient than checking for __alignof__ and then invent some default where
+# it is not supported.  I think I could live with those not being constant at
+# CPP time, but why not.
+AC_CHECK_ALIGNOF([void *])
+AC_CHECK_ALIGNOF([void * *])
+AC_CHECK_ALIGNOF([short])
+AC_CHECK_ALIGNOF([int])
+AC_CHECK_ALIGNOF([long])
+AC_CHECK_ALIGNOF([long long])
+AC_CHECK_ALIGNOF([float])
+AC_CHECK_ALIGNOF([double])
+AC_CHECK_ALIGNOF([long double])
+
 # By definition we will take the size of a pointer as the host machine "word
 # size".  This information is also used in the test suite, so define a
 # substitution as well.
@@ -2139,6 +2153,17 @@ jitter_define_prefixed_macro([ac_cv_sizeof_long_long],   [SIZEOF_LONG_LONG])
 jitter_define_prefixed_macro([ac_cv_sizeof_float],       [SIZEOF_FLOAT])
 jitter_define_prefixed_macro([ac_cv_sizeof_double],      [SIZEOF_DOUBLE])
 jitter_define_prefixed_macro([ac_cv_sizeof_long_double], [SIZEOF_LONG_DOUBLE])
+
+jitter_define_prefixed_macro([ac_cv_alignof_void_p],      [ALIGNOF_VOID_P])
+jitter_define_prefixed_macro([ac_cv_alignof_void_p_p],    [ALIGNOF_VOID_P_P])
+jitter_define_prefixed_macro([ac_cv_alignof_short],       [ALIGNOF_SHORT])
+jitter_define_prefixed_macro([ac_cv_alignof_int],         [ALIGNOF_INT])
+jitter_define_prefixed_macro([ac_cv_alignof_long],        [ALIGNOF_LONG])
+jitter_define_prefixed_macro([ac_cv_alignof_long_long],   [ALIGNOF_LONG_LONG])
+jitter_define_prefixed_macro([ac_cv_alignof_float],       [ALIGNOF_FLOAT])
+jitter_define_prefixed_macro([ac_cv_alignof_double],      [ALIGNOF_DOUBLE])
+jitter_define_prefixed_macro([ac_cv_alignof_long_double], [ALIGNOF_LONG_DOUBLE])
+
 
 # Define prefixed alternatives for macros expanding to string literals in C,
 # or actually for any shell variable meant to be used in this way.
