@@ -31,8 +31,9 @@
    script.
 
    This file is included from both C and assembly, so it must contain only
-   preprocessor directives.  In particular, differenly from C sources, it does
-   not use "" characters for sectioning. */
+   whitespace and preprocessor directives.  In particular, differenly from the
+   purely C source files in Jitter, it does not use "" characters for
+   sectioning. */
 
 
 /* Data representation.
@@ -84,6 +85,65 @@
 #undef JITTER_ASSEMBLY_SUBDIRECTORY
 
 
+/* CPU architecture.
+ * ************************************************************************** */
+
+/* Define a CPU (architecture)-specific macro if the CPU is known and the
+   user did not disable assembly support.  Not every architecture mentioned
+   here has specific support, but this is still useful even for user code
+   when deciding whether to enable optional optimisations, which can be
+   achieved without need for configuration facilities other than what
+   Jitter already provides.
+   Where an architecture has 32-bit and 64-bit variants one macro is defined
+   for both when the 64-bit variant is a very similar clean extension, as
+   is the case for example with RISC-V, MIPS and PowerPC; the user may then
+   conditionalise on JITTER_BYTES_PER_WORD (which is a CPP-time constant) if
+   needed. 
+   When the two variants of an architecture are radically different and
+   incompatible two different macros are used here. */
+
+/* Define if the CPU is Aarch64. */
+#undef JITTER_HOST_CPU_IS_AARCH64
+
+/* Define if the CPU is Alpha. */
+#undef JITTER_HOST_CPU_IS_ALPHA
+
+/* Define if the CPU is a 32-bit ARM.  The 64-bit version, Aarch64, is so
+   different that it would make little sense to define one macro for both. */
+#undef JITTER_HOST_CPU_IS_ARM
+
+/* Define if the CPU is i386.  This is for 32-bit configurations only. */
+#undef JITTER_HOST_CPU_IS_I386
+
+/* Define if the CPU is some m68k variant. */
+#undef JITTER_HOST_CPU_IS_M68K
+
+/* Define if the CPU is a MIPS, either 32-bit or 64-bit. */
+#undef JITTER_HOST_CPU_IS_MIPS
+
+/* Define if the CPU is a PA-RISC, either 32-bit or 64-bit. */
+#undef JITTER_HOST_CPU_IS_PARISC
+
+/* Define if the CPU is some POWER or PowerPC variant, either 32-bit or
+   64-bit. */
+#undef JITTER_HOST_CPU_IS_POWERPC
+
+/* Define if the CPU is RISC-V, either 32-bit or 64-bit. */
+#undef JITTER_HOST_CPU_IS_RISCV
+
+/* Define if the CPU is any variant of S390. */
+#undef JITTER_HOST_CPU_IS_S390
+
+/* Define if the CPU is some SH variant. */
+#undef JITTER_HOST_CPU_IS_SH
+
+/* Define if the CPU is some SPARC variant, either 32-bit or 64-bit. */
+#undef JITTER_HOST_CPU_IS_SPARC
+
+/* Define if the CPU is x86_64. */
+#undef JITTER_HOST_CPU_IS_X86_64
+
+
 /* Operating system features.
  * ************************************************************************** */
 
@@ -99,9 +159,9 @@
 #undef JITTER_HOST_OS_IS_OPENBSD
 #undef JITTER_HOST_OS_IS_WINDOWS
 
-/* Binary format.  ELF support may be disabled even on ELF systems, if te tools
-   are old enough not to support .pushsection / .popsection with subsection
-   numbers. */
+/* Binary format.  ELF support may be disabled even on ELF systems, if the
+   tools are old enough not to support .pushsection / .popsection with
+   subsection numbers. */
 #undef JITTER_HOST_OS_IS_ELF
 #undef JITTER_HOST_OS_IS_COFF
 #undef JITTER_HOST_OS_IS_MACHO
@@ -202,8 +262,8 @@
 /* Define if the language supports computed goto in the style of GNU C. */
 #undef JITTER_HAVE_GNU_C_COMPUTED_GOTO
 
-/* Define if the language GNU C's inline asm, including the modern syntax for
-   named operands. */
+/* Define if the language supports GNU C's inline asm, including the modern
+   syntax for named operands. */
 #undef JITTER_HAVE_GNU_C_INLINE_ASM
 
 /* Define if the language supports asm goto in the style of GNU C. */
@@ -214,6 +274,12 @@
 
 /* Define if the builtins for handling overflow are available. */
 #undef JITTER_HAVE_GCC_OVERFLOW_CHECKING
+
+/* Define if __builtin_constant_p is available. */
+#undef JITTER_HAVE_GCC_BUILTIN_CONSTANT_P
+
+/* Define if __builtin_expect is available. */
+#undef JITTER_HAVE_GCC_BUILTIN_EXPECT
 
 /* Define if __builtin_unreachable is available. */
 #undef JITTER_HAVE_GCC_BUILTIN_UNREACHABLE

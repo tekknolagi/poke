@@ -1,6 +1,6 @@
 /* Jitter: VM-independent library.
 
-   Copyright (C) 2016, 2017, 2019 Luca Saiu
+   Copyright (C) 2016, 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -203,7 +203,8 @@ union jitter_word
 /* Word size in bytes and its binary logarithm.
  * ************************************************************************** */
 
-/* Word size in bytes (actually in chars). */
+/* Word size in bytes (actually in chars).  This expands to an integer literal
+   and therefore is suitable for use in CPP conditionals. */
 #define JITTER_BYTES_PER_WORD \
   JITTER_SIZEOF_VOID_P
 

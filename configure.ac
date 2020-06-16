@@ -882,6 +882,37 @@ if test "x$ac_cv_have_gcc_overflow" = "xyes"; then
             [Define if __builtin_add_overflow_p and friends are usable.])
 fi
 
+# Very old GCCs or non-GCC compilers will not have __builtin_constant_p.
+AC_CACHE_CHECK([for GCC __builtin_constant_p],
+  [ac_cv_have_gcc_builtin_constant_p],
+  [AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM(
+        [[]],
+        [[const int x = __builtin_constant_p (2 + 2); return x;
+        ]])],
+     [ac_cv_have_gcc_builtin_constant_p=yes],
+     [ac_cv_have_gcc_builtin_constant_p=no])])
+if test "x$ac_cv_have_gcc_builtin_constant_p" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_GCC_BUILTIN_CONSTANT_P], [1],
+            [Define if __builtin_constant_p exists.])
+fi
+
+# Very old GCCs or non-GCC compilers will not have __builtin_expect.
+AC_CACHE_CHECK([for GCC __builtin_expect],
+  [ac_cv_have_gcc_builtin_expect],
+  [AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM(
+        [[]],
+        [[volatile int foo = 10;
+          return __builtin_expect (foo, 10);
+        ]])],
+     [ac_cv_have_gcc_builtin_expect=yes],
+     [ac_cv_have_gcc_builtin_expect=no])])
+if test "x$ac_cv_have_gcc_builtin_expect" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_GCC_BUILTIN_EXPECT], [1],
+            [Define if __builtin_expect exists.])
+fi
+
 # Very old GCCs or non-GCC compilers will not have __builtin_unreachable.
 AC_CACHE_CHECK([for GCC __builtin_unreachable],
   [ac_cv_have_gcc_builtin_unreachable],
@@ -1031,39 +1062,81 @@ else
 fi
 AC_MSG_CHECKING([if we have assembly support for \"$default_host_cpu\"])
 AS_CASE([$default_host_cpu],
-        [aarch64*],    [#JITTER_ASSEMBLY_SUBDIRECTORY=aarch64
+        [aarch64*],    [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_AARCH64], [1], []
+                                           ) # No ";": see the Autoconf manual
+                                             # near the end of "Defining C
+                                             # Preprocessor Symbols".
+                        #JITTER_ASSEMBLY_SUBDIRECTORY=aarch64
                         jitter_has_host_assembly=no;
                         jitter_objdump_options="--architecture=aarch64 --disassembler-options=reg-names-raw"],
-        [arm*],        [#JITTER_ASSEMBLY_SUBDIRECTORY=arm
+        [alpha*],      [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_ALPHA], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        #JITTER_ASSEMBLY_SUBDIRECTORY=alpha
+                        jitter_has_host_assembly=no;
+                        # FIXME: test with a cross-objdump and see what options I like.
+                        jitter_objdump_options="--architecture= --disassembler-options=no-aliases"],
+        [arm*],        [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_ARM], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        #JITTER_ASSEMBLY_SUBDIRECTORY=arm
                         jitter_has_host_assembly=no;
                         jitter_objdump_options="--architecture=arm --disassembler-options=reg-names-raw"],
-        [i?86],        [#JITTER_ASSEMBLY_SUBDIRECTORY=i386
+        [i?86],        [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_I386], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        #JITTER_ASSEMBLY_SUBDIRECTORY=i386
                         jitter_has_host_assembly=no;
                         jitter_objdump_options="--architecture=i386 --disassembler-options=att,suffix"],
-        [mips|mipsel], [JITTER_ASSEMBLY_SUBDIRECTORY=mips;
+        [m68k*],       [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_M68K], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        jitter_has_host_assembly=no;
+                        jitter_objdump_options="--architecture= --disassembler-options=no-aliases"],
+        [mips|mipsel], [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_MIPS], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        JITTER_ASSEMBLY_SUBDIRECTORY=mips;
                         jitter_has_host_assembly=yes;
                         jitter_objdump_options="--architecture=mips:isa32 --disassembler-options=no-aliases,reg-names=numeric"],
         [mips64|mips64el],
-                       [#JITTER_ASSEMBLY_SUBDIRECTORY=mips;
+                       [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_MIPS], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        #JITTER_ASSEMBLY_SUBDIRECTORY=mips;
                         jitter_has_host_assembly=no;
                         jitter_objdump_options="--architecture= --disassembler-options=no-aliases,reg-names=numeric"],
+        [parisc*],     [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_PARISC], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        jitter_has_host_assembly=no;
+                        jitter_objdump_options="--architecture= --disassembler-options=no-aliases"],
         [powerpc64|powerpc64le],
-                       [#JITTER_ASSEMBLY_SUBDIRECTORY=powerpc
+                       [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_POWERPC], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        #JITTER_ASSEMBLY_SUBDIRECTORY=powerpc
                         jitter_has_host_assembly=no;
                         jitter_objdump_options="--architecture=powerpc:common64"],
         [ppc|powerpc|powerpcle],
+                       [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_POWERPC], [1], []
+                                           ) # No ";": see the Autoconf manual.
                         jitter_has_host_assembly=yes;
-                       [JITTER_ASSEMBLY_SUBDIRECTORY=powerpc],
-        [riscv*],      [#JITTER_ASSEMBLY_SUBDIRECTORY=riscv;
+                        JITTER_ASSEMBLY_SUBDIRECTORY=powerpc],
+        [riscv*],      [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_RISCV], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        #JITTER_ASSEMBLY_SUBDIRECTORY=riscv;
                         jitter_has_host_assembly=no;
                         jitter_objdump_options="--architecture=riscv:rv64 --disassembler-options=no-aliases,numeric"],
-        [sh4*],        [JITTER_ASSEMBLY_SUBDIRECTORY=sh
+        [s390*],       [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_S390], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        jitter_has_host_assembly=no;
+                        jitter_objdump_options="--architecture= --disassembler-options=no-aliases"],
+        [sh4*],        [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_SH], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        JITTER_ASSEMBLY_SUBDIRECTORY=sh
                         jitter_has_host_assembly=yes;
                         jitter_objdump_options="--architecture=sh4a --disassembler-options=no-aliases"],
-        [sparc*],      [JITTER_ASSEMBLY_SUBDIRECTORY=sparc
+        [sparc*],      [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_SPARC], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        JITTER_ASSEMBLY_SUBDIRECTORY=sparc
                         jitter_has_host_assembly=yes;
                         jitter_objdump_options="--architecture=sparc:v9b --disassembler-options=no-aliases"],
-        [x86_64],      [JITTER_ASSEMBLY_SUBDIRECTORY=x86_64;
+        [x86_64],      [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_X86_64], [1], []
+                                           ) # No ";": see the Autoconf manual.
+                        JITTER_ASSEMBLY_SUBDIRECTORY=x86_64;
                         jitter_has_host_assembly=yes;
                         jitter_objdump_options="--architecture=i386:x86-64 --disassembler-options=x86-64,att,suffix"],
                        # Default case.  Notice that, as a fallback case, we call

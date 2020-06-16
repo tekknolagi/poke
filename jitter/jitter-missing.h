@@ -65,12 +65,27 @@
 /* GCC builtins.
  * ************************************************************************** */
 
+/* The logic relying on __builtin_constant_p is probably all conditionalised on
+   GCC, but it is also easy to simulate it where missing with a dummy
+   compatibility macro which treats every expression as non-constant. */
+#if ! defined (JITTER_HAVE_GCC_BUILTIN_CONSTANT_P)
+# define __builtin_constant_p(expression) \
+    0
+#endif /* # if ! defined (JITTER_HAVE_GCC_BUILTIN_CONSTANT_P) */
+
+/* We can work with any compiler missing __builtin_expect by defining it as a
+   macro. */
+#if ! defined (JITTER_HAVE_GCC_BUILTIN_EXPECT)
+# define __builtin_expect(expression, expected_value) \
+    (expression)
+#endif /* # if ! defined (JITTER_HAVE_GCC_BUILTIN_EXPECT) */
+
 /* Non-GCC compilers or very old GCCs miss the __bultin_unreachable builtin. */
 #if ! defined (JITTER_HAVE_GCC_BUILTIN_UNREACHABLE)
 # define __builtin_unreachable()                          \
     /* It is acceptable to compile this into nothing. */  \
     do { /* Nothing*/ } while (false)
-#endif /* #if ! defined (JITTER_HAVE_GCC_BUILTIN_UNREACHABLE) */
+#endif /* # if ! defined (JITTER_HAVE_GCC_BUILTIN_UNREACHABLE) */
 
 
 

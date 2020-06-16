@@ -32,4 +32,7 @@ Bruno Haible sent fixes and patches, in his usual precise and helful style.
 
 Niobos helped by testing changes on her configuration.
 
+xelxebar helped me to debug a problem with the shebang lines in scripts, testing
+in unusual configurations.
+
 Dan Čermák sent useful bug report and automatic analysis results.
