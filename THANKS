@@ -28,6 +28,13 @@ providing fixes.
 Alfred M. Szmidt made me notice a few bugs preventing portability to BSD
 systems, and contributed to my porting effort with long friendly discussions.
 
+Bruno Haible [FIXME: discussed with me for a long time about hash tables and
+garbage collection; say it nicely, as he was really helpful and constructive.  I
+like how he made a strong effort to prevent me from doing something bad, and
+proactively criticised my design to warn me of possible problems, temporarily
+adopting my own obsession with optimisation as a point of view for the scope of
+the discussion]
+
 Bruno Haible sent fixes and patches, in his usual precise and helful style.
 
 Niobos helped by testing changes on her configuration.
