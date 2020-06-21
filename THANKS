@@ -17,29 +17,34 @@ You should have received a copy of the GNU General Public License
 along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
 
 
-[FIXME: thank packagers.]
+I wish to thank the people who showed an interest in this project and
+contributed with feedback or encouragement.  Some are personal friends, others I
+have only met online; even those whom I only know by an IRC nickname have been
+important.
 
-José Marchesi, the first serious user of Jitter in an external software, has
-always provided suggestions and useful, constructive feedback.
+* José Marchesi, the first serious user of Jitter in an external software, has
+  always provided suggestions and useful, constructive feedback.
 
-Darshit Shah reported several bugs in a very precise way, more than once
-providing fixes.
+* Bruno Haible intervened in an IRC conversation and discussed with me for a long
+  time about hashing and garbage collection.  I appreciate how he made a strong
+  effort to prevent me from making a wrong choice and proactively criticised my
+  design to warn me of possible problems, adopting my own obsession with
+  optimisation as a point of view for the scope of the exchange.
 
-Alfred M. Szmidt made me notice a few bugs preventing portability to BSD
-systems, and contributed to my porting effort with long friendly discussions.
+* Darshit Shah reported several bugs in a very precise way, more than once
+  providing fixes.
 
-Bruno Haible [FIXME: discussed with me for a long time about hash tables and
-garbage collection; say it nicely, as he was really helpful and constructive.  I
-like how he made a strong effort to prevent me from doing something bad, and
-proactively criticised my design to warn me of possible problems, temporarily
-adopting my own obsession with optimisation as a point of view for the scope of
-the discussion]
+* Alfred M. Szmidt made me notice a few bugs preventing portability to BSD
+  systems, and contributed to my porting effort with long friendly discussions.
 
-Bruno Haible sent fixes and patches, in his usual precise and helful style.
+* Bruno Haible sent fixes and patches, in his usual precise and helpful style.
 
-Niobos helped by testing changes on her configuration.
+* Niobos helped by testing changes on her configuration.
 
-xelxebar helped me to debug a problem with the shebang lines in scripts, testing
-in unusual configurations.
+* xelxebar helped me to debug a problem with the shebang lines in scripts, testing
+  in unusual configurations.
 
-Dan Čermák sent useful bug report and automatic analysis results.
+* Dan Čermák sent useful bug report and automatic analysis results.
+
+I wish to thank the people who maintained a package for Jitter; I know of
+Darshit Shah, but there are others as well who would deserve a mention here.

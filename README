@@ -21,3 +21,14 @@ Jitter
 ======
 
 FIXME: write a very short introduction.
+
+
+Online resources
+================
+
+The Jitter home page is http://ageinghacker.net/jitter .
+A public git repository is available at the URL http://git.ageinghacker.net/jitter .
+
+Discussions about Jitter, which spawned off as a sub-project of GNU epsilon, are
+definitely on topic on the epsilon mailing list.  See
+https://lists.gnu.org/mailman/listinfo/epsilon-devel .
