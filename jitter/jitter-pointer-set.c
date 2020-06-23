@@ -78,7 +78,7 @@ jitter_pointer_set_double (struct jitter_pointer_set *ps)
           pointer_type *pp;
           size_t probeno __attribute__ ((unused));
           JITTER_POINTER_SET_BUFFER_SEARCH (new_buffer, ps->mask, p,
-                                            JITTER_POINTER_SET_UNUSED,
+                                            false,
                                             probeno, pp);
           * pp = p;
           ps->used_element_no ++;
@@ -316,37 +316,44 @@ jitter_pointer_set_print_statistics (struct jitter_pointer_set *psp)
 
 __attribute__ ((noclone, noinline))
 bool
-test1 (struct jitter_pointer_set *psp, pointer_type p)
+jitter_pointer_set_test0 (jitter_int n)
 {
-  bool b;
+  return ! ! n;
+}
+
+__attribute__ ((noclone, noinline))
+int /*bool*/
+jitter_pointer_set_test1 (struct jitter_pointer_set *psp, pointer_type p)
+{
+  int b;
   JITTER_POINTER_SET_SET_HAS (psp, p, b);
   return b;
 }
 
 __attribute__ ((noclone, noinline))
 void
-test2 (struct jitter_pointer_set *psp, pointer_type p)
+jitter_pointer_set_test2 (struct jitter_pointer_set *psp, pointer_type p)
 {
   JITTER_POINTER_SET_ADD_NEW (psp, p);
 }
 
 __attribute__ ((noclone, noinline))
 void
-test3 (struct jitter_pointer_set *psp, pointer_type p)
+jitter_pointer_set_test3 (struct jitter_pointer_set *psp, pointer_type p)
 {
   JITTER_POINTER_SET_ADD_UNIQUE (psp, p);
 }
 
 __attribute__ ((noclone, noinline))
 void
-test4 (struct jitter_pointer_set *psp, pointer_type p)
+jitter_pointer_set_test4 (struct jitter_pointer_set *psp, pointer_type p)
 {
   JITTER_POINTER_SET_REMOVE (psp, p);
 }
 
 __attribute__ ((noclone, noinline))
 void
-test5 (struct jitter_pointer_set *psp, pointer_type p)
+jitter_pointer_set_test5 (struct jitter_pointer_set *psp, pointer_type p)
 {
   bool b;
   JITTER_POINTER_SET_SET_HAS (psp, p, b);
@@ -361,7 +368,7 @@ test5 (struct jitter_pointer_set *psp, pointer_type p)
 }
 
 void
-test_hash (long random_element_no)
+jitter_pointer_set_test_hash (long random_element_no)
 {
   struct jitter_pointer_set ps;
   jitter_pointer_set_initialize (& ps);
@@ -397,7 +404,7 @@ test_hash (long random_element_no)
 }
 
 void
-pointer_set_test (void)
+jitter_pointer_set_pointer_set_test (void)
 {
   unsigned long table_size;
   for (table_size = 64; table_size < ((unsigned long) 1 << 30); table_size *= 2)
@@ -406,6 +413,6 @@ pointer_set_test (void)
         = (long) ((double) table_size
                   / JITTER_POINTER_SET_RECIPROCAL_FILL_RATIO
                   - 1);
-      test_hash (element_no);
+      jitter_pointer_set_test_hash (element_no);
     }
 }

@@ -102,20 +102,27 @@
    important to strike a balance between the optimisation of the number of
    probes and the density of valid elements.
    This is a convenient way to sample possible values from Emacs:
-     (dolist (a '(.9 .8 .66666667 .6 .5 .4 .33333333 .25 .1))
-       (let* ((reciprocal-a (/ a))
+     (dolist (a (sort (list (/ 16.0) (/ 8.0) (/ 4.0) (/ 2.0)
+                            (/ 10.0) (/ 5.0) (/ 3.0)
+                            .4 .6 (/ 2 3.0) (/ 3 4.0) (/ 4 5.0))
+                      '<=))
+       (let* ((a (float a))
+              (reciprocal-a (/ a))
               (probe-no (* (/ a) (log (/ (- 1 a))))))
-         (insert (format "     a: %6.3f  reciprocal-a: %6.3f  probe-no: %6.3f\n"
+         (insert (format "     a:%7.3f   reciprocal-a:%7.3f   probe-no:%7.3f\n"
                   a reciprocal-a probe-no))))
-     a:  0.900  reciprocal-a:  1.111  probe-no:  2.558
-     a:  0.800  reciprocal-a:  1.250  probe-no:  2.012
-     a:  0.667  reciprocal-a:  1.500  probe-no:  1.648
-     a:  0.600  reciprocal-a:  1.667  probe-no:  1.527
-     a:  0.500  reciprocal-a:  2.000  probe-no:  1.386
-     a:  0.400  reciprocal-a:  2.500  probe-no:  1.277
-     a:  0.333  reciprocal-a:  3.000  probe-no:  1.216
-     a:  0.250  reciprocal-a:  4.000  probe-no:  1.151
-     a:  0.100  reciprocal-a: 10.000  probe-no:  1.054  */
+     a:  0.062   reciprocal-a: 16.000   probe-no:  1.033
+     a:  0.100   reciprocal-a: 10.000   probe-no:  1.054
+     a:  0.125   reciprocal-a:  8.000   probe-no:  1.068
+     a:  0.200   reciprocal-a:  5.000   probe-no:  1.116
+     a:  0.250   reciprocal-a:  4.000   probe-no:  1.151
+     a:  0.333   reciprocal-a:  3.000   probe-no:  1.216
+     a:  0.400   reciprocal-a:  2.500   probe-no:  1.277
+     a:  0.500   reciprocal-a:  2.000   probe-no:  1.386
+     a:  0.600   reciprocal-a:  1.667   probe-no:  1.527
+     a:  0.667   reciprocal-a:  1.500   probe-no:  1.648
+     a:  0.750   reciprocal-a:  1.333   probe-no:  1.848
+     a:  0.800   reciprocal-a:  1.250   probe-no:  2.012  */
 #define JITTER_POINTER_SET_RECIPROCAL_FILL_RATIO  \
   3
 
@@ -298,7 +305,7 @@ jitter_pointer_set_rebuild_and_possibly_minimize (struct jitter_pointer_set *ps,
       size_t _jitter_ps_au_probeno __attribute__ ((unused));      \
       JITTER_POINTER_SET_SEARCH (_jitter_ps_an_psp,               \
                                  _jitter_ps_an_p,                 \
-                                 JITTER_POINTER_SET_UNUSED,       \
+                                 true,                            \
                                  _jitter_ps_au_probeno,           \
                                  _jitter_ps_an_item);             \
       * _jitter_ps_an_item = _jitter_ps_an_p;                     \
@@ -319,7 +326,7 @@ jitter_pointer_set_rebuild_and_possibly_minimize (struct jitter_pointer_set *ps,
       size_t _jitter_ps_au_probeno __attribute__ ((unused));        \
       JITTER_POINTER_SET_SEARCH (_jitter_ps_au_psp,                 \
                                  _jitter_ps_au_p,                   \
-                                 _jitter_ps_au_p,                   \
+                                 false,                             \
                                  _jitter_ps_au_probeno,             \
                                  _jitter_ps_au_item);               \
       if (* _jitter_ps_au_item == JITTER_POINTER_SET_UNUSED)        \
@@ -344,7 +351,7 @@ jitter_pointer_set_rebuild_and_possibly_minimize (struct jitter_pointer_set *ps,
       size_t _jitter_ps_au_probeno __attribute__ ((unused));      \
       JITTER_POINTER_SET_SEARCH (_jitter_ps_sh_psp,               \
                                  _jitter_ps_sh_p,                 \
-                                 _jitter_ps_sh_p,                 \
+                                 false,                           \
                                  _jitter_ps_au_probeno,           \
                                  _jitter_ps_sh_item);             \
       (res_lvalue)                                                \
@@ -364,7 +371,7 @@ jitter_pointer_set_rebuild_and_possibly_minimize (struct jitter_pointer_set *ps,
       size_t _jitter_ps_au_probeno __attribute__ ((unused));     \
       JITTER_POINTER_SET_SEARCH (_jitter_ps_r_psp,               \
                                  _jitter_ps_r_p,                 \
-                                 _jitter_ps_r_p,                 \
+                                 false,                          \
                                  _jitter_ps_au_probeno,          \
                                  _jitter_ps_r_item);             \
       if (* _jitter_ps_r_item == _jitter_ps_r_p)                 \
@@ -384,7 +391,7 @@ jitter_pointer_set_rebuild_and_possibly_minimize (struct jitter_pointer_set *ps,
       pointer_type *_jitter_ps_sh_item __attribute__ ((unused));  \
       JITTER_POINTER_SET_SEARCH (_jitter_ps_sh_psp,               \
                                  _jitter_ps_sh_p,                 \
-                                 _jitter_ps_sh_p,                 \
+                                 false,                           \
                                  (res_lvalue),                    \
                                  _jitter_ps_sh_item);             \
     }                                                             \
@@ -418,6 +425,9 @@ jitter_pointer_set_print_statistics (struct jitter_pointer_set *rsp)
 #define JITTER_POINTER_SET_IS_USED(_jitter_ps_p_expr)  \
   ((_jitter_ps_p_expr) > JITTER_POINTER_SET_UNUSED)
 
+#define JITTER_POINTER_SET_IS_UNUSED(_jitter_ps_p_expr)  \
+  ((_jitter_ps_p_expr) == JITTER_POINTER_SET_UNUSED)
+
 /* Expand to an expression evaluating to non-false if the given element is a
    valid non-reserved element: not unused, not deleted. */
 #define JITTER_POINTER_SET_IS_VALID(_jitter_ps_p_expr)  \
@@ -446,58 +456,96 @@ jitter_pointer_set_print_statistics (struct jitter_pointer_set *rsp)
   ((pointer_type *)                                                   \
    ((char *) (_jitter_ps_buffer_p_expr) + (_jitter_ps_offset_expr)))
 
+/* There are two kind of match criteria:
+   If search_first_unused is:
+   - non-false: starting at h1 (key) search for the first entry which is unused 
+   - false:     starting at h1 (key) search for the first entry which is either
+                                     unused or matching p */
+
+/* Expand to an expression evaluating to true if the result of the evaluation
+   of the first argument "matches", as per the definition above, the result
+   of the evaluation of the second according to the criterion which is the
+   result of the evaluation of search_first_unused.
+   Use __builtin_expect to compile more efficiently in case of match.
+   This macro may evaluate some arguments zero, one or multiple times. */
+#define JITTER_POINTER_SET_MATCHES(some_object,                                \
+                                   key,                                        \
+                                   search_first_unused)                        \
+  ((search_first_unused)                                                       \
+   ? (__builtin_expect (JITTER_POINTER_SET_IS_UNUSED (some_object), true))     \
+   : (__builtin_expect ((some_object) == (key), true)                          \
+      || __builtin_expect (JITTER_POINTER_SET_IS_UNUSED (some_object), true)))
+
 /* This is the fundamental search facility used by every access macros, working
    on buffers.
-   It assings to the given l-values the number of required probes and the
-   address of the found entry in the table; usually only one of the two will be
-   needed, but the compiler will easily optimise away the unnecessary part of
-   the computation.  The searched_for_expr argument may be different from the
-   key argument p_expr: some searches look for a used entry, others for an
-   *unused* entry following the given key if present. */
-#define JITTER_POINTER_SET_BUFFER_SEARCH(buffer_p_expr,                    \
-                                         mask_expr,                        \
-                                         p_expr,                           \
-                                         searched_for_expr,                \
-                                         probeno_lvalue,                   \
-                                         entryp_lvalue)                    \
-  do                                                                       \
-    {                                                                      \
-      pointer_type *_jitter_ps_bs_buffer_p = (buffer_p_expr);              \
-      pointer_type _jitter_ps_bs_p = (p_expr);                             \
-      pointer_type _jitter_ps_bs_searched_for = (searched_for_expr);       \
-      jitter_uint _jitter_ps_bs_mask = (mask_expr);                        \
-      /* Compute the first hash, giving the initial offset. */             \
-      jitter_uint _jitter_ps_bs_offset                                     \
-        = (JITTER_POINTER_SET_HASH1_CHAR_STAR_OFFSET (_jitter_ps_bs_p)     \
-           & _jitter_ps_bs_mask);                                          \
-      /* Compute the second hash as well, giving the probe step.  This,    \
-         however, will only be useful if the first probe fails; GCC can    \
-         easily move this computation to a later point because of this.    \
-         The code is more readable the way it is written rather than       \
-         with a first test unrolled out of the loop. */                    \
-      jitter_uint _jitter_ps_bs_step                                       \
-        = JITTER_POINTER_SET_HASH2_CHAR_STAR_OFFSET (_jitter_ps_bs_p);     \
-      pointer_type _jitter_ps_bs_some_p;                                   \
-      (probeno_lvalue) = 1;                                                \
-      while (JITTER_POINTER_SET_IS_USED                                    \
-               (_jitter_ps_bs_some_p                                       \
-                  = * JITTER_POINTER_SET_ACCESS_BUFFER                     \
-                         (_jitter_ps_bs_buffer_p, _jitter_ps_bs_offset)))  \
-        if (__builtin_expect ((_jitter_ps_bs_some_p                        \
-                               == _jitter_ps_bs_searched_for),             \
-                              true))                                       \
-          break;                                                           \
-        else                                                               \
-          {                                                                \
-            _jitter_ps_bs_offset                                           \
-              = ((_jitter_ps_bs_offset + _jitter_ps_bs_step)               \
-                 & _jitter_ps_bs_mask);                                    \
-            (probeno_lvalue) ++;                                           \
-          }                                                                \
-      (entryp_lvalue)                                                      \
-        = JITTER_POINTER_SET_ACCESS_BUFFER (_jitter_ps_bs_buffer_p,        \
-                                            _jitter_ps_bs_offset);         \
-    }                                                                      \
+   The exapansion is a statement assinging to the given l-values the number of
+   required probes and the address of the found entry in the table; usually only
+   one of the two will be needed, but the compiler will easily optimise away the
+   unnecessary part of the computation.  Use the given search criterion. */
+#define JITTER_POINTER_SET_BUFFER_SEARCH(buffer_p_expr,                        \
+                                         mask_expr,                            \
+                                         key_expr,                             \
+                                         search_first_unused,                  \
+                                         probeno_lvalue,                       \
+                                         entryp_lvalue)                        \
+  do                                                                           \
+    {                                                                          \
+      /* Compute the expresisons given as arguments, once. */                  \
+      pointer_type *_jitter_ps_bs_buffer_p = (buffer_p_expr);                  \
+      pointer_type _jitter_ps_bs_key = (key_expr);                             \
+      int /* bool */ _jitter_ps_bs_search_first_unused                         \
+        = (search_first_unused);                                               \
+      jitter_uint _jitter_ps_bs_mask = (mask_expr);                            \
+      /* Compute the first hash, giving the initial offset. */                 \
+      jitter_uint _jitter_ps_bs_offset                                         \
+        = (JITTER_POINTER_SET_HASH1_CHAR_STAR_OFFSET (_jitter_ps_bs_key)       \
+           & _jitter_ps_bs_mask);                                              \
+      pointer_type * _jitter_ps_bs_some_p                                      \
+        = JITTER_POINTER_SET_ACCESS_BUFFER (_jitter_ps_bs_buffer_p,            \
+                                            _jitter_ps_bs_offset);             \
+      /* This could have been written in a single loop, but I find that GCC    \
+         generates better code on some architectures is I unroll the first     \
+         iteration and give __builtin_expected hints.  This is normal: is it   \
+         unusual that loops tend to iterate exactly once, and hash table       \
+         accesses follow this rare pattern.  A do..while loop would not work   \
+         well here because of the computation of h2 on the key, which must     \
+         come after the first iteration: see the comment below. */             \
+      jitter_int _jitter_ps_bs_probeno = 1;                                    \
+      if (__builtin_expect (! JITTER_POINTER_SET_MATCHES                       \
+                                 (* _jitter_ps_bs_some_p,                      \
+                                  _jitter_ps_bs_key,                           \
+                                  _jitter_ps_bs_search_first_unused),          \
+                            false))                                            \
+        {                                                                      \
+          /* The first probe failed; only now it is worth computing h2 on the  \
+             key.  If I put this variable definition above GCC would not move  \
+             it down after the first probe, even on architectures whose        \
+             implementations are typically weaker at exploiting ILP.  If I do  \
+             this the result appears to be good on every configuration. */     \
+          jitter_uint _jitter_ps_bs_step                                       \
+            = JITTER_POINTER_SET_HASH2_CHAR_STAR_OFFSET (_jitter_ps_bs_key);   \
+          while (_jitter_ps_bs_probeno ++,                                     \
+                 (! JITTER_POINTER_SET_MATCHES                                 \
+                                        (* _jitter_ps_bs_some_p,               \
+                                         _jitter_ps_bs_key,                    \
+                                         _jitter_ps_bs_search_first_unused)))  \
+            {                                                                  \
+              _jitter_ps_bs_offset                                             \
+                = ((_jitter_ps_bs_offset + _jitter_ps_bs_step)                 \
+                   & _jitter_ps_bs_mask);                                      \
+              _jitter_ps_bs_some_p                                             \
+                = JITTER_POINTER_SET_ACCESS_BUFFER                             \
+                     (_jitter_ps_bs_buffer_p, _jitter_ps_bs_offset);           \
+            }                                                                  \
+        }                                                                      \
+      /* Either the first probe succeeded and control fell here immediately,   \
+         or the loop is over.  In any case _jitter_ps_bs_some_p contains the   \
+         interesting element: either what the user searched for, or an unused  \
+         slot.  GCC has no problem duplicating this final basic block, which   \
+         is good. */                                                           \
+      (entryp_lvalue) = _jitter_ps_bs_some_p;                                  \
+      (probeno_lvalue) = _jitter_ps_bs_probeno;                                \
+    }                                                                          \
   while (false)
 
 
@@ -523,24 +571,25 @@ jitter_pointer_set_print_statistics (struct jitter_pointer_set *rsp)
    JITTER_POINTER_SET_BUFFER_SEARCH which works on buffers.  Values for the
    arguments to JITTER_POINTER_SET_BUFFER_SEARCH not given here are found
    as fields within the pointed pointer buffer. */
-#define JITTER_POINTER_SET_SEARCH(psp_expr,                          \
-                                  p_expr,                            \
-                                  searched_for_expr,                 \
-                                  probe_no_lvalue,                   \
-                                  res_lvalue)                        \
-  do                                                                 \
-    {                                                                \
-      struct jitter_pointer_set *_jitter_ps_s_psp = (psp_expr);      \
-      pointer_type _jitter_ps_s_p = (p_expr);                        \
-      pointer_type _jitter_ps_s_searched_for = (searched_for_expr);  \
-      jitter_uint _jitter_ps_s_mask = _jitter_ps_s_psp->mask;        \
-      JITTER_POINTER_SET_BUFFER_SEARCH (_jitter_ps_s_psp->buffer,    \
-                                        _jitter_ps_s_mask,           \
-                                        _jitter_ps_s_p,              \
-                                        _jitter_ps_s_searched_for,   \
-                                        (probe_no_lvalue),           \
-                                        (res_lvalue));               \
-    }                                                                \
+#define JITTER_POINTER_SET_SEARCH(psp_expr,                                \
+                                  key_expr,                                \
+                                  search_first_unused,                     \
+                                  probe_no_lvalue,                         \
+                                  res_lvalue)                              \
+  do                                                                       \
+    {                                                                      \
+      struct jitter_pointer_set *_jitter_ps_s_psp = (psp_expr);            \
+      pointer_type _jitter_ps_s_key = (key_expr);                          \
+      int /*bool*/ _jitter_ps_s_search_first_unused                        \
+        = (search_first_unused);                                           \
+      jitter_uint _jitter_ps_s_mask = _jitter_ps_s_psp->mask;              \
+      JITTER_POINTER_SET_BUFFER_SEARCH (_jitter_ps_s_psp->buffer,          \
+                                        _jitter_ps_s_mask,                 \
+                                        _jitter_ps_s_key,                  \
+                                        _jitter_ps_s_search_first_unused,  \
+                                        (probe_no_lvalue),                 \
+                                        (res_lvalue));                     \
+    }                                                                      \
   while (false)
 
 
