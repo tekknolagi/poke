@@ -504,12 +504,13 @@ jitter_pointer_set_print_statistics (struct jitter_pointer_set *rsp)
         = JITTER_POINTER_SET_ACCESS_BUFFER (_jitter_ps_bs_buffer_p,            \
                                             _jitter_ps_bs_offset);             \
       /* This could have been written in a single loop, but I find that GCC    \
-         generates better code on some architectures is I unroll the first     \
-         iteration and give __builtin_expected hints.  This is normal: is it   \
-         unusual that loops tend to iterate exactly once, and hash table       \
-         accesses follow this rare pattern.  A do..while loop would not work   \
-         well here because of the computation of h2 on the key, which must     \
-         come after the first iteration: see the comment below. */             \
+         generates better code on some architectures if I unroll the first     \
+         iteration and give __builtin_expected hints.  This is normal: most    \
+         loops iterate either zero or many times, and it is that one iterates  \
+         exactly once; hash table accesses follow this rare pattern.           \
+         A do..while loop would not work well here because of the computation  \
+         of h2 on the key, which must come after the first iteration: see the  \
+         comment below. */                                                     \
       jitter_int _jitter_ps_bs_probeno = 1;                                    \
       if (__builtin_expect (! JITTER_POINTER_SET_MATCHES                       \
                                  (* _jitter_ps_bs_some_p,                      \

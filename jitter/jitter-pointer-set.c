@@ -331,6 +331,15 @@ jitter_pointer_set_test1 (struct jitter_pointer_set *psp, pointer_type p)
 }
 
 __attribute__ ((noclone, noinline))
+bool
+jitter_pointer_set_test1b (struct jitter_pointer_set *psp, pointer_type p)
+{
+  bool b;
+  JITTER_POINTER_SET_SET_HAS (psp, p, b);
+  return b;
+}
+
+__attribute__ ((noclone, noinline))
 void
 jitter_pointer_set_test2 (struct jitter_pointer_set *psp, pointer_type p)
 {
