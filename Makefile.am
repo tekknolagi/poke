@@ -295,6 +295,7 @@ CPPFLAGS_FOR_INTERNAL_USE = \
 # not rely on Gnulib.
 EXTRA_LTLIBRARIES += lib/libjitterutility--partial.la
 lib_libjitterutility__partial_la_SOURCES = \
+  jitter/jitter-aligned-block.h jitter/jitter-aligned-block.c \
   jitter/jitter-arithmetic.h \
   jitter/jitter-bitwise.h \
   jitter/jitter-cpp.h \
@@ -320,6 +321,7 @@ lib_libjitterutility__partial_la_CPPFLAGS = \
 # Jitter-generated code in VMs, so they belong in the jitterinclude directory
 # along with the rest of the runtime library.
 jitterinclude_HEADERS += \
+  jitter/jitter-aligned-block.h \
   jitter/jitter-arithmetic.h \
   jitter/jitter-bitwise.h \
   jitter/jitter-cpp.h \

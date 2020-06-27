@@ -975,6 +975,13 @@ AC_CHECK_DECLS([_SC_PAGESIZE,
 # Check for functions letting me allocate executable space.
 AC_CHECK_FUNCS([mmap64 mmap mremap munmap])
 
+# Check for libc functions to allocate aligned blocks which can actually be
+# freed.  On inferior systems when none of these is available I have to resort
+# to my own inefficient wrapper around malloc.
+# Notice that memalign and valloc do not qualify, as there is no way to free
+# the buffer they allocate.
+AC_CHECK_FUNCS([aligned_alloc posix_memalign])
+
 # Check for getrlimit/setrlimit and alarm.
 AC_CHECK_FUNCS([getrlimit setrlimit alarm])
 
@@ -2281,6 +2288,10 @@ jitter_define_prefixed_feature_macro([ac_cv_type_unsigned_long_long_int], [yes],
 jitter_define_prefixed_feature_macro([ac_cv_type_long_double], [yes],
                                      [HAVE_LONG_DOUBLE])
 jitter_define_prefixed_feature_macro([ac_cv_func_alarm], [yes], [HAVE_ALARM])
+jitter_define_prefixed_feature_macro([ac_cv_func_aligned_alloc], [yes],
+                                     [HAVE_ALIGNED_ALLOC])
+jitter_define_prefixed_feature_macro([ac_cv_func_posix_memalign], [yes],
+                                     [HAVE_POSIX_MEMALIGN])
 jitter_define_prefixed_feature_macro([gl_have_mmap_anonymous], [yes],
                                      [HAVE_MMAP_ANONYMOUS])
 jitter_define_prefixed_feature_macro([ac_cv_func_setrlimit], [yes],
