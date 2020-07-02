@@ -37,10 +37,12 @@
  * ************************************************************************** */
 
 /* This is an efficient implementation of a set data structure using pointers as
-   keys, based on open-address hashing and designed for the specialised purpose
-   of implement the remembered set in a generational garbage collector.  (For a
-   more generic but heavyweight alternative please see jitter/jitter-hash.h ;
-   that implementation includes good hash functions distributing well.)
+   keys, based on open-address hashing and mostly designed for one specialised
+   purpose: holding the remembered set in a generational garbage collector.
+   In that application the critical operation is add-unique.
+   (For a more generic but heavyweight alternative please see
+   jitter/jitter-hash.h ; that implementation, differently from this one,
+   includes sophisticated hash functions achieving a good "randomness".)
 
    The keys are non-NULL non-1 pointers (those two values are reserved), aligned
    as required by the machine ABI.
@@ -48,36 +50,36 @@
    Keys have no associated data: this data structure implements a set or a
    multiset, not a map.
 
-   It features very efficient access, with comparatively simple bad hashing.
+   It features very efficient access, with an intentionally simple and "bad"
+   first hash function.
    The table is automatically resized, always to a power of two, when the fill
    factor reaches a fixed threshold.  Collisions are handled by double hashing.
-   Key removal is supported by marking as deleted, without reusing space.  The
-   table access routines have been design never to require multiplication,
-   division, remainder.
+   Key removal is supported by marking removed elements as deleted, without
+   reusing space.  The table access routines have been designed never to
+   require multiplication, division, remainder.
 
-   The first hash function is the identity if pointers are aligned, or one
-   bitwise and operation otherwise.  The first hash function returns an offset
-   in bytes, not an index, which saves one instruction on RISCs and makes the
-   memory operand simpler on CISCs.
-   If pointers are aligned in this configuration, the key can be directly used
-   as an offset: the address of every key is also word aligned and has the same
-   low bits at zero: in this case the hash function can be the identity
-   function, which costs zero instructions to compute.  On hypothetical bizarre
-   ABIs not requiring pointer alignment (I am speaking of the pointers
-   themselves not beginning at a machine-word boundary, not about pointers
-   pointing to unaligned data) the hash function masks off the low bits, using
-   a constant mask.
+   Both hash functions return an *offset* in bytes instead of an index, which
+   saves one instruction on RISCs and makes the memory operand simpler on CISCs.
 
-   The offset which is the result of the hash function needs to be masked to
+   If pointers are aligned in this configuration, then the first has function
+   directly uses the key as the result offset: the address of every key is also
+   word aligned and has the same low bits at zero: in this case the first hash
+   function can be the identity function, which costs zero instructions to
+   compute.  On hypothetical bizarre ABIs not requiring pointer alignment (I am
+   speaking of the pointers themselves not beginning at a machine-word boundary,
+   not about pointers pointing to unaligned data) the hash function masks off
+   the low bits, using a compile-time-constant mask.
+
+   The offset which is the result of either hash function needs to be masked to
    make it wrap around; the mask is stored in the data structure, updated when
    the structure is resized.
 
 
    Thanks to Bruno Haible for suggesting the use of double hashing in the first
-   place, after hearing of my initial naïve version relying on linear probing.
-   Bruno also cited Knuth's analysis and suggested the idea of h2 as defined
-   below.  About h2 I do not claim to have followed his suggestions exactly, and
-   any remaining oversights are mine. */
+   place, after hearing of my initial more naïve version relying on linear
+   probing.  Bruno also cited Knuth's analysis and suggested the idea of h2 as
+   defined below.  About h2 I do not claim to have followed his suggestions
+   exactly, and any remaining oversights are mine. */
 
 
 
@@ -184,7 +186,7 @@ struct jitter_pointer_set
 /* Hash functions.
  * ************************************************************************** */
 
-/* Hash functions here are functions in the mathematical sense; they are
+/* Hash functions here are only functions in the mathematical sense; they are
    implemented as macros to avoid function call overhead in this
    performance-critical code.  These hash functions, again for reasons of
    performance, return an *offset* in bytes, not an index.
@@ -196,18 +198,22 @@ struct jitter_pointer_set
    table size M from the previous one.
    The i-th probe will be therefore at offset
      (h1 (k) + i h2 (k)) mod M
-   .  Only if the first probe fails there is need to compute h2 (k), and even
-   in that case it can be computed just once, even if more probes are needed
-   after the second. */
+   .  Only if the first probe fails there is need to compute h2 (k), and in
+   that case it can be computed just once, even if more probes are needed after
+   the second.  The modulo needs to be computed at each probe, but it should be
+   efficient requring as it does only one bitwise and operation.  In critical
+   code, where multiple accesses occur in a loop, the mask will be loaded once
+   from memory and then kept in a register. */
 
 /* This is a definition of h1, as simple and fast as it can be. */
 #define JITTER_POINTER_SET_HASH1_CHAR_STAR_OFFSET(_jitter_p)  \
   JITTER_UNMISALIGNED_BITMASK ((jitter_uint) (_jitter_p))
 
-/* In order to guarantee coverage on the entire buffer, and considering that the
-   buffer size is a power of two, this function should return a result which is
+/* This is a definition of h2.
+   In order to guarantee coverage of the entire buffer, and considering that the
+   buffer size is a power of two, this function must return a result which is
    odd in terms of elements -- in terms of offsets it need to be an odd multiple
-   of the word size.
+   of the (always even) word size.
    In general, in terms of indices, h2 must yield a result which is coprime with
    M.  M being a power of two here, any odd number will be correct. */
 #define JITTER_POINTER_SET_HASH2_CHAR_STAR_OFFSET(_jitter_p)    \
@@ -506,8 +512,9 @@ jitter_pointer_set_print_statistics (struct jitter_pointer_set *rsp)
       /* This could have been written in a single loop, but I find that GCC    \
          generates better code on some architectures if I unroll the first     \
          iteration and give __builtin_expected hints.  This is normal: most    \
-         loops iterate either zero or many times, and it is that one iterates  \
-         exactly once; hash table accesses follow this rare pattern.           \
+         loops iterate either zero or many times, and it is uncommon for a     \
+         loop to roll exactly once; hash table accesses follow this rare       \
+         pattern.                                                              \
          A do..while loop would not work well here because of the computation  \
          of h2 on the key, which must come after the first iteration: see the  \
          comment below. */                                                     \
