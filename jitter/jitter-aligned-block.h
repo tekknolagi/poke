@@ -31,19 +31,29 @@
  * ************************************************************************** */
 
 /* In several places Jitter needs heap blocks allocated to a relatively large
-   power of two; such blocks are freed when no longer needed.  On system
-   providing aligned_alloc or posix_memalign this is trivial to achieve; on
-   inferior systems I define an alternative, wasting some space but at least
+   power of two; such blocks are freed when no longer needed.  The best
+   implementation uses mmap, followed by munmap to free unneeded spaces; this,
+   while heavyweight, has the advantage of immediately freeing memory as soon as
+   a block is destroyed.
+
+   On systems lacking mmap but providing aligned_alloc or posix_memalign the
+   implementation is still easy, as the allocated block can be released (to the
+   process, not the system) by a call too free.
+
+   Finally, on inferior systems lacking all of mmap, aligned_alloc and
+   posix_memalign I define an alternative, wasting some space but at least
    allowing to free an allocated buffer.
 
    This wrapper provides a unified abstraction using the best available
    alternative. */
+
 
 
 
 /* Configuration-dependent definitions.
  * ************************************************************************** */
 
+// FIXME: add mmap implementation ////////////////////////////////////////////////////////
 /* Define a feature macro per implementation. */
 #if defined (JITTER_HAVE_ALIGNED_ALLOC)
 # define JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC
@@ -57,6 +67,7 @@
 //# define JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC
 //# define JITTER_ALIGNED_BLOCK_USE_POSIX_MEMALIGN
 //# define JITTER_ALIGNED_BLOCK_USE_FALLBACK
+
 
 
 
