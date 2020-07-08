@@ -1,6 +1,6 @@
 /* Jitter: general-purpose integer arithmetic macro header.
 
-   Copyright (C) 2019 Luca Saiu
+   Copyright (C) 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -114,6 +114,23 @@
         >= JITTER_MOST_NEGATIVE_SIGNED_IN_BITS (bit_no))       \
        && (((int64_t) (uint64_t) (word))                       \
            <= JITTER_MOST_POSITIVE_SIGNED_IN_BITS (bit_no))))
+
+
+
+
+/* Integer division rounding up.
+ * ************************************************************************** */
+
+/* Given two expressions of some unsigned integer type expand to an expression
+   of the same type evaluating to the ceiling of the quotient of the arguments.
+   This may evaluate the arguments multiple times, but expands to a constant
+   expression if the arguments are constant expressions. */
+#define JITTER_QUOTIENT_CEILING(ua, ub)                                  \
+  /* Bruno Haible suggested the alternative (ua + ub - 1) / ub which is  \
+     useful in some contexts, but unfortunately can overflow. */         \
+  ((ua) != 0                                                             \
+   ? (((ua) - 1) / (ub) + 1)                                             \
+   : 0)
 
 
 
