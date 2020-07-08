@@ -1,8 +1,7 @@
 \input texinfo.tex @c This is -*- Texinfo -*-.
 
 @c This file is part of the JitterLisp manual, which is part of Jitter.
-@c Copyright (C) 2017, 2018, 2019  Luca Saiu
-@c Updated in 2020 by Luca Saiu
+@c Copyright (C) 2017, 2018, 2019, 2020  Luca Saiu
 @c Written by Luca Saiu
 
 @c Permission is granted to copy, distribute and/or modify this
@@ -179,7 +178,7 @@ This is the manual for JitterLisp
 (for Jitter version @value{VERSION},
 last updated on @value{UPDATED}), an efficient Lisp system using a Jittery VM.
 
-Copyright @copyright{} 2018, 2019  Luca Saiu.  Written by Luca Saiu.
+Copyright @copyright{} 2018, 2019, 2020  Luca Saiu.  Written by Luca Saiu.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -760,7 +759,7 @@ readable git repository, is on my web site at the URL
 @cindex branch, git
 @cindex git branch
 @cindex @code{master}, git branch
-As of 2019 JitterLisp's development takes place on the
+As of 2020 JitterLisp's development takes place on the
 main git branch named @code{master}.
 
 @cindex feedback
@@ -1762,7 +1761,7 @@ course generalized Booleans are not necessarily unique objects.
 @subsection Conses
 @cindex cons
 A @dfn{cons} is a pair object containing exactly two other Lisp
-objects, allowed to be conses in their turn or objects of any other type.
+objects, allowed to be conses in their turn or objects of any other types.
 Conses are mutable, in the sense that the two components of a cons can
 be changed at run time while keeping the identity of the cons object.
 
@@ -1977,8 +1976,7 @@ JitterLisp code is executed by first translating user syntax into
 Far from being only an implementation device, JitterLisp ASTs are also
 exposed to the user who may execute them
 (@pxref{Code execution})
-but also work on them just as on any other Lisp data
-structure.
+and also work on them just as on any other Lisp data structure.
 
 There is no read syntax allowing the user to directly enter an AST as
 a literal datum; however the library includes sufficient functionality
@@ -2346,9 +2344,9 @@ The evaluation of a literal AST always terminates and never fails.
 @cindex name, variable, AST semantics
 If the named variable is bound in the current environment, then the
 result is its value in the environment; otherwise, if the variable is
-not bound in the environment but is bound globally, then the result is
+not bound in the environment but is bound globally, the result is
 its global value.  If the variable is unbound both in the environment
-and globally then evaluation fails.
+and globally then the form evaluation fails.
 
 @smallquotation Examples
 @itemize @bullet
@@ -4211,7 +4209,7 @@ core definitions coming from the C code and library definitions from
 the library written in Lisp and executed at startup.
 
 In the same sense the index glosses over the difference in type among
-globally defined symbols: some may be procedures or primitive wrappers
+globally defined variables: some may be procedures or primitive wrappers
 and other macros, from either the core or the library.
 
 Most of the symbols named here are constant.  Some, particularly
