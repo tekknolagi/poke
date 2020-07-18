@@ -124,7 +124,7 @@ version ()
 {
     cat <<EOF
 jitter-config (@PACKAGE_NAME@) @PACKAGE_VERSION@
-Copyright (C) 2016-2019 Luca Saiu.
+Copyright (C) 2016-2020 Luca Saiu.
 Jitter comes with ABSOLUTELY NO WARRANTY.
 You may redistribute copies of Jitter under the terms of the GNU General Public
 License, version 3 or any later version published by the Free Software
