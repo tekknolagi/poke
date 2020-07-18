@@ -313,5 +313,77 @@ struct jitter_list_header
                                        item_field_name, header_p, item_p,   \
                                        new_item_p)
 
+/* Expand to a sequence of local variable declarations initialised to the
+   header, first and last items, each for one of a "to" and a "from" list; the
+   expansion is meant as part of a larger block, and not protected with
+   do..while (false). */
+#define _JITTER_TWO_LISTS_LOCALS_(item_struct_name, item_field_name,            \
+                                  to_header_p, from_header_p)                   \
+  struct jitter_list_header * const _jitter_to_header __attribute__ ((unused))  \
+    = (to_header_p);                                                            \
+  struct item_struct_name * const _jitter_to_first __attribute__ ((unused))     \
+    = _jitter_to_header->first;                                                 \
+  struct item_struct_name * const _jitter_to_last __attribute__ ((unused))      \
+    = _jitter_to_header->last;                                                  \
+  struct jitter_list_header * const _jitter_from_header __attribute__ ((unused))\
+    = (from_header_p);                                                          \
+  struct item_struct_name * const _jitter_from_first __attribute__ ((unused))   \
+    = _jitter_from_header->first;                                               \
+  struct item_struct_name * const _jitter_from_last __attribute__ ((unused))    \
+    = _jitter_from_header->last;
+
+/* Make the from list empty, moving all of its elements to the beginning
+   of the to list. */
+#define JITTER_LIST_PREPEND_LIST(item_struct_name, item_field_name,      \
+                                 to_header_p, from_header_p)             \
+  do                                                                     \
+    {                                                                    \
+      _JITTER_TWO_LISTS_LOCALS_ (item_struct_name, item_field_name,      \
+                                 (to_header_p), (from_header_p));        \
+      /* At the end from is empty.  The final configuration of to is:    \
+         from_first .. from_last , to_first .. to_last */                \
+      struct item_struct_name * _jitter_new_first = _jitter_from_first;  \
+      if (_jitter_new_first == NULL)                                     \
+        _jitter_new_first = _jitter_to_first;                            \
+      struct item_struct_name * _jitter_new_last = _jitter_to_last;      \
+      if (_jitter_new_last == NULL)                                      \
+        _jitter_new_last = _jitter_from_last;                            \
+      if (_jitter_from_last != NULL)                                     \
+        _jitter_from_last->item_field_name.next = _jitter_to_first;      \
+      if (_jitter_to_first != NULL)                                      \
+        _jitter_to_first->item_field_name.previous = _jitter_from_last;  \
+      _jitter_to_header->first = _jitter_new_first;                      \
+      _jitter_to_header->last = _jitter_new_last;                        \
+      _jitter_from_header->first = NULL;                                 \
+      _jitter_from_header->last = NULL;                                  \
+    }                                                                    \
+  while (false)
+
+/* Make the from list empty, moving all of its elements to the end of the
+   to list. */
+#define JITTER_LIST_APPEND_LIST(item_struct_name, item_field_name,       \
+                                to_header_p, from_header_p)              \
+  do                                                                     \
+    {                                                                    \
+      _JITTER_TWO_LISTS_LOCALS_ (item_struct_name, item_field_name,      \
+                                 (to_header_p), (from_header_p));        \
+      /* At the end from is empty.  The final configuration of to is:    \
+         to_first .. to_last , from_first .. from_last */                \
+      struct item_struct_name * _jitter_new_first = _jitter_to_first;    \
+      if (_jitter_new_first == NULL)                                     \
+        _jitter_new_first = _jitter_from_first;                          \
+      struct item_struct_name * _jitter_new_last = _jitter_from_last;    \
+      if (_jitter_new_last == NULL)                                      \
+        _jitter_new_last = _jitter_to_last;                              \
+      if (_jitter_to_last != NULL)                                       \
+        _jitter_to_last->item_field_name.next = _jitter_from_first;      \
+      if (_jitter_from_first != NULL)                                    \
+        _jitter_from_first->item_field_name.previous = _jitter_to_last;  \
+      _jitter_to_header->first = _jitter_new_first;                      \
+      _jitter_to_header->last = _jitter_new_last;                        \
+      _jitter_from_header->first = NULL;                                 \
+      _jitter_from_header->last = NULL;                                  \
+    }                                                                    \
+  while (false)
 
 #endif // #ifndef JITTER_LIST_H_
