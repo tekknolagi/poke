@@ -25,6 +25,9 @@
 #include <jitter/jitter.h>
 #include <jitter/jitter-config.h>
 
+#include <stdlib.h>
+
+
 
 
 /* Introduction.
@@ -32,9 +35,15 @@
 
 /* In several places Jitter needs heap blocks allocated to a relatively large
    power of two; such blocks are freed when no longer needed.  The best
-   implementation uses mmap, followed by munmap to free unneeded spaces; this,
-   while heavyweight, has the advantage of immediately freeing memory as soon as
-   a block is destroyed.
+   implementation uses mmap, followed by munmap to free the unneeded parts of
+   the mapping at the beginning and ad the end; this technique, while
+   heavyweight, has the advantage of immediately returning memory to the
+   operating system as soon as a block is destroyed.
+   Notice that the block alignment must be a multiple of the system page size;
+   on current systems any power of two larger than 32KiB should be supported in
+   practice.  Older systems tend to have smaller pages and are even less of a
+   problem.  If you know of some exception please report it as a bug, providing
+   details.
 
    On systems lacking mmap but providing aligned_alloc or posix_memalign the
    implementation is still easy, as the allocated block can be released (to the
@@ -53,20 +62,17 @@
 /* Configuration-dependent definitions.
  * ************************************************************************** */
 
-// FIXME: add mmap implementation ////////////////////////////////////////////////////////
-/* Define a feature macro per implementation. */
-#if defined (JITTER_HAVE_ALIGNED_ALLOC)
+/* Decide which implementation to use according to feature availability, and
+   Define exactly one feature macro for the implementation. */
+#if defined (JITTER_HAVE_MMAP_ANONYMOUS)
+# define JITTER_ALIGNED_BLOCK_USE_MMAP
+#elif defined (JITTER_HAVE_ALIGNED_ALLOC)
 # define JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC
 #elif defined (JITTER_HAVE_POSIX_MEMALIGN)
 # define JITTER_ALIGNED_BLOCK_USE_POSIX_MEMALIGN
 #else
 # define JITTER_ALIGNED_BLOCK_USE_FALLBACK
 #endif
-
-// FIXME: testing.  Remove ////////////////////////////////////////////////////////////////
-//# define JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC
-//# define JITTER_ALIGNED_BLOCK_USE_POSIX_MEMALIGN
-//# define JITTER_ALIGNED_BLOCK_USE_FALLBACK
 
 
 
@@ -85,7 +91,11 @@
    on its size, which may vary according to the configuration. */
 struct jitter_aligned_block
 {
-#if defined (JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC)
+#if defined (JITTER_ALIGNED_BLOCK_USE_MMAP)
+  /* When calling munmap we have to provide a length as well. */
+  void *initial_map;
+  size_t mapping_length_in_bytes;
+#elif defined (JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC)
   /* This is easy: the initial pointer suffices. */
   void *aligned_alloced_buffer;
 #elif defined (JITTER_ALIGNED_BLOCK_USE_POSIX_MEMALIGN)
@@ -118,7 +128,7 @@ jitter_aligned_block_id;
 void *
 jitter_aligned_block_make (jitter_aligned_block_id *id,
                            size_t alignment_in_bytes, size_t size_in_bytes)
-  __attribute__ ((malloc, returns_nonnull,
+  __attribute__ ((malloc, warn_unused_result, returns_nonnull,
                   nonnull (1)));
 
 /* Free the block with the given id.  It is not necessary to supply the block

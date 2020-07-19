@@ -20,17 +20,19 @@
 
 
 #include <jitter/jitter-aligned-block.h>
-
+#include <jitter/jitter-bitwise.h>
 #include <jitter/jitter-fatal.h>
 
 /* Include the right header, according to the selected implementation. */
-#if defined (JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC)
+#if defined (JITTER_ALIGNED_BLOCK_USE_MMAP)
+# include <unistd.h>   /* For sysconf . */
+# include <sys/mman.h> /* For mmap and munmap . */
+#elif defined (JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC)
 # include <stdlib.h>
 #elif defined (JITTER_ALIGNED_BLOCK_USE_POSIX_MEMALIGN)
 # include <stdlib.h>
 #elif defined (JITTER_ALIGNED_BLOCK_USE_FALLBACK)
 # include <jitter/jitter-malloc.h>
-# include <jitter/jitter-bitwise.h>
 #else
 # error "no aligned block implementation defined.  This should never happen."
 #endif
@@ -46,19 +48,67 @@ jitter_aligned_block_make (jitter_aligned_block_id *id,
                            size_t alignment_in_bytes, size_t size_in_bytes)
 {
   void *res;
-#if defined (JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC)
+
+  /* The mmap and malloc implementations share the strategy of allocating a
+     larger block guaranteed to contain an aligned block inside. */
+#if defined (JITTER_ALIGNED_BLOCK_USE_MMAP) \
+    || defined (JITTER_ALIGNED_BLOCK_USE_FALLBACK)
+  /* Allocate a larger buffer which is guaranteed to contain an aligned buffer
+     of the required size as a sub-buffer.  Keep a pointer to the initial
+     buffer, in order to be able to free it later, in the block id. */
+  size_t allocated_size_in_bytes;
+  if (size_in_bytes < alignment_in_bytes)
+    allocated_size_in_bytes = alignment_in_bytes * 2;
+  else
+    allocated_size_in_bytes = size_in_bytes * 2;
+  void *initial_pointer;
+#endif
+
+#if defined (JITTER_ALIGNED_BLOCK_USE_MMAP)
+  /* Allocated a larger block. */
+  initial_pointer = mmap (NULL,
+                          allocated_size_in_bytes,
+                          PROT_READ | PROT_WRITE,
+                          MAP_PRIVATE | MAP_ANONYMOUS,
+                          -1,
+                          0);
+  if (initial_pointer == NULL)
+    jitter_fatal ("mmap failed");
+  /* Isolate the aligned part. */
+  res = ((void *)
+         JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO ((jitter_uint) initial_pointer,
+                                               alignment_in_bytes));
+  id->initial_map = res;
+  id->mapping_length_in_bytes = size_in_bytes;
+  /* Unmap the misaligned part (which means: aligned to the page, but not to the
+     required alignment) at the beginning and the end.  This also checks that
+     the block alignment is a multiple of the page size. */
+  void *misaligned_before = initial_pointer;
+  size_t misaligned_before_length
+    = (char *) res - (char *) initial_pointer;
+  void *misaligned_after = (char *) res + size_in_bytes;
+  size_t misaligned_after_length
+    = (((char *) initial_pointer + allocated_size_in_bytes)
+       - (char *) misaligned_after);
+  if (misaligned_before_length > 0)
+    if (munmap (misaligned_before, misaligned_before_length) != 0)
+      jitter_fatal ("munmap failed (%li B not multiple of the page size?)",
+                    (long) alignment_in_bytes);
+  if (misaligned_after_length > 0)
+    if (munmap (misaligned_after, misaligned_after_length) != 0)
+      jitter_fatal ("munmap failed (%li B not multiple of the page size?)",
+                    (long) alignment_in_bytes);
+#elif defined (JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC)
   res = aligned_alloc (alignment_in_bytes, size_in_bytes);
+  if (res == NULL)
+    jitter_fatal ("aligned_alloc failed");
   id->aligned_alloced_buffer = res;
 #elif defined (JITTER_ALIGNED_BLOCK_USE_POSIX_MEMALIGN)
   if (posix_memalign (& res, alignment_in_bytes, size_in_bytes) != 0)
     jitter_fatal ("posix_memalign failed");
   id->posix_memaligned_buffer = res;
 #elif defined (JITTER_ALIGNED_BLOCK_USE_FALLBACK)
-  /* Allocate a larger buffer which is guaranteed to contain an aligned buffer
-     of the required size as a sub-buffer.  Keep a pointer to the initial
-     buffer, in order to be able to free it, in the block id. */
-  size_t double_size_in_bytes = size_in_bytes * 2;
-  void *initial_pointer = jitter_xmalloc (double_size_in_bytes);
+  initial_pointer = jitter_xmalloc (allocated_size_in_bytes);
   res = ((void *)
          JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO ((jitter_uint) initial_pointer,
                                                alignment_in_bytes));
@@ -72,7 +122,9 @@ jitter_aligned_block_make (jitter_aligned_block_id *id,
 void
 jitter_aligned_block_destroy (jitter_aligned_block_id id)
 {
-#if defined (JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC)
+#if defined (JITTER_ALIGNED_BLOCK_USE_MMAP)
+  munmap (id.initial_map, id.mapping_length_in_bytes);
+#elif defined (JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC)
   free (id.aligned_alloced_buffer);
 #elif defined (JITTER_ALIGNED_BLOCK_USE_POSIX_MEMALIGN)
   free (id.posix_memaligned_buffer);
