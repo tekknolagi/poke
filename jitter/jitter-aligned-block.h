@@ -35,10 +35,11 @@
 
 /* In several places Jitter needs heap blocks allocated to a relatively large
    power of two; such blocks are freed when no longer needed.  The best
-   implementation uses mmap, followed by munmap to free the unneeded parts of
-   the mapping at the beginning and ad the end; this technique, while
-   heavyweight, has the advantage of immediately returning memory to the
-   operating system as soon as a block is destroyed.
+   implementation uses mmap to allocate a larger block followed by up to two
+   munmap calls freeing the unneeded parts of the mapping at the beginning and
+   at the end; this technique, while heavyweight, has the advantage of
+   immediately returning memory to the operating system as soon as a block is
+   destroyed.
    Notice that the block alignment must be a multiple of the system page size;
    on current systems any power of two larger than 32KiB should be supported in
    practice.  Older systems tend to have smaller pages and are even less of a
@@ -47,7 +48,7 @@
 
    On systems lacking mmap but providing aligned_alloc or posix_memalign the
    implementation is still easy, as the allocated block can be released (to the
-   process, not the system) by a call too free.
+   process, not the system) by a call to free.
 
    Finally, on inferior systems lacking all of mmap, aligned_alloc and
    posix_memalign I define an alternative, wasting some space but at least

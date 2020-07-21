@@ -51,7 +51,7 @@ jitter_aligned_block_make (jitter_aligned_block_id *id,
 
   /* The mmap and malloc implementations share the strategy of allocating a
      larger block guaranteed to contain an aligned block inside. */
-#if defined (JITTER_ALIGNED_BLOCK_USE_MMAP) \
+#if defined (JITTER_ALIGNED_BLOCK_USE_MMAP)         \
     || defined (JITTER_ALIGNED_BLOCK_USE_FALLBACK)
   /* Allocate a larger buffer which is guaranteed to contain an aligned buffer
      of the required size as a sub-buffer.  Keep a pointer to the initial
@@ -65,7 +65,7 @@ jitter_aligned_block_make (jitter_aligned_block_id *id,
 #endif
 
 #if defined (JITTER_ALIGNED_BLOCK_USE_MMAP)
-  /* Allocated a larger block. */
+  /* Allocate a larger block. */
   initial_pointer = mmap (NULL,
                           allocated_size_in_bytes,
                           PROT_READ | PROT_WRITE,
@@ -74,7 +74,8 @@ jitter_aligned_block_make (jitter_aligned_block_id *id,
                           0);
   if (initial_pointer == NULL)
     jitter_fatal ("mmap failed");
-  /* Isolate the aligned part. */
+  /* Find the aligned part of the mapping, which is the only part we are
+     interested in. */
   res = ((void *)
          JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO ((jitter_uint) initial_pointer,
                                                alignment_in_bytes));
@@ -82,7 +83,8 @@ jitter_aligned_block_make (jitter_aligned_block_id *id,
   id->mapping_length_in_bytes = size_in_bytes;
   /* Unmap the misaligned part (which means: aligned to the page, but not to the
      required alignment) at the beginning and the end.  This also checks that
-     the block alignment is a multiple of the page size. */
+     the block alignment is a multiple of the page size, as munmap fails in that
+     case. */
   void *misaligned_before = initial_pointer;
   size_t misaligned_before_length
     = (char *) res - (char *) initial_pointer;
