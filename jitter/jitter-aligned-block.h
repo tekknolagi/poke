@@ -46,12 +46,15 @@
    problem.  If you know of some exception please report it as a bug, providing
    details.
 
-   On systems lacking mmap but providing aligned_alloc or posix_memalign the
-   implementation is still easy, as the allocated block can be released (to the
-   process, not the system) by a call to free.
+   On systems lacking mmap but providing posix_memalign the implementation is
+   still easy, as the allocated block can be released (to the process, not the
+   system) by a call to free.  Despite the general case being slightly more
+   wasteful, aligned_alloc can be used as well as another alternative: it
+   requires the block size to be a multiple of the alignment, so the
+   implementation based on aligned_alloc rounds the demanded size up.
 
-   Finally, on inferior systems lacking all of mmap, aligned_alloc and
-   posix_memalign I define an alternative, wasting some space but at least
+   Finally, on inferior systems lacking all of mmap, posix_memalign and
+   aligned_alloc I define an alternative, wasting some space but at least
    allowing to free an allocated buffer.
 
    This wrapper provides a unified abstraction using the best available
@@ -64,13 +67,14 @@
  * ************************************************************************** */
 
 /* Decide which implementation to use according to feature availability, and
-   Define exactly one feature macro for the implementation. */
+   define exactly one feature macro for the implementation.  Check for features
+   in the order of implementation desirability. */
 #if defined (JITTER_HAVE_MMAP_ANONYMOUS)
 # define JITTER_ALIGNED_BLOCK_USE_MMAP
-#elif defined (JITTER_HAVE_ALIGNED_ALLOC)
-# define JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC
 #elif defined (JITTER_HAVE_POSIX_MEMALIGN)
 # define JITTER_ALIGNED_BLOCK_USE_POSIX_MEMALIGN
+#elif defined (JITTER_HAVE_ALIGNED_ALLOC)
+# define JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC
 #else
 # define JITTER_ALIGNED_BLOCK_USE_FALLBACK
 #endif

@@ -101,6 +101,12 @@ jitter_aligned_block_make (jitter_aligned_block_id *id,
       jitter_fatal ("munmap failed (%li B not multiple of the page size?)",
                     (long) alignment_in_bytes);
 #elif defined (JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC)
+  /* According to the specification aligned_alloc requires that the size be a
+     multiple of the alignment -- thanks to Bruno Haible for letting me notice.
+     This solution is therefore, in theory (in practice alignment_in_bytes will
+     usually be the same as size_in_bytes), wasteful. */
+  size_in_bytes = JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO (size_in_bytes,
+                                                        alignment_in_bytes);
   res = aligned_alloc (alignment_in_bytes, size_in_bytes);
   if (res == NULL)
     jitter_fatal ("aligned_alloc failed");
