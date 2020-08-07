@@ -23,7 +23,23 @@
 
 #include <jitter/jitter-config.h>
 #include <stdio.h>
+#include <stddef.h> /* for offsetof, in case it is supported. */
 
+
+/* Struct offset computation.
+ * ************************************************************************** */
+
+/* If offsetof is missign I can emulate with a macro which should be portable
+   in practice even if not according to the letter of the Standard. */
+#if ! defined (JITTER_HAVE_OFFSETOF)
+# define offsetof(type_name, field_name)             \
+    ((size_t)                                        \
+     ((char *) & (((type_name *) NULL)->field_name)  \
+      - (char *) NULL))
+#endif // ! defined (JITTER_HAVE_OFFSETOF)
+
+
+
 
 /* Alignment qualifiers.
  * ************************************************************************** */

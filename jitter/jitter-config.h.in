@@ -274,6 +274,9 @@
 /* Define if the compiler supports alignas. */
 #undef JITTER_HAVE_ALIGNAS
 
+/* Define if the library/compiler supports offsetof. */
+#undef JITTER_HAVE_OFFSETOF
+
 /* Define if the builtins for handling overflow are available. */
 #undef JITTER_HAVE_GCC_OVERFLOW_CHECKING
 

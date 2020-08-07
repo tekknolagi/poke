@@ -769,6 +769,20 @@ if test "x$ac_cv_have_alignas" = "xyes"; then
             [Define if the compiler supports alignas .])
 fi
 
+# Check for offsetof.
+AC_CACHE_CHECK([for offsetof], [ac_cv_have_offsetof],
+  [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM(
+        [#include <stddef.h>],
+        [[struct s { int i; char c; float f; };
+          return (int) offsetof (struct s, f);]])],
+     [ac_cv_have_offsetof=yes],
+     [ac_cv_have_offsetof=no])])
+if test "x$ac_cv_have_offsetof" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_OFFSETOF], [1],
+            [Define if the compiler supports offsetof .])
+fi
+
 # Check for GNU C's inline asm with modern syntax.
 AC_CACHE_CHECK([for GNU C inline asm with modern syntax],
   [ac_cv_have_gnu_c_inline_asm],
