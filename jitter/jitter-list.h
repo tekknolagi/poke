@@ -202,7 +202,14 @@ struct jitter_list_header
   JITTER_LIST_UNLINK_POSSIBLY_AWNE(false, item_struct_name,                     \
                                     item_field_name, header_p, item_p)
 
-/* Same as JITTER_LIST_UNLINK, but assume that the list is always-nonempty. */
+/* Same as JITTER_LIST_UNLINK, but assume that the list is always-nonempty.  A
+   useful property of JITTER_LIST_UNLINK_NONEMPTY not satisfied by
+   JITTER_LIST_UNLINK is that it is possible to unlink a *copy* of an element
+   which belongs to the list: item_p is allowed not to belong to the list, as
+   long as a copy of it does; in this case the expansion unlinks its copy.
+   JITTER_LIST_UNLINK does not allow to do this when the element to be unlinked
+   is a copy of the first or the last of the list, which would not compare as
+   equal to item_p . */
 #define JITTER_LIST_UNLINK_NONEMPTY(item_struct_name, item_field_name,  \
                                     header_p, item_p)                   \
   JITTER_LIST_UNLINK_POSSIBLY_AWNE(true, item_struct_name,              \
