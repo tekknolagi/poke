@@ -40,11 +40,11 @@
    at the end; this technique, while heavyweight, has the advantage of
    immediately returning memory to the operating system as soon as a block is
    destroyed.
-   Notice that the block alignment must be a multiple of the system page size;
-   on current systems any power of two larger than 32KiB should be supported in
-   practice.  Older systems tend to have smaller pages and are even less of a
-   problem.  If you know of some exception please report it as a bug, providing
-   details.
+   Notice that the block alignment must be a multiple of the system page size
+   times two; on modern systems any power of two larger than 64KiB should be
+   supported as a block size in practice.  Older systems tend to have smaller
+   pages and are even less of a problem.  If you know of some exception please
+   report it as a bug, providing details.
 
    On systems lacking mmap but providing posix_memalign the implementation is
    still easy, as the allocated block can be released (to the process, not the

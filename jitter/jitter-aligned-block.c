@@ -81,10 +81,10 @@ jitter_aligned_block_make (jitter_aligned_block_id *id,
                                                alignment_in_bytes));
   id->initial_map = res;
   id->mapping_length_in_bytes = size_in_bytes;
-  /* Unmap the misaligned part (which means: aligned to the page, but not to the
-     required alignment) at the beginning and the end.  This also checks that
-     the block alignment is a multiple of the page size, as munmap fails in that
-     case. */
+  /* Unmap the misaligned part (which means: aligned to a double memory page,
+     but not to the required alignment) at the beginning and the end.  This also
+     checks that the block alignment is a multiple of double the page size, as
+     munmap fails in that case. */
   void *misaligned_before = initial_pointer;
   size_t misaligned_before_length
     = (char *) res - (char *) initial_pointer;
@@ -94,12 +94,12 @@ jitter_aligned_block_make (jitter_aligned_block_id *id,
        - (char *) misaligned_after);
   if (misaligned_before_length > 0)
     if (munmap (misaligned_before, misaligned_before_length) != 0)
-      jitter_fatal ("munmap failed (%li B not multiple of the page size?)",
-                    (long) alignment_in_bytes);
+      jitter_fatal ("munmap failed (%li B not an even multiple of the page "
+                    "size?)", (long) alignment_in_bytes);
   if (misaligned_after_length > 0)
     if (munmap (misaligned_after, misaligned_after_length) != 0)
-      jitter_fatal ("munmap failed (%li B not multiple of the page size?)",
-                    (long) alignment_in_bytes);
+      jitter_fatal ("munmap failed (%li B not an even multiple of the page "
+                    "size?)", (long) alignment_in_bytes);
 #elif defined (JITTER_ALIGNED_BLOCK_USE_ALIGNED_ALLOC)
   /* According to the specification aligned_alloc requires that the size be a
      multiple of the alignment -- thanks to Bruno Haible for letting me notice.
