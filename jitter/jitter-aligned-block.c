@@ -84,7 +84,7 @@ jitter_aligned_block_make (jitter_aligned_block_id *id,
   /* Unmap the misaligned part (which means: aligned to a double memory page,
      but not to the required alignment) at the beginning and the end.  This also
      checks that the block alignment is a multiple of double the page size, as
-     munmap fails in that case. */
+     munmap fails otherwise. */
   void *misaligned_before = initial_pointer;
   size_t misaligned_before_length
     = (char *) res - (char *) initial_pointer;
