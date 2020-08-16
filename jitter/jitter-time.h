@@ -48,13 +48,13 @@ jitter_point_in_time;
 /* Allocate a new point-in-time structure, without setting its content.  Return
    a pointer to the new structure.
    Remark: since the purpose of this functionality is precise time measurement,
-   you should notice that it is inefficient to allocate a structure as part of
-   the operation being timed.  It is recommended to allocate point-in-time
-   structures in advance and then simply write into them.  The same structure
-   can be overwritten and reused over and over again. */
+   you should notice that allocating a structure as part of the operation being
+   timed is inefficient, and may pollute the measurement.  It is recommended to
+   allocate point-in-time structures in advance and then simply write into them.
+   The same structure can be overwritten and reused over and over again. */
 jitter_point_in_time
 jitter_point_in_time_make (void)
-  __attribute__ ((returns_nonnull));
+  __attribute__ ((returns_nonnull, malloc));
 
 /* Destroy a point-in-time structure allocated by jitter_point_in_time_make. */
 void
