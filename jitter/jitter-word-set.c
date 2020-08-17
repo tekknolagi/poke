@@ -1,4 +1,4 @@
-/* Jitter: pointer set data structure.
+/* Jitter: word set data structure.
 
    Copyright (C) 2020 Luca Saiu
    Written by Luca Saiu
@@ -22,7 +22,7 @@
 #include <stdio.h>  /* Only for the debugging functions.  I may want to
                        remove those altogether. */
 
-#include <jitter/jitter-pointer-set.h>
+#include <jitter/jitter-word-set.h>
 
 #include <jitter/jitter-fatal.h>
 #include <jitter/jitter-malloc.h>
@@ -35,49 +35,49 @@
 
 /* Fill the pointed buffer with element_no copies of the unused entry. */
 static void
-jitter_pointer_set_empty_buffer (pointer_type *buffer, size_t element_no)
+jitter_word_set_empty_buffer (jitter_uint *buffer, size_t element_no)
 {
   /* GCC translates this into a memset call when the number of elements is
      not statically known.  I guess it is the right choice. */
   int i;
   for (i = 0; i < element_no; i ++)
-    buffer [i] = JITTER_POINTER_SET_UNUSED;
+    buffer [i] = JITTER_WORD_SET_UNUSED;
 }
 
-static pointer_type *
-jitter_pointer_set_allocate_and_empty_buffer (size_t element_no)
+static jitter_uint *
+jitter_word_set_allocate_and_empty_buffer (size_t element_no)
 {
-  pointer_type *res = jitter_xmalloc (element_no * sizeof (pointer_type));
-  jitter_pointer_set_empty_buffer (res, element_no);
+  jitter_uint *res = jitter_xmalloc (element_no * sizeof (jitter_uint));
+  jitter_word_set_empty_buffer (res, element_no);
   return res;
 }
 
 void
-jitter_pointer_set_double (struct jitter_pointer_set *ps)
+jitter_word_set_double (struct jitter_word_set *ps)
 {
   size_t old_element_no = ps->allocated_element_no;
   size_t new_element_no = old_element_no * 2;
-  pointer_type *old_buffer = ps->buffer;
-  pointer_type *new_buffer
-    = jitter_pointer_set_allocate_and_empty_buffer (new_element_no);
+  jitter_uint *old_buffer = ps->buffer;
+  jitter_uint *new_buffer
+    = jitter_word_set_allocate_and_empty_buffer (new_element_no);
   ps->mask = (ps->mask << 1) | 1;
   ps->buffer = new_buffer;
   ps->allocated_element_no = new_element_no;
   ps->used_element_limit
-    = JITTER_POINTER_SET_ELEMENT_NO_TO_LIMIT (new_element_no);
+    = JITTER_WORD_SET_ELEMENT_NO_TO_LIMIT (new_element_no);
   ps->used_element_no = 0;
   int i;
   for (i = 0; i < old_element_no; i ++)
     {
-      pointer_type p = old_buffer [i];
-      if (JITTER_POINTER_SET_IS_VALID (p))
+      jitter_uint p = old_buffer [i];
+      if (JITTER_WORD_SET_IS_VALID (p))
         {
           /* Add the element to the new buffer, without using the more
-             convenient macros which rely on a pointer set structure and
+             convenient macros which rely on a word set structure and
              automatically resize the buffer. */
-          pointer_type *pp;
+          jitter_uint *pp;
           size_t probeno __attribute__ ((unused));
-          JITTER_POINTER_SET_BUFFER_SEARCH (new_buffer, ps->mask, p,
+          JITTER_WORD_SET_BUFFER_SEARCH (new_buffer, ps->mask, p,
                                             false,
                                             probeno, pp);
           * pp = p;
@@ -95,34 +95,34 @@ jitter_pointer_set_double (struct jitter_pointer_set *ps)
  * ************************************************************************** */
 
 /* Perform sanity checks.  This compiles to nothing in correct configuratins, so
-   it is simpler to just call the function from jitter_pointer_set_initialize
+   it is simpler to just call the function from jitter_word_set_initialize
    instead of providing another annoying global initialisation function to the
    user. */
 static void
-jitter_pointer_set_sanity_checks (void)
+jitter_word_set_sanity_checks (void)
 {
-  if (JITTER_POINTER_SET_INITIAL_ELEMENT_NO < 1)
-    jitter_fatal ("JITTER_POINTER_SET_INITIAL_ELEMENT_NO is less than 1");
-  if (JITTER_POINTER_SET_RECIPROCAL_FILL_RATIO <= 1)
-    jitter_fatal ("JITTER_POINTER_SET_RECIPROCAL_FILL_RATIO is less than or "
+  if (JITTER_WORD_SET_INITIAL_ELEMENT_NO < 1)
+    jitter_fatal ("JITTER_WORD_SET_INITIAL_ELEMENT_NO is less than 1");
+  if (JITTER_WORD_SET_RECIPROCAL_FILL_RATIO <= 1)
+    jitter_fatal ("JITTER_WORD_SET_RECIPROCAL_FILL_RATIO is less than or "
                   "equal to 1");
 }
 
 void
-jitter_pointer_set_initialize (struct jitter_pointer_set *ps)
+jitter_word_set_initialize (struct jitter_word_set *ps)
 {
   /* Crash on configuration errors. */
-  jitter_pointer_set_sanity_checks ();
+  jitter_word_set_sanity_checks ();
   
-  size_t element_no = JITTER_POINTER_SET_INITIAL_ELEMENT_NO;
+  size_t element_no = JITTER_WORD_SET_INITIAL_ELEMENT_NO;
   jitter_uint index_mask_plus_one = 2;
   while (index_mask_plus_one < element_no)
     index_mask_plus_one *= 2;
   if (index_mask_plus_one != element_no)
-    jitter_fatal ("jitter pointer set: element no not an even power of two");
+    jitter_fatal ("jitter word set: element no not an even power of two");
   ps->allocated_element_no = element_no;
   ps->used_element_limit
-    = JITTER_POINTER_SET_ELEMENT_NO_TO_LIMIT (element_no);
+    = JITTER_WORD_SET_ELEMENT_NO_TO_LIMIT (element_no);
   ps->mask = index_mask_plus_one - 1;
   /* I want to mask two different sets of bits:
      - enough bit to cover the number of elements: index_mask_plus_one - 1
@@ -134,11 +134,11 @@ jitter_pointer_set_initialize (struct jitter_pointer_set *ps)
        | JITTER_POINTER_MISALIGNMENT_BITS_MASK);
 
   ps->used_element_no = 0;
-  ps->buffer = jitter_pointer_set_allocate_and_empty_buffer (element_no);
+  ps->buffer = jitter_word_set_allocate_and_empty_buffer (element_no);
 }
 
 void
-jitter_pointer_set_finalize (struct jitter_pointer_set *ps)
+jitter_word_set_finalize (struct jitter_word_set *ps)
 {
   free (ps->buffer);
 }
@@ -150,41 +150,41 @@ jitter_pointer_set_finalize (struct jitter_pointer_set *ps)
  * ************************************************************************** */
 
 void
-jitter_pointer_set_clear (struct jitter_pointer_set *ps)
+jitter_word_set_clear (struct jitter_word_set *ps)
 {
-  jitter_pointer_set_empty_buffer (ps->buffer, ps->allocated_element_no);
+  jitter_word_set_empty_buffer (ps->buffer, ps->allocated_element_no);
   ps->used_element_no = 0;
 }
 
 void
-jitter_pointer_set_clear_and_minimize (struct jitter_pointer_set *ps)
+jitter_word_set_clear_and_minimize (struct jitter_word_set *ps)
 {
-  jitter_pointer_set_finalize (ps);
-  jitter_pointer_set_initialize (ps);
+  jitter_word_set_finalize (ps);
+  jitter_word_set_initialize (ps);
 }
 
 void
-jitter_pointer_set_clear_and_possibly_minimize (struct jitter_pointer_set *ps,
+jitter_word_set_clear_and_possibly_minimize (struct jitter_word_set *ps,
                                                 bool minimize)
 {
-  /* Differently from jitter_pointer_set_rebuild_and_possibly_minimize this
+  /* Differently from jitter_word_set_rebuild_and_possibly_minimize this
      function does not come out so naturally out of factoring. */
   if (minimize)
-    jitter_pointer_set_clear_and_minimize (ps);
+    jitter_word_set_clear_and_minimize (ps);
   else
-    jitter_pointer_set_clear (ps);
+    jitter_word_set_clear (ps);
    
 }
 
-/* This factors the common logic of jitter_pointer_set_rebuild and
-   jitter_pointer_set_rebuild_and_minimize.  It is also useful on its own. */
+/* This factors the common logic of jitter_word_set_rebuild and
+   jitter_word_set_rebuild_and_minimize.  It is also useful on its own. */
 void
-jitter_pointer_set_rebuild_and_possibly_minimize (struct jitter_pointer_set *ps,
+jitter_word_set_rebuild_and_possibly_minimize (struct jitter_word_set *ps,
                                                   bool minimize)
 {
   /* Keep a pointer to the old buffer and the number of elements, that we would
      otherwise lose by modifying *ps . */
-  pointer_type *old_buffer = ps->buffer;
+  jitter_uint *old_buffer = ps->buffer;
   size_t old_allocated_element_no = ps->allocated_element_no;
 
   if (minimize)
@@ -193,7 +193,7 @@ jitter_pointer_set_rebuild_and_possibly_minimize (struct jitter_pointer_set *ps,
          fresh.  A new buffer will be allocated, and old_buffer will also remain
          valid.  This resets the number of used elements, which is what we
          want. */
-      jitter_pointer_set_initialize (ps);
+      jitter_word_set_initialize (ps);
     }
   else
     {
@@ -201,31 +201,31 @@ jitter_pointer_set_rebuild_and_possibly_minimize (struct jitter_pointer_set *ps,
          one, and empty the new buffer as well as zeroing the number of
          entries. */
       ps->buffer
-        = jitter_xmalloc (ps->allocated_element_no * sizeof (pointer_type));
-      jitter_pointer_set_clear (ps);
+        = jitter_xmalloc (ps->allocated_element_no * sizeof (jitter_uint));
+      jitter_word_set_clear (ps);
     }
 
   /* At this point the structure is consistent but empty.  Copy non-unused
      non-deleted entries from the old buffer into it. */
   int i;
   for (i = 0; i < old_allocated_element_no; i ++)
-    if (JITTER_POINTER_SET_IS_VALID (old_buffer [i]))
-      JITTER_POINTER_SET_ADD_NEW (ps, old_buffer [i]);
+    if (JITTER_WORD_SET_IS_VALID (old_buffer [i]))
+      JITTER_WORD_SET_ADD_NEW (ps, old_buffer [i]);
 
   /* We are done with the old buffer. */
   free (old_buffer);
 }
 
 void
-jitter_pointer_set_rebuild (struct jitter_pointer_set *ps)
+jitter_word_set_rebuild (struct jitter_word_set *ps)
 {
-  jitter_pointer_set_rebuild_and_possibly_minimize (ps, false);
+  jitter_word_set_rebuild_and_possibly_minimize (ps, false);
 }
 
 void
-jitter_pointer_set_rebuild_and_minimize (struct jitter_pointer_set *ps)
+jitter_word_set_rebuild_and_minimize (struct jitter_word_set *ps)
 {
-  jitter_pointer_set_rebuild_and_possibly_minimize (ps, true);
+  jitter_word_set_rebuild_and_possibly_minimize (ps, true);
 }
 
 
@@ -234,11 +234,11 @@ jitter_pointer_set_rebuild_and_minimize (struct jitter_pointer_set *ps)
 /* Debugging.
  * ************************************************************************** */
 
-/* Some common logic factoring jitter_pointer_set_print and
-   jitter_pointer_set_print_statistics . */
+/* Some common logic factoring jitter_word_set_print and
+   jitter_word_set_print_statistics . */
 static void
-jitter_pointer_set_print_possibly_with_statistics
-   (struct jitter_pointer_set *psp, bool statistics)
+jitter_word_set_print_possibly_with_statistics
+   (struct jitter_word_set *psp, bool statistics)
 {
   jitter_uint i;
   long valid_element_no = 0;
@@ -249,26 +249,26 @@ jitter_pointer_set_print_possibly_with_statistics
   long max_probe_no = 0;
   for (i = 0; i < total_element_no; i ++)
     {
-      pointer_type p = psp->buffer [i];
+      jitter_uint p = psp->buffer [i];
       if (! statistics)
         printf ("%4li. ", (long) i);
-      if (JITTER_POINTER_SET_IS_VALID (p))
+      if (JITTER_WORD_SET_IS_VALID (p))
         {
           long probe_no;
-          JITTER_POINTER_SET_SET_PROBE_NO (psp, p, probe_no);
+          JITTER_WORD_SET_SET_PROBE_NO (psp, p, probe_no);
           if (! statistics)
-            printf ("%-18p   probe no %li\n", p, probe_no);
+            printf ("%-18p   probe no %li\n", (void *) p, probe_no);
           valid_element_no ++;
           total_probe_no += probe_no;
           if (probe_no < min_probe_no) min_probe_no = probe_no;
           if (probe_no > max_probe_no) max_probe_no = probe_no;
         }
-      else if (p == JITTER_POINTER_SET_UNUSED)
+      else if (p == JITTER_WORD_SET_UNUSED)
         {
           if (! statistics)
             printf ("unused\n");
         }
-      else if (p == JITTER_POINTER_SET_DELETED)
+      else if (p == JITTER_WORD_SET_DELETED)
         {
           if (! statistics)
             printf ("deleted\n");
@@ -292,20 +292,20 @@ jitter_pointer_set_print_possibly_with_statistics
                   average_probe_no, max_probe_no);
         }
       else
-        printf ("empty pointer set: no statistics\n");
+        printf ("empty word set: no statistics\n");
     }
 }
 
 void
-jitter_pointer_set_print (struct jitter_pointer_set *psp)
+jitter_word_set_print (struct jitter_word_set *psp)
 {
-  jitter_pointer_set_print_possibly_with_statistics (psp, false);
+  jitter_word_set_print_possibly_with_statistics (psp, false);
 }
 
 void
-jitter_pointer_set_print_statistics (struct jitter_pointer_set *psp)
+jitter_word_set_print_statistics (struct jitter_word_set *psp)
 {
-  jitter_pointer_set_print_possibly_with_statistics (psp, true);
+  jitter_word_set_print_possibly_with_statistics (psp, true);
 }
 
 
@@ -316,71 +316,71 @@ jitter_pointer_set_print_statistics (struct jitter_pointer_set *psp)
 
 __attribute__ ((noclone, noinline))
 bool
-jitter_pointer_set_test0 (jitter_int n)
+jitter_word_set_test0 (jitter_int n)
 {
   return ! ! n;
 }
 
 __attribute__ ((noclone, noinline))
 int /*bool*/
-jitter_pointer_set_test1 (struct jitter_pointer_set *psp, pointer_type p)
+jitter_word_set_test1 (struct jitter_word_set *psp, jitter_uint p)
 {
-  int b;
-  JITTER_POINTER_SET_SET_HAS (psp, p, b);
+  int /*bool*/ b;
+  JITTER_WORD_SET_SET_HAS (psp, p, b);
   return b;
 }
 
 __attribute__ ((noclone, noinline))
 bool
-jitter_pointer_set_test1b (struct jitter_pointer_set *psp, pointer_type p)
+jitter_word_set_test1b (struct jitter_word_set *psp, jitter_uint p)
 {
   bool b;
-  JITTER_POINTER_SET_SET_HAS (psp, p, b);
+  JITTER_WORD_SET_SET_HAS (psp, p, b);
   return b;
 }
 
 __attribute__ ((noclone, noinline))
 void
-jitter_pointer_set_test2 (struct jitter_pointer_set *psp, pointer_type p)
+jitter_word_set_test2 (struct jitter_word_set *psp, jitter_uint p)
 {
-  JITTER_POINTER_SET_ADD_NEW (psp, p);
+  JITTER_WORD_SET_ADD_NEW (psp, p);
 }
 
 __attribute__ ((noclone, noinline))
 void
-jitter_pointer_set_test3 (struct jitter_pointer_set *psp, pointer_type p)
+jitter_word_set_test3 (struct jitter_word_set *psp, jitter_uint p)
 {
-  JITTER_POINTER_SET_ADD_UNIQUE (psp, p);
+  JITTER_WORD_SET_ADD_UNIQUE (psp, p);
 }
 
 __attribute__ ((noclone, noinline))
 void
-jitter_pointer_set_test4 (struct jitter_pointer_set *psp, pointer_type p)
+jitter_word_set_test4 (struct jitter_word_set *psp, jitter_uint p)
 {
-  JITTER_POINTER_SET_REMOVE (psp, p);
+  JITTER_WORD_SET_REMOVE (psp, p);
 }
 
 __attribute__ ((noclone, noinline))
 void
-jitter_pointer_set_test5 (struct jitter_pointer_set *psp, pointer_type p)
+jitter_word_set_test5 (struct jitter_word_set *psp, jitter_uint p)
 {
-  bool b;
-  JITTER_POINTER_SET_SET_HAS (psp, p, b);
+  int /*bool*/ b;
+  JITTER_WORD_SET_SET_HAS (psp, p, b);
   if (b)
     {
-      JITTER_POINTER_SET_REMOVE (psp, p);
+      JITTER_WORD_SET_REMOVE (psp, p);
     }
   else
     {
-      JITTER_POINTER_SET_REMOVE (psp, psp);
+      JITTER_WORD_SET_REMOVE (psp, (jitter_uint) psp);
     }
 }
 
 void
-jitter_pointer_set_test_hash (long random_element_no)
+jitter_word_set_test_hash (long random_element_no)
 {
-  struct jitter_pointer_set ps;
-  jitter_pointer_set_initialize (& ps);
+  struct jitter_word_set ps;
+  jitter_word_set_initialize (& ps);
   long i;
   for (i = 0; i < random_element_no; /* nothing */)
     {
@@ -402,26 +402,26 @@ jitter_pointer_set_test_hash (long random_element_no)
       rn &= ~ (((jitter_uint) 1 << JITTER_LG_BYTES_PER_WORD) - 1);
       long j;
       for (j = 0; j < sequential_element_no; j ++)
-        JITTER_POINTER_SET_ADD_UNIQUE (& ps, (void **) rn + j);
+        JITTER_WORD_SET_ADD_UNIQUE (& ps, rn + JITTER_BYTES_PER_WORD * j);
 
       i += sequential_element_no;
     }
-  // jitter_pointer_set_print (& ps);
+  // jitter_word_set_print (& ps);
   printf ("%-10li ", random_element_no);
-  jitter_pointer_set_print_statistics (& ps);
-  jitter_pointer_set_finalize (& ps);
+  jitter_word_set_print_statistics (& ps);
+  jitter_word_set_finalize (& ps);
 }
 
 void
-jitter_pointer_set_pointer_set_test (void)
+jitter_word_set_word_set_test (void)
 {
   unsigned long table_size;
   for (table_size = 64; table_size < ((unsigned long) 1 << 30); table_size *= 2)
     {
       long element_no
         = (long) ((double) table_size
-                  / JITTER_POINTER_SET_RECIPROCAL_FILL_RATIO
+                  / JITTER_WORD_SET_RECIPROCAL_FILL_RATIO
                   - 1);
-      jitter_pointer_set_test_hash (element_no);
+      jitter_word_set_test_hash (element_no);
     }
 }
