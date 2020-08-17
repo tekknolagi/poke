@@ -370,7 +370,7 @@
    JITTER_POINTER_MISALIGNMENT_BITS_MASK , having the low bits set to 1 instead
    of the high bits. */
 #define JITTER_POINTER_NON_MISALIGNMENT_BITS_MASK  \
-  (~ JITTER_POINTER_SET_LOW_BITS_MASK)
+  (~ JITTER_POINTER_MISALIGNMENT_BITS_MASK)
 
 /* Given an expression evaluating to a pointer or a word-sized bitmask expand to
    an expression evaluating to the given expression converted to a bitmask and
