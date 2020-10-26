@@ -1392,7 +1392,7 @@ AC_MSG_RESULT([$jitter_have_known_binary_format])
 # mode.
 if test "x$jitter_host_os_is_elf" = "xyes" \
    && test "x$JITTER_HAVE_ACTUAL_GCC" = "xyes" \
-   && test "$JITTER_GCC_MINOR_VERSION" -ge 4 \
+   && test "$JITTER_GCC_MAJOR_VERSION" -ge 4 \
    && test "x$JITTER_SUBPACKAGE" != 'x'; then
   jitter_enable_visibility_hidden_default=yes
 else
@@ -1409,7 +1409,6 @@ AC_ARG_ENABLE([visibility-hidden],
 AC_MSG_RESULT([$jitter_enable_visibility_hidden])
 AM_CONDITIONAL([JITTER_ENABLE_VISIBILITY_HIDDEN],
                [test "x$jitter_enable_visibility_hidden" = "xyes"])
-
 
 # Recognize specific operating systems.
 ################################################################
