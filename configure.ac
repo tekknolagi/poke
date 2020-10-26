@@ -1905,6 +1905,10 @@ for dispatch_model in $jitter_enabled_dispatch_models; do
   jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-tree-tail-merge
   jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-isolate-erroneous-paths-dereference
   jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-split-paths
+  if test "x$jitter_enable_visibility_hidden" = 'xyes'; then
+    jitter_check_cc_options JITTER_FLAGS_CFLAGS -fvisibility=hidden
+    jitter_check_cc_options JITTER_FLAGS_LDFLAGS -fvisibility=hidden
+  fi
 
   # LTO, impressive as it is in general, is a bad match for Jitter, for
   # correctness reasons on complex dispatches and for performance reasons with
