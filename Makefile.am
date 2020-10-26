@@ -48,7 +48,9 @@ AUTOMAKE_OPTIONS = subdir-objects info-in-builddir
 
 # I prefer to define all variables as empty in the beginning, and then add to
 # each group of them as part of the implementation of the same feature.
+AM_CFLAGS =
 AM_CPPFLAGS =
+AM_LDFLAGS =
 BUILT_SOURCES =
 DISTCLEANFILES =
 EXTRA_DIST =
@@ -700,6 +702,18 @@ non_convenience_lib_libjitter_la_DEPENDENCIES = \
   lib/libjitter.la
 non_convenience_lib_libjitter_la_LIBADD = \
   lib/libjitter.la
+
+
+# Experimental: ELF symbol visibility.
+# ################################################################
+
+# In case we are to use -fvisibility-hidden, use it everywhere: notice that
+# AM_CFLAGS is used in the definition of target-specific target_CFLAGS, so its
+# content is always taken into account.
+if JITTER_ENABLE_VISIBILITY_HIDDEN
+  AM_CFLAGS += -fvisibility=hidden
+  AM_LDFLAGS += -fvisibility=hidden
+endif # if JITTER_ENABLE_VISIBILITY_HIDDEN
 
 
 # Non-Libtool static libraries for sub-package mode.

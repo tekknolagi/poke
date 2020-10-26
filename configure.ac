@@ -1381,6 +1381,36 @@ fi
 AC_MSG_RESULT([$jitter_have_known_binary_format])
 
 
+# ELF symbol visibility.
+################################################################
+
+# This is an experimental feature requested by the poke people.  The API may
+# change in the future.
+
+# If the option is passed, compile with -fvisibility=hidden.  This is the
+# default only on ELF systems, with GCC version 4 or later, in sub-package
+# mode.
+if test "x$jitter_host_os_is_elf" = "xyes" \
+   && test "x$JITTER_HAVE_ACTUAL_GCC" = "xyes" \
+   && test "$JITTER_GCC_MINOR_VERSION" -ge 4 \
+   && test "x$JITTER_SUBPACKAGE" != 'x'; then
+  jitter_enable_visibility_hidden_default=yes
+else
+  jitter_enable_visibility_hidden_default=no
+fi
+AC_MSG_CHECKING([if libraries should be compiled with -fvisibility=hidden])
+AC_ARG_ENABLE([visibility-hidden],
+              AS_HELP_STRING([--enable-visibility-hidden],
+                 [experimental: compile passing the GCC option
+                  -fvisibility=hidden.  Default: yes on ELF systems using GCC 4
+                  or later in sub-package mode; no elsewhere.]),
+              jitter_enable_visibility_hidden="$enableval",
+              jitter_enable_visibility_hidden="$jitter_enable_visibility_hidden_default")
+AC_MSG_RESULT([$jitter_enable_visibility_hidden])
+AM_CONDITIONAL([JITTER_ENABLE_VISIBILITY_HIDDEN],
+               [test "x$jitter_enable_visibility_hidden" = "xyes"])
+
+
 # Recognize specific operating systems.
 ################################################################
 
