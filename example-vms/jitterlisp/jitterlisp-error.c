@@ -1,6 +1,6 @@
 /* JitterLisp: error handling.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -21,6 +21,7 @@
 
 
 #include "jitterlisp-error.h"
+#include "jitterlisp-printer.h"
 
 #include <setjmp.h>
 #include <stdbool.h>
@@ -151,7 +152,11 @@ jitterlisp_error (char *message_or_NULL)
 
   // FIXME: move the print somewhere else.
   if (message_or_NULL != NULL)
-    printf ("ERRORING OUT: %s\n", message_or_NULL);
+    {
+      jitterlisp_print_error_char_star ("ERRORING OUT: ");
+      jitterlisp_print_error_char_star (message_or_NULL);
+      jitterlisp_print_error_char_star ("\n");
+    }
 
   if (! jitterlisp_error_context_stack_empty ())
     {

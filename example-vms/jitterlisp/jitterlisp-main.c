@@ -53,7 +53,7 @@ enum jitterlisp_negative_option
     jitterlisp_negative_option_no_compact_uninterned,
     jitterlisp_negative_option_omit_nothing,
     jitterlisp_negative_option_repl,
-    jitterlisp_negative_option_no_colorize,
+    jitterlisp_negative_option_colorize,
     jitterlisp_negative_option_no_cross_disassembler,
     jitterlisp_negative_option_no_free_routines,
     jitterlisp_negative_option_no_time,
@@ -64,7 +64,7 @@ enum jitterlisp_negative_option
    with any value in enum jitterlisp_negative_option . */
 enum jitterlisp_long_only_option
   {
-    jitterlisp_long_only_option_colorize = -100,
+    jitterlisp_long_only_option_no_colorize = -100,
     jitterlisp_long_only_option_no_verbose_litter,
     jitterlisp_long_only_option_no_library,
     jitterlisp_long_only_option_no_omit_nothing,
@@ -100,8 +100,12 @@ static struct argp_option jitterlisp_option_specification[] =
    {NULL, '\0', NULL, OPTION_DOC, "Interaction options:", 30},
    {"no-omit-nothing", jitterlisp_long_only_option_no_omit_nothing, NULL, 0,
     "Show interactive evaluation results even when they are #<nothing>" },
-   {"colorize", jitterlisp_long_only_option_colorize, NULL, 0,
-    "Colorize s-expressions with ANSI terminal escape sequences" },
+   {"no-colorize", jitterlisp_long_only_option_no_colorize, NULL, 0,
+    "Do not colorise s-expressions with terminal escape sequences"
+#ifndef JITTER_WITH_LIBTEXTSTYLE
+    " (no effect in this configuration)"
+#endif // #ifndef JITTER_WITH_LIBTEXTSTYLE
+   },
    {"compact-uninterned", 'c', NULL,
     0, "Print uninterned symbols in compact notation" },
    {"cross-disassembler", jitterlisp_long_only_option_cross_disassembler, NULL,
@@ -112,7 +116,7 @@ static struct argp_option jitterlisp_option_specification[] =
    {"no-verbose-litter", jitterlisp_long_only_option_no_verbose_litter, NULL, 0,
     "Don't show littering information at run time"
 #ifndef JITTERLISP_LITTER
-    " (no effect with this exectuable)"
+    " (no effect with this executable)"
 #endif // #ifndef JITTERLISP_LITTER
    },
    {"time", jitterlisp_long_only_option_time, "TIME", OPTION_ARG_OPTIONAL,
@@ -124,8 +128,12 @@ static struct argp_option jitterlisp_option_specification[] =
    {NULL, '\0', NULL, OPTION_DOC, "", 31},
    {"omit-nothing", jitterlisp_negative_option_omit_nothing, NULL, 0,
     "Omit #<nothing> interactive evaluation results (default)"},
-   {"no-colorize", jitterlisp_negative_option_no_colorize, NULL, 0,
-    "Don't colorize s-expressions (default)"},
+   {"colorize", jitterlisp_negative_option_colorize, NULL, 0,
+    "Colorise s-expressions (default)"
+#ifndef JITTER_WITH_LIBTEXTSTYLE
+    " (no effect in this configuration)"
+#endif // #ifndef JITTER_WITH_LIBTEXTSTYLE
+    },
    {"no-compact-uninterned", jitterlisp_negative_option_no_compact_uninterned,
     NULL, 0, "Don't print uninterned symbols in compact notation (default)" },
    {"no-cross-disassembler", jitterlisp_negative_option_no_cross_disassembler,
@@ -177,7 +185,7 @@ static struct argp_option jitterlisp_option_specification[] =
 
 const char *argp_program_version
   = "JitterLisp (" PACKAGE_NAME ") " PACKAGE_VERSION "\n"
-    "Copyright (C) 2017, 2018, 2019 Luca Saiu.\n"
+    "Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu.\n"
     "JitterLisp comes with ABSOLUTELY NO WARRANTY.\n"
     "You may redistribute copies of JitterLisp under the terms of the GNU General Public\n"
     "License, version 3 or any later version published by the Free Software Foundation.\n"
@@ -228,8 +236,8 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case jitterlisp_long_only_option_no_omit_nothing:
       sp->print_nothing_results = true;
       break;
-    case jitterlisp_long_only_option_colorize:
-      sp->colorize = true;
+    case jitterlisp_long_only_option_no_colorize:
+      sp->colorize = false;
       break;
     case 'c':
       sp->print_compact_uninterned_symbols = true;
@@ -259,8 +267,8 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case jitterlisp_negative_option_omit_nothing:
       sp->print_nothing_results = false;
       break;
-    case jitterlisp_negative_option_no_colorize:
-      sp->colorize = false;
+    case jitterlisp_negative_option_colorize:
+      sp->colorize = true;
       break;
     case jitterlisp_negative_option_no_compact_uninterned:
       sp->print_compact_uninterned_symbols = false;
@@ -329,7 +337,8 @@ main (int argc, char **argv)
 {
   /* Initialize JitterLisp.  This among the rest initializes the settings data
      structure with default values, so it must be called before argp_parse ,
-     which may change those. */
+     which may change those.  This does *not* initialise the print subsystem;
+     we need to parse the options before doing that. */
   jitterlisp_initialize ();
 
   /* Parse our arguments; jitterlisp_settings will contain the information
@@ -337,6 +346,10 @@ main (int argc, char **argv)
      sp as a pointer to it, for convenience. */
   argp_parse (& argp, argc, argv, 0, 0, & jitterlisp_settings);
 
+  /* Now we know whether styling is enabled, and we can initialise the
+     print subsystem as well. */
+  jitterlisp_printer_initialize ();
+  
   /* In case no REPL option was given decide whether to run it: yes iff no
      file was given. */
   struct jitterlisp_settings * const sp = & jitterlisp_settings;

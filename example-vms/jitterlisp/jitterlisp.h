@@ -60,14 +60,16 @@
 /* Initialization and finalization.
  * ************************************************************************** */
 
-/* Initialize JitterLisp.  It is in general unsafe to call any function or macro
-   from the JitterLisp headers before this. */
+/* Initialise JitterLisp, except for the printer API which must be initialised
+   separately, after we decide whether styling is enabled.  It is in general
+   unsafe to call any function or macro from the JitterLisp headers before
+   this. */
 void
 jitterlisp_initialize (void);
 
-/* Finalize JitterLisp.  It is in general unsafe to call any function or macro
-   from the JitterLisp headers after this, until jitterlisp_initialize is called
-   again. */
+/* Finalize JitterLisp (including the printer API).  It is in general unsafe to
+   call any function or macro from the JitterLisp headers after this, until
+   jitterlisp_initialize is called again. */
 void
 jitterlisp_finalize (void);
 

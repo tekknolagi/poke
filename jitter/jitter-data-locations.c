@@ -1,6 +1,6 @@
 /* Jitter: data locations.
 
-   Copyright (C) 2019 Luca Saiu
+   Copyright (C) 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -142,32 +142,56 @@ jitter_destroy_data_locations (struct jitter_data_locations *locations)
 /* Data locations: human-readable output.
  * ************************************************************************** */
 
+/* Begin using a class in the given print context, where the class name is
+   formed by the concatenation of the lower-case prefix for the VM of the
+   pointed executable routine, concatenated to an underscore, concatenated
+   to the given suffix.
+   For example, if the mutable routine r belonged to a VM named "foo",
+     jitter_disassemble_begin_class (ctx, r, "label")
+   would open a class in the context ctx named "foo_label". */
+__attribute__ ((unused))
+static void
+jitter_locations_begin_class (jitter_print_context ctx,
+                              const struct jitter_vm *vm,
+                              const char *suffix)
+{
+  char *prefix = vm->configuration.lower_case_prefix;
+  size_t size = strlen (prefix) + 1 + strlen (suffix) + 1;
+  char *buffer = jitter_xmalloc (size);
+  sprintf (buffer, "%s_%s", prefix, suffix);
+  jitter_print_begin_class (ctx, buffer);
+  free (buffer);
+}
+
 void
-jitter_dump_data_locations (FILE *out, const struct jitter_vm *vm)
+jitter_dump_data_locations (jitter_print_context out,
+                            const struct jitter_vm *vm)
 {
   struct jitter_data_locations *locations = jitter_make_data_locations (vm);
   if (! locations->reliable)
     {
-      fprintf (out, "The following information is unreliable: at least\n");
-      fprintf (out, "one datum needs more than one load instruction to be\n");
-      fprintf (out, "accessed.\n");
+      jitter_print_char_star (out, "The following information is unreliable: at least\n");
+      jitter_print_char_star (out, "one datum needs more than one load instruction to be\n");
+      jitter_print_char_star (out, "accessed.\n");
       if (JITTER_ARCHITECTURE_IS ("sh"))
         {
-          fprintf (out, "This might happen, on SH, because of the\n");
-          fprintf (out, "restricted load offset ranges.\n");
+          jitter_print_char_star (out, "This might happen, on SH, because of the\n");
+          jitter_print_char_star (out, "restricted load offset ranges.\n");
         }
       else
-        fprintf (out, "This should never happen.\n");
+        jitter_print_char_star (out, "This should never happen.\n");
     }
   int i;
   size_t register_no = 0;
   for (i = 0; i < locations->data_location_no; i ++)
     {
-      fprintf (out, "%2i. %24s: %-12s (%s)\n",
+      char s [1000];
+      sprintf (s, "%2i. %24s: %-12s (%s)\n",
                i,
                locations->data_locations [i].name,
                locations->data_locations [i].location,
                locations->data_locations [i].register_ ? "register" : "memory");
+      jitter_print_char_star (out, s);
       if (locations->data_locations [i].register_)
         register_no ++;
     }
@@ -175,10 +199,11 @@ jitter_dump_data_locations (FILE *out, const struct jitter_vm *vm)
     {
       int register_percentage
         = (register_no * 100) / locations->data_location_no;
-      fprintf (out, "Register ratio: %i%%\n", register_percentage);
+      jitter_print_char_star (out, "Register ratio: ");
+      jitter_print_int (out, 10, register_percentage);
+      jitter_print_char_star (out, "%\n");
     }
   else
-    fprintf (out, "Register ratio: undefined\n");
-  fflush (out);
+    jitter_print_char_star (out, "Register ratio: undefined\n");
   jitter_destroy_data_locations (locations);
 }

@@ -1,6 +1,6 @@
 /* JitterLisp: printer header.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -26,76 +26,63 @@
 #include <stdio.h>
 
 #include "jitterlisp-sexpression.h"
+#include <jitter/jitter-print.h>
 
 
-/* Char-printing definitions.
+/* The global print context.
  * ************************************************************************** */
 
-/* This API makes it easy to use the same functions for printing to a stream, to
-   a dynamically-allocated string in memory or to some other sink defined by the
-   user.
-
-   This has nothing to do with character names, below. */
-
-/* A char-printing function, at every call, prints the given character to the
-   sink referred in the pointed state, updating it if needed.  The exact nature
-   of the state depends on the printer function. */
-typedef void (*jitterlisp_char_printer_function) (void *printer_state, char c);
+/* This is the print context bound to the terminal or to stdout.  It may support
+   styling. */
+extern jitter_print_context
+jitterlisp_print_context;
 
 
 
 
-/* Predefined char-printers.
+/* Low-level print facility: classes.
  * ************************************************************************** */
 
-/* A char-printing function adding to a dynamic buffer.  The first argument,
-   declared as void * for compatibility with jitterlisp_char_printer_function ,
-   is actually of type struct jitter_dynamic_buffer * , and the pointed
-   structure must be already initialized when this function is called.  The
-   function pushes a character to the dynamic buffer, which is automatically
-   enlarged as needed.
-
-   After printing is over the user can finalize the dynamic buffer, or extract
-   its data. */
+/* Begin the named class in the given print context.  The implicit class name
+   prefix is "jitterlisp_". */
 void
-jitterlisp_dynamic_buffer_char_printer_function (void *dynamic_buffer, char c)
-  __attribute__ ((nonnull (1)));
+jitterlisp_begin_class (jitter_print_context cx, const char *name_suffix);
 
-/* A char-printing function writing to a FILE * output stream.  The first argument,
-   declared as void * for compatibility with jitterlisp_char_printer_function ,
-   is actually of type FILE * , and must be open for writing at at the correct
-   position.
-
-   After printing is over the caller may close the stream. */
+/* End the last begun class in the given print context. */
 void
-jitterlisp_stream_char_printer_function (void *file_star, char c)
-  __attribute__ ((nonnull (1)));
+jitterlisp_end_class (jitter_print_context cx);
 
 
 
 
-/* S-expression printer.
+/* Print error, warning and logging messages.
  * ************************************************************************** */
 
-/* Print the given s-expression using the given printer state, without
+/* Print text as an error message, appropriately styled, to the global
+   print context. */
+void
+jitterlisp_log_char_star (const char *message);
+void
+jitterlisp_print_error_char_star (const char *message);
+
+/* Print a Lisp object as part of an error message, appropriately styled, to the
+   global print context. */
+void
+jitterlisp_log (jitterlisp_object o);
+void
+jitterlisp_print_error (jitterlisp_object o);
+
+
+
+
+/* Lisp object printer.
+ * ************************************************************************** */
+
+/* Print the given Lisp object using the given print context, without
    terminating with '\n'. */
 void
-jitterlisp_print (jitterlisp_char_printer_function char_printer,
-                  void *char_printer_state,
-                  jitterlisp_object o)
+jitterlisp_print (jitter_print_context c, jitterlisp_object o)
   __attribute__ ((nonnull (1)));
-
-
-
-
-/* S-expression printer: convenience API hiding char-printers.
- * ************************************************************************** */
-
-/* Print the given JitterLisp object to the given stream. */
-void
-jitterlisp_print_to_stream (FILE *f, jitterlisp_object o)
-  __attribute__ ((nonnull (1)));
-
 
 /* Print the given JitterLisp object into a fresh malloc-allocated
    '\0'-terminated string, and return a pointer to it.  The user is responsible
@@ -140,5 +127,27 @@ jitterlisp_non_ordinary_character_name_bindings [];
    jitterlisp_non_ordinary_character_name_bindings in elements. */
 extern const size_t
 jitterlisp_non_ordinary_character_name_binding_no;
+
+
+
+
+/* Printer initialisation.
+ * ************************************************************************** */
+
+/* Initialise the print subsystem.  This needs to be called after the main
+   initialisation function, in order to know whether to enable styling. */
+void
+jitterlisp_printer_initialize (void);
+
+
+
+
+/* Not for the user: printer finalisation.
+ * ************************************************************************** */
+
+/* Finalise the print subsystem.  This is an internal function called by the
+   global JitterLisp finalisation function. */
+void
+jitterlisp_printer_finalize (void);
 
 #endif // #ifndef JITTERLISP_PRINTER_H_

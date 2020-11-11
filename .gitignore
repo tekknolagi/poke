@@ -1,3 +1,23 @@
+# Git ignore file for the Jitter source repository.
+# Copyright (C) 2016, 2017, 2018, 2019, 2020 Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
 # Don't track my two build-aux directories.
 /build-aux
 /example-vms/structured/build-aux
@@ -52,9 +72,11 @@ jitterc/jitterc-parser.output
 jitterc/jitterc-scanner.c
 jitterc/jitterc-scanner.h
 doc/stamp-1
+doc/jitter.info
 example-vms/jitterlisp/jitterlisp-constant-strings.c
 example-vms/jitterlisp/doc/fdl.texi
 example-vms/jitterlisp/doc/gpl.texi
+example-vms/jitterlisp/doc/jitterlisp.info
 example-vms/jitterlisp/doc/stamp-vti
 example-vms/jitterlisp/doc/version-jitterlisp.texi
 bin/jitter-config.in
@@ -92,6 +114,7 @@ example-build-systems/structured-simple/structured.y
 example-build-systems/structured-simple/structuredvm-vm.h
 example-build-systems/structured-simple/structuredvm-vm1.c
 example-build-systems/structured-simple/structuredvm-vm2.c
+example-build-systems/structured-simple/structured-style.css
 example-build-systems/structured-with-library/AUTHORS
 example-build-systems/structured-with-library/COPYING
 example-build-systems/structured-with-library/NEWS
@@ -118,6 +141,7 @@ example-build-systems/structured-with-library/structured.y
 example-build-systems/structured-with-library/structuredvm-vm.h
 example-build-systems/structured-with-library/structuredvm-vm1.c
 example-build-systems/structured-with-library/structuredvm-vm2.c
+example-build-systems/structured-with-library/structured-style.css
 example-vms/jitterlisp/examples/fibo.py
 example-vms/jitterlisp/examples/other-systems/
 example-vms/uninspired/examples/counter.lisp

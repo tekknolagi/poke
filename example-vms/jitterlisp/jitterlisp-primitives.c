@@ -1,6 +1,6 @@
 /* JitterLisp: primitives.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -160,10 +160,13 @@ jitterlisp_apply_primitive (jitterlisp_object primitive,
                * _jitterlisp_next_arg))                                       \
         {                                                                     \
           /* FIXME: integrate into jitter_error_cloned. */                    \
-          printf ("About the %i-th (0-based) actual for %s  ",                \
-                  (int) (_jitterlisp_next_arg - args),                        \
-                  _jitterlisp_the_name_suffix);                               \
-          jitterlisp_print_to_stream (stdout, * _jitterlisp_next_arg);        \
+          char _jitterlisp_error_buffer [1000];                               \
+          sprintf (_jitterlisp_error_buffer,                                  \
+                   "About the %i-th (0-based) actual for %s  ",               \
+                   (int) (_jitterlisp_next_arg - args),                       \
+                   _jitterlisp_the_name_suffix);                              \
+          jitterlisp_print_error_char_star (_jitterlisp_error_buffer);        \
+          jitterlisp_print_error (* _jitterlisp_next_arg);                    \
           printf (":\n");                                                     \
           jitterlisp_error_cloned ("invalid argument type for primitive "     \
                                    "(not "                                    \
@@ -637,12 +640,12 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(compiled_closure_disassemble, COMPILED_CLOSURE,
   { JITTERLISP_COMPILED_CLOSURE_DISASSEMBLE_(res, args [0]); })
 /* Operations displaying debugging information. */
 JITTERLISP_PRIMITIVE_FUNCTION_0_(dump_data_locations,
-  { jitterlispvm_dump_data_locations (stdout); })
+  { jitterlispvm_dump_data_locations (jitterlisp_print_context); })
 /* Operations to display legal notices. */
 JITTERLISP_PRIMITIVE_FUNCTION_0_(copying,
-  { printf ("%s\n", jitterlisp_gpl); })
+  { jitter_print_char_star (jitterlisp_print_context, jitterlisp_gpl); })
 JITTERLISP_PRIMITIVE_FUNCTION_0_(no_warranty,
-  { printf ("%s\n", jitterlisp_no_warranty); })
+  { jitter_print_char_star (jitterlisp_print_context, jitterlisp_no_warranty); })
 /* Scratch / tentative. */
 JITTERLISP_PRIMITIVE_FUNCTION_2_(catch_any, CLOSURE, CLOSURE,
   { jitterlisp_object jitterlisp_possibly_failing_thunk = args [0];

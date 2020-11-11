@@ -1,6 +1,6 @@
 /* VM library: native code disassembler.
 
-   Copyright (C) 2017, 2019 Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -33,19 +33,43 @@
 #include <jitter/jitter-specialize.h>
 #include <jitter/jitter-disassemble.h>
 #include <jitter/jitter-vm.h>
+#include <jitter/jitter-print.h>
+
+/* Begin using a class in the given print context, where the class name is
+   formed by the concatenation of the lower-case prefix for the VM of the
+   pointed executable routine, concatenated to an underscore, concatenated
+   to the given suffix.
+   For example, if the mutable routine r belonged to a VM named "foo",
+     jitter_disassemble_begin_class (ctx, r, "label")
+   would open a class in the context ctx named "foo_label". */
+static void
+jitter_disassemble_begin_class (jitter_print_context ctx,
+                                const struct jitter_executable_routine *er,
+                                const char *suffix)
+{
+  char *prefix = er->vm->configuration.lower_case_prefix;
+  size_t size = strlen (prefix) + 1 + strlen (suffix) + 1;
+  char *buffer = jitter_xmalloc (size);
+  sprintf (buffer, "%s_%s", prefix, suffix);
+  jitter_print_begin_class (ctx, buffer);
+  free (buffer);
+}
 
 /* Almost nothing of what follows is relevant with switch-dispatching. */
 #ifdef JITTER_DISPATCH_SWITCH
 __attribute__ ((noinline, noclone))
 void
-jitter_disassemble_executable_routine_to (FILE *f,
-                                          const struct jitter_executable_routine
-                                          *er, bool raw,
-                                          const char *objdump_name,
-                                          const char *objdump_options_or_NULL)
+jitter_executable_routine_disassemble (jitter_print_context out,
+                                       const struct jitter_executable_routine
+                                       *er, bool raw,
+                                       const char *objdump_name,
+                                       const char *objdump_options_or_NULL)
 {
   /* Just refuse to disassemble under switch dispatching. */
-  fprintf (f, "<switch dispatching: refusing to disassemble>\n");
+  jitter_disassemble_begin_class (out, er, "warning");
+  jitter_print_char_star (out,
+                          "<switch dispatching: refusing to disassemble>\n");
+  jitter_print_end_class (out);
 }
 
 #else /* not switch-dispatching */
@@ -88,10 +112,85 @@ jitter_temporary_file_pathname (const char *basename_prefix)
   return pathname;
 }
 
+/* The "state" (in the DFA sense) we are in, while reprinting and decorating
+   the output of objdump. */
+enum disassemble_objdump_state
+  {
+    disassemble_objdump_state_address,
+    disassemble_objdump_state_whitespace_after_address,
+    disassemble_objdump_state_hex,
+    disassemble_objdump_state_whitespace_after_hex,
+    disassemble_objdump_state_disassembly
+  };
+
+/* A helper function for jitter_disassemble_range_objdump.
+   Print the given character, coming from objdump, with the appropriate class
+   for the given state, to the given print context; keep into account the
+   previous character.  Return the next state */
+static enum disassemble_objdump_state
+jitter_disassemble_print_char (jitter_print_context output,
+                               const struct jitter_executable_routine *er,
+                               enum disassemble_objdump_state old_state,
+                               char previous_c,
+                               char c)
+{
+  enum disassemble_objdump_state new_state = old_state;
+  bool whitespace = (c == ' ' || c == '\t' || c == '\n' || c == '\r');
+  switch (old_state)
+    {
+    case disassemble_objdump_state_address:
+      if (whitespace)
+        new_state = disassemble_objdump_state_whitespace_after_address;
+      else
+        jitter_disassemble_begin_class (output, er, "memory_address");
+      break;
+    case disassemble_objdump_state_whitespace_after_address:
+      if (! whitespace)
+        {
+          new_state = disassemble_objdump_state_hex;
+          jitter_disassemble_begin_class (output, er, "native_instruction_hex");
+        }
+      break;
+    case disassemble_objdump_state_hex:
+      /* Objdump behaves differently on different architectures, in some cases
+         visually separating bytes with a space, in other case not.  Anyway
+         there is always a wider separator between hexadecimal instructions and
+         their disassembly: either multiple spaces or a tab.  This is the most
+         reliable general way I can think of for finding where hexadecimal
+         instructions end and the spaces after them begins. */
+      if (whitespace && (c == '\t' || previous_c == ' '))
+        new_state = disassemble_objdump_state_whitespace_after_hex;
+      else if (! whitespace)
+        jitter_disassemble_begin_class (output, er, "native_instruction_hex");
+      break;
+    case disassemble_objdump_state_whitespace_after_hex:
+      if (! whitespace)
+        {
+          new_state = disassemble_objdump_state_disassembly;
+          jitter_disassemble_begin_class (output, er, "disassembly");
+        }
+      break;
+    case disassemble_objdump_state_disassembly:
+      if (c == '\n')
+        new_state = disassemble_objdump_state_address;
+      else if (! whitespace)
+        jitter_disassemble_begin_class (output, er, "disassembly");
+      break;
+    default:
+      jitter_fatal ("impossible");
+    };
+  jitter_print_char (output, c);
+  if (! whitespace)
+    jitter_print_end_class (output);
+
+  return new_state;
+}
+
 /* Disassemble a range on the given output.  Return 0 on success, nonzero on
    failure. */
 static int
-jitter_disassemble_range_objdump (FILE *output,
+jitter_disassemble_range_objdump (jitter_print_context output,
+                                  const struct jitter_executable_routine *er,
                                   const void *beginning, size_t size_in_bytes,
                                   const char *prefix,
                                   bool raw,
@@ -111,7 +210,7 @@ jitter_disassemble_range_objdump (FILE *output,
     }
   if (fwrite (beginning, 1, size_in_bytes, temporary_file) != size_in_bytes)
     {
-      fclose (output);
+      fclose (temporary_file);
       unlink (temporary_file_name);
       free (temporary_file_name);
       return -1;
@@ -129,7 +228,7 @@ jitter_disassemble_range_objdump (FILE *output,
                     + strlen (objdump_options)
                     + 1000);
   sprintf (command_line,
-           "LC_ALL=C; LANG=C; LANGUAGE=C; export LC_ALL; export LANG; export LANGUAGE; %s --disassemble-all -b binary --%sshow-raw-insn %s %s --adjust-vma=0x%lx --prefix-addresses --wide %s 2> /dev/null",
+           "LC_ALL=C; LANG=C; LANGUAGE=C; %s --disassemble-all -b binary --%sshow-raw-insn %s %s --adjust-vma=0x%lx --prefix-addresses --wide %s 2> /dev/null",
            objdump_name,
            (raw ? "" : "no-"),
            endianness_option,
@@ -150,8 +249,8 @@ jitter_disassemble_range_objdump (FILE *output,
       return -1;
     }
 
-  /* Read the command output character by character, diverting it to the given
-     stream.  I can't use a char for c, which could be unsigned on some
+  /* Read the command output character by character, reproducing it into the
+     print context.  I can't use a char for c, which could be unsigned on some
      platforms and therefore not able to store EOF.  This bit me on ARM. */
   int c;
 
@@ -162,6 +261,7 @@ jitter_disassemble_range_objdump (FILE *output,
   char previous_char = '\0', previous_previous_char = '\0',
        previous_previous_previous_char = '\0';
   bool the_useful_part_has_started = false;
+  enum disassemble_objdump_state state = disassemble_objdump_state_address;
   while (   ! feof (objdump_output)
          && (c = fgetc (objdump_output)) != EOF)
     {
@@ -169,10 +269,12 @@ jitter_disassemble_range_objdump (FILE *output,
       if (the_useful_part_has_started)
         {
           /* Yes.  Print the prefix if we have just started a line, then, in any
-             case, the character coming from objdump. */
+             case, the character coming from objdump, with the decorations
+             appropriate for the current state.  Update the state. */
           if (previous_char == '\n')
-            fputs (prefix, output);
-          fputc (c, output);
+            jitter_print_char_star (output, prefix);
+          state = jitter_disassemble_print_char (output, er, state,
+                                                 previous_char, c);
         }
       else if (   previous_previous_previous_char == '\n'
                && previous_previous_char == '0'
@@ -182,7 +284,11 @@ jitter_disassemble_range_objdump (FILE *output,
              have not printed the prefix "\n0x"; print the "0x" part (but not an
              initial newline, which would look ugly) now, after the prefix, and
              then the last seen character, which we had also skipped. */
-          fprintf (output, "%s0x%c", prefix, c);
+          jitter_print_char_star (output, prefix);
+          jitter_disassemble_begin_class (output, er, "memory_address");
+          jitter_print_char_star (output, "0x");
+          jitter_print_char (output, c);
+          jitter_print_end_class (output);
           the_useful_part_has_started = true;
         }
 
@@ -206,7 +312,8 @@ jitter_disassemble_range_objdump (FILE *output,
 /* Print a memory dump of the given range.  This is useful as a fallback
    solution when objdump is not usable. */
 static void
-jitter_dump_range (FILE *output,
+jitter_dump_range (jitter_print_context output,
+                   const struct jitter_executable_routine *er,
                    const void *beginning, size_t size_in_bytes,
                    const char *prefix,
                    size_t bytes_per_row)
@@ -230,25 +337,47 @@ jitter_dump_range (FILE *output,
          address. */
       if (index_in_row == 0)
         {
-          fputs (prefix, output);
-          fprintf (output, address_format, (long) (jitter_int) p);
+          char buffer [100];
+          sprintf (buffer, address_format, (long) (jitter_int) p);
+          jitter_print_char_star (output, prefix);
+          jitter_disassemble_begin_class (output, er, "memory_address");
+          jitter_print_char_star (output, buffer);
+          jitter_print_end_class (output);
         }
 
       /* Print the byte, preceded by a space; this way there will be no trailing
          spaces on the right. */
-      fprintf (output, " %02x", * p);
+      jitter_print_char (output, ' ');
+      char buffer [10];
+      sprintf (buffer, "%02x", * p);
+      jitter_disassemble_begin_class (output, er, "native_instruction_hex");
+      jitter_print_char_star (output, buffer);
+      jitter_print_end_class (output);
 
       /* If this is the last byte in a full row, or the last byte in the whole
-         buffer in vase the last row is incomplete, we need to close the
-         line. */
-      if (   index_in_row == bytes_per_row - 1
+         buffer in case the last row is incomplete, we need to close the line. */
+      if (index_in_row == bytes_per_row - 1
           || p + 1 == limit)
-        fputs ("\t?\n", output);
+        {
+          /* If the last line is incomplete add spaces before the disassembly:
+             one space plus two (omitted) nybbles per missing byte. */
+          int i;
+          for (i = 0; i < bytes_per_row - index_in_row - 1; i ++)
+            jitter_print_char_star (output, "   ");
+
+          /* Close the line with the "disassembly", so the speak. */
+          jitter_print_char (output, '\t');
+          jitter_disassemble_begin_class (output, er, "disassembly");
+          jitter_print_char (output, '?');
+          jitter_print_end_class (output);
+          jitter_print_char (output, '\n');
+        }
     }
 }
 
 static void
-jitter_disassemble_range (FILE *output,
+jitter_disassemble_range (jitter_print_context output,
+                          const struct jitter_executable_routine *er,
                           const void *beginning, size_t size_in_bytes,
                           bool raw,
                           const char *objdump_name,
@@ -274,6 +403,7 @@ jitter_disassemble_range (FILE *output,
   if (! is_objdump_known_to_fail)
       is_objdump_known_to_fail
         = jitter_disassemble_range_objdump (output,
+                                            er,
                                             beginning, size_in_bytes,
                                             "    ",
                                             raw,
@@ -289,7 +419,7 @@ jitter_disassemble_range (FILE *output,
   if (is_objdump_known_to_fail)
     /* The number of bytes per row here is arbitrary, even if 4 is a common
        instruction size; shall I add arguments to control this? */
-    jitter_dump_range (output,
+    jitter_dump_range (output, er,
                        beginning, size_in_bytes,
                        "    ",
                        4);
@@ -301,9 +431,9 @@ jitter_disassemble_range (FILE *output,
    jitter_uint . */
 static void
 jitter_disassemble_show_specialized_instruction
-   (FILE *f,
+   (jitter_print_context f,
+    const struct jitter_executable_routine *er,
     const struct jitter_mutable_routine *p,
-    /* enum vmprefix_specialized_instruction_opcode */
     jitter_uint opcode,
     const union jitter_word * const first_residual_argument_pointer,
     size_t residual_argument_no,
@@ -313,27 +443,36 @@ jitter_disassemble_show_specialized_instruction
     const char *objdump_name,
     const char *objdump_options)
 {
-  fprintf (f, "%s", p->vm->specialized_instruction_names [opcode]);
+  jitter_disassemble_begin_class (f, er, "comment");
+  jitter_print_char_star (f, p->vm->specialized_instruction_names [opcode]);
   int i;
   const union jitter_word *residual_argument_pointer
     = first_residual_argument_pointer;
   for (i = 0; i < residual_argument_no; i ++)
-    fprintf (f, " 0x%lx%s",
-            (unsigned long)((residual_argument_pointer ++)->ufixnum),
-            i < residual_argument_no - 1 ? "," : "");
-  fprintf (f, " (%li bytes):\n", (long)native_code_size);
-  jitter_disassemble_range (f, native_code, native_code_size, raw, objdump_name,
-                            objdump_options);
+    {
+      char buffer [1000];
+      sprintf (buffer, " 0x%lx%s",
+               (unsigned long)((residual_argument_pointer ++)->ufixnum),
+               i < residual_argument_no - 1 ? "," : "");
+      jitter_print_char_star (f, buffer);
+    }
+  jitter_print_char_star (f, " (");
+  jitter_print_long (f, 10, (long) native_code_size);
+  jitter_print_char_star (f, " B):");
+  jitter_print_end_class (f);
+  jitter_print_char (f, '\n');
+  jitter_disassemble_range (f, er, native_code, native_code_size, raw,
+                            objdump_name, objdump_options);
 }
 
 __attribute__ ((noinline, noclone))
 void
-jitter_disassemble_executable_routine_to (FILE *f,
-                                          const struct jitter_executable_routine
-                                          *er,
-                                          bool raw,
-                                          const char *objdump_name,
-                                          const char *objdump_options_or_NULL)
+jitter_executable_routine_disassemble (jitter_print_context f,
+                                       const struct jitter_executable_routine
+                                       *er,
+                                       bool raw,
+                                       const char *objdump_name,
+                                       const char *objdump_options_or_NULL)
 {
   /* Get the non-executable routine for er.  If that is no longer available we
      have to work differently. */
@@ -343,11 +482,12 @@ jitter_disassemble_executable_routine_to (FILE *f,
 #if defined(JITTER_DISPATCH_SWITCH)
 # error "this code should never be compiled."
 #elif defined(JITTER_DISPATCH_DIRECT_THREADING)
-      fprintf (f, "<cannot disassemble direct-threaded code without\n");
-      fprintf (f, " non-executable routine>\n");
+      jitter_print_char_star (f, "<cannot disassemble direct-threaded code without\n");
+      jitter_print_char_star (f, " non-executable routine>\n");
 #elif defined(JITTER_DISPATCH_MINIMAL_THREADING)
 #elif defined(JITTER_DISPATCH_NO_THREADING)
-      jitter_disassemble_range (f, er->native_code, er->native_code_size, raw,
+      jitter_disassemble_range (f, er,
+                                er->native_code, er->native_code_size, raw,
                                 objdump_name,
                                 ((objdump_options_or_NULL != NULL)
                                  ? objdump_options_or_NULL
@@ -363,7 +503,7 @@ jitter_disassemble_executable_routine_to (FILE *f,
   /* Refuse to disassemble if threads are overlapping or of negative size. */
   if (! p->vm->threads_validated)
     {
-      fprintf (f, "<threads not validated: refusing to disassemble>\n");
+      jitter_print_char_star (f, "<threads not validated: refusing to disassemble>\n");
       return;
     }
 
@@ -420,10 +560,16 @@ jitter_disassemble_executable_routine_to (FILE *f,
       */
 
       /* Disassemble this VM instruction, and only this, to stdout. */
-      fprintf (f, "# ");
-      fprintf (f, "%p: ", (void*)next_thread);
+      jitter_disassemble_begin_class (f, er, "comment");
+      jitter_print_char_star (f, "# ");
+#ifndef JITTER_REPLICATE
+      jitter_print_pointer (f, (void *) next_thread);
+      jitter_print_char_star (f, ": ");
+#endif // #ifndef JITTER_REPLICATE
+      jitter_print_end_class (f);
       jitter_disassemble_show_specialized_instruction
          (f,
+          er,
           p,
           opcode,
           next_thread,
@@ -454,10 +600,11 @@ jitter_disassemble_executable_routine_to (FILE *f,
         = p->vm->specialized_instruction_residual_arities [opcode];
 
       /* Disassemble this VM instruction, and only this, to stdout. */
-      fprintf (f, "# ");
-      fprintf (f, "%p: ", (void*)next_thread);
+      jitter_print_char_star (f, "# ");
+      jitter_print_pointer (f, (void*) next_thread);
+      jitter_print_char_star (f, ": ");
       jitter_disassemble_show_specialized_instruction
-         (f, p,
+         (f, er, p,
           opcode,
           next_thread,
           residual_argument_no + 1,
@@ -475,12 +622,3 @@ jitter_disassemble_executable_routine_to (FILE *f,
 #endif // #ifdef JITTER_REPLICATE
 }
 #endif // #ifdef JITTER_DISPATCH_SWITCH
-
-void
-jitter_disassemble_executable_routine (const struct jitter_executable_routine
-                                       *er, bool raw, const char *objdump_name,
-                                       const char *objdump_options_or_NULL)
-{
-  jitter_disassemble_executable_routine_to (stdout, er, raw, objdump_name,
-                                            objdump_options_or_NULL);
-}

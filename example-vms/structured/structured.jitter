@@ -1,6 +1,7 @@
 ## A simple Jittery VM, used in the structured language example.
 
 ## Copyright (C) 2017, 2019 Luca Saiu
+## Updated in 2020 by Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -68,9 +69,11 @@ end
 printer-c
   code
 static void
-structured_literal_printer (FILE *out, jitter_uint u)
+structured_literal_printer (jitter_print_context out, jitter_uint u)
 {
-  fprintf (out, "%" JITTER_PRIu, u);
+  jitter_print_begin_class (out, "structuredvm_number");
+  jitter_print_jitter_uint (out, 10, u);
+  jitter_print_end_class (out);
 }
   end
 end

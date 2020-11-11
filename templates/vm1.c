@@ -1,7 +1,6 @@
 /* VM library: main VM C file template.
 
-   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -38,6 +37,7 @@
 #include <jitter/jitter-instruction.h>
 #include <jitter/jitter-mmap.h>
 #include <jitter/jitter-mutable-routine.h>
+#include <jitter/jitter-print.h>
 #include <jitter/jitter-rewrite.h>
 #include <jitter/jitter-routine.h>
 #include <jitter/jitter-routine-parser.h>
@@ -185,12 +185,13 @@ JITTER_DATA_LOCATION_NAME(vmprefix) [];
 #endif // #if ...
 
 void
-vmprefix_dump_data_locations (FILE *output)
+vmprefix_dump_data_locations (jitter_print_context output)
 {
 #ifndef JITTER_DISPATCH_SWITCH
   jitter_dump_data_locations (output, & the_vmprefix_vm);
 #else
-  fprintf (output, "VM data location information unavailable\n");
+  jitter_print_char_star (output,
+                          "VM data location information unavailable\n");
 #endif // #ifndef JITTER_DISPATCH_SWITCH
 }
 
@@ -323,6 +324,9 @@ vmprefix_initialize (void)
   /* Initialize the executable-memory subsystem. */
   jitter_initialize_executable ();
 #endif // #ifdef JITTER_REPLICATE
+
+  /* Initialise the print-context machinery. */
+  jitter_print_initialize ();
 
   /* Perform some sanity checks which only need to be run once. */
   vmprefix_check_specialized_instruction_opcode_once ();

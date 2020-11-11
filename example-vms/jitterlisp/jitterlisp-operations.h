@@ -1,6 +1,6 @@
 /* JitterLisp: operations on JitterLisp objects: header.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -1076,18 +1076,18 @@
 /* I/O operations.
  * ************************************************************************** */
 
-#define JITTERLISP_DISPLAY_(_jitterlisp_out, _jitterlisp_in0)  \
-  JITTER_BEGIN_                                                \
-    jitterlisp_print_to_stream (stdout, _jitterlisp_in0);      \
-    (_jitterlisp_out) = JITTERLISP_NOTHING;                    \
+#define JITTERLISP_DISPLAY_(_jitterlisp_out, _jitterlisp_in0)      \
+  JITTER_BEGIN_                                                    \
+    jitterlisp_print (jitterlisp_print_context, _jitterlisp_in0);  \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;                        \
   JITTER_END_
 
-#define JITTERLISP_CHARACTER_DISPLAY_(_jitterlisp_out, _jitterlisp_in0)  \
-  JITTER_BEGIN_                                                          \
-    jitter_int _jitterlisp_character                                     \
-      = JITTERLISP_CHARACTER_DECODE(_jitterlisp_in0);                    \
-    putchar (_jitterlisp_character);                                     \
-    (_jitterlisp_out) = JITTERLISP_NOTHING;                              \
+#define JITTERLISP_CHARACTER_DISPLAY_(_jitterlisp_out, _jitterlisp_in0)   \
+  JITTER_BEGIN_                                                           \
+    jitter_int _jitterlisp_character                                      \
+      = JITTERLISP_CHARACTER_DECODE(_jitterlisp_in0);                     \
+    jitter_print_char (jitterlisp_print_context, _jitterlisp_character);  \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;                               \
   JITTER_END_
 
 #define JITTERLISP_CHARACTER_READ_(_jitterlisp_out)              \
@@ -1099,10 +1099,10 @@
          : JITTERLISP_CHARACTER_ENCODE(_jitterlisp_character));  \
   JITTER_END_
 
-#define JITTERLISP_NEWLINE_(_jitterlisp_out)  \
-  JITTER_BEGIN_                               \
-    putchar ('\n');                           \
-    (_jitterlisp_out) = JITTERLISP_NOTHING;   \
+#define JITTERLISP_NEWLINE_(_jitterlisp_out)             \
+  JITTER_BEGIN_                                          \
+    jitter_print_char (jitterlisp_print_context, '\n');  \
+    (_jitterlisp_out) = JITTERLISP_NOTHING;              \
   JITTER_END_
 
 #define JITTERLISP_READ_(_jitterlisp_out)                     \
@@ -1118,9 +1118,9 @@
 
 #define JITTERLISP_ERROR_(_jitterlisp_out, _jitterlisp_in0)           \
   JITTER_BEGIN_                                                       \
-    printf ("Error: ");                                               \
-    jitterlisp_print_to_stream (stdout, (_jitterlisp_in0));           \
-    printf ("\n");                                                    \
+    jitterlisp_print_error_char_star ("Error: ");                     \
+    jitterlisp_print_error (_jitterlisp_in0);                         \
+    jitterlisp_print_error_char_star ("\n");                          \
     /* This should never be used, but let's initialize it in case */  \
     /* it remains visible because of some bug. */                     \
     (_jitterlisp_out) = JITTERLISP_UNDEFINED;                         \

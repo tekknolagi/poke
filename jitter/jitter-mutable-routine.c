@@ -1,7 +1,6 @@
 /* Jitter: VM-independent mutable routine data structures.
 
-   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
-   Written by Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019, 2020 Luca Saiu
 
    This file is part of Jitter.
 
@@ -779,33 +778,55 @@ jitter_maximum_instruction_name_length (const struct jitter_mutable_routine *p)
   return res;
 }
 
-void
-jitter_mutable_routine_print (FILE *out, const struct jitter_mutable_routine *p)
+/* Begin using a class in the given print context, where the class name is
+   formed by the concatenation of the lower-case prefix for the VM of the
+   pointed mutable routine, concatenated to an underscore, concatenated to the
+   given suffix.
+   For example, if the mutable routine r belonged to a VM named "foo",
+     jitter_mutable_routine_begin_class (ctx, r, "label")
+   would open a class in the context ctx named "foo_label". */
+static void
+jitter_mutable_routine_begin_class (jitter_print_context ctx,
+                                    const struct jitter_mutable_routine *p,
+                                    const char *suffix)
 {
-  const bool slow_registers_only = p->options.slow_registers_only;
-  const int instruction_no = jitter_mutable_routine_instruction_no (p);
+  char *prefix = p->vm->configuration.lower_case_prefix;
+  size_t size = strlen (prefix) + 1 + strlen (suffix) + 1;
+  char *buffer = jitter_xmalloc (size);
+  sprintf (buffer, "%s_%s", prefix, suffix);
+  jitter_print_begin_class (ctx, buffer);
+  free (buffer);
+}
+
+void
+jitter_mutable_routine_print (jitter_print_context ctx,
+                              const struct jitter_mutable_routine *r)
+{
+  const bool slow_registers_only = r->options.slow_registers_only;
+  const int instruction_no = jitter_mutable_routine_instruction_no (r);
   const struct jitter_instruction **ins
     = (const struct jitter_instruction **)
-      jitter_dynamic_buffer_to_const_pointer (& p->instructions);
+      jitter_dynamic_buffer_to_const_pointer (& r->instructions);
 
   /* We need to keep track of which instructions are jump targets.  If we
      already have the information, which is computed at specialization time,
      then use it; otherwise compute it now. */
   bool *is_target;
-  if (p->stage >= jitter_routine_stage_specialized)
-    is_target = p->jump_targets;
+  if (r->stage >= jitter_routine_stage_specialized)
+    is_target = r->jump_targets;
   else
-    is_target = jitter_mutable_routine_jump_targets (p);
+    is_target = jitter_mutable_routine_jump_targets (r);
 
   /* Prepare a printf format string leaving the correct amount of space to align
      the first argument of every instruction to the same column.  The format
      string describes a single conversion specification, the instruction name as
      a string. */
   size_t max_instruction_name_length
-    = jitter_maximum_instruction_name_length (p);
-  char instruction_format [100];
-  sprintf (instruction_format, "        %%-%us ",
-           (unsigned) max_instruction_name_length);
+    = jitter_maximum_instruction_name_length (r);
+  char last_label_index_string [100]; // FIXME: write and use a function to compute the number of digits of a number instead of this barbaric thing.
+  sprintf (last_label_index_string, "%i", instruction_no - 1);
+  size_t max_label_name_length
+    = /* "$L" */ 2 + strlen (last_label_index_string) + /* ":" */ 1;
   int i;
   for (i = 0; i < instruction_no; i ++)
     {
@@ -814,20 +835,49 @@ jitter_mutable_routine_print (FILE *out, const struct jitter_mutable_routine *p)
       const struct jitter_parameter **ps
         = (const struct jitter_parameter **) in->parameters;
 
-      /* It is okay to use "$L" followed by an unspecialized index as a label
-         name; this way we have a guarantee that all names are unique. */
+      bool newline_after_label = false; // FIXME: configuration parameter?
+      int indentation_width = max_label_name_length + 1;
+      int printed_char_no_for_this_line = 0;
       if (is_target [i])
-        fprintf (out, "$L%i:\n", i);
-      fprintf (out, instruction_format, mi->name);
-      const int arity = mi->parameter_no;
+        {
+          /* It is okay to use "$L" followed by an unspecialized index as a
+             label name; this way we have a guarantee that all label names are
+             unique. */
+          char label_name_buffer [100];
+          sprintf (label_name_buffer, "$L%i", i);
+          jitter_mutable_routine_begin_class (ctx, r, "label");
+          jitter_print_char_star (ctx, label_name_buffer);
+          jitter_print_end_class (ctx);
+          jitter_mutable_routine_begin_class (ctx, r, "punctuation");
+          jitter_print_char (ctx, ':');
+          jitter_print_end_class (ctx);
+          if (newline_after_label)
+            jitter_print_char (ctx, '\n');
+          else
+            printed_char_no_for_this_line = strlen (label_name_buffer) + 1;
+        }
       int j;
+      for (j = printed_char_no_for_this_line; j < indentation_width; j ++)
+        jitter_print_char (ctx, ' ');
+      jitter_mutable_routine_begin_class (ctx, r, "instruction");
+      jitter_print_char_star (ctx, mi->name);
+      jitter_print_end_class (ctx);
+      if (mi->parameter_no > 0)
+        {
+          int j;
+          for (j = strlen (mi->name); j < max_instruction_name_length + 1; j ++)
+            jitter_print_char (ctx, ' ');
+        }
+      const int arity = mi->parameter_no;
       for (j = 0; j < arity; j ++)
         {
           const struct jitter_parameter *p = ps [j];
           switch (p->type)
             {
             case jitter_parameter_type_uninitialized:
-              fprintf (out, "<uninitialized>");
+              jitter_mutable_routine_begin_class (ctx, r, "invalid");
+              jitter_print_char_star (ctx, "<uninitialized>");
+              jitter_print_end_class (ctx);
               break;
             case jitter_parameter_type_register_id:
               {
@@ -841,36 +891,55 @@ jitter_mutable_routine_print (FILE *out, const struct jitter_mutable_routine *p)
                 if (slow_registers_only)
                   register_index -= register_class->fast_register_no;
                 /* Print the possibly unmodified register. */
-                fprintf (out, "%%%c%i", register_class->character,
-                         register_index);
+                jitter_mutable_routine_begin_class (ctx, r, "register");
+                jitter_print_char (ctx, '%');
+                jitter_print_char (ctx, register_class->character);
+                jitter_print_int (ctx, 10, register_index);
+                jitter_print_end_class (ctx);
                 break;
               }
             case jitter_parameter_type_literal:
               {
                 const jitter_literal_parameter_printer printer
                   = mi->parameter_types [j].literal_printer;
-                printer (out, p->literal.ufixnum);
+                /* If the printer is the default printer than use the number
+                   class; otherwise let the printer itself deal with classes. */
+                if (printer == jitter_default_literal_parameter_printer)
+                  jitter_mutable_routine_begin_class (ctx, r, "number");
+                printer (ctx, p->literal.ufixnum);
+                if (printer == jitter_default_literal_parameter_printer)
+                  jitter_print_end_class (ctx);
                 break;
               }
             case jitter_parameter_type_label:
-              fprintf (out, "$L%li", (long) p->label_as_index);
+              jitter_mutable_routine_begin_class (ctx, r, "label");
+              jitter_print_char_star (ctx, "$L");
+              jitter_print_long (ctx, 10, (long) p->label_as_index);
+              jitter_print_end_class (ctx);
               break;
             default:
               /* Even if in the future I remove some parameter types this
                  default case remains useful for debugging.  Don't touch it. */
-              fprintf (out, "<INVALID-ARGUMENT-TYPE>");
+              jitter_mutable_routine_begin_class (ctx, r, "invalid");
+              jitter_print_char_star (ctx, "<INVALID-ARGUMENT-TYPE>");
+              jitter_print_end_class (ctx);
               break;
             } /* switch */
           if (j + 1 != arity)
-            fprintf (out, ", ");
+            {
+              jitter_mutable_routine_begin_class (ctx, r, "punctuation");
+              jitter_print_char (ctx, ',');
+              jitter_print_end_class (ctx);
+              jitter_print_char (ctx, ' ');
+            }
         } /* inner for: parameter loop. */
-      fprintf (out, "\n");
+      jitter_print_char (ctx, '\n');
     } /* outer for: instruction loop. */
 
   /* If we have allocated the boolean array here then free it; if not then we
      were reusing some part of the routine, and of course we should not break
      it. */
-  if (p->stage < jitter_routine_stage_specialized)
+  if (r->stage < jitter_routine_stage_specialized)
     free (is_target);
 }
 

@@ -1,6 +1,7 @@
 /* Jitter: VM-independent mutable routine data structures: header.
 
    Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -22,12 +23,11 @@
 #ifndef JITTER_MUTABLE_ROUTINE_H_
 #define JITTER_MUTABLE_ROUTINE_H_
 
-#include <stdio.h>
-
 #include <jitter/jitter.h>
 #include <jitter/jitter-dynamic-buffer.h>
 #include <jitter/jitter-hash.h>
 #include <jitter/jitter-instruction.h>
+#include <jitter/jitter-print.h>
 
 
 /* Routine data structures.
@@ -477,10 +477,22 @@ jitter_mutable_routine_append_parameter_copy (struct jitter_mutable_routine *p,
 /* Unspecialized program printer.
  * ************************************************************************** */
 
-/* Print a readable representation of the pointed program to the pointed
-   stream. */
+/* Print a readable representation of the pointed mutable routine to the
+   given print context.
+   
+   The output uses the following class names (see jitter/jitter-print.h), with
+   "vmprefix" replaced by the lower-case name of the VM for the mutable routine:
+   - vmprefix_punctuation;
+   - vmprefix_label;
+   - vmprefix_instruction;
+   - vmprefix_register;
+   - vmprefix_number;
+   - vmprefix_invalid.
+   Some VMs will print instruction literals though custom printers, which may
+   use other classes. */
 void
-jitter_mutable_routine_print (FILE *out, const struct jitter_mutable_routine *p);
+jitter_mutable_routine_print (jitter_print_context ctx,
+                              const struct jitter_mutable_routine *p);
 
 
 

@@ -1,6 +1,6 @@
 /* JitterLisp: banners for interactive use.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -33,46 +33,93 @@ static const char *
 jitterlisp_interactive_banner_text =
 "================================================================\n"
 "JitterLisp (from Jitter version " JITTER_PACKAGE_VERSION ")\n"
-"Copyright (C) 2018, 2019 Luca Saiu\n"
+"Copyright (C) 2018, 2019, 2020 Luca Saiu\n"
 "\n"
 "JitterLisp comes with ABSOLUTELY NO WARRANTY; type (no-warranty)\n"
 "for details.  This program is free software, and you are welcome\n"
 "to redistribute it under the GNU General Public License, version\n"
 "3 or later; type (copying) to display the license text.\n"
-"================================================================\n"
-"* Heap memory handling: "
-#if defined (JITTERLISP_LITTER)
-  "litter (all heap memory leaked)"
-#elif defined (JITTERLISP_BOEHM_GC)
-  "Boehm garbage collector"
-#else
-# error "unknown GC method"
-#endif // GC
-"\n"
-"* VM dispatch:          " JITTER_DISPATCH_NAME_STRING "\n"
-"* VM primitive safety:  "
-#if defined (JITTERLISP_UNSAFE)
-  "no type checking (unsafe)"
-#else
-  "run-time type checking"
-#endif // safety
-"\n"
-"* Line editing:         "
-#if defined (JITTER_HAVE_GNU_READLINE)
-  "GNU Readline"
-#else
-  "not available"
-#endif // readline
-"\n"
-"\n";
+"================================================================\n";
 
+
+
 
 /* Banner printing.
  * ************************************************************************** */
+
+static void
+jitterlisp_interactive_banner_feature (const char *feature_name,
+                                       const char *feature_value)
+{
+  const int name_width = 29;
+  jitter_print_char_star (jitterlisp_print_context, "* ");
+  jitterlisp_begin_class (jitterlisp_print_context, "banner_feature_name");
+  jitter_print_char_star (jitterlisp_print_context, feature_name);
+  jitterlisp_end_class (jitterlisp_print_context);
+  jitter_print_char_star (jitterlisp_print_context, ":");
+  int i;
+  for (i = /* "* " */ 2 + strlen (feature_name) + /* ":" */ 1;
+       i < name_width;
+       i ++)
+    jitter_print_char (jitterlisp_print_context, ' ');
+
+  /* By convention if the feature value contains a '!' character then the
+     setting is dangerous and the text describing it should be decorated as a
+     warning. */
+  char *class_suffix = "banner_feature_value";
+  if (strchr (feature_value, '!') != NULL)
+    class_suffix = "warning";
+  jitterlisp_begin_class (jitterlisp_print_context, class_suffix);
+  jitter_print_char_star (jitterlisp_print_context, feature_value);
+  jitterlisp_end_class (jitterlisp_print_context);
+  jitter_print_char_star (jitterlisp_print_context, "\n");
+}
 
 /* Print the banner. */
 void
 jitterlisp_interactive_banner (void)
 {
-  printf ("%s", jitterlisp_interactive_banner_text);
+  jitterlisp_begin_class (jitterlisp_print_context, "banner");
+  jitter_print_char_star (jitterlisp_print_context,
+                          jitterlisp_interactive_banner_text);
+  jitterlisp_end_class (jitterlisp_print_context);
+
+  /* Show information about configured or enabled features. */
+  jitterlisp_interactive_banner_feature ("VM dispatch",
+                                         JITTER_DISPATCH_NAME_STRING);
+  jitterlisp_interactive_banner_feature ("Compiled primitive safety",
+#if defined (JITTERLISP_UNSAFE)
+                                         "no type checking (unsafe!)"
+#else
+                                         "run-time type checking"
+#endif // safety
+                                         );
+  jitterlisp_interactive_banner_feature ("Heap memory handling",
+#if defined (JITTERLISP_LITTER)
+                                         "litter (heap memory leaked!)"
+#elif defined (JITTERLISP_BOEHM_GC)
+                                         "Boehm garbage collector"
+#else
+# error "unknown GC method"
+#endif // GC
+                                         );
+  jitterlisp_interactive_banner_feature ("Line editing",
+#if defined (JITTER_HAVE_GNU_READLINE)
+                                         "GNU Readline"
+#else
+                                         "not available"
+#endif // readline
+                                         );
+  const char *styling;
+#if defined (JITTER_WITH_LIBTEXTSTYLE)
+  if (jitterlisp_settings.colorize)
+    styling = "GNU Libtextstyle";
+  else
+    styling = "GNU Libtextstyle (disabled)";
+#else
+  styling = "not available";
+#endif
+  jitterlisp_interactive_banner_feature ("Output styling", styling);
+
+  jitter_print_char_star (jitterlisp_print_context, "\n");
 }

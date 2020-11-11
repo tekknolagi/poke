@@ -62,4 +62,5 @@ jitterlisp_finalize (void)
   jitterlisp_sexpression_finalize ();
   jitterlisp_memory_finalize ();
   jitterlisp_settings_finalize (); /* There's a dynamic buffer to finalize. */
+  jitterlisp_printer_finalize ();
 }

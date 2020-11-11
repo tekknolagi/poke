@@ -1,6 +1,6 @@
 /* JitterLisp: interpreter: naïve C version.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -82,9 +82,9 @@ jitterlisp_eval_interpreter_ast_call
     = jitterlisp_eval_interpreter_ast (rator_and_rand_asts [0], env);
   if (! JITTERLISP_IS_CLOSURE(rator_value))
     {
-      printf ("About "); // FIXME: add to the error message
-      jitterlisp_print_to_stream (stdout, rator_value);
-      printf (":\n");
+      jitterlisp_print_error_char_star ("About "); // FIXME: add to the error message
+      jitterlisp_print_error (rator_value);
+      jitterlisp_print_error_char_star (":\n");
       jitterlisp_error_cloned ("call: non-closure operator");
     }
 
@@ -123,9 +123,9 @@ jitterlisp_eval_interpreter_ast_call
     {
       if (JITTERLISP_IS_EMPTY_LIST(formals))
         {
-          printf ("About a call to "); // FIXME: add to the error message
-          jitterlisp_print_to_stream (stdout, rator_value);
-          printf (":\n");
+          jitterlisp_print_error_char_star ("About a call to "); // FIXME: add to the error message
+          jitterlisp_print_error (rator_value);
+          jitterlisp_print_error_char_star (":\n");
           jitterlisp_error_cloned ("call: too many actuals");
         }
 
@@ -138,9 +138,9 @@ jitterlisp_eval_interpreter_ast_call
     }
   if (! JITTERLISP_IS_EMPTY_LIST(formals))
     {
-      printf ("About a call to "); // FIXME: add to the error message
-      jitterlisp_print_to_stream (stdout, rator_value);
-      printf (":\n");
+      jitterlisp_print_error_char_star ("About a call to "); // FIXME: add to the error message
+      jitterlisp_print_error (rator_value);
+      jitterlisp_print_error_char_star (":\n");
       jitterlisp_error_cloned ("call: not enough actuals");
     }
 
@@ -248,9 +248,9 @@ jitterlisp_eval_interpreter_ast (jitterlisp_object o,
       return jitterlisp_eval_interpreter_ast (subs [1], env);
 
     default:
-      printf ("About "); // FIXME: add to the error message
-      jitterlisp_print_to_stream (stdout, o);
-      printf (":\n");
+      jitterlisp_print_error_char_star ("About "); // FIXME: add to the error message
+      jitterlisp_print_error (o);
+      jitterlisp_print_error_char_star (":\n");
       jitterlisp_error_cloned ("eval: invalid or unimplemented AST case");
     }
 }
@@ -274,16 +274,16 @@ jitterlisp_eval_interpreter (jitterlisp_object unexpanded_form,
 {
   if (jitterlisp_settings.verbose)
     {
-      printf ("Macroexpanding ");
-      jitterlisp_print_to_stream (stdout, unexpanded_form);
-      printf ("...\n");
+      jitterlisp_log_char_star ("Macroexpanding ");
+      jitterlisp_log (unexpanded_form);
+      jitterlisp_log_char_star ("...\n");
     }
   jitterlisp_object ast = jitterlisp_macroexpand (unexpanded_form, env);
   if (jitterlisp_settings.verbose)
     {
-      printf ("...into ");
-      jitterlisp_print_to_stream (stdout, ast);
-      printf ("\n");
+      jitterlisp_log_char_star ("...into ");
+      jitterlisp_log (ast);
+      jitterlisp_log_char_star ("\n");
     }
   return jitterlisp_eval_interpreter_ast (ast, env);
 }
@@ -329,9 +329,9 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
     {
       if (JITTERLISP_IS_EMPTY_LIST(formals))
         {
-          printf ("About a call to "); // FIXME: add to the error message
-          jitterlisp_print_to_stream (stdout, closure_value);
-          printf ("\n");
+          jitterlisp_print_error_char_star ("About a call to "); // FIXME: add to the error message
+          jitterlisp_print_error (closure_value);
+          jitterlisp_print_error_char_star ("\n");
           jitterlisp_error_cloned ("apply: too many actuals");
         }
       /* If this were a safe C function I would check whether operands_as_list
@@ -349,9 +349,9 @@ jitterlisp_apply_interpreter (jitterlisp_object closure_value,
     }
   if (! JITTERLISP_IS_EMPTY_LIST(formals))
     {
-      printf ("About a call to "); // FIXME: add to the error message
-      jitterlisp_print_to_stream (stdout, closure_value);
-      printf ("\n");
+      jitterlisp_print_error_char_star ("About a call to "); // FIXME: add to the error message
+      jitterlisp_print_error (closure_value);
+      jitterlisp_print_error_char_star ("\n");
       jitterlisp_error_cloned ("apply: not enough actuals");
     }
 

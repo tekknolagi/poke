@@ -1,6 +1,6 @@
 /* JitterLisp: utility functions.
 
-   Copyright (C) 2017, 2018 Luca Saiu
+   Copyright (C) 2017, 2018, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -195,8 +195,10 @@ jitterlisp_validate_primitive (jitterlisp_object o)
 {
   if (! JITTERLISP_IS_PRIMITIVE(o))
     {
-printf ("About "); jitterlisp_print_to_stream (stdout, o); printf ("\n"); // FIXME: add to the error message
-    jitterlisp_error_cloned ("jitterlisp_validate_primitive: non-primitive argument");
+      jitterlisp_print_error_char_star ("About ");
+      jitterlisp_print_error (o);
+      jitterlisp_print_error_char_star ("\n"); // FIXME: add to the error message
+      jitterlisp_error_cloned ("jitterlisp_validate_primitive: non-primitive argument");
     }
 }
 
@@ -458,7 +460,9 @@ jitterlisp_environment_lookup (jitterlisp_object env, jitterlisp_object name)
   jitterlisp_object res = unencoded_name->global_value;
   if (JITTERLISP_IS_UNDEFINED(res))
     {
-      printf ("About "); jitterlisp_print_to_stream (stdout, name); printf ("\n"); // FIXME: add to the error message
+      jitterlisp_print_error_char_star ("About ");
+      jitterlisp_print_error (name);
+      jitterlisp_print_error_char_star ("\n"); // FIXME: add to the error message
       jitterlisp_error_cloned ("unbound variable");
     }
   else
@@ -493,7 +497,9 @@ jitterlisp_define (jitterlisp_object name, jitterlisp_object new_value)
   struct jitterlisp_symbol *unencoded_name = JITTERLISP_SYMBOL_DECODE(name);
   if (unencoded_name->global_constant)
     {
-      printf ("About "); jitterlisp_print_to_stream (stdout, name); printf ("\n"); // FIXME: add to the error message
+      jitterlisp_print_error_char_star ("About ");
+      jitterlisp_print_error (name);
+      jitterlisp_print_error_char_star ("\n"); // FIXME: add to the error message
       jitterlisp_error_cloned ("assignment to global constant");
     }
 
@@ -513,7 +519,9 @@ jitterlisp_global_setb (jitterlisp_object name, jitterlisp_object new_value)
     {
       /* There is no global binding for the symbol.  It's forbidden to set!
          a global which has not been define'd before. */
-      printf ("About "); jitterlisp_print_to_stream (stdout, name); printf ("\n"); // FIXME: add to the error message
+      jitterlisp_print_error_char_star ("About ");
+      jitterlisp_print_error (name);
+      jitterlisp_print_error_char_star ("\n"); // FIXME: add to the error message
       jitterlisp_error_cloned ("set! on unbound variable");
     }
 

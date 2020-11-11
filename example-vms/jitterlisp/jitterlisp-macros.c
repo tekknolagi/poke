@@ -1,6 +1,6 @@
 /* JitterLisp: Lisp macros.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -44,9 +44,9 @@ jitterlisp_macroexpand_multiple (jitterlisp_object os,
     {
       if (! JITTERLISP_IS_CONS(os))
         {
-          printf ("About "); // FIXME: integrate with the error function
-          jitterlisp_print_to_stream (stdout, os);
-          printf (":\n");
+          jitterlisp_print_error_char_star ("About "); // FIXME: integrate with the error function
+          jitterlisp_print_error (os);
+          jitterlisp_print_error_char_star (":\n");
           jitterlisp_error_cloned ("jitterlisp_macroexpand_multiple: non-list "
                                    "argument");
         }
@@ -322,8 +322,8 @@ jitterlisp_primitive_macro_function_setb (jitterlisp_object cdr,
   jitterlisp_object variable = JITTERLISP_EXP_C_A_CAR (cdr);
   if (! JITTERLISP_IS_SYMBOL (variable))
     {
-      printf ("About "); // FIXME: integrate with the error function
-      jitterlisp_print_to_stream (stdout, variable); printf (":\n");
+      jitterlisp_print_error_char_star ("About "); // FIXME: integrate with the error function
+      jitterlisp_print_error (variable); printf (":\n");
       jitterlisp_error_cloned ("set!: non-symbol variable name");
     }
   jitterlisp_object forms = JITTERLISP_EXP_C_A_CDR (cdr);
@@ -358,18 +358,18 @@ jitterlisp_primitive_macro_function_primitive (jitterlisp_object cdr,
   jitterlisp_object primitive_name = jitterlisp_car (cdr);
   if (! JITTERLISP_IS_SYMBOL (primitive_name))
     {
-      printf ("About "); // FIXME: integrate with the error function
-      jitterlisp_print_to_stream (stdout, primitive_name);
-      printf (":\n");
+      jitterlisp_print_error_char_star ("About "); // FIXME: integrate with the error function
+      jitterlisp_print_error (primitive_name);
+      jitterlisp_print_error_char_star (":\n");
       jitterlisp_error_cloned ("primitive: non-symbol primitive name");
     }
   jitterlisp_object primitive
     = JITTERLISP_SYMBOL_DECODE(primitive_name)->global_value;
   if (! JITTERLISP_IS_PRIMITIVE (primitive))
     {
-      printf ("About "); // FIXME: integrate with the error function
-      jitterlisp_print_to_stream (stdout, primitive_name);
-      printf (":\n");
+      jitterlisp_print_error_char_star ("About "); // FIXME: integrate with the error function
+      jitterlisp_print_error (primitive_name);
+      jitterlisp_print_error_char_star (":\n");
       jitterlisp_error_cloned ("primitive: non primitive name");
     }
   jitterlisp_object primitive_actuals = jitterlisp_cdr (cdr);
@@ -426,15 +426,15 @@ jitterlisp_bindings_get_bound_variables (jitterlisp_object bindings)
   jitterlisp_object binding = JITTERLISP_EXP_C_A_CAR(bindings);
   if (! JITTERLISP_IS_CONS(binding))
     {
-      printf ("About "); // FIXME: integrate with the error function
-      jitterlisp_print_to_stream (stdout, binding);
+      jitterlisp_print_error_char_star ("About "); // FIXME: integrate with the error function
+      jitterlisp_print_error (binding);
       jitterlisp_error_cloned ("let: non-list binding");
     }
   jitterlisp_object bound_symbol = JITTERLISP_EXP_C_A_CAR(binding);
   if (! JITTERLISP_IS_SYMBOL(bound_symbol))
     {
-      printf ("About "); // FIXME: integrate with the error function
-      jitterlisp_print_to_stream (stdout, bound_symbol);
+      jitterlisp_print_error_char_star ("About "); // FIXME: integrate with the error function
+      jitterlisp_print_error (bound_symbol);
       jitterlisp_error_cloned ("let: non-symbol bound variable");
     }
 

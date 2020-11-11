@@ -59,10 +59,11 @@ bin_structured_SOURCES = \
 # Jitter dispatching mode as selected at configure time, which is what most
 # people will want.
 # The fourth line is not a mistake: Automake provides no AM_LDADD variable.
-bin_structured_CPPFLAGS = $(AM_CPPFLAGS) $(JITTER_CPPFLAGS)
+bin_structured_CPPFLAGS = \
+  $(AM_CPPFLAGS) $(JITTER_CPPFLAGS) $(JITTER_LIBTEXTSTYLE_CPPFLAGS)
 bin_structured_CFLAGS = $(AM_CFLAGS) $(JITTER_CFLAGS)
 bin_structured_LDFLAGS = $(AM_LDFLAGS) $(JITTER_LDFLAGS)
-bin_structured_LDADD = $(JITTER_LDADD)
+bin_structured_LDADD = $(JITTER_LDADD) $(JITTER_LIBTEXTSTYLE_LDADD)
 
 
 # Machine-generated C files.
@@ -139,7 +140,8 @@ EXTRA_DIST = \
   examples/count-up-down.structured \
   examples/euclid.structured \
   examples/primes.structured \
-  examples/primes.c
+  examples/primes.c \
+  structured-style.css
 
 
 # Benchmarking examples.

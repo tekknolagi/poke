@@ -29,6 +29,7 @@
 #if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
 # include <jitter/jitter-sections.h>
 #endif // #if defined (JITTER_HAVE_KNOWN_BINARY_FORMAT)
+#include <jitter/jitter-print.h>
 #include <jitter/jitter-vm.h>
 
 
@@ -84,9 +85,9 @@ jitter_destroy_data_locations (struct jitter_data_locations *locations)
  * ************************************************************************** */
 
 /* Output a human-readable message about data locations for the pointed VM to
-   the pointed stream. */
+   the given print context. */
 void
-jitter_dump_data_locations (FILE *output, const struct jitter_vm *vm)
+jitter_dump_data_locations (jitter_print_context ctx, const struct jitter_vm *vm)
   __attribute__ ((nonnull (1, 2)));
 
 

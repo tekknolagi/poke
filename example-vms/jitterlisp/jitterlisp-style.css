@@ -1,0 +1,252 @@
+/* JitterLisp: default -*- CSS -*- style for Libtextstyle.
+
+   Copyright (C) 2020 Luca Saiu
+   Written by Luca Saiu
+
+   This file is part of the JitterLisp language implementation, distributed as
+   an example along with Jitter under the same license.
+
+   Jitter is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   Jitter is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
+
+
+/* Introduction.
+ * ************************************************************************** */
+
+/* This is a default style for JitterLisp, reasonable for terminals with a black
+   background.  It looks much better with at least 256 colors, which is supported
+   in practice by most modern terminals even when they do not set the TERM variable
+   accordingly: the user is invited to try
+     TERM=xterm-256color
+   . */
+
+
+
+
+/* Interaction and debugging.
+ * ************************************************************************** */
+
+.jitterlisp_banner
+{
+    font-style: italic;
+    font-weight: bold;
+}
+
+.jitterlisp_banner_feature_name
+{
+    font-style: italic;
+}
+
+.jitterlisp_banner_feature_value
+{
+    font-style: italic;
+    text-decoration: underline;
+}
+
+.jitterlisp_log
+{
+    background-color: gray;
+    color: black;
+    font-style: italic;
+}
+
+
+
+
+/* Errors and warnings.
+ * ************************************************************************** */
+
+.jitterlispvm_invalid, .jitterlispvm_error, .jitterlisp_error, .jitterlisp_invalid, .jitterlisp_warning
+{
+    background-color: red;
+    color: black;
+    font-style: italic;
+    text-decoration: underline;
+}
+
+.jitterlispvm_warning
+{
+    background-color: purple;
+    color: white;
+    font-style: italic;
+    text-decoration: underline;
+}
+
+
+
+
+/* JitterLispVM routines.
+ * ************************************************************************** */
+
+.jitterlispvm_comment
+{
+    color: brown;
+    font-style: italic;
+}
+
+.jitterlispvm_punctuation
+{
+    color: white;
+}
+
+.jitterlispvm_instruction
+{
+    color: cyan;
+    font-weight: bold;
+}
+
+.jitterlispvm_label
+{
+    color: yellow;
+    font-style: italic;
+    font-weight: bold;
+}
+
+.jitterlispvm_register
+{
+    color: green;
+    font-style: italic;
+    font-weight: bold;
+}
+
+.jitterlispvm_number
+{
+    color: green;
+}
+
+
+
+
+/* Native-code disassemblying of JitterLispVM routines.
+ * ************************************************************************** */
+
+.jitterlispvm_memory_address
+{
+    color: yellow;
+    font-style: italic;
+}
+.jitterlispvm_native_instruction_hex
+{
+    color: cyan;
+}
+.jitterlispvm_disassembly
+{
+    color: green;
+    font-style: italic;
+}
+
+
+
+
+/* Lisp data.
+ * ************************************************************************** */
+
+.jitterlisp_fixnum
+{
+    color: green;
+}
+
+.jitterlisp_unique
+{
+    color: lightgreen;
+    font-weight: bold;
+}
+
+.jitterlisp_interned_symbol
+{
+    color: orange;
+}
+
+.jitterlisp_uninterned_symbol
+{
+    color: orange;
+    text-decoration: underline;
+}
+
+.jitterlisp_character
+{
+    color: purple;
+    font-style: italic;
+    text-decoration: underline;
+}
+
+.jitterlisp_cons
+{
+    color: white;
+}
+
+.jitterlisp_vector
+{
+    color: white;
+    font-weight: bold;
+}
+
+.jitterlisp_box
+{
+    color: green;
+    font-weight: bold;
+}
+
+.jitterlisp_primitive
+{
+    color: orange;
+    font-weight: bold;
+    font-style: italic;
+    text-decoration: underline;
+}
+
+.jitterlisp_closure
+{
+    color: purple;
+    font-weight: bold;
+    font-style: italic;
+}
+
+.jitterlisp_primitive_macro
+{
+    color: pink;
+    font-style: italic;
+    text-decoration: underline;
+}
+
+.jitterlisp_non_primitive_macro
+{
+    color: pink;
+    font-weight: bold;
+    font-style: italic;
+}
+
+.jitterlisp_ast
+{
+    color: cyan;
+    font-style: italic;
+    text-decoration: underline;
+}
+
+.jitterlisp_circular
+{
+    color: white;
+    font-weight: bold;
+    background-color: red;
+}
+
+/*
+.template
+{
+    background-color: red;
+    color: white;
+    font-style: italic;
+    text-decoration: underline;
+    font-weight: bold;
+}
+*/

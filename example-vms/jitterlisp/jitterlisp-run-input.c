@@ -89,7 +89,11 @@ static void
 jitterlisp_run_from_string_internal (const char *string, bool library_verbosity)
 {
   if (! library_verbosity && jitterlisp_settings.verbose)
-    printf ("Running from string \"%s\"...\n", string);
+    {
+      jitterlisp_log_char_star ("Running from string \"");
+      jitterlisp_log_char_star (string);
+      jitterlisp_log_char_star ("\"...\n");
+    }
   struct jitterlisp_reader_state *rstate
     = jitterlisp_make_string_reader_state (string);
   jitterlisp_object result
@@ -97,11 +101,15 @@ jitterlisp_run_from_string_internal (const char *string, bool library_verbosity)
   if (! library_verbosity && (jitterlisp_settings.print_nothing_results
                               || ! JITTERLISP_IS_NOTHING(result)))
     {
-      jitterlisp_print_to_stream (stdout, result);
-      printf ("\n");
+      jitterlisp_log (result);
+      jitterlisp_log_char_star ("\n");
     }
   if (! library_verbosity && jitterlisp_settings.verbose)
-    printf ("...Done running from string \"%s\".\n", string);
+    {
+      jitterlisp_log_char_star ("Done running from string \"");
+      jitterlisp_log_char_star (string);
+      jitterlisp_log_char_star ("\"...\n");
+    }
 }
 
 void
@@ -120,10 +128,10 @@ void
 jitterlisp_run_library (void)
 {
   if (jitterlisp_settings.verbose)
-    printf ("Running the library...\n");
+    jitterlisp_log_char_star ("Running the library...\n");
   jitterlisp_run_from_string_internal (jitterlisp_library_string, true);
   if (jitterlisp_settings.verbose)
-    printf ("...Done running the library.\n");
+    jitterlisp_log_char_star ("Done running the library.\n");
 }
 
 
@@ -194,7 +202,7 @@ void
 jitterlisp_repl (void)
 {
   if (jitterlisp_settings.verbose)
-    printf ("Running the REPL...\n");
+    jitterlisp_log_char_star ("Running the REPL...\n");
 
   /* Make a readline reader state.  It will be used to read every form
      from the REPL, even in case of parse errors. */
@@ -209,22 +217,32 @@ jitterlisp_repl (void)
     {
       JITTERLISP_HANDLE_ERRORS(
         {
+          /* Flush the output before printing the prompt, if any.  This will
+             make printed characters always visible, even if a newline has not
+             been printed yet. */
+          jitter_print_flush (jitterlisp_print_context);
+
           jitterlisp_object form = jitterlisp_read (rstate);
           if (JITTERLISP_IS_EOF (form))
             goto out;
           jitter_time_set_now (time_before);
           jitterlisp_object result = jitterlisp_eval_globally (form);
           double elapsed_time = jitter_time_subtract_from_now (time_before);
+          char message_buffer [100];
           /* Print the elapsed time according to the settings. */
           switch (jitterlisp_settings.time)
             {
             case jitterlisp_time_yes:
-              printf ("[Evaluated in %.3fs]\n", elapsed_time);
+              sprintf (message_buffer, "[Evaluated in %.3fs]\n", elapsed_time);
+              jitterlisp_log_char_star (message_buffer);
               break;
             case jitterlisp_time_verbose:
-              printf ("[");
-              jitterlisp_print_to_stream (stdout, form);
-              printf (" evaluated in %.3fs]\n", elapsed_time);
+              jitterlisp_begin_class (jitterlisp_print_context, "log");
+              jitter_print_char_star (jitterlisp_print_context, "[");
+              jitterlisp_print (jitterlisp_print_context, form);
+              sprintf (message_buffer, " evaluated in %.3fs]\n", elapsed_time);
+              jitter_print_char_star (jitterlisp_print_context, message_buffer);
+              jitterlisp_end_class (jitterlisp_print_context);
               break;
             case jitterlisp_time_no:
               /* Do nothing. */
@@ -237,13 +255,14 @@ jitterlisp_repl (void)
           if (jitterlisp_settings.print_nothing_results
               || ! JITTERLISP_IS_NOTHING (result))
             {
-              jitterlisp_print_to_stream (stdout, result);
-              printf ("\n");
+              jitterlisp_print (jitterlisp_print_context, result);
+              jitter_print_char (jitterlisp_print_context, '\n');
             }
         },
         {
           /* Do nothing on error. */
-          printf ("User error in the REPL.  Continuing.\n");
+          jitterlisp_print_error_char_star
+             ("User error in the REPL.  Continuing.\n");
         });
     }
   while (true);
@@ -254,9 +273,12 @@ jitterlisp_repl (void)
   jitterlisp_destroy_reader_state (rstate);
 
   if (jitterlisp_settings.verbose)
-    printf ("...Done running the REPL.\n");
+    jitterlisp_log_char_star ("...Done running the REPL.\n");
 
   /* Print a goodbye message.  It is acceptable to do it unconditionally, since
      this is interactive use. */
-  printf ("Goodbye.\n");
+  //jitterlisp_log_char_star ("Goodbye.\n");
+  jitterlisp_begin_class (jitterlisp_print_context, "banner");
+  jitter_print_char_star (jitterlisp_print_context, "Goodbye.\n");
+  jitterlisp_end_class (jitterlisp_print_context);
 }

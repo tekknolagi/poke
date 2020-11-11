@@ -1,6 +1,6 @@
 /* Jitter: VM-independent instruction header.
 
-   Copyright (C) 2016, 2017, 2019 Luca Saiu
+   Copyright (C) 2016, 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -31,6 +31,7 @@
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-hash.h>
+#include <jitter/jitter-print.h>
 
 
 /* Register classes.
@@ -193,15 +194,22 @@ jitter_instruction_parameters_equal (const struct jitter_parameter *a,
  * ************************************************************************** */
 
 /* A function printing a given VM instruction literal actual parameter to the
-   pointed stream.  The parameter is arbitrarily represented as an unsigned
+   given print context.  The parameter is arbitrarily represented as an unsigned
    integer to the printer, but is meant to be cast to the appropriate type,
    which may be signed or pointer. */
-typedef void (*jitter_literal_parameter_printer) (FILE *out, jitter_uint arg);
+typedef void (*jitter_literal_parameter_printer) (jitter_print_context out,
+                                                  jitter_uint arg);
 
 /* The default VM parameter printer, showing values in hexadecimal according to
-   the C lexicon, including the "0x" prefix. */
+   the C lexicon, including the "0x" prefix.
+   This does not by itself use classes, but the VM routine printer in
+   jitter/jitter-mutable-routine.c does check whether the literal printer is in
+   fact this one, and adds the suitable decoration in that case.  Rationale:
+   this printer is generally useful and can be independent from the VM, from
+   whose name the class names depend. */
 void
-jitter_default_literal_parameter_printer (FILE *out, jitter_uint arg);
+jitter_default_literal_parameter_printer (jitter_print_context c,
+                                          jitter_uint arg);
 
 
 

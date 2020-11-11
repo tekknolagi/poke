@@ -91,6 +91,7 @@ for target_directory in $subs; do
                 structured-main.c                         \
                 structured-syntax.c                       \
                 structured-syntax.h                       \
+                structured-style.css                      \
                 ; do
         cp_or_fail ../example-vms/structured/${file} ${target_directory}/
     done

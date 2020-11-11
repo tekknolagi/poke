@@ -48,12 +48,12 @@
 
 #include <argp.h>
 
-
 /* Include optional headers. */
-#include <jitter/jitter.h>
 #ifdef JITTER_HAVE_SETRLIMIT
 # include <sys/resource.h> /* For getrlimit and setrlimit . */
 #endif // #ifdef JITTER_HAVE_SETRLIMIT
+
+#include <jitter/jitter.h>
 
 #include <jitter/jitter-parse-int.h>
 #include <jitter/jitter-fatal.h>
@@ -462,6 +462,27 @@ main (int argc, char **argv)
   argp_parse (&argp, argc, argv,
               0,//ARGP_IN_ORDER,
               0, &cl);
+
+  /* Initialise the GNU Libtextstyle wrapper, if used. */
+#ifdef JITTER_WITH_LIBTEXTSTYLE
+  jitter_print_libtextstyle_initialize ();
+
+  /* FIXME: this should be less crude, but is enough for checking that the
+     libtextstyle wrapper works. */
+  char *style_file_name = "vmprefix-style.css";
+  styled_ostream_t ostream
+    = styled_ostream_create (STDOUT_FILENO, "(stdout)", TTYCTL_AUTO,
+                             style_file_name);
+#endif // #ifdef JITTER_WITH_LIBTEXTSTYLE
+
+  /* Make a print context, using the Libtextstyle wrapper if possible. */
+  jitter_print_context ctx
+#ifdef JITTER_WITH_LIBTEXTSTYLE
+    = jitter_print_context_make_libtextstyle (ostream);
+#else
+    = jitter_print_context_make_file_star (stdout);
+#endif // #ifdef JITTER_WITH_LIBTEXTSTYLE
+
   FILE *progress;
   if (cl.progress_on_stderr)
     progress = stderr;
@@ -536,21 +557,21 @@ main (int argc, char **argv)
     {
       if (cl.debug)
         fprintf (progress, "Printing data location information...\n");
-      vmprefix_dump_data_locations (stdout);
+      vmprefix_dump_data_locations (ctx);
     }
 
   if (cl.print_routine)
     {
       if (cl.debug)
         fprintf (progress, "Printing back the routine...\n");
-      vmprefix_mutable_routine_print (stdout, r);
+      vmprefix_mutable_routine_print (ctx, r);
     }
 
   if (cl.disassemble_routine)
     {
       if (cl.debug)
         fprintf (progress, "Disassembling...\n");
-      vmprefix_disassemble_executable_routine (er, true, cl.objdump_name,
+      vmprefix_executable_routine_disassemble (ctx, er, true, cl.objdump_name,
                                                cl.objdump_options);
     }
 
@@ -560,6 +581,7 @@ main (int argc, char **argv)
      possibly crashing. */
   if (cl.print_locations || cl.print_routine || cl.disassemble_routine)
     {
+      jitter_print_flush (ctx);
       fflush (stdout);
       fflush (stderr);
     }
@@ -590,6 +612,15 @@ main (int argc, char **argv)
   if (cl.debug)
     fprintf (progress, "Finalizing...\n");
   vmprefix_finalize ();
+
+  /* Destroy the print context. */
+  jitter_print_context_destroy (ctx);
+
+  /* End the ostream and finalise the GNU Libtextstyle wrapper, if used. */
+#ifdef JITTER_WITH_LIBTEXTSTYLE
+  styled_ostream_free (ostream);
+  jitter_print_libtextstyle_finalize ();
+#endif // #ifdef JITTER_WITH_LIBTEXTSTYLE
 
   if (cl.debug)
     fprintf (progress, "Still alive at exit.\n");

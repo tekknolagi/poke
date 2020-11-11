@@ -2139,7 +2139,7 @@ fi
 # @JITTER_NON_INSTALLED_LDFLAGS@ must always come before other *_LDFLAGS
 # variables, since the first -L option takes precedence.
 AC_SUBST([JITTER_NON_INSTALLED_LDFLAGS],
-         [-L$jitter_abs_top_builddir/lib])
+         [-L$jitter_abs_top_builddir/non-convenience-lib])
 
 
 # Debugging support.
@@ -2208,6 +2208,70 @@ AC_CONFIG_FILES([bin/jitter-config],
 # Generate the shell script generating high-level fast-branch macros.
 AC_CONFIG_FILES([scripts/generate-fast-branches],
                 [chmod +x scripts/generate-fast-branches])
+
+
+# Optional dependencies.
+################################################################
+
+# Check for GNU libtextstyle, unless it is explicitly disabled by an option.
+# Define a feature macro and an Automake conditional.
+AC_ARG_WITH([libtextstyle],
+            AS_HELP_STRING([--with-libtextstyle],
+                           [use GNU libtextstyle, where available (default:
+                            derected)]),
+            jitter_check_libtextstyle="$withval",
+            jitter_check_libtextstyle="yes")
+if test "x$jitter_check_libtextstyle" = 'xyes'; then
+  # Save the current value for LIBS before temporary changing it.
+  jitter_backup_LIBS="$LIBS"
+
+  # Check for possible dependencies of Libtextstyle.  Do not use any library
+  # other than the ones I am mentioning here.
+  # FIXME: shall I use AC_LIB_LINKFLAGS or AC_LIB_HAVE_LINKFLAGS from Gnulib
+  # instead?
+  #   https://www.gnu.org/software/gnulib/manual/html_node/Searching-for-Libraries.html
+  AC_MSG_NOTICE([checking for libraries GNU libtextstyle may possibly depend on])
+  LIBS=''
+  AC_SEARCH_LIBS([sin], [m])
+  AC_SEARCH_LIBS([tputs], [termcap])
+  AC_SEARCH_LIBS([initscr], [ncurses])
+  AC_SEARCH_LIBS([initscr], [xcurses])
+  AC_SEARCH_LIBS([initscr], [curses])
+  AC_SEARCH_LIBS([iconv], [iconv])
+  # Remove unsightly duplicates from $LIBS , without changing the order of
+  # its elements.
+  LIBS=$(echo $(for x in $LIBS; do echo $x; done | uniq))' '
+
+  # Check for Libtextstyle itself using the dependencies.  This may mention
+  # more library than are needed in the command line, but should be enough.
+  AC_SEARCH_LIBS([ostream_flush], [textstyle])
+  AC_CHECK_HEADERS([textstyle.h], [jitter_have_libtextstyle_header=yes])
+  AC_MSG_CHECKING([if GNU libtextstyle is usable])
+  if    test "x$ac_cv_search_ostream_flush" != 'xno' \
+     && test "x$jitter_have_libtextstyle_header" = 'xyes'; then
+    jitter_have_libtextstyle=yes
+    AC_DEFINE_UNQUOTED([JITTER_HAVE_LIBTEXTSTYLE], [1],
+                       [Define iff GNU libtextstyle is usable and enabled])
+    AC_SUBST([JITTER_LIBTEXTSTYLE_CPPFLAGS],
+             [-DJITTER_WITH_LIBTEXTSTYLE=1])
+    AC_SUBST([JITTER_LIBTEXTSTYLE_LDADD],
+             ["-ljitter-libtextstyle $LIBS"])
+    AC_SUBST([JITTER_LIBTEXTSTYLE_LIBADD],
+             ["$jitter_abs_top_builddir/non-convenience-lib/libjitter-libtextstyle.la $LIBS"])
+    # Forget about the libraries found by the check for libtextstlye and its
+    # dependencies: they should not be linked by default.
+    LIBS="$jitter_backup_LIBS"
+  else
+    jitter_have_libtextstyle=no
+  fi
+  AC_MSG_RESULT([$jitter_have_libtextstyle])
+else
+  AC_MSG_NOTICE([not checking for GNU libtextstyle: disabled by configure option])
+fi
+AM_CONDITIONAL([JITTER_HAVE_LIBTEXTSTYLE],
+               [test "x$jitter_have_libtextstyle" = 'xyes'])
+# Notice that JITTER_WITH_LIBTEXTSTYLE is not automatically defined.  See
+# the comment in jitter/jitter-config.h.in .
 
 
 # Optional dependencies, for examples only.

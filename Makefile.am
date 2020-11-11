@@ -310,7 +310,7 @@ lib_libjitterutility__partial_la_SOURCES = \
   jitter/jitter-human-prefix.h jitter/jitter-human-prefix.c \
   jitter/jitter-list.h jitter/jitter-list.c \
   jitter/jitter-parse-int.h jitter/jitter-parse-int.c \
-  jitter/jitter-print-binary.h jitter/jitter-print-binary.c \
+  jitter/jitter-print.h jitter/jitter-print.c \
   jitter/jitter-readline.h jitter/jitter-readline.c \
   jitter/jitter-string.h jitter/jitter-string.c \
   jitter/jitter-time.h jitter/jitter-time.c \
@@ -337,7 +337,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-list.h \
   jitter/jitter-missing.h \
   jitter/jitter-parse-int.h \
-  jitter/jitter-print-binary.h \
+  jitter/jitter-print.h \
   jitter/jitter-readline.h \
   jitter/jitter-string.h \
   jitter/jitter-time.h \
@@ -704,6 +704,32 @@ non_convenience_lib_libjitter_la_LIBADD = \
   lib/libjitter.la
 
 
+# GNU Libtextstyle print context library.
+# ################################################################
+
+# This wrapper library, separate from the Jitter runtime library, is
+# optional: it is only built when GNU Libtextstyle is available.
+if JITTER_HAVE_LIBTEXTSTYLE
+  EXTRA_LTLIBRARIES += lib/libjitter-libtextstyle.la
+  lib_libjitter_libtextstyle_la_SOURCES = \
+    jitter/jitter-print.h \
+    jitter/jitter-print-libtextstyle.c
+  lib_LTLIBRARIES += non-convenience-lib/libjitter-libtextstyle.la
+  non_convenience_lib_libjitter_libtextstyle_la_SOURCES =
+  non_convenience_lib_libjitter_libtextstyle_la_DEPENDENCIES = \
+    lib/libjitter-libtextstyle.la
+  non_convenience_lib_libjitter_libtextstyle_la_LIBADD = \
+    lib/libjitter-libtextstyle.la
+  LDADD_FOR_JITTER_LIBTEXTSTYLE = @JITTER_LIBTEXTSTYLE_LDADD@
+
+  # Actually use GNU Libtextstyle for the examples.  It is easier to define the
+  # CPP macro unconditionally; only the examples will check it.
+  AM_CPPFLAGS += -DJITTER_WITH_LIBTEXTSTYLE=1
+else
+  LDADD_FOR_JITTER_LIBTEXTSTYLE =
+endif # if JITTER_HAVE_LIBTEXTSTYLE
+
+
 # Experimental: ELF symbol visibility.
 # ################################################################
 
@@ -751,6 +777,11 @@ endif # JITTER_ENABLE_DISPATCH_NO_THREADING
 
 # Add one more library for the default dispatch, unconditionally.
 noinst_DATA += lib/libjitter.a
+
+if JITTER_HAVE_LIBTEXTSTYLE
+# Add the GNU Libtextstyle wrapper library.
+noinst_DATA += lib/libjitter-libtextstyle.a
+endif # if JITTER_HAVE_LIBTEXTSTYLE
 endif # JITTER_SUBPACKAGE
 
 
@@ -931,7 +962,7 @@ if JITTER_ENABLE_DISPATCH_SWITCH
   bin_uninspired__switch_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_SWITCH_LDFLAGS)
   bin_uninspired__switch_LDADD = \
-    $(JITTER_SWITCH_LDADD) $(LDADD_FOR_GNULIB)
+    $(JITTER_SWITCH_LDADD) $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
 endif # JITTER_ENABLE_DISPATCH_SWITCH
 
 # Uninspired VM program: direct threading.
@@ -947,7 +978,7 @@ if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
   bin_uninspired__direct_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_DIRECT_THREADING_LDFLAGS)
   bin_uninspired__direct_threading_LDADD = \
-    $(JITTER_DIRECT_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+    $(JITTER_DIRECT_THREADING_LDADD) $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
 endif # JITTER_ENABLE_DISPATCH_DIRECT_THREADING
 
 # Uninspired VM program: minimal threading.
@@ -963,7 +994,7 @@ if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
   bin_uninspired__minimal_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_MINIMAL_THREADING_LDFLAGS)
   bin_uninspired__minimal_threading_LDADD = \
-    $(JITTER_MINIMAL_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+    $(JITTER_MINIMAL_THREADING_LDADD) $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
 endif # JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
 
 # Uninspired VM program: no threading.
@@ -979,7 +1010,7 @@ if JITTER_ENABLE_DISPATCH_NO_THREADING
   bin_uninspired__no_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_NO_THREADING_LDFLAGS)
   bin_uninspired__no_threading_LDADD = \
-    $(JITTER_NO_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+    $(JITTER_NO_THREADING_LDADD) $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
 endif # JITTER_ENABLE_DISPATCH_NO_THREADING
 
 # Examples VM routines for the Uninspired VM example, to be distributed.
@@ -1006,6 +1037,9 @@ EXTRA_DIST += \
   example-vms/uninspired/examples/sqrt-2.vm \
   example-vms/uninspired/examples/threading-benchmark.vm \
   example-vms/uninspired/examples/vector-sum.vm
+
+# Distribute the GNU Libtextstyle default style for the Uninspired VM.  FIXME: install.
+EXTRA_DIST += example-vms/uninspired/uninspired-style.css
 
 
 # Structured language example.  The VM isn't really "structured".
@@ -1090,14 +1124,15 @@ bin_structured_CPPFLAGS = \
 bin_structured_CFLAGS = \
   $(AM_CFLAGS) $(JITTER_CFLAGS)
 bin_structured_LDADD = \
-  $(AM_LDADD) $(JITTER_LDADD)
+  $(AM_LDADD) $(JITTER_LDADD) $(LDADD_FOR_JITTER_LIBTEXTSTYLE)
 bin_structured_LDFLAGS = \
   $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
 PROGRAMS_STRUCTURED += bin/structuredvm
 bin_structuredvm_SOURCES = $(SOURCES_FOR_STRUCTUREDVM)
 bin_structuredvm_CPPFLAGS = $(bin_structured_CPPFLAGS) $(CPPFLAGS_FOR_GNULIB)
 bin_structuredvm_CFLAGS = $(bin_structured_CFLAGS)
-bin_structuredvm_LDADD = $(bin_structured_LDADD) $(LDADD_FOR_GNULIB)
+bin_structuredvm_LDADD = \
+  $(bin_structured_LDADD) $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
 bin_structuredvm_LDFLAGS = $(bin_structured_LDFLAGS)
 
 # The structured example , with switch dispatch.
@@ -1110,7 +1145,8 @@ if JITTER_ENABLE_DISPATCH_SWITCH
   bin_structured__switch_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_SWITCH_CFLAGS)
   bin_structured__switch_LDADD = \
-    $(AM_LDADD) $(JITTER_SWITCH_LDADD)
+    $(AM_LDADD) $(JITTER_SWITCH_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE)
   bin_structured__switch_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_SWITCH_LDFLAGS)
   PROGRAMS_STRUCTURED += bin/structuredvm--switch
@@ -1120,7 +1156,8 @@ if JITTER_ENABLE_DISPATCH_SWITCH
   bin_structuredvm__switch_CFLAGS = \
     $(bin_structured__switch_CFLAGS)
   bin_structuredvm__switch_LDADD = \
-    $(bin_structured__switch_LDADD) $(LDADD_FOR_GNULIB)
+    $(bin_structured__switch_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
   bin_structuredvm__switch_LDFLAGS = \
     $(bin_structured__switch_LDFLAGS)
 endif # JITTER_ENABLE_DISPATCH_SWITCH
@@ -1136,7 +1173,8 @@ if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
   bin_structured__direct_threading_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_DIRECT_THREADING_CFLAGS)
   bin_structured__direct_threading_LDADD = \
-    $(AM_LDADD) $(JITTER_DIRECT_THREADING_LDADD)
+    $(AM_LDADD) $(JITTER_DIRECT_THREADING_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE)
   bin_structured__direct_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_DIRECT_THREADING_LDFLAGS)
   PROGRAMS_STRUCTURED += bin/structuredvm--direct-threading
@@ -1146,7 +1184,8 @@ if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
   bin_structuredvm__direct_threading_CFLAGS = \
     $(bin_structured__direct_threading_CFLAGS)
   bin_structuredvm__direct_threading_LDADD = \
-    $(bin_structured__direct_threading_LDADD) $(LDADD_FOR_GNULIB)
+    $(bin_structured__direct_threading_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
   bin_structuredvm__direct_threading_LDFLAGS = \
     $(bin_structured__direct_threading_LDFLAGS)
 endif # JITTER_ENABLE_DISPATCH_DIRECT_THREADING
@@ -1162,7 +1201,8 @@ if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
   bin_structured__minimal_threading_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_MINIMAL_THREADING_CFLAGS)
   bin_structured__minimal_threading_LDADD = \
-    $(AM_LDADD) $(JITTER_MINIMAL_THREADING_LDADD)
+    $(AM_LDADD) $(JITTER_MINIMAL_THREADING_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE)
   bin_structured__minimal_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_MINIMAL_THREADING_LDFLAGS)
   PROGRAMS_STRUCTURED += bin/structuredvm--minimal-threading
@@ -1172,7 +1212,8 @@ if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
   bin_structuredvm__minimal_threading_CFLAGS = \
     $(bin_structured__minimal_threading_CFLAGS)
   bin_structuredvm__minimal_threading_LDADD = \
-    $(bin_structured__minimal_threading_LDADD) $(LDADD_FOR_GNULIB)
+    $(bin_structured__minimal_threading_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
   bin_structuredvm__minimal_threading_LDFLAGS = \
     $(bin_structured__minimal_threading_LDFLAGS)
 endif # JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
@@ -1188,7 +1229,8 @@ if JITTER_ENABLE_DISPATCH_NO_THREADING
   bin_structured__no_threading_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_NO_THREADING_CFLAGS)
   bin_structured__no_threading_LDADD = \
-    $(AM_LDADD) $(JITTER_NO_THREADING_LDADD)
+    $(AM_LDADD) $(JITTER_NO_THREADING_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE)
   bin_structured__no_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_NO_THREADING_LDFLAGS)
   PROGRAMS_STRUCTURED += bin/structuredvm--no-threading
@@ -1198,7 +1240,8 @@ if JITTER_ENABLE_DISPATCH_NO_THREADING
   bin_structuredvm__no_threading_CFLAGS = \
     $(bin_structured__no_threading_CFLAGS)
   bin_structuredvm__no_threading_LDADD = \
-    $(bin_structured__no_threading_LDADD) $(LDADD_FOR_GNULIB)
+    $(bin_structured__no_threading_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
   bin_structuredvm__no_threading_LDFLAGS = \
     $(bin_structured__no_threading_LDFLAGS)
 endif # JITTER_ENABLE_DISPATCH_NO_THREADING
@@ -1254,6 +1297,9 @@ EXTRA_DIST += \
   example-vms/structured/examples/count-down-nonopt.structuredvm \
   example-vms/structured/examples/euclid-optimized.structuredvm \
   example-vms/structured/examples/euclid-unoptimized.structuredvm
+
+# Distribute the GNU Libtextstyle default style for Structured and the Structured VM.  FIXME: install.
+EXTRA_DIST += example-vms/structured/structured-style.css
 
 
 # Jittery Lisp example.
@@ -1372,7 +1418,8 @@ bin_jitterlisp_CPPFLAGS = \
 bin_jitterlisp_CFLAGS = \
   $(AM_CFLAGS) $(JITTER_CFLAGS)
 bin_jitterlisp_LDADD = \
-  $(AM_LDADD) $(JITTER_LDADD) $(LDADD_FOR_GNULIB)
+  $(AM_LDADD) $(JITTER_LDADD) \
+  $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
 bin_jitterlisp_LDFLAGS = \
   $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) $(JITTER_LDFLAGS)
 PROGRAMS_JITTERLISP += bin/jitterlisp--unsafe
@@ -1411,7 +1458,8 @@ if JITTER_ENABLE_DISPATCH_SWITCH
   bin_jitterlisp__switch_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_SWITCH_CFLAGS)
   bin_jitterlisp__switch_LDADD = \
-    $(AM_LDADD) $(JITTER_SWITCH_LDADD) $(LDADD_FOR_GNULIB)
+    $(AM_LDADD) $(JITTER_SWITCH_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
   bin_jitterlisp__switch_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) \
     $(JITTER_SWITCH_LDFLAGS)
@@ -1463,7 +1511,8 @@ if JITTER_ENABLE_DISPATCH_DIRECT_THREADING
   bin_jitterlisp__direct_threading_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_DIRECT_THREADING_CFLAGS)
   bin_jitterlisp__direct_threading_LDADD = \
-    $(AM_LDADD) $(JITTER_DIRECT_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+    $(AM_LDADD) $(JITTER_DIRECT_THREADING_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
   bin_jitterlisp__direct_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) \
     $(JITTER_DIRECT_THREADING_LDFLAGS)
@@ -1516,7 +1565,8 @@ if JITTER_ENABLE_DISPATCH_MINIMAL_THREADING
   bin_jitterlisp__minimal_threading_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_MINIMAL_THREADING_CFLAGS)
   bin_jitterlisp__minimal_threading_LDADD = \
-    $(AM_LDADD) $(JITTER_MINIMAL_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+    $(AM_LDADD) $(JITTER_MINIMAL_THREADING_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
   bin_jitterlisp__minimal_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) \
     $(JITTER_MINIMAL_THREADING_LDFLAGS)
@@ -1569,7 +1619,8 @@ if JITTER_ENABLE_DISPATCH_NO_THREADING
   bin_jitterlisp__no_threading_CFLAGS = \
     $(AM_CFLAGS) $(JITTER_NO_THREADING_CFLAGS)
   bin_jitterlisp__no_threading_LDADD = \
-    $(AM_LDADD) $(JITTER_NO_THREADING_LDADD) $(LDADD_FOR_GNULIB)
+    $(AM_LDADD) $(JITTER_NO_THREADING_LDADD) \
+    $(LDADD_FOR_JITTER_LIBTEXTSTYLE) $(LDADD_FOR_GNULIB)
   bin_jitterlisp__no_threading_LDFLAGS = \
     $(AM_LDFLAGS) $(JITTER_NON_INSTALLED_LDFLAGS) \
     $(JITTER_NO_THREADING_LDFLAGS)
@@ -1614,6 +1665,9 @@ endif # JITTER_ENABLE_DISPATCH_NO_THREADING
 # JitterLisp Lisp library.
 EXTRA_DIST += \
   example-vms/jitterlisp/jitterlisp-library.lisp
+
+# Distribute the GNU Libtextstyle default style for JitterLisp.  FIXME: install.
+EXTRA_DIST += example-vms/jitterlisp/jitterlisp-style.css
 
 # Examples for JitterLisp.
 EXTRA_DIST += \
@@ -1808,6 +1862,18 @@ dvi: missinghardcopytools
 ps: missinghardcopytools
 pdf: missinghardcopytools
 endif # ! JITTER_HAVE_TEXI2DVI
+
+# Completely disable Jitter's documentation building in sub-package mode.
+if JITTER_SUBPACKAGE
+documentationdisabledinsubpackagemode:
+	@echo 'The documentation for Jitter is not built in sub-package mode.'
+	@exit 0
+info: documentationdisabledinsubpackagemode
+html: documentationdisabledinsubpackagemode
+dvi: documentationdisabledinsubpackagemode
+ps: documentationdisabledinsubpackagemode
+pdf: documentationdisabledinsubpackagemode
+endif # JITTER_SUBPACKAGE
 
 
 # Texinfo documentation or lack thereof in sub-package mode.

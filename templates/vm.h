@@ -1,7 +1,6 @@
 /* VM library: main header file.
 
-   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -48,6 +47,7 @@
 #include <jitter/jitter-stack.h>
 #include <jitter/jitter-instruction.h>
 #include <jitter/jitter-mutable-routine.h>
+#include <jitter/jitter-print.h>
 #include <jitter/jitter-routine.h>
 //#include <jitter/jitter-specialize.h> // FIXME: what about only declaring jitter_specialize in another header, and not including this?
 #include <jitter/jitter-disassemble.h>
@@ -775,10 +775,8 @@ vmprefix_vm_configuration;
 /* Printing and disassembling: ordinary API. */
 #define vmprefix_mutable_routine_print \
   jitter_mutable_routine_print
-#define vmprefix_disassemble_executable_routine \
-  jitter_disassemble_executable_routine
-#define vmprefix_disassemble_executable_routine_to \
-  jitter_disassemble_executable_routine_to
+#define vmprefix_executable_routine_disassemble \
+  jitter_executable_routine_disassemble
 
 /* Mutable routine construction API. */
 #define vmprefix_mutable_routine_append_instruction_name \
@@ -829,10 +827,8 @@ vmprefix_vm_configuration;
    the unified API */
 #define vmprefix_routine_print \
   jitter_routine_print
-#define vmprefix_disassemble_routine \
-  jitter_disassemble_routine
-#define vmprefix_disassemble_routine_to \
-  jitter_disassemble_routine_to
+#define vmprefix_routine_disassemble \
+  jitter_routine_disassemble
 
 /* Unified routine construction API. */
 #define vmprefix_routine_append_instruction_name \
@@ -1064,11 +1060,12 @@ vmprefix_execute_routine (jitter_routine r,
 /* Low-level debugging features relying on assembly: data locations.
  * ************************************************************************** */
 
-/* Dump human-readable information about data locations to the pointed stream.
+/* Dump human-readable information about data locations to the given print
+   context.
    This is a trivial VM-dependent wrapper around jitter_dump_data_locations,
    which does not require a struct jitter_vm pointer as input. */
 void
-vmprefix_dump_data_locations (FILE *output)
+vmprefix_dump_data_locations (jitter_print_context output)
   __attribute__ ((nonnull (1)));
 
 

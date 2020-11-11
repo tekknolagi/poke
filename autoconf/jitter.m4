@@ -256,11 +256,23 @@ AC_ARG_WITH([jitter],
 #   - JITTER_$D_LDADD          (LDADD with dispatch $D);
 #   - JITTER_$D_LDFLAGS        (LDFLAGS with dispatch $D);
 #   - JITTER_$D_LIBADD         (LIBADD with dispatch $D).
-#
 # When Automake is used, also define the following Automake conditionals
 # for each dispatching model $D (in all caps, with underscores separating
 # words):
 # * JITTER_ENABLE_DISPATCH_$D  (true iff $D is enabled).
+#
+# Also define the following for the libjitter-libtextstyle wrapper:
+# * JITTER_LIBTEXTSTYLE_CPPFLAGS  (the command line C preprocessor flags to
+#                                  use for *using* the wrapper library;
+#                                  without these falgs the wrapper is not
+#                                  used, even if available);
+# * JITTER_LIBTEXTSTYLE_LDADD     (LDADD for linking the wrapper and GNU
+#                                  libtextstyle itself into an executable);
+# * JITTER_LIBTEXTSTYLE_LIBADD    (LDADD for linking the wrapper and GNU
+#                                  libtextstyle itself into a library).
+# When Automake is used, also defined the following Automake conditional:
+# * JITTER_HAVE_LIBTEXTSTYLE      (true iff GNU Libtextstyle and its wrapper
+#                                  are available).
 AC_DEFUN([AC_JITTER_CONFIG], [
 # I'd like to define Automake conditionals later on, but that only works if
 # the project is actually using Automake.
@@ -410,6 +422,25 @@ if test "x$ac_jitter_using_automake" != "x"; then
     [AM_CONDITIONAL([JITTER_ENABLE_DISPATCH_]jitter_tocpp(a_dispatch),
                     [   test "x$JITTER_CONFIG" != "x" \
                      && "$JITTER_CONFIG" --has-dispatch=]a_dispatch)])
+fi
+
+# Define substitutions for the GNU Libtextstyle wrapper, if jitter-config
+# was found.
+if test "x$JITTER_CONFIG" != 'x'; then
+  AC_SUBST([JITTER_LIBTEXTSTYLE_CPPFLAGS],
+           [$("$JITTER_CONFIG" --libtextstyle-cppflags)])
+  AC_SUBST([JITTER_LIBTEXTSTYLE_LDADD],
+           [$("$JITTER_CONFIG" --libtextstyle-ldadd)])
+  AC_SUBST([JITTER_LIBTEXTSTYLE_LIBADD],
+           [$("$JITTER_CONFIG" --libtextstyle-libadd)])
+fi
+
+# Define the Automake conditional for the GNU Libtextstyle wrapper, if we
+# are using Automake and jitter-config was found.
+if    test "x$ac_jitter_using_automake" != "x" \
+   && test "x$JITTER_CONFIG" != 'x'; then
+  AM_CONDITIONAL([JITTER_HAVE_LIBTEXTSTYLE],
+                 [test "$JITTER_CONFIG" --have-libtextstyle])
 fi
 
 # We're done testing C features, for the time being.

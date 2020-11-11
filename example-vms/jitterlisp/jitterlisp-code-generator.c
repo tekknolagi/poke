@@ -51,7 +51,7 @@
 static void
 jitterlisp_compilation_error (char *message)
 {
-  printf ("compile-time failure:\n");
+  jitterlisp_print_error_char_star ("compile-time failure:\n");
   jitterlisp_error_cloned (message);
 }
 
@@ -563,10 +563,11 @@ jitterlisp_translate_instruction (struct jitterlispvm_mutable_routine *p,
     }
   else
     {
-      printf ("About the Lisp instruction ");
-      jitterlisp_print_to_stream (stdout, insn);
-      printf ("\n");
-      printf ("WARNING: unknown instruction named %s:\n", name);
+      jitterlisp_print_error_char_star ("About the Lisp instruction ");
+      jitterlisp_print_error (insn);
+      jitterlisp_print_error_char_star ("\nWARNING: unknown instruction named ");
+      jitterlisp_print_error_char_star (name);
+      jitterlisp_print_error_char_star ("\n");
       //printf ("About an instruction named %s:\n", name);
       //jitterlisp_compilation_error ("unknown instruction");
     }
@@ -732,7 +733,8 @@ jitterlisp_print_compiled_closure (struct jitterlisp_compiled_closure *cc)
 {
   /* Print VM instructions, if we have them. */
   if (cc->mutable_routine != NULL)
-    jitterlispvm_mutable_routine_print (stdout, cc->mutable_routine);
+    jitterlispvm_mutable_routine_print (jitterlisp_print_context,
+                                        cc->mutable_routine);
   else
     printf ("<non-executable routine destroyed: cannot print it>\n");
 }
@@ -743,8 +745,11 @@ jitterlisp_disassemble_compiled_closure (struct jitterlisp_compiled_closure *cc)
 {
   struct jitter_executable_routine *er = cc->executable_routine;
   if (jitterlisp_settings.cross_disassembler)
-    jitterlispvm_disassemble_executable_routine (er, true, JITTER_CROSS_OBJDUMP,
-                                                 NULL);
+    jitterlispvm_executable_routine_disassemble (jitterlisp_print_context,
+                                                 er, true,
+                                                 JITTER_CROSS_OBJDUMP, NULL);
   else
-    jitterlispvm_disassemble_executable_routine (er, true, JITTER_OBJDUMP, NULL);
+    jitterlispvm_executable_routine_disassemble (jitterlisp_print_context,
+                                                 er, true,
+                                                 JITTER_OBJDUMP, NULL);
 }

@@ -1,6 +1,6 @@
 ## Jitter specification for the JitterLisp VM.
 
-## Copyright (C) 2017, 2018 Luca Saiu
+## Copyright (C) 2017, 2018, 2020 Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of JitterLisp, distributed as an example along with Jitter
@@ -59,7 +59,7 @@ wrapped-functions
   # Temporary/debugging stuff.
   debug_pointer
 #  printf
-  jitterlisp_print_to_stream
+  jitterlisp_print
 
   # Calling interpreted closures from compiled code.
   jitterlisp_call_interpreted
@@ -236,18 +236,21 @@ jitterlispvm_error_invalid_primitive_argument_type_friendly
   /* Print information about the argument and its hex representation:
      don't dare yet to print it as a Lisp object, as the printer might
      crash if there is a bug and the object is invalid. */
-  printf ("%s: About the %i-th (0-based) primitive argument %p\n",
+  char buffer [1000];
+  printf (buffer,
+          "%s: About the %i-th (0-based) primitive argument %p\n",
           jitterlispvm_specialized_instruction_names [sins_opcode],
           arg_index, (void *) o);
+  jitterlisp_print_error_char_star (buffer);
 
-  /* This shouldn't be needed on GNU, but flush stdout so that we can be
+  /* This shouldn't be needed on GNU, but flush the output so that we can be
      sure that the previous line is visible before we crash. */
-  fflush (stdout);
+  jitter_print_flush (jitterlisp_print_context);
 
   /* Okay, now we can print in in Lisp. */
-  printf ("  (in Lisp ");
-  jitterlisp_print_to_stream (stdout, o);
-  printf ("):\n");
+  jitterlisp_print_error_char_star ("  (in Lisp ");
+  jitterlisp_print_error (o);
+  jitterlisp_print_error_char_star ("):\n");
 
   jitterlisp_error_cloned ("invalid primitive argument type");
 }
@@ -278,13 +281,7 @@ end
 
 printer-c
   code
-/* Print a Lisp object in Lisp notation.  This is convenient to read VM
-   routines in textual form. */
-static void
-print_object (FILE *out, jitter_uint u)
-{
-  jitterlisp_print_to_stream (out, u);
-}
+    /* Not really needed.  The printer is jitterlisp_print. */
   end
 end
 
@@ -524,14 +521,14 @@ instruction push-register (?R)
   end
 end
 
-instruction push-literal (?n print_object)
+instruction push-literal (?n jitterlisp_print)
   code
     jitterlisp_object k = JITTER_ARGN0;
     JITTER_PUSH_MAINSTACK(k);
   end
 end
 
-instruction push-global (?n print_object, ?f)
+instruction push-global (?n jitterlisp_print, ?f)
   code
     jitterlisp_object tagged_symbol = JITTER_ARGN0;
     struct jitterlisp_symbol * symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
@@ -581,7 +578,7 @@ instruction pop-to-register (!R)
   end
 end
 
-instruction pop-to-global (?n print_object, ?f)
+instruction pop-to-global (?n jitterlisp_print, ?f)
   code
     jitterlisp_object tagged_symbol = JITTER_ARGN0;
     struct jitterlisp_symbol *symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
@@ -593,7 +590,7 @@ instruction pop-to-global (?n print_object, ?f)
   end
 end
 
-instruction pop-to-global-defined (?n print_object, ?f)
+instruction pop-to-global-defined (?n jitterlisp_print, ?f)
   code
     jitterlisp_object tagged_symbol = JITTER_ARGN0;
     struct jitterlisp_symbol *symbol = JITTERLISP_SYMBOL_DECODE(tagged_symbol);
@@ -630,13 +627,13 @@ instruction copy-from-register (?R)
   end
 end
 
-instruction copy-from-literal (?n print_object)
+instruction copy-from-literal (?n jitterlisp_print)
   code
     JITTER_TOP_MAINSTACK() = JITTER_ARGN0;
   end
 end
 
-instruction literal-to-register (?n print_object, !R)
+instruction literal-to-register (?n jitterlisp_print, !R)
   code
     JITTER_ARG1 = JITTER_ARGN0;
   end
@@ -664,7 +661,7 @@ end
 
 # Fast-branch to the given error label if the given argument, a tagged symbol,
 # is not globally bound.
-instruction check-global-defined (?n print_object, ?f)
+instruction check-global-defined (?n jitterlisp_print, ?f)
   code
 #ifndef JITTERLISP_UNSAFE
     jitterlisp_object tagged_symbol = JITTER_ARGN0;

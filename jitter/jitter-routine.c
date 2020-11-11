@@ -21,6 +21,7 @@
 
 #include <jitter/jitter-routine.h>
 #include <jitter/jitter-disassemble.h>
+#include <jitter/jitter-print.h>
 #include <jitter/jitter-specialize.h>
 
 
@@ -60,7 +61,7 @@ jitter_unpin_routine (jitter_routine r)
 }
 
 void
-jitter_routine_print (FILE *out, const jitter_routine r)
+jitter_routine_print (jitter_print_context out, const jitter_routine r)
 {
   /* Labels must be resolved before we can print. */
   jitter_routine_make_executable_if_needed (r);
@@ -70,26 +71,15 @@ jitter_routine_print (FILE *out, const jitter_routine r)
 }
 
 void
-jitter_disassemble_routine (const jitter_routine r, bool raw,
+jitter_routine_disassemble (jitter_print_context out,
+                            const jitter_routine r, bool raw,
                             const char *objdump_name,
                             const char *objdump_options_or_NULL)
 {
-  jitter_disassemble_routine_to (stdout,
-                                 r, raw,
-                                 objdump_name,
-                                 objdump_options_or_NULL);
-}
-
-void
-jitter_disassemble_routine_to (FILE *f,
-                               const jitter_routine r, bool raw,
-                               const char *objdump_name,
-                               const char *objdump_options_or_NULL)
-{
   struct jitter_executable_routine *e
     = jitter_routine_make_executable_if_needed (r);
-  jitter_disassemble_executable_routine_to (f, e, raw, objdump_name,
-                                            objdump_options_or_NULL);
+  jitter_executable_routine_disassemble (out, e, raw, objdump_name,
+                                         objdump_options_or_NULL);
 }
 
 struct jitter_executable_routine *

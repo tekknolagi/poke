@@ -53,6 +53,7 @@ jitter_initialize_executable_routine (struct jitter_executable_routine *er,
      update the other. */
   r->executable_routine = er;
   er->routine = r;
+  er->vm = r->vm;
 
   /* Initialize the other fields, where we already have enough information. */
   er->reference_count = 1;

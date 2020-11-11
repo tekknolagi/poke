@@ -1,6 +1,6 @@
 /* VM library: native code disassembler.
 
-   Copyright (C) 2017, 2019 Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -26,24 +26,26 @@
 #include <stdio.h>
 
 #include <jitter/jitter.h>
+#include <jitter/jitter-print.h>
 #include <jitter/jitter-specialize.h>
 
-/* Disassemble the given routine to stdout.  The internal implementation is
-   currently inefficient, as it relies on one objdump invocation per specialized
-   instruction. */
+/* Disassemble the given routine to the given print context using a pipe to
+   objdump, or falling back to a binary dump if such functionality is not
+   available or fails at run time.  The internal implementation is quite
+   inefficient, as it relies on one objdump invocation per specialised
+   instruction.
+   
+   The output uses the following class names (see jitter/jitter-print.h), with
+   "vmprefix" replaced by the lower-case name of the VM for the mutable routine:
+   - vmprefix_comment;
+   - vmprefix_memory_address;
+   - vmprefix_native_instruction_hex;
+   - vmprefix_disassembly. */
 void
-jitter_disassemble_executable_routine (const struct jitter_executable_routine
+jitter_executable_routine_disassemble (jitter_print_context out,
+                                       const struct jitter_executable_routine
                                        *er, bool raw, const char *objdump_name,
                                        const char *objdump_options_or_NULL)
-  __attribute__ ((nonnull (1, 3)));
-
-/* Like jitter_disassemble_routine, but write the output to the pointed stream
-   instead of stdout. */
-void
-jitter_disassemble_executable_routine_to (FILE *f,
-                                          const struct jitter_executable_routine
-                                          *er, bool raw, const char *objdump_name,
-                                          const char *objdump_options_or_NULL)
   __attribute__ ((nonnull(1, 2, 4)));
 
 

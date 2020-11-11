@@ -56,6 +56,10 @@ struct jitter_executable_routine
      non-executable routine is destroyed. */
   struct jitter_mutable_routine *routine;
 
+  /* A pointer to the VM this belongs to, which is never invalidated even
+     if the mutable routine is destroyed. */
+  const struct jitter_vm *vm;
+
   /* How many live pointers there are to this executable routine.  This is set
      to 1 at initialization, then updated manually with
      jitter_pin_executable_routine and jitter_unpin_executable_routine ,

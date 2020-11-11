@@ -348,6 +348,26 @@ structured_work (struct structured_command_line *cl)
   /* Initialize the structured-VM subsystem. */
   structuredvm_initialize ();
 
+  /* Initialise the GNU Libtextstyle wrapper, if used. */
+#ifdef JITTER_WITH_LIBTEXTSTYLE
+  jitter_print_libtextstyle_initialize ();
+
+  /* FIXME: this should be less crude, but is enough for checking that the
+     libtextstyle wrapper works. */
+  char *style_file_name = "structured-style.css";
+  styled_ostream_t ostream
+    = styled_ostream_create (STDOUT_FILENO, "(stdout)", TTYCTL_AUTO,
+                             style_file_name);
+#endif // #ifdef JITTER_WITH_LIBTEXTSTYLE
+
+  /* Make a print context. */
+  jitter_print_context ctx
+#ifdef JITTER_WITH_LIBTEXTSTYLE
+    = jitter_print_context_make_libtextstyle (ostream);
+#else
+    = jitter_print_context_make_file_star (stdout);
+#endif // #ifdef JITTER_WITH_LIBTEXTSTYLE
+
   /* Make an empty Jittery routine and set options for it as needed. */
   structuredvm_routine vmr
     = structuredvm_make_routine ();
@@ -378,13 +398,14 @@ structured_work (struct structured_command_line *cl)
 
   /* Print and/or disassemble the routine as requested. */
   if (cl->print)
-    structuredvm_routine_print (stdout, vmr);
+    structuredvm_routine_print (ctx, vmr);
   if (cl->cross_disassemble)
     cl->disassemble = true;
   if (cl->print_locations)
-    structuredvm_dump_data_locations (stdout);
+    structuredvm_dump_data_locations (ctx);
   if (cl->disassemble)
-    structuredvm_disassemble_routine (vmr, true,
+    structuredvm_routine_disassemble (ctx,
+                                      vmr, true,
                                       (cl->cross_disassemble
                                        ? JITTER_CROSS_OBJDUMP
                                        : JITTER_OBJDUMP),
@@ -404,6 +425,15 @@ structured_work (struct structured_command_line *cl)
      more complex cases where routines are shared by objects destroyed at multiple
      times the user will want to unpin, like in this example. */
   structuredvm_unpin_routine (vmr);
+
+  /* Destroy the print context. */
+  jitter_print_context_destroy (ctx);
+
+  /* End the ostream and finalise the GNU Libtextstyle wrapper, if used. */
+#ifdef JITTER_WITH_LIBTEXTSTYLE
+  styled_ostream_free (ostream);
+  jitter_print_libtextstyle_finalize ();
+#endif // #ifdef JITTER_WITH_LIBTEXTSTYLE
 
   /* Finalize the structured-VM subsystem. */
   structuredvm_finalize ();

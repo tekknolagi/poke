@@ -207,6 +207,21 @@
 
 #undef JITTER_HAVE_GNU_READLINE
 
+/* This macro is defined iff GNU Libtextstyle is available, in which case the
+   separate wrapper library libjitter-libtextstyle is also built.  However,
+   since Libtextstyle is a large library and its usage should remain optional,
+   having JITTER_HAVE_LIBTEXTSTYLE defined is not enough to actually enable
+   its functionality.
+   The user should define
+     JITTER_WITH_LIBTEXTSTYLE
+   on the command line *and* have JITTER_HAVE_LIBTEXTSTYLE defined in order for
+   the functionality to be actually used.
+   User code should conditionalise using only JITTER_WITH_LIBTEXTSTYLE : it is
+   the build system's responsibility to define
+     JITTER_WITH_LIBTEXTSTYLE
+   on the command line only when the configuration supports it. */
+#undef JITTER_HAVE_LIBTEXTSTYLE
+
 
 /* External utility availability, features and options.
  * ************************************************************************** */

@@ -22,11 +22,10 @@
 #ifndef JITTER_ROUTINE_H_
 #define JITTER_ROUTINE_H_
 
-#include <stdio.h>
-
 #include <jitter/jitter.h>
 
 #include <jitter/jitter-mutable-routine.h>
+#include <jitter/jitter-print.h>
 #include <jitter/jitter-specialize.h>
 
 
@@ -102,23 +101,15 @@ jitter_unpin_routine (jitter_routine r)
 
 /* Like jitter_mutable_routine_print , for the unified routine API. */
 void
-jitter_routine_print (FILE *out, const jitter_routine r)
+jitter_routine_print (jitter_print_context out, const jitter_routine r)
   __attribute__ ((nonnull (1, 2)));
 
-/* Like jitter_disassemble_excecutable_routine , for the unified routine API. */
+/* Like jitter_excecutable_routine_disassemble , for the unified routine API. */
 void
-jitter_disassemble_routine (const jitter_routine r, bool raw,
+jitter_routine_disassemble (jitter_print_context out,
+                            const jitter_routine r, bool raw,
                             const char *objdump_name,
                             const char *objdump_options_or_NULL)
-  __attribute__ ((nonnull (1, 3)));
-
-/* Like jitter_disassemble_excecutable_routine_to , for the unified routine
-   API. */
-void
-jitter_disassemble_routine_to (FILE *f,
-                               const jitter_routine r, bool raw,
-                               const char *objdump_name,
-                               const char *objdump_options_or_NULL)
   __attribute__ ((nonnull(1, 2, 4)));
 
 

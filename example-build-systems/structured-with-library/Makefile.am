@@ -28,6 +28,10 @@
 # linked to as "jitter" within the current directory.
 SUBDIRS = jitter
 
+# Compile every source defining the feature macro to enable the Libtextstyle
+# wrapper.  It is harmless to supply it even when not used.
+AM_CPPFLAGS = $(JITTER_LIBTEXTSTYLE_CPPFLAGS)
+
 
 # General settings.
 ################################################################
@@ -68,7 +72,7 @@ bin_structured_SOURCES = \
 bin_structured_CPPFLAGS = $(AM_CPPFLAGS) $(JITTER_CPPFLAGS)
 
 # bin/structured depends on a Libtool convenience library and is linked to it.
-bin_structured_LDADD = -lstructuredvm
+bin_structured_LDADD = -lstructuredvm  $(JITTER_LIBTEXTSTYLE_LDADD)
 bin_structured_DEPENDENCIES = libstructuredvm.la
 bin_structured_LDFLAGS = -L$(abs_top_builddir)
 
@@ -184,7 +188,8 @@ benchmarks: $(EXTRA_PROGRAMS)
 # example into other languages, but they are not automatically compiled.
 EXTRA_DIST += \
   examples/primes.java \
-  examples/primes.py
+  examples/primes.py \
+  structured-style.css
 
 
 # Cleanup.

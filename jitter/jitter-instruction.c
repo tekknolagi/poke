@@ -1,6 +1,7 @@
 /* Jitter: VM-independent instruction implementation.
 
    Copyright (C) 2016, 2017 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -27,6 +28,7 @@
 #include <jitter/jitter-malloc.h>
 #include <jitter/jitter-fatal.h>
 #include <jitter/jitter-hash.h>
+#include <jitter/jitter-print.h>
 
 
 /* Meta-instructions.
@@ -182,7 +184,9 @@ jitter_instruction_parameters_equal (const struct jitter_parameter *a,
  * ************************************************************************** */
 
 void
-jitter_default_literal_parameter_printer (FILE *out, jitter_uint arg)
+jitter_default_literal_parameter_printer (jitter_print_context out,
+                                          jitter_uint arg)
 {
-  fprintf (out, "0x%" JITTER_PRIx, arg);
+  jitter_print_char_star (out, "0x");
+  jitter_print_jitter_uint (out, 16, arg);
 }
