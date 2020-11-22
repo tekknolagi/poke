@@ -1,6 +1,6 @@
 ;;; JitterLisp (let's say -*- Scheme -*- for the purposes of Emacs) -- library.
 
-;;; Copyright (C) 2017, 2018, 2019 Luca Saiu
+;;; Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
 ;;; Written by Luca Saiu
 
 ;;; This file is part of the JitterLisp language implementation, distributed as
@@ -6312,6 +6312,45 @@
        (newline)
        (compile! ,@interpreted-closure-names))))
 
+(define-constant (prime? n)
+  (if (< n 2)
+      #f
+      (let ((i 2)
+            (divisor-found #f))
+        (while (and (not divisor-found)
+                    (< i n))
+               (when (zero? (remainder n i))
+                 (set! divisor-found #t))
+               (set! i (+ i 1)))
+        (not divisor-found))))
+
+(define-constant (primes-naif limit)
+  (let ((reversed-res ()))
+    (dotimes (i limit)
+      (when (prime? i)
+        (set! reversed-res (cons i reversed-res))))
+    (reverse! reversed-res)))
+
+(define-constant (prime?-knowing known-primes n)
+  (if (< n 2)
+      #f
+      (let ((i 2)
+            (remaining-candidate-factors known-primes)
+            (divisor-found #f))
+        (while (and (not divisor-found)
+                    (not (null? remaining-candidate-factors)))
+               (when (zero? (remainder n (car remaining-candidate-factors)))
+                 (set! divisor-found #t))
+               (set! remaining-candidate-factors
+                     (cdr remaining-candidate-factors)))
+        (not divisor-found))))
+
+(define-constant (primes limit)
+  (let ((known-primes ()))
+    (dotimes (i limit)
+      (when (prime?-knowing known-primes i)
+        (set! known-primes (cons i known-primes))))
+    (reverse! known-primes)))
 
 ;;; I CAN DO BETTER IN THIS CASE:
 ;;; (lambda (f x) (f (begin y x)))
