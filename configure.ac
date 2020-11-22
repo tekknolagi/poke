@@ -384,6 +384,7 @@ AC_SUBST([SIZEOF_VOID_P], [$ac_cv_sizeof_void_p])
 # Define a substitution ("yes" or "no"), CPP feature macro (1 or undefiend) and
 # Automake conditional, all named JITTER_HAVE_ACTUAL_GCC.
 AC_MSG_CHECKING([if the compiler is *really* GCC])
+JITTER_HAVE_CLANG=no
 if test "x$GCC" = ''; then
   JITTER_HAVE_ACTUAL_GCC=no
   AC_MSG_RESULT([no])
@@ -398,6 +399,7 @@ else
   if echo "$JITTER_CLAIMED_GCC_VERSION" | grep 'clang' > /dev/null 2> /dev/null; then
     AC_MSG_RESULT([no (clang pretending to be GCC)])
     JITTER_HAVE_ACTUAL_GCC=no
+    JITTER_HAVE_CLANG=yes
   # If other compilers lie in a way similar to Clang and cause problems in a
   # similar way I can add checks here.
   else
@@ -407,8 +409,11 @@ else
 fi
 AC_SUBST([JITTER_HAVE_ACTUAL_GCC])
 if test "x$JITTER_HAVE_ACTUAL_GCC" = 'xyes'; then
-  AC_DEFINE_UNQUOTED([JITTER_HAVE_ACTUAL_GCC], [${JITTER_HAVE_ACTUAL_GCC}],
+  AC_DEFINE_UNQUOTED([JITTER_HAVE_ACTUAL_GCC], [1],
                      [Defined if using GCC and not something "compatibile".])
+elif test "x$JITTER_HAVE_CLANG" = 'xyes'; then
+  AC_DEFINE_UNQUOTED([JITTER_HAVE_CLANG], [1],
+                     [Defined if using clang.])
 fi
 AM_CONDITIONAL([JITTER_HAVE_ACTUAL_GCC],
                [test "x$JITTER_HAVE_ACTUAL_GCC" = 'xyes'])
@@ -434,6 +439,29 @@ if test "x$JITTER_HAVE_ACTUAL_GCC" = 'xyes'; then
                      [The GCC version as a combined integer, if GCC is being
                      used])
   AC_MSG_RESULT([major ${JITTER_GCC_MAJOR_VERSION}, minor ${JITTER_GCC_MINOR_VERSION}, patchlevel ${JITTER_GCC_PATCHLEVEL_VERSION}, combined ${JITTER_GCC_COMBINED_VERSION}])
+fi
+
+# If the compiler is clang I can check its version as well.
+if test "x$JITTER_HAVE_CLANG" = 'xyes'; then
+  AC_MSG_CHECKING([for clang's version])
+  JITTER_CLANG_MAJOR_VERSION=$(echo '__clang_major__' | jitter_cpp_preprocess)
+  JITTER_CLANG_MINOR_VERSION=$(echo '__clang_minor__' | jitter_cpp_preprocess)
+  JITTER_CLANG_PATCHLEVEL_VERSION=$(echo '__clang_patchlevel__' | jitter_cpp_preprocess)
+  JITTER_CLANG_COMBINED_VERSION=$(( ${JITTER_CLANG_MAJOR_VERSION} * 10000 + ${JITTER_CLANG_MINOR_VERSION} * 100 + ${JITTER_CLANG_PATCHLEVEL_VERSION}))
+  AC_DEFINE_UNQUOTED([JITTER_CLANG_MAJOR_VERSION],
+                     [${JITTER_CLANG_MAJOR_VERSION}],
+                     [The clang major version, if clang is being used])
+  AC_DEFINE_UNQUOTED([JITTER_CLANG_MINOR_VERSION],
+                     [${JITTER_CLANG_MINOR_VERSION}],
+                     [The clang minor version, if clang is being used])
+  AC_DEFINE_UNQUOTED([JITTER_CLANG_PATCHLEVEL_VERSION],
+                     [${JITTER_CLANG_PATCHLEVEL_VERSION}],
+                     [The clang patchlevel version, if clang is being used])
+  AC_DEFINE_UNQUOTED([JITTER_CLANG_COMBINED_VERSION],
+                     [${JITTER_CLANG_COMBINED_VERSION}],
+                     [The clang version as a combined integer, if clang is being
+                     used])
+  AC_MSG_RESULT([major ${JITTER_CLANG_MAJOR_VERSION}, minor ${JITTER_CLANG_MINOR_VERSION}, patchlevel ${JITTER_CLANG_PATCHLEVEL_VERSION}, combined ${JITTER_CLANG_COMBINED_VERSION}])
 fi
 
 # FIXME: the GCC version will be useful in advanced dispatches to enable or
@@ -1388,11 +1416,13 @@ AC_MSG_RESULT([$jitter_have_known_binary_format])
 # change in the future.
 
 # If the option is passed, compile with -fvisibility=hidden.  This is the
-# default only on ELF systems, with GCC version 4 or later, in sub-package
-# mode.
+# default only on ELF systems, with either GCC version 4 or later or clang
+# version 2 or later, in sub-package mode.
 if test "x$jitter_host_os_is_elf" = "xyes" \
-   && test "x$JITTER_HAVE_ACTUAL_GCC" = "xyes" \
-   && test "$JITTER_GCC_MAJOR_VERSION" -ge 4 \
+   && (   (test "x$JITTER_HAVE_ACTUAL_GCC" = "xyes" \
+           && test "$JITTER_GCC_MAJOR_VERSION" -ge 4) \
+       || (test "x$JITTER_HAVE_CLANG" = "xyes" \
+           && test "$JITTER_CLANG_MAJOR_VERSION" -ge 2)) \
    && test "x$JITTER_SUBPACKAGE" != 'x'; then
   jitter_enable_visibility_hidden_default=yes
 else

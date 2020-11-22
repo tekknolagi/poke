@@ -267,6 +267,17 @@
 #undef JITTER_GCC_PATCHLEVEL_VERSION
 #undef JITTER_GCC_COMBINED_VERSION
 
+/* Define if the compiler is clang.  Notice that we discourage the use of clang
+   as a non-copylefted project with a copyleft alternative.  Jitter recommends
+   GCC, which will be the only compiler supporting advanced dispatches. */
+#undef JITTER_HAVE_CLANG
+
+/* Define to the clang version, when clang is being used. */
+#undef JITTER_CLANG_MAJOR_VERSION
+#undef JITTER_CLANG_MINOR_VERSION
+#undef JITTER_CLANG_PATCHLEVEL_VERSION
+#undef JITTER_CLANG_COMBINED_VERSION
+
 /* Define if the language supports mixing declarations and statements, as
    standard in C since 1999 and widely supported even earlier.  If this is not
    defined I expect major problems, and the compiler will not be supported.
