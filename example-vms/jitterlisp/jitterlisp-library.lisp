@@ -6352,6 +6352,12 @@
         (set! known-primes (cons i known-primes))))
     (reverse! known-primes)))
 
+;;; FIXME: these are good for testing return with defective instructions.
+(define-constant (fibo-tr next-to-last last n) (if (zero? n) next-to-last (fibo-tr last (+ next-to-last last) (- n 1))))
+(define-constant (fibof n) (fibo-tr 0 1 n))
+(define-constant (fibo n) (if (< n 2) n (+ (fibo (- n 2)) (fibo (- n 1)))))
+
+
 ;;; I CAN DO BETTER IN THIS CASE:
 ;;; (lambda (f x) (f (begin y x)))
 ;;; Getting this right in the general case (any number of arguments, both
