@@ -373,7 +373,6 @@ jitterlisp_print_recursive (jitter_print_context cx,
         }
       else
         {
-          jitterlisp_end_class (cx);
           jitterlisp_begin_class (cx, "invalid");
           jitter_print_char_star (cx, "#<invalid-unique-object:");
           jitter_print_long_long (cx, 10, index);
