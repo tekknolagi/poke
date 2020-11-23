@@ -6357,6 +6357,11 @@
 (define-constant (fibof n) (fibo-tr 0 1 n))
 (define-constant (fibo n) (if (< n 2) n (+ (fibo (- n 2)) (fibo (- n 1)))))
 
+(define-macro (compiled-lambda formals . body)
+  (let ((closure-name (gensym)))
+    `(let ((,closure-name (lambda ,formals ,@body)))
+       (compile! ,closure-name)
+       ,closure-name)))
 
 ;;; I CAN DO BETTER IN THIS CASE:
 ;;; (lambda (f x) (f (begin y x)))
