@@ -637,7 +637,7 @@ jitter_print_context
 jitter_print_context_make (jitter_print_context_kind k,
                            jitter_print_context_data d)
   __attribute__ ((warn_unused_result, returns_nonnull,
-                  nonnull (1, 2)));
+                  nonnull (1)));
 
 /* The fields within the struct below, along with its total size, may change in
    future versions and the user should treat the structure as containing unknown
