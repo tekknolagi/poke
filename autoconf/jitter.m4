@@ -440,7 +440,7 @@ fi
 if    test "x$ac_jitter_using_automake" != "x" \
    && test "x$JITTER_CONFIG" != 'x'; then
   AM_CONDITIONAL([JITTER_HAVE_LIBTEXTSTYLE],
-                 [test "$JITTER_CONFIG" --have-libtextstyle])
+                 ["$JITTER_CONFIG" --have-libtextstyle])
 fi
 
 # We're done testing C features, for the time being.
