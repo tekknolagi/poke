@@ -2206,7 +2206,7 @@ AC_CONFIG_FILES([scripts/generate-fast-branches],
 # Define a feature macro and an Automake conditional.
 AC_ARG_WITH([libtextstyle],
             AS_HELP_STRING([--with-libtextstyle],
-                           [use GNU Libtextstyle if available and built
+                           [use GNU Libtextstyle if available and build
                             the separate libjitter-libtextstyle wrapper
                             library (default: detected)]),
             jitter_check_libtextstyle="$withval",
