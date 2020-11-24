@@ -29,12 +29,21 @@
 #include <jitter/jitter-print.h>
 
 
-/* Conditional expansion: beginning.
+
+
+/* Fail if we are compiling this on a configuration where we should not.
  * ************************************************************************** */
 
-/* The following expands to nothing if Jitter has not been configured with
+/* This should not even be compiled if Jitter has not been configured with
    support for GNU Libtextstyle. */
-#if defined (JITTER_HAVE_LIBTEXTSTYLE)
+#if ! defined (JITTER_HAVE_LIBTEXTSTYLE)
+# error "jitter/jitter-print-libtextstyle.c should not be compiled if Jitter"
+# error "was not configured with support for GNU libtextstyle.  This C file"
+# error "is part (in fact the entirety) of the sources for the wrapper"
+# error "library libjitter-libtextstyle.la which Jitter's Makefile.am should"
+# error "have disabled in your configuration.  Have you found a build system"
+# error "bug?"
+#endif // #if ! defined (JITTER_HAVE_LIBTEXTSTYLE)
 
 
 
@@ -192,16 +201,3 @@ jitter_print_context_make_libtextstyle (styled_ostream_t ostream)
   return jitter_print_context_make (jitter_print_context_kind_libtextstyle,
                                     ostream);
 }
-
-
-
-
-/* Conditional expansion: end.
- * ************************************************************************** */
-
-#else
-/* For portability's sake it is better not to have a completely empty compilation
-   unit. */
-int
-jitter_print_context_libtextstyle_useless_global;
-#endif // #if defined (JITTER_HAVE_LIBTEXTSTYLE)
