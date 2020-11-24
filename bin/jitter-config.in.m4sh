@@ -220,6 +220,21 @@ ${help_section_indentation}GNU Libtextstyle wrapper options:
                              when linking a larger library which inclues the
                              wrapper.
 
+${help_section_indentation}GNU Readline wrapper/replacement options:
+  --readline-ldadd           Print C compiler (driver) '-l' options for
+                             linking Jitter's Readline wrapper/replacement
+                             library and GNU Readline itself (when used) into
+                             a program.
+                             These flags are to be supplied at link time when
+                             linking a program using the wrapper/replacement.
+  --readline-libadd          Print C compiler (driver) arguments for linking
+                             Jitter's Readline wrapper/replcament library and
+                             GNU Readline itself (when used) into another
+                             library, using GNU LibTool.
+                             These arguments are to be supplied at link time
+                             when linking a larger library which inclues the
+                             wrapper.
+
 ${help_section_indentation}Debugging and scripting:
   --dump-version             Print the Jitter version only, without any
                              surrounding text; this is convenient for scripts
@@ -307,6 +322,10 @@ append_to_output_dispatch_independent ()
             new="@JITTER_LIBTEXTSTYLE_LDADD@";;
         libtextstyle-libadd)
             new="@JITTER_LIBTEXTSTYLE_LIBADD@";;
+        readline-ldadd)
+            new="@JITTER_READLINE_LDADD@";;
+        readline-libadd)
+            new="@JITTER_READLINE_LIBADD@";;
         *)
             fail_semantic "this should never happen: optionname $optionname";;
     esac
@@ -472,6 +491,14 @@ while test "$#" != "0"; do
         --libtextstyle-libadd)
             no_option_argument 
             append_to_output_dispatch_independent libtextstyle-libadd;;
+
+        # GNU Readline wrapper (or replacement) options.
+        --readline-ldadd)
+            no_option_argument
+            append_to_output_dispatch_independent readline-ldadd;;
+        --readline-libadd)
+            no_option_argument 
+            append_to_output_dispatch_independent readline-libadd;;
 
         # Debugging and scripting options.
         --dump-version)

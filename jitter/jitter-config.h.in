@@ -205,7 +205,15 @@
 /* External library availability.
  * ************************************************************************** */
 
-#undef JITTER_HAVE_GNU_READLINE
+/* This macro is defined iff GNU Readline is available, in which case the
+   separate library libjitter-readline will be a wrapper using the actual
+   library and depending on it; otherwise the wrapper library will use its own
+   compatible but crude replacement.
+   The convenient way of linking libjitter-readline (along with the actual GNU
+   Readline library, when used) is by using
+     jitter-config
+   or the substitutions defined by AC_JITTER and AC_JITTER_SUBPACKAGE . */
+#undef JITTER_HAVE_READLINE
 
 /* This macro is defined iff GNU Libtextstyle is available, in which case the
    separate wrapper library libjitter-libtextstyle is also built.  However,
@@ -215,7 +223,10 @@
    The user should define
      JITTER_WITH_LIBTEXTSTYLE
    on the command line *and* have JITTER_HAVE_LIBTEXTSTYLE defined in order for
-   the functionality to be actually used.
+   the functionality to be actually used. The convenient way of doing this is
+   by using
+     jitter-config
+   or the substitutions defined by AC_JITTER and AC_JITTER_SUBPACKAGE . 
    User code should conditionalise using only JITTER_WITH_LIBTEXTSTYLE : it is
    the build system's responsibility to define
      JITTER_WITH_LIBTEXTSTYLE

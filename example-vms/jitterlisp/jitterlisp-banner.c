@@ -104,7 +104,7 @@ jitterlisp_interactive_banner (void)
 #endif // GC
                                          );
   jitterlisp_interactive_banner_feature ("Line editing",
-#if defined (JITTER_HAVE_GNU_READLINE)
+#if defined (JITTER_HAVE_READLINE)
                                          "GNU Readline"
 #else
                                          "not available"

@@ -1,6 +1,6 @@
 /* Readline: either a GNU Readline wrapper or a trivial emulator -- header.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -22,6 +22,22 @@
 #ifndef JITTER_READLINE_H_
 #define JITTER_READLINE_H_
 
+
+/* This functionality is part of a separate library.
+ * ************************************************************************** */
+
+/* In order to keep the Jitter runtime library small and minimal, the Jitter
+   wrapper for readline is built as a separate library named
+     libjitter-readline.la
+   .  The small library is always built, but according to the configuration it
+   may actually use GNU Readline and depend on it, or just provide a crude but
+   compatible emulation.
+
+   See jitter/jitter-config.h and the documentation about how to conveniently
+   use the wrapper library from Jittery programs. */
+
+
+
 
 /* Readline.
  * ************************************************************************** */

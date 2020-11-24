@@ -24,9 +24,9 @@
 
 /* Include the GNU Readline header for initialization.  This may not be the most
    appropriate place for this, but it's just one line. */
-#ifdef JITTER_HAVE_GNU_READLINE
+#ifdef JITTER_HAVE_READLINE
 # include <readline/readline.h>
-#endif // #ifdef JITTER_HAVE_GNU_READLINE
+#endif // #ifdef JITTER_HAVE_READLINE
 
 
 void
@@ -43,12 +43,12 @@ jitterlisp_initialize (void)
   jitterlisp_error_initialize ();
   jitterlisp_vm_initialize ();
 
-#ifdef JITTER_HAVE_GNU_READLINE
+#ifdef JITTER_HAVE_READLINE
   /* Enable blink-matching-paren if using GNU Readline.  Some people might find
      this default somewhat too Lispy to be the default in Jitter, which is why
      it's not in jitter-readline.c . */
   rl_variable_bind ("blink-matching-paren", "on");
-#endif // #ifdef JITTER_HAVE_GNU_READLINE
+#endif // #ifdef JITTER_HAVE_READLINE
 }
 
 void

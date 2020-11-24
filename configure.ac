@@ -683,47 +683,6 @@ gl_INIT
 AM_PATH_LISPDIR
 
 
-# Check for libraries: GNU Readline
-################################################################
-
-# Jitter can use GNU Readline, even if there is a crude emulation facility
-# for when it's not installed.  It is currently only used in JitterLisp but
-# I plan to use it more in the future, so it's linked to every program.
-#
-# Anyway, don't check for Readline and refuse to use it if we got
-# --without-readline or --with-readline=no as a configure option,
-# or if Jitter is being configured in sub-package mode.
-AC_ARG_WITH([readline],
-            AS_HELP_STRING([--with-readline],
-                           [use GNU ReadLine (default: detected)]),
-            jitter_check_readline="$withval",
-            jitter_check_readline="yes")
-if test "x$JITTER_SUBPACKAGE" != 'x'; then
-  # Readline is just an annoyance in sub-package mode.
-  AC_MSG_NOTICE([not using GNU Readline in sub-package mode: even ignoring
-the command line option])
-elif test "x$jitter_check_readline" != 'xno'; then
-  # These seem to be readline dependencies.
-  AC_CHECK_LIB([ncurses], [main])
-  AC_CHECK_LIB([termcap], [main])
-  AC_CHECK_LIB([tinfo], [main])
-
-  # Check for the actual Readline library.
-  AC_CHECK_LIB([readline], [readline], , [did_we_find_readline=no])
-
-  # If we found it, LDADD has already been updated.  In that case also define a
-  # CPP feature macro, so as to use the actual Readline instead of my crude
-  # emulation.
-  if test "x$did_we_find_readline" != "xno"; then
-    AC_DEFINE_UNQUOTED([JITTER_HAVE_GNU_READLINE], [1],
-                       [Use the actual GNU Readline library])
-  fi
-else
-  # We were requested to do without Readline.
-  AC_MSG_NOTICE([not using GNU Readline because of configure option])
-fi # if test "x$jitter_check_readline" = "xyes"
-
-
 # Check for headers.
 ################################################################
 
@@ -2240,15 +2199,16 @@ AC_CONFIG_FILES([scripts/generate-fast-branches],
                 [chmod +x scripts/generate-fast-branches])
 
 
-# Optional dependencies.
+# Library wrappers/replacements, not part of libjitter.
 ################################################################
 
 # Check for GNU libtextstyle, unless it is explicitly disabled by an option.
 # Define a feature macro and an Automake conditional.
 AC_ARG_WITH([libtextstyle],
             AS_HELP_STRING([--with-libtextstyle],
-                           [use GNU libtextstyle, where available (default:
-                            derected)]),
+                           [use GNU Libtextstyle if available and built
+                            the separate libjitter-libtextstyle wrapper
+                            library (default: detected)]),
             jitter_check_libtextstyle="$withval",
             jitter_check_libtextstyle="yes")
 if test "x$jitter_check_libtextstyle" = 'xyes'; then
@@ -2260,7 +2220,7 @@ if test "x$jitter_check_libtextstyle" = 'xyes'; then
   # FIXME: shall I use AC_LIB_LINKFLAGS or AC_LIB_HAVE_LINKFLAGS from Gnulib
   # instead?
   #   https://www.gnu.org/software/gnulib/manual/html_node/Searching-for-Libraries.html
-  AC_MSG_NOTICE([checking for libraries GNU libtextstyle may possibly depend on])
+  AC_MSG_NOTICE([checking for libraries GNU Libtextstyle may possibly depend on])
   LIBS=''
   AC_SEARCH_LIBS([sin], [m])
   AC_SEARCH_LIBS([tputs], [termcap])
@@ -2276,12 +2236,12 @@ if test "x$jitter_check_libtextstyle" = 'xyes'; then
   # more library than are needed in the command line, but should be enough.
   AC_SEARCH_LIBS([ostream_flush], [textstyle])
   AC_CHECK_HEADERS([textstyle.h], [jitter_have_libtextstyle_header=yes])
-  AC_MSG_CHECKING([if GNU libtextstyle is usable])
+  AC_MSG_CHECKING([if GNU Libtextstyle is usable])
   if    test "x$ac_cv_search_ostream_flush" != 'xno' \
      && test "x$jitter_have_libtextstyle_header" = 'xyes'; then
     jitter_have_libtextstyle=yes
     AC_DEFINE_UNQUOTED([JITTER_HAVE_LIBTEXTSTYLE], [1],
-                       [Define iff GNU libtextstyle is usable and enabled])
+                       [Define iff GNU Libtextstyle is usable and enabled])
     AC_SUBST([JITTER_LIBTEXTSTYLE_CPPFLAGS],
              [-DJITTER_WITH_LIBTEXTSTYLE=1])
     AC_SUBST([JITTER_LIBTEXTSTYLE_LDADD],
@@ -2296,12 +2256,84 @@ if test "x$jitter_check_libtextstyle" = 'xyes'; then
   fi
   AC_MSG_RESULT([$jitter_have_libtextstyle])
 else
-  AC_MSG_NOTICE([not checking for GNU libtextstyle: disabled by configure option])
+  AC_MSG_NOTICE([not checking for GNU Libtextstyle: disabled by configure option])
 fi
 AM_CONDITIONAL([JITTER_HAVE_LIBTEXTSTYLE],
                [test "x$jitter_have_libtextstyle" = 'xyes'])
 # Notice that JITTER_WITH_LIBTEXTSTYLE is not automatically defined.  See
 # the comment in jitter/jitter-config.h.in .
+
+
+# Check for libraries: GNU Readline
+################################################################
+
+# Jitter comes with a separate library called libjitter-readline.la , which
+# is always built but is not part of the Jitter runtime.  The library may
+# either actually use GNU Readline, and therefore depend on it, or implement
+# a compatible but crude replacement which performs no line editing.
+#
+# Anyway, do not check for Readline and refuse to use it if we got
+# --without-readline or --with-readline=no as a configure option.
+AC_ARG_WITH([readline],
+            AS_HELP_STRING([--with-readline],
+                           [actually use GNU Readline in the separate
+                            library libjitter-readline, which is always
+                            built (default: detected)]),
+            jitter_check_readline="$withval",
+            jitter_check_readline="yes")
+if test "x$jitter_check_readline" = 'xyes'; then
+  # Save the current value for LIBS before temporary changing it.
+  jitter_backup_LIBS="$LIBS"
+
+  # Check for possible dependencies of Readline.  Do not use any library
+  # other than the ones I am mentioning here.
+  # FIXME: shall I use AC_LIB_LINKFLAGS or AC_LIB_HAVE_LINKFLAGS from Gnulib
+  # instead?
+  #   https://www.gnu.org/software/gnulib/manual/html_node/Searching-for-Libraries.html
+  AC_MSG_NOTICE([checking for libraries GNU Readline may possibly depend on])
+  LIBS=''
+  AC_SEARCH_LIBS([tputs], [termcap])
+  AC_SEARCH_LIBS([tinfo], [setupterm])
+  AC_SEARCH_LIBS([initscr], [ncurses])
+  AC_SEARCH_LIBS([initscr], [xcurses])
+  AC_SEARCH_LIBS([initscr], [curses])
+  # Remove unsightly duplicates from $LIBS , without changing the order of
+  # its elements.
+  LIBS=$(echo $(for x in $LIBS; do echo $x; done | uniq))' '
+
+  # Check for Readline itself using the dependencies.  This may mention
+  # more library than are needed in the command line, but should be enough.
+  AC_SEARCH_LIBS([readline], [readline])
+  AC_CHECK_HEADERS([readline/readline.h], [jitter_have_readline_header=yes])
+  AC_MSG_CHECKING([if GNU readline is usable])
+  if    test "x$ac_cv_search_readline" != 'xno' \
+     && test "x$jitter_have_readline_header" = 'xyes'; then
+    jitter_have_readline=yes
+    AC_DEFINE_UNQUOTED([JITTER_HAVE_READLINE], [1],
+                       [Define iff GNU Readline is usable and enabled])
+    AC_SUBST([JITTER_READLINE_LDADD],
+             ["-ljitter-readline $LIBS"])
+    AC_SUBST([JITTER_READLINE_LIBADD],
+             ["$jitter_abs_top_builddir/non-convenience-lib/libjitter-readline.la $LIBS"])
+    # Forget about the libraries found by the check for libtextstlye and its
+    # dependencies: they should not be linked by default.
+    LIBS="$jitter_backup_LIBS"
+  else
+    jitter_have_readline=no
+  fi
+  AC_MSG_RESULT([$jitter_have_readline])
+else
+  AC_MSG_NOTICE([not checking for GNU Readline: disabled by configure option])
+fi # if test "x$jitter_check_readline" = "xyes"
+if test "x$jitter_have_readline" != "xyes"; then
+  # Define substitutions for using libjitter-readline without not linking the
+  # actual GNU Readline.
+  AC_SUBST([JITTER_READLINE_LDADD], ["-ljitter-readline"])
+  AC_SUBST([JITTER_READLINE_LIBADD],
+           ["$jitter_abs_top_builddir/non-convenience-lib/libjitter-readline.la"])
+fi
+AM_CONDITIONAL([JITTER_HAVE_READLINE],
+               [test "x$jitter_have_readline" = 'xyes'])
 
 
 # Optional dependencies, for examples only.

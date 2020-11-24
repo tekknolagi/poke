@@ -261,7 +261,7 @@ AC_ARG_WITH([jitter],
 # words):
 # * JITTER_ENABLE_DISPATCH_$D  (true iff $D is enabled).
 #
-# Also define the following for the libjitter-libtextstyle wrapper:
+# Moreover, define the following for the libjitter-libtextstyle wrapper:
 # * JITTER_LIBTEXTSTYLE_CPPFLAGS  (the command line C preprocessor flags to
 #                                  use for *using* the wrapper library;
 #                                  without these falgs the wrapper is not
@@ -273,6 +273,15 @@ AC_ARG_WITH([jitter],
 # When Automake is used, also defined the following Automake conditional:
 # * JITTER_HAVE_LIBTEXTSTYLE      (true iff GNU Libtextstyle and its wrapper
 #                                  are available).
+#
+# Moreover, define the following for the libjitter-readline wrapper, which
+# is always built:
+# * JITTER_READLINE_LDADD         (LDADD for linking the wrapper (and GNU
+#                                  readline itself, where used) into an
+#                                  executable);
+# * JITTER_READLINE_LIBADD        (LDADD for linking the wrapper (and GNU
+#                                  readline itself, where used) into a
+#                                  library).
 AC_DEFUN([AC_JITTER_CONFIG], [
 # I'd like to define Automake conditionals later on, but that only works if
 # the project is actually using Automake.
@@ -433,6 +442,15 @@ if test "x$JITTER_CONFIG" != 'x'; then
            [$("$JITTER_CONFIG" --libtextstyle-ldadd)])
   AC_SUBST([JITTER_LIBTEXTSTYLE_LIBADD],
            [$("$JITTER_CONFIG" --libtextstyle-libadd)])
+fi
+
+# Define substitutions for the GNU Readline wrapper, if jitter-config
+# was found.
+if test "x$JITTER_CONFIG" != 'x'; then
+  AC_SUBST([JITTER_READLINE_LDADD],
+           [$("$JITTER_CONFIG" --readline-ldadd)])
+  AC_SUBST([JITTER_READLINE_LIBADD],
+           [$("$JITTER_CONFIG" --readline-libadd)])
 fi
 
 # Define the Automake conditional for the GNU Libtextstyle wrapper, if we
