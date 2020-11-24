@@ -482,12 +482,12 @@ jitter_mutable_routine_append_parameter_copy (struct jitter_mutable_routine *p,
    
    The output uses the following class names (see jitter/jitter-print.h), with
    "vmprefix" replaced by the lower-case name of the VM for the mutable routine:
-   - vmprefix_punctuation;
-   - vmprefix_label;
-   - vmprefix_instruction;
-   - vmprefix_register;
-   - vmprefix_number;
-   - vmprefix_invalid.
+   - "vmprefix-punctuation";
+   - "vmprefix-label";
+   - "vmprefix-instruction";
+   - "vmprefix-register";
+   - "vmprefix-number";
+   - "vmprefix-invalid".
    Some VMs will print instruction literals though custom printers, which may
    use other classes. */
 void

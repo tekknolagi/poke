@@ -36,29 +36,14 @@
 /* Interaction and debugging.
  * ************************************************************************** */
 
-.jitterlisp_banner
-{
-    font-style: italic;
-    font-weight: bold;
-}
-
-.jitterlisp_banner_feature_name
-{
-    font-style: italic;
-}
-
-.jitterlisp_banner_feature_value
-{
-    font-style: italic;
-    text-decoration: underline;
-}
-
-.jitterlisp_log
-{
-    background-color: gray;
-    color: black;
-    font-style: italic;
-}
+.jitterlisp-banner                { font-style: italic;
+                                    font-weight: bold; }
+.jitterlisp-banner-feature-name   { font-style: italic; }
+.jitterlisp-banner-feature-value  { font-style: italic;
+                                    text-decoration: underline; }
+.jitterlisp-log                   { background-color: gray;
+                                    color: black;
+                                    font-style: italic; }
 
 
 
@@ -66,21 +51,18 @@
 /* Errors and warnings.
  * ************************************************************************** */
 
-.jitterlispvm_invalid, .jitterlispvm_error, .jitterlisp_error, .jitterlisp_invalid, .jitterlisp_warning
-{
-    background-color: red;
-    color: black;
-    font-style: italic;
-    text-decoration: underline;
-}
-
-.jitterlispvm_warning
-{
-    background-color: purple;
-    color: white;
-    font-style: italic;
-    text-decoration: underline;
-}
+.jitterlispvm-invalid,
+.jitterlispvm-error,
+.jitterlisp-error,
+.jitterlisp-invalid,
+.jitterlisp-warning    { background-color: red;
+                         color: black;
+                         font-style: italic;
+                         text-decoration: underline; }
+.jitterlispvm-warning  { background-color: purple;
+                         color: white;
+                         font-style: italic;
+                         text-decoration: underline; }
 
 
 
@@ -88,41 +70,19 @@
 /* JitterLispVM routines.
  * ************************************************************************** */
 
-.jitterlispvm_comment
-{
-    color: brown;
-    font-style: italic;
-}
+.jitterlispvm-comment      { color: brown;
+                             font-style: italic; }
+.jitterlispvm-punctuation  { color: white; }
 
-.jitterlispvm_punctuation
-{
-    color: white;
-}
-
-.jitterlispvm_instruction
-{
-    color: cyan;
-    font-weight: bold;
-}
-
-.jitterlispvm_label
-{
-    color: yellow;
-    font-style: italic;
-    font-weight: bold;
-}
-
-.jitterlispvm_register
-{
-    color: green;
-    font-style: italic;
-    font-weight: bold;
-}
-
-.jitterlispvm_number
-{
-    color: lightgreen;
-}
+.jitterlispvm-instruction  { color: cyan;
+                             font-weight: bold; }
+.jitterlispvm-label        { color: yellow;
+                             font-style: italic;
+                             font-weight: bold; }
+.jitterlispvm-register     { color: green;
+                             font-style: italic;
+                             font-weight: bold; }
+.jitterlispvm-number       { color: lightgreen; }
 
 
 
@@ -130,20 +90,11 @@
 /* Native-code disassemblying of JitterLispVM routines.
  * ************************************************************************** */
 
-.jitterlispvm_memory_address
-{
-    color: yellow;
-    font-style: italic;
-}
-.jitterlispvm_native_instruction_hex
-{
-    color: cyan;
-}
-.jitterlispvm_disassembly
-{
-    color: green;
-    font-style: italic;
-}
+.jitterlispvm-memory-address          { color: yellow;
+                                        font-style: italic; }
+.jitterlispvm-native-instruction-hex  { color: cyan; }
+.jitterlispvm-disassembly             { color: green;
+                                        font-style: italic; }
 
 
 
@@ -151,94 +102,42 @@
 /* Lisp data.
  * ************************************************************************** */
 
-.jitterlisp_fixnum
-{
-    color: green;
-}
+.jitterlisp-fixnum               { color: green; }
+.jitterlisp-unique               { color: lightgreen;
+                                   font-weight: bold; }
+.jitterlisp-interned-symbol      { color: orange; }
+.jitterlisp-uninterned-symbol    { color: orange;
+                                   text-decoration: underline; }
+.jitterlisp-character            { color: purple;
+                                   font-style: italic;
+                                   text-decoration: underline; }
+.jitterlisp-cons                 { color: white; }
+.jitterlisp-vector               { color: white;
+                                   font-weight: bold; }
+.jitterlisp-box                  { color: green;
+                                   font-weight: bold; }
+.jitterlisp-primitive            { color: orange;
+                                   font-weight: bold;
+                                   font-style: italic;
+                                   text-decoration: underline; }
+.jitterlisp-closure              { color: purple;
+                                   font-weight: bold;
+                                   font-style: italic; }
+.jitterlisp-primitive-macro      { color: pink;
+                                   font-style: italic;
+                                   text-decoration: underline; }
+.jitterlisp-non-primitive-macro  { color: pink;
+                                   font-weight: bold;
+                                   font-style: italic; }
+.jitterlisp-ast                  { color: cyan;
+                                   font-style: italic;
+                                   text-decoration: underline; }
+.jitterlisp-circular             { color: white;
+                                   font-weight: bold;
+                                   background-color: red; }
 
-.jitterlisp_unique
-{
-    color: lightgreen;
-    font-weight: bold;
-}
 
-.jitterlisp_interned_symbol
-{
-    color: orange;
-}
-
-.jitterlisp_uninterned_symbol
-{
-    color: orange;
-    text-decoration: underline;
-}
-
-.jitterlisp_character
-{
-    color: purple;
-    font-style: italic;
-    text-decoration: underline;
-}
-
-.jitterlisp_cons
-{
-    color: white;
-}
-
-.jitterlisp_vector
-{
-    color: white;
-    font-weight: bold;
-}
-
-.jitterlisp_box
-{
-    color: green;
-    font-weight: bold;
-}
-
-.jitterlisp_primitive
-{
-    color: orange;
-    font-weight: bold;
-    font-style: italic;
-    text-decoration: underline;
-}
-
-.jitterlisp_closure
-{
-    color: purple;
-    font-weight: bold;
-    font-style: italic;
-}
-
-.jitterlisp_primitive_macro
-{
-    color: pink;
-    font-style: italic;
-    text-decoration: underline;
-}
-
-.jitterlisp_non_primitive_macro
-{
-    color: pink;
-    font-weight: bold;
-    font-style: italic;
-}
-
-.jitterlisp_ast
-{
-    color: cyan;
-    font-style: italic;
-    text-decoration: underline;
-}
-
-.jitterlisp_circular
-{
-    color: white;
-    font-weight: bold;
-    background-color: red;
-}
+
 
 /*
 .template

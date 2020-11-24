@@ -37,11 +37,11 @@
 
 /* Begin using a class in the given print context, where the class name is
    formed by the concatenation of the lower-case prefix for the VM of the
-   pointed executable routine, concatenated to an underscore, concatenated
+   pointed executable routine, concatenated to a dash, concatenated
    to the given suffix.
    For example, if the mutable routine r belonged to a VM named "foo",
      jitter_disassemble_begin_class (ctx, r, "label")
-   would open a class in the context ctx named "foo_label". */
+   would open a class in the context ctx named "foo-label". */
 static void
 jitter_disassemble_begin_class (jitter_print_context ctx,
                                 const struct jitter_executable_routine *er,
@@ -50,7 +50,7 @@ jitter_disassemble_begin_class (jitter_print_context ctx,
   char *prefix = er->vm->configuration.lower_case_prefix;
   size_t size = strlen (prefix) + 1 + strlen (suffix) + 1;
   char *buffer = jitter_xmalloc (size);
-  sprintf (buffer, "%s_%s", prefix, suffix);
+  sprintf (buffer, "%s-%s", prefix, suffix);
   jitter_print_begin_class (ctx, buffer);
   free (buffer);
 }
@@ -142,13 +142,13 @@ jitter_disassemble_print_char (jitter_print_context output,
       if (whitespace)
         new_state = disassemble_objdump_state_whitespace_after_address;
       else
-        jitter_disassemble_begin_class (output, er, "memory_address");
+        jitter_disassemble_begin_class (output, er, "memory-address");
       break;
     case disassemble_objdump_state_whitespace_after_address:
       if (! whitespace)
         {
           new_state = disassemble_objdump_state_hex;
-          jitter_disassemble_begin_class (output, er, "native_instruction_hex");
+          jitter_disassemble_begin_class (output, er, "native-instruction-hex");
         }
       break;
     case disassemble_objdump_state_hex:
@@ -161,7 +161,7 @@ jitter_disassemble_print_char (jitter_print_context output,
       if (whitespace && (c == '\t' || previous_c == ' '))
         new_state = disassemble_objdump_state_whitespace_after_hex;
       else if (! whitespace)
-        jitter_disassemble_begin_class (output, er, "native_instruction_hex");
+        jitter_disassemble_begin_class (output, er, "native-instruction-hex");
       break;
     case disassemble_objdump_state_whitespace_after_hex:
       if (! whitespace)
@@ -285,7 +285,7 @@ jitter_disassemble_range_objdump (jitter_print_context output,
              initial newline, which would look ugly) now, after the prefix, and
              then the last seen character, which we had also skipped. */
           jitter_print_char_star (output, prefix);
-          jitter_disassemble_begin_class (output, er, "memory_address");
+          jitter_disassemble_begin_class (output, er, "memory-address");
           jitter_print_char_star (output, "0x");
           jitter_print_char (output, c);
           jitter_print_end_class (output);
@@ -340,7 +340,7 @@ jitter_dump_range (jitter_print_context output,
           char buffer [100];
           sprintf (buffer, address_format, (long) (jitter_int) p);
           jitter_print_char_star (output, prefix);
-          jitter_disassemble_begin_class (output, er, "memory_address");
+          jitter_disassemble_begin_class (output, er, "memory-address");
           jitter_print_char_star (output, buffer);
           jitter_print_end_class (output);
         }
@@ -350,7 +350,7 @@ jitter_dump_range (jitter_print_context output,
       jitter_print_char (output, ' ');
       char buffer [10];
       sprintf (buffer, "%02x", * p);
-      jitter_disassemble_begin_class (output, er, "native_instruction_hex");
+      jitter_disassemble_begin_class (output, er, "native-instruction-hex");
       jitter_print_char_star (output, buffer);
       jitter_print_end_class (output);
 

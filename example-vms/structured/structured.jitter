@@ -71,7 +71,7 @@ printer-c
 static void
 structured_literal_printer (jitter_print_context out, jitter_uint u)
 {
-  jitter_print_begin_class (out, "structuredvm_number");
+  jitter_print_begin_class (out, "structuredvm-number");
   jitter_print_jitter_uint (out, 10, u);
   jitter_print_end_class (out);
 }

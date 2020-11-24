@@ -36,11 +36,12 @@
    instruction.
    
    The output uses the following class names (see jitter/jitter-print.h), with
-   "vmprefix" replaced by the lower-case name of the VM for the mutable routine:
-   - vmprefix_comment;
-   - vmprefix_memory_address;
-   - vmprefix_native_instruction_hex;
-   - vmprefix_disassembly. */
+   "vmprefix" replaced by the lower-case name of the VM for the executable
+   routine:
+   - "vmprefix-comment";
+   - "vmprefix-memory-address";
+   - "vmprefix-native-instruction-hex";
+   - "vmprefix-disassembly". */
 void
 jitter_executable_routine_disassemble (jitter_print_context out,
                                        const struct jitter_executable_routine

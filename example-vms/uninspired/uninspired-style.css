@@ -36,41 +36,18 @@
 /* Uninspired routines.
  * ************************************************************************** */
 
-.uninspired_comment
-{
-    color: brown;
-    font-style: italic;
-}
-
-.uninspired_punctuation
-{
-    color: white;
-}
-
-.uninspired_instruction
-{
-    color: cyan;
-    font-weight: bold;
-}
-
-.uninspired_label
-{
-    color: yellow;
-    font-style: italic;
-    font-weight: bold;
-}
-
-.uninspired_register
-{
-    color: green;
-    font-style: italic;
-    font-weight: bold;
-}
-
-.uninspired_number
-{
-    color: lightgreen;
-}
+.uninspired-comment      { color: brown;
+                           font-style: italic; }
+.uninspired-punctuation  { color: white;  }
+.uninspired-instruction  { color: cyan;
+                           font-weight: bold; }
+.uninspired-label        { color: yellow;
+                           font-style: italic;
+                           font-weight: bold; }
+.uninspired-register     { color: green;
+                           font-style: italic;
+                           font-weight: bold; }
+.uninspired-number       { color: lightgreen; }
 
 
 
@@ -78,20 +55,14 @@
 /* Native-code disassemblying of Uninspired routines.
  * ************************************************************************** */
 
-.uninspired_memory_address
-{
-    color: yellow;
-    font-style: italic;
-}
-.uninspired_native_instruction_hex
-{
-    color: cyan;
-}
-.uninspired_disassembly
-{
-    color: green;
-    font-style: italic;
-}
+.uninspired-memory-address          { color: yellow;
+                                      font-style: italic; }
+.uninspired-native-instruction-hex  { color: cyan; }
+.uninspired-disassembly             { color: green;
+                                      font-style: italic; }
+
+
+
 
 /*
 .template

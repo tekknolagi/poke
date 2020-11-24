@@ -152,7 +152,7 @@ void
 jitterlisp_begin_class (jitter_print_context cx, const char *name_suffix)
 {
   char buffer [1000];
-  sprintf (buffer, "jitterlisp_%s", name_suffix);
+  sprintf (buffer, "jitterlisp-%s", name_suffix);
   jitter_print_begin_class (cx, buffer);
 }
 
@@ -393,13 +393,13 @@ jitterlisp_print_recursive (jitter_print_context cx,
       if (s->name_or_NULL != NULL)
         {
           /* Print an interned symbol. */
-          jitterlisp_begin_class (cx, "interned_symbol");
+          jitterlisp_begin_class (cx, "interned-symbol");
           jitter_print_char_star (cx, s->name_or_NULL);
         }
       else if (jitterlisp_settings.print_compact_uninterned_symbols)
         {
           /* Print an uninterned symbol in compact notation. */
-          jitterlisp_begin_class (cx, "uninterned_symbol");
+          jitterlisp_begin_class (cx, "uninterned-symbol");
           jitter_print_char_star (cx, "#<u");
           jitter_print_long_long (cx, 10, (jitter_long_long) s->index);
           jitter_print_char_star (cx, ">");
@@ -407,7 +407,7 @@ jitterlisp_print_recursive (jitter_print_context cx,
       else
         {
           /* Print an uninterned symbol in the default notation. */
-          jitterlisp_begin_class (cx, "uninterned_symbol");
+          jitterlisp_begin_class (cx, "uninterned-symbol");
           jitter_print_char_star (cx, "#<uninterned:");
           jitter_print_char_star (cx, "0x");
           jitter_print_long_long (cx, 16, (jitter_uint) s);
@@ -421,16 +421,10 @@ jitterlisp_print_recursive (jitter_print_context cx,
       struct jitterlisp_compiled_closure *cc = & c->compiled;
       jitterlisp_begin_class (cx, "closure");
       jitter_print_char_star (cx, "#<compiled-closure ");
-      jitterlisp_end_class (cx);
-      jitterlisp_begin_class (cx, "closure");
       jitter_print_long_long (cx, 10, c->in_arity);
       jitter_print_char_star (cx, "-ary");
-      jitterlisp_end_class (cx);
-      jitterlisp_begin_class (cx, "closure");
       jitter_print_char_star (cx, " nonlocals ");
-      jitterlisp_end_class (cx);
       jitterlisp_print_recursive (cx, st, cc->nonlocals);
-      jitterlisp_begin_class (cx, "closure");
       jitter_print_char_star (cx, ">");
       jitterlisp_end_class (cx);
     }
@@ -440,17 +434,11 @@ jitterlisp_print_recursive (jitter_print_context cx,
         = & JITTERLISP_CLOSURE_DECODE(o)->interpreted;
       jitterlisp_begin_class (cx, "closure");
       jitter_print_char_star (cx, "#<interpreted-closure ");
-      jitterlisp_end_class (cx);
       jitterlisp_print_recursive (cx, st, ic->environment);
-      jitterlisp_begin_class (cx, "closure");
       jitter_print_char (cx, ' ');
-      jitterlisp_end_class (cx);
       jitterlisp_print_recursive (cx, st, ic->formals);
-      jitterlisp_begin_class (cx, "closure");
       jitter_print_char (cx, ' ');
-      jitterlisp_end_class (cx);
       jitterlisp_print_recursive (cx, st, ic->body);
-      jitterlisp_begin_class (cx, "closure");
       jitter_print_char (cx, '>');
       jitterlisp_end_class (cx);
     }
@@ -458,19 +446,13 @@ jitterlisp_print_recursive (jitter_print_context cx,
     {
       struct jitterlisp_interpreted_closure * const closure
         = JITTERLISP_NON_PRIMITIVE_MACRO_DECODE(o);
-      jitterlisp_begin_class (cx, "non_primitive_macro");
+      jitterlisp_begin_class (cx, "non-primitive-macro");
       jitter_print_char_star (cx, "#<macro ");
-      jitterlisp_end_class (cx);
       jitterlisp_print_recursive (cx, st, closure->environment);
-      jitterlisp_begin_class (cx, "non_primitive_macro");
       jitter_print_char (cx, ' ');
-      jitterlisp_end_class (cx);
       jitterlisp_print_recursive (cx, st, closure->formals);
-      jitterlisp_begin_class (cx, "non_primitive_macro");
-      jitterlisp_end_class (cx);
       jitter_print_char (cx, ' ');
       jitterlisp_print_recursive (cx, st, closure->body);
-      jitterlisp_begin_class (cx, "non_primitive_macro");
       jitter_print_char_star (cx, ">");
       jitterlisp_end_class (cx);
     }
@@ -500,9 +482,7 @@ jitterlisp_print_recursive (jitter_print_context cx,
     {
       jitterlisp_begin_class (cx, "box");
       jitter_print_char_star (cx, "#<box ");
-      jitterlisp_end_class (cx);
       jitterlisp_print_recursive (cx, st, JITTERLISP_EXP_B_A_GET(o));
-      jitterlisp_begin_class (cx, "box");
       jitter_print_char (cx, '>');
       jitterlisp_end_class (cx);
     }
@@ -513,10 +493,8 @@ jitterlisp_print_recursive (jitter_print_context cx,
       jitterlisp_object cdr = c->cdr;
       jitterlisp_begin_class (cx, "cons");
       jitter_print_char (cx, '(');
-      jitterlisp_end_class (cx);
       jitterlisp_print_recursive (cx, st, car);
       jitterlisp_print_cdr (cx, st, cdr);
-      jitterlisp_begin_class (cx, "cons");
       jitter_print_char (cx, ')');
       jitterlisp_end_class (cx);
     }
@@ -530,20 +508,14 @@ jitterlisp_print_recursive (jitter_print_context cx,
       const struct jitterlisp_vector * const v = JITTERLISP_VECTOR_DECODE(o);
       jitterlisp_begin_class (cx, "vector");
       jitter_print_char_star (cx, "#(");
-      jitterlisp_end_class (cx);
       int i;
       int element_no = JITTERLISP_FIXNUM_DECODE(v->element_no);
       for (i = 0; i < element_no; i ++)
         {
           jitterlisp_print_recursive (cx, st, v->elements [i]);
           if (i < (element_no - 1))
-            {
-              jitterlisp_begin_class (cx, "vector");
-              jitter_print_char (cx, ' ');
-              jitterlisp_end_class (cx);
-            }
+            jitter_print_char (cx, ' ');
         }
-      jitterlisp_begin_class (cx, "vector");
       jitter_print_char (cx, ')');
       jitterlisp_end_class (cx);
     }

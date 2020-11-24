@@ -144,11 +144,11 @@ jitter_destroy_data_locations (struct jitter_data_locations *locations)
 
 /* Begin using a class in the given print context, where the class name is
    formed by the concatenation of the lower-case prefix for the VM of the
-   pointed executable routine, concatenated to an underscore, concatenated
+   pointed executable routine, concatenated to a dash, concatenated
    to the given suffix.
    For example, if the mutable routine r belonged to a VM named "foo",
      jitter_disassemble_begin_class (ctx, r, "label")
-   would open a class in the context ctx named "foo_label". */
+   would open a class in the context ctx named "foo-label". */
 __attribute__ ((unused))
 static void
 jitter_locations_begin_class (jitter_print_context ctx,
@@ -158,7 +158,7 @@ jitter_locations_begin_class (jitter_print_context ctx,
   char *prefix = vm->configuration.lower_case_prefix;
   size_t size = strlen (prefix) + 1 + strlen (suffix) + 1;
   char *buffer = jitter_xmalloc (size);
-  sprintf (buffer, "%s_%s", prefix, suffix);
+  sprintf (buffer, "%s-%s", prefix, suffix);
   jitter_print_begin_class (ctx, buffer);
   free (buffer);
 }

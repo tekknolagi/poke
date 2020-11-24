@@ -780,11 +780,11 @@ jitter_maximum_instruction_name_length (const struct jitter_mutable_routine *p)
 
 /* Begin using a class in the given print context, where the class name is
    formed by the concatenation of the lower-case prefix for the VM of the
-   pointed mutable routine, concatenated to an underscore, concatenated to the
+   pointed mutable routine, concatenated to a dash, concatenated to the
    given suffix.
    For example, if the mutable routine r belonged to a VM named "foo",
      jitter_mutable_routine_begin_class (ctx, r, "label")
-   would open a class in the context ctx named "foo_label". */
+   would open a class in the context ctx named "foo-label". */
 static void
 jitter_mutable_routine_begin_class (jitter_print_context ctx,
                                     const struct jitter_mutable_routine *p,
@@ -793,7 +793,7 @@ jitter_mutable_routine_begin_class (jitter_print_context ctx,
   char *prefix = p->vm->configuration.lower_case_prefix;
   size_t size = strlen (prefix) + 1 + strlen (suffix) + 1;
   char *buffer = jitter_xmalloc (size);
-  sprintf (buffer, "%s_%s", prefix, suffix);
+  sprintf (buffer, "%s-%s", prefix, suffix);
   jitter_print_begin_class (ctx, buffer);
   free (buffer);
 }

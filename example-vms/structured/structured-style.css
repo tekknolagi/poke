@@ -36,41 +36,18 @@
 /* StructuredVM routines.
  * ************************************************************************** */
 
-.structuredvm_comment
-{
-    color: brown;
-    font-style: italic;
-}
-
-.structuredvm_punctuation
-{
-    color: white;
-}
-
-.structuredvm_instruction
-{
-    color: cyan;
-    font-weight: bold;
-}
-
-.structuredvm_label
-{
-    color: yellow;
-    font-style: italic;
-    font-weight: bold;
-}
-
-.structuredvm_register
-{
-    color: green;
-    font-style: italic;
-    font-weight: bold;
-}
-
-.structuredvm_number
-{
-    color: lightgreen;
-}
+.structuredvm-comment      { color: brown;
+                             font-style: italic; }
+.structuredvm-punctuation  { color: white;  }
+.structuredvm-instruction  { color: cyan;
+                             font-weight: bold; }
+.structuredvm-label        { color: yellow;
+                             font-style: italic;
+                             font-weight: bold; }
+.structuredvm-register     { color: green;
+                             font-style: italic;
+                             font-weight: bold; }
+.structuredvm-number       { color: lightgreen; }
 
 
 
@@ -78,20 +55,14 @@
 /* Native-code disassemblying of StructuredVM routines.
  * ************************************************************************** */
 
-.structuredvm_memory_address
-{
-    color: yellow;
-    font-style: italic;
-}
-.structuredvm_native_instruction_hex
-{
-    color: cyan;
-}
-.structuredvm_disassembly
-{
-    color: green;
-    font-style: italic;
-}
+.structuredvm-memory-address          { color: yellow;
+                                        font-style: italic; }
+.structuredvm-native-instruction-hex  { color: cyan; }
+.structuredvm-disassembly             { color: green;
+                                        font-style: italic; }
+
+
+
 
 /*
 .template
