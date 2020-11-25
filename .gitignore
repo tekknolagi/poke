@@ -153,18 +153,35 @@ example-vms/structured/examples/primes.class
 
 # These are just directories, notes for myself or private scripts on my local
 # computer, not belonging in the repository.
-NOTES-off-git
-benchmark-for-anton-ertl/
-papers/
+ANALYSIS
+ANALYSIS-COMMAND-LINE
+BACKUP-JITTER-DIRECTORY
+BACKUP-NOT-COMMITTED-2019-11-25.diff
+BACKUP-TO-EXTERNAL-DISK
+BISON-COMMIT-MESSAGE
+BISON-DIFF
+BREAK-INSTALLATION
 CD
+CLEANUP-DEBUGGING
+CLEANUP-GENERATED
+COMMIT-MESSAGE
 CONFIGURE-COMMON-PARAMETERS
 GNUEVAL
-webpage/
-UPLOAD-NANONOTE
-BACKUP-JITTER-DIRECTORY
-BACKUP-TO-EXTERNAL-DISK
+LIBTEXTSTYLE-DIFF
 MAKE-TAGS
+NOTES-off-git
+STASHES
 TESTED-CONFIGURATIONS
-BREAK-INSTALLATION
-my-tests/
+THE-IMPORTANT-PATCH
+ULIMIT
+UPLOAD-NANONOTE
 attic/
+benchmark-for-anton-ertl/
+example-build-systems/galisp/
+my-tests/
+netbsd/
+niobos/
+openbsd/
+papers/
+signal-test.s
+webpage/
