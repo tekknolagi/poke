@@ -4,8 +4,7 @@
 
 ## Generate the fast-branch header containing repetitive CPP macro definitions.
 
-## Copyright (C) 2019 Luca Saiu
-## Updated in 2020 by Luca Saiu
+## Copyright (C) 2019, 2020 Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -309,11 +308,11 @@ binaries="equal notequal less greater notless notgreater and nand"
 # Such macros are, of course, not intended for the user.  Like other similar C
 # identifier in Jitter they have a "_" name suffix for this reason.
 #
-# C expressions have spaces escaped by '.' characters and slashed escaped by '|'
+# C expressions have spaces escaped by '.' characters and slashes escaped by '|'
 # characters, formal arguments being named "x".
 # The argument type, the same for every argumetn, is accessible as
 # "_jitter_type" from definitions where needed.
-unary_definitions='never/0 always/1 zero/(!.(x)) nonzero/(x) positive/((x).>.0) nonpositive/((x).<=.0) negative/((x).<.0) nonnegative/((x).>=.0)'
+unary_definitions='never/0 always/1 zero/(!.(x)) nonzero/(x) positive/((jitter_int).(x).>.0) nonpositive/((jitter_int).(x).<=.0) negative/((jitter_int).(x).<.0) nonnegative/((jitter_int).(x).>=.0)'
 
 # Definitions of binary relations, like above for unaries, with first formal
 # arguments named "x" and second formal arguments named "y".
