@@ -1025,6 +1025,18 @@ instruction bge (?Rn 0 1, ?Rn 0 1, ?f)
   end
 end
 
+instruction band (?Rn, ?Rn 3 7, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_AND (JITTER_ARGU0, JITTER_ARGU1, JITTER_ARGF2);
+  end
+end
+
+instruction bnand (?Rn, ?Rn 3 7, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NAND (JITTER_ARGU0, JITTER_ARGU1, JITTER_ARGF2);
+  end
+end
+
 
 ## Advanced stack handling, and debugging.
 #################################################################
