@@ -944,48 +944,48 @@ end
 # end
 
 # FIXME: useful for testing, but possibly to keep as well.
-instruction bz (?Rn 0, ?f)
+instruction bz (?Rn, ?f)
   code
     JITTER_BRANCH_FAST_IF_ZERO (JITTER_ARGN0, JITTER_ARGF1);
   end
 end
 
 # FIXME: useful for testing, but possibly to keep as well.
-instruction bnz (?Rn 0, ?f)
+instruction bnz (?Rn, ?f)
   code
     JITTER_BRANCH_FAST_IF_NONZERO (JITTER_ARGN0, JITTER_ARGF1);
   end
 end
 
 # FIXME: useful for testing, but possibly to keep as well.
-instruction bpos (?Rn 0, ?f)
+instruction bpos (?Rn, ?f)
   code
     JITTER_BRANCH_FAST_IF_POSITIVE (JITTER_ARGN0, JITTER_ARGF1);
   end
 end
 
 # FIXME: useful for testing, but possibly to keep as well.
-instruction bnpos (?Rn 0, ?f)
+instruction bnpos (?Rn, ?f)
   code
     JITTER_BRANCH_FAST_IF_NONPOSITIVE (JITTER_ARGN0, JITTER_ARGF1);
   end
 end
 
 # FIXME: useful for testing, but possibly to keep as well.
-instruction bneg (?Rn 0, ?f)
+instruction bneg (?Rn, ?f)
   code
     JITTER_BRANCH_FAST_IF_NEGATIVE (JITTER_ARGN0, JITTER_ARGF1);
   end
 end
 
 # FIXME: useful for testing, but possibly to keep as well.
-instruction bnneg (?Rn 0, ?f)
+instruction bnneg (?Rn, ?f)
   code
     JITTER_BRANCH_FAST_IF_NONNEGATIVE (JITTER_ARGN0, JITTER_ARGF1);
   end
 end
 
-instruction beq (?Rn 0, ?Rn 0, ?f)
+instruction beq (?Rn, ?Rn, ?f)
   # FIXME: I would like to be able to express some form of commutativity here,
   # as the two non-label arguments *are* commutative.
   code
