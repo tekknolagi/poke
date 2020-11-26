@@ -119,6 +119,22 @@
 
 
 
+/* Binary field extraction.
+ * ************************************************************************** */
+
+/* Expand to an expression evaluating to a field of the given word starting from
+   the given 0-based bit index until the given 0-based bit index, both ends
+   included.  The 0th bit is considered to be the least significant.
+   The result is logically-right-shifted so that the least significant bit of
+   the field is the least significant bit of the result.
+   The expansion may evaluate the arguments multiple times. */
+#define JITTER_WORD_FIELD(word, from_bit_index, to_bit_index)  \
+  ((((uint64_t) (word)) >> (from_bit_index))                   \
+   & ((1UL << ((to_bit_index) - (from_bit_index) + 1)) - 1))
+
+
+
+
 /* Arithmetic right shifts.
  * ************************************************************************** */
 
