@@ -700,10 +700,29 @@ instruction add (?Rn 1 -1, ?Rn 1 -1, !R)
   end
 end
 
+instruction addo (?Rn, ?Rn 1 -1, !R, ?f)
+#  commutative
+#  two-operands
+  code
+    JITTER_PLUS_BRANCH_FAST_IF_OVERFLOW (JITTER_ARGN2,
+                                         JITTER_ARGN0, JITTER_ARGN1,
+                                         JITTER_ARGF3);
+  end
+end
+
 instruction sub (?Rn 0, ?Rn 1, !R)
 #  two-operands
   code
     JITTER_ARGN2 = JITTER_ARGN0 - JITTER_ARGN1;
+  end
+end
+
+instruction subo (?Rn, ?Rn 1, !R, ?f)
+#  two-operands
+  code
+    JITTER_MINUS_BRANCH_FAST_IF_OVERFLOW (JITTER_ARGN2,
+                                          JITTER_ARGN0, JITTER_ARGN1,
+                                          JITTER_ARGF3);
   end
 end
 
@@ -715,6 +734,16 @@ instruction mul (?Rn 2, ?Rn 2, !R)
   end
 end
 
+instruction mulo (?Rn, ?Rn 2, !R, ?f)
+##  two-operands
+#  commutative
+  code
+    JITTER_TIMES_BRANCH_FAST_IF_OVERFLOW (JITTER_ARGN2,
+                                          JITTER_ARGN0, JITTER_ARGN1,
+                                          JITTER_ARGF3);
+  end
+end
+
 instruction div (?Rn, ?Rn 2, !R)
   non-relocatable # FIXME: this should only be non-relocatable on some architectures.
 #  two-operands
@@ -723,11 +752,31 @@ instruction div (?Rn, ?Rn 2, !R)
   end
 end
 
+instruction divo (?Rn, ?Rn 2, !R, ?f)
+##  two-operands
+#  commutative
+  code
+    JITTER_DIVIDED_BRANCH_FAST_IF_OVERFLOW (JITTER_ARGN2,
+                                            JITTER_ARGN0, JITTER_ARGN1,
+                                            JITTER_ARGF3);
+  end
+end
+
 instruction mod (?Rn, ?Rn 2, !R)
   non-relocatable # FIXME: this should only be non-relocatable on some architectures.
 #  two-operands
   code
     JITTER_ARGN2 = JITTER_ARGN0 % JITTER_ARGN1;
+  end
+end
+
+instruction modo (?Rn, ?Rn 2, !R, ?f)
+##  two-operands
+#  commutative
+  code
+    JITTER_REMAINDER_BRANCH_FAST_IF_OVERFLOW (JITTER_ARGN2,
+                                              JITTER_ARGN0, JITTER_ARGN1,
+                                              JITTER_ARGF3);
   end
 end
 
