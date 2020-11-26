@@ -88,7 +88,16 @@ jitter_readline (const char *prompt_or_NULL)
 {
   /* Show the prompt, if any. */
   if (prompt_or_NULL != NULL)
-    printf ("%s", prompt_or_NULL);
+    {
+      /* Flush *every* stream before printing the prompt.  This will not suffice
+         in all circumstances, but can help absent-minded users. */
+      fflush (NULL);
+      printf ("%s", prompt_or_NULL);
+
+      /* Flush after writing the prompt.  This *is* necessary in general, as
+         stdout may be line-buffered. */
+      fflush (stdout);
+    }
 
   /* Use a dynamic buffer to hold the string. */
   struct jitter_dynamic_buffer db;
