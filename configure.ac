@@ -1125,8 +1125,8 @@ AS_CASE([$default_host_cpu],
                         JITTER_ASSEMBLY_SUBDIRECTORY=powerpc],
         [riscv*],      [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_RISCV], [1], []
                                            ) # No ";": see the Autoconf manual.
-                        #JITTER_ASSEMBLY_SUBDIRECTORY=riscv;
-                        jitter_has_host_assembly=no;
+                        JITTER_ASSEMBLY_SUBDIRECTORY=riscv;
+                        jitter_has_host_assembly=yes;
                         jitter_objdump_options="--architecture=riscv:rv64 --disassembler-options=no-aliases,numeric"],
         [s390*],       [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_S390], [1], []
                                            ) # No ";": see the Autoconf manual.
