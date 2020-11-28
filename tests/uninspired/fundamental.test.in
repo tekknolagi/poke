@@ -1,6 +1,6 @@
 #!@SHELL@
 # Jitter testsuite: elementary tests.  This is -*- sh -*-, to be preprocessed.
-# Copyright (C) 2017 Luca Saiu
+# Copyright (C) 2017, 2020 Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -24,17 +24,41 @@
 . "@abs_top_builddir@/tests/utility"
 
 # Print a range for test case indices.
-echo 1..84
+echo 1..184
 
 # Test simple program loading constants to registers and printing them.
-jitter_run_uninspired_case_all_dispatches "load-8-bit"  "125" ""
+jitter_run_uninspired_case_all_dispatches "load-0" "0" ""
+jitter_run_uninspired_case_all_dispatches "load-3-bit" "7" ""
+jitter_run_uninspired_case_all_dispatches "load-4-bit" "15" ""
+jitter_run_uninspired_case_all_dispatches "load-5-bit" "31" ""
+jitter_run_uninspired_case_all_dispatches "load-6-bit" "63" ""
+jitter_run_uninspired_case_all_dispatches "load-7-bit" "127" ""
+jitter_run_uninspired_case_all_dispatches "load-8-bit" "125" ""
+jitter_run_uninspired_case_all_dispatches "load-9-bit" "511" ""
+jitter_run_uninspired_case_all_dispatches "load-10-bit" "1023" ""
+jitter_run_uninspired_case_all_dispatches "load-11-bit" "2047" ""
+jitter_run_uninspired_case_all_dispatches "load-12-bit" "4095" ""
+jitter_run_uninspired_case_all_dispatches "load-13-bit" "8191" ""
 jitter_run_uninspired_case_all_dispatches "load-16-bit" "32765" ""
-jitter_run_uninspired_case_all_dispatches "load-0xffff" "65535" ""
+jitter_run_uninspired_case_all_dispatches "load-17-bit" "131071" ""
+jitter_run_uninspired_case_all_dispatches "load-21-bit" "2097151" ""
+jitter_run_uninspired_case_all_dispatches "load-22-bit" "4194303" ""
+jitter_run_uninspired_case_all_dispatches "load-23-bit" "8388607" ""
+jitter_run_uninspired_case_all_dispatches "load-24-bit" "16777215" ""
+jitter_run_uninspired_case_all_dispatches "load-25-bit" "33554431" ""
 jitter_run_uninspired_case_all_dispatches "load-32-bit" "2147483645" ""
+jitter_run_uninspired_case_all_dispatches "load-0xffff" "65535" ""
 jitter_run_uninspired_case_all_dispatches "load-minus-one" "-1" ""
 jitter_run_uninspired_case_all_dispatches "load-minus-two" "-2" ""
+jitter_run_uninspired_case_all_dispatches "load-594116" "594116" ""
+jitter_run_uninspired_case_all_dispatches "load-823944" "823944" ""
+jitter_run_uninspired_case_all_dispatches "load-143010319" "143010319" ""
+jitter_run_uninspired_case_all_dispatches "load-256167675" "256167675" ""
+jitter_run_uninspired_case_all_dispatches "load-680185852" "680185852" ""
+jitter_run_uninspired_case_all_dispatches "load-1450166639" "1450166639" ""
+jitter_run_uninspired_case_all_dispatches "load-1625250854" "1625250854" ""
 
-# Skip the 64-bit case on non-64-bit architectures.  Here we are assuming
+# Skip 64-bit test cases on non-64-bit architectures.  Here we are assuming
 # architectures to be either 32- or 64-bit.
 if test "x@SIZEOF_VOID_P@" = "x8"; then
     skip=""
@@ -42,6 +66,7 @@ else
     skip="skip"
 fi
 jitter_run_uninspired_case_all_dispatches "load-64-bit" "9223372036854775805" "$skip"
+jitter_run_uninspired_case_all_dispatches "load-3761490317" "3761490317" "$skip"
 
 # Check arithmetic operations with non-immediate operands.  Multiplication and
 # particularly division and remainder are critical on some machines relying on

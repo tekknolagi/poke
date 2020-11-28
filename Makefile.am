@@ -2163,11 +2163,36 @@ EXTRA_DIST += \
   tests/structured/conditional.structured \
   tests/structured/euclid.structured \
   tests/structured/primes.structured \
+  tests/uninspired/load-3-bit.vm \
+  tests/uninspired/load-4-bit.vm \
+  tests/uninspired/load-5-bit.vm \
+  tests/uninspired/load-6-bit.vm \
+  tests/uninspired/load-7-bit.vm \
   tests/uninspired/load-8-bit.vm \
+  tests/uninspired/load-9-bit.vm \
+  tests/uninspired/load-10-bit.vm \
+  tests/uninspired/load-11-bit.vm \
+  tests/uninspired/load-12-bit.vm \
+  tests/uninspired/load-13-bit.vm \
   tests/uninspired/load-16-bit.vm \
-  tests/uninspired/load-0xffff.vm \
+  tests/uninspired/load-17-bit.vm \
+  tests/uninspired/load-21-bit.vm \
+  tests/uninspired/load-22-bit.vm \
+  tests/uninspired/load-23-bit.vm \
+  tests/uninspired/load-24-bit.vm \
+  tests/uninspired/load-25-bit.vm \
   tests/uninspired/load-32-bit.vm \
   tests/uninspired/load-64-bit.vm \
+  tests/uninspired/load-594116.vm \
+  tests/uninspired/load-823944.vm \
+  tests/uninspired/load-143010319.vm \
+  tests/uninspired/load-256167675.vm \
+  tests/uninspired/load-680185852.vm \
+  tests/uninspired/load-1450166639.vm \
+  tests/uninspired/load-1625250854.vm \
+  tests/uninspired/load-3761490317.vm \
+  tests/uninspired/load-0.vm \
+  tests/uninspired/load-0xffff.vm \
   tests/uninspired/load-minus-one.vm \
   tests/uninspired/load-minus-two.vm \
   tests/uninspired/add.vm \
