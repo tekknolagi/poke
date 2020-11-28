@@ -1,6 +1,6 @@
 /* VM library: native code patching for PowerPC .
 
-   Copyright (C) 2017, 2019 Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -202,10 +202,20 @@ enum jitter_snippet_to_patch
 jitter_snippet_for_patch_in (const struct jitter_patch_in_descriptor *dp)
 {
   jitter_uint patch_in_case = dp->patch_in_case;
-  if (patch_in_case != JITTER_PATCH_IN_CASE_FAST_BRANCH_UNCONDITIONAL)
-    jitter_fatal ("jitter_snippet_for_patch_in: unsupported patch-in case");
+  switch (patch_in_case)
+    {
+    case JITTER_PATCH_IN_CASE_FAST_BRANCH_UNCONDITIONAL:
+      return jitter_snippet_jump_unconditional_26bit_offset_no_link;
 
-  return jitter_snippet_jump_unconditional_26bit_offset_no_link;
+    case JITTER_PATCH_IN_CASE_FAST_BRANCH_BRANCH_AND_LINK:
+      return jitter_snippet_jump_and_link_26bit_offset;
+
+    case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ANY:
+      return jitter_snippet_jump_conditional_16bit_offset;
+
+    default:
+      jitter_fatal ("jitter_snippet_for_patch_in: unsupported patch-in case");
+    }
 }
 #endif // #ifdef JITTER_HAVE_PATCH_IN
 
@@ -218,30 +228,24 @@ jitter_patch_patch_in (char *native_code,
                        const struct jitter_patch_in_descriptor *descriptor,
                        enum jitter_snippet_to_patch snippet)
 {
+  /* On PowerPC relative branch targets are encoded as signed displacements from
+     the *beginning* of the jumping instruction. */
+  char *jump_target = * (char**) immediate_pointer;
+  int64_t offset = jump_target - native_code;
+
+  if (((uint64_t) offset) & 3)
+    jitter_fatal ("unaligned branch: this should never happen");
+
   switch (snippet)
     {
     case jitter_snippet_jump_unconditional_26bit_offset_no_link:
+    case jitter_snippet_jump_and_link_26bit_offset:
       {
-        char *jump_target = * (char**) immediate_pointer;
-
-        /* On PowerPC relative branch targets are encoded as signed
-           displacements from the *beginning* of the jumping instruction, and
-           must fit in 26 bits.  The two least significant bits are flags which
-           I want to keep cleared; the six most significant bits are the
-           opcode. */
-        int64_t offset = jump_target - native_code;
+        /* Here the displacement must fit in 26 bits.  The two least significant
+           bits are flags which I want to keep cleared; the six most significant
+           bits are the opcode. */
         if (! jitter_fits_in_bits_sign_extended (offset, 26))
-          jitter_fatal ("branch displacement too far");
-
-        /* This is apparently not needed.  I seem to be able to directly check
-           ((uint64_t) offset) & 3, as the PowerPC documentation seems to
-           vaguely suggest.  The mathematical reason escapes me right now, but
-           the thing works. */
-        /* uint64_t offset_absolute_value = offset < 0 ? - offset : offset; */
-        /* if (offset_absolute_value & 3) */
-        /*   jitter_fatal ("unaligned branch: this should never happen"); */
-        if (((uint64_t) offset) & 3)
-          jitter_fatal ("unaligned branch: this should never happen");
+          jitter_fatal ("branch displacement for b too far");
 
         /* The instruction might be unaligned with respect to a 64-bit word (for
            the future: PowerPC64 is not supported yet), but since PowerPC allows
@@ -266,12 +270,47 @@ jitter_patch_patch_in (char *native_code,
            I'm keeping it. */
         uint32_t shifted_opcode = 18u << 26;
         uint32_t truncated_offset = ((uint32_t) offset) & ((2u << 25) - 1);
-        uint32_t truncated_offset_with_flags_cleared = truncated_offset & ~ 3;
+
+        /* Set the LK flag iff we are linking. */
+        uint32_t flags = 0;
+        if (snippet == jitter_snippet_jump_and_link_26bit_offset)
+          flags = 1;
+        uint32_t truncated_offset_with_flags = (truncated_offset & ~ 3) | flags;
         uint32_t instruction
-          = shifted_opcode | truncated_offset_with_flags_cleared;
+          = shifted_opcode | truncated_offset_with_flags;
         * (uint32_t *) native_code = instruction;
         break;
       }
+
+    case jitter_snippet_jump_conditional_16bit_offset:
+      {
+        /* Here the displacement must fit in 26 bits.  The two least significant
+           bits are flags which I want to keep cleared; the six most significant
+           bits are the opcode. */
+        if (! jitter_fits_in_bits_sign_extended (offset, 16))
+          jitter_fatal ("branch displacement for bc too far");
+
+        // FIXME: factor with the previous case, following the style I adopted
+        // in the RISC-V port.
+
+        /* Read the current unpatched instruction from memory. */
+        uint32_t * instruction_p = (uint32_t *) native_code;
+        uint32_t instruction = * instruction_p;
+
+        /* Clear the low 16 bits of the instruction, replacing them with the
+           displacement.  Since the displacement is aligned the two least
+           significant bits will be zero, which is what we need here since they
+           represent the AA and LK flags. */
+        instruction &= ~ ((1LU << 16) - 1);
+
+        /* Insert the offset. */
+        instruction |= ((uint32_t) offset & ((1LU << 16) - 1));
+
+        /* Replace the original instruction with its patched copy. */
+        * instruction_p = instruction;
+        break;
+      }
+
     default:
       jitter_fatal ("jitter_patch_patch_in: unsupported snippet %li",
                     (long) snippet);

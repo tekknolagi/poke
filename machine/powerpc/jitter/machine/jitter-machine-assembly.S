@@ -1,6 +1,6 @@
 /* VM library: assembly support for PowerPC .
 
-   Copyright (C) 2017, 2019 Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -152,4 +152,14 @@ jitter_snippet load_32bit_to_memory,  \
    I set to zero for a relative non-link branch.
       48 00 00 00   # L: b L  */
 jitter_snippet jump_unconditional_26bit_offset_no_link,  \
-          <.long 0x48000000>
+  <1: b 1b>
+
+/* This is an easy variant of the previous snippet, the only difference being
+   the least significant bit set to 1 for the LK flag. */
+jitter_snippet jump_and_link_26bit_offset,  \
+  <1: bl 1b>
+
+/* A dummy 0-byte snippet: the code generated from C with inline assembly is
+   already correct, and only the displacement needs to be patched. */
+jitter_snippet jump_conditional_16bit_offset,  \
+  <> /* no actual snippet: the snippet size is zero bytes. */
