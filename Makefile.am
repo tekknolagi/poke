@@ -851,6 +851,9 @@ EXTRA_DIST += \
   machine/powerpc/jitter/machine/jitter-machine.h \
   machine/powerpc/jitter/machine/jitter-machine-assembly.S \
   machine/powerpc/jitter/machine/jitter-machine-c.c \
+  machine/sh/jitter/machine/jitter-machine.h \
+  machine/sh/jitter/machine/jitter-machine-assembly.S \
+  machine/sh/jitter/machine/jitter-machine-c.c \
   machine/sparc/jitter/machine/jitter-machine.h \
   machine/sparc/jitter/machine/jitter-machine-assembly.S \
   machine/sparc/jitter/machine/jitter-machine-c.c \
