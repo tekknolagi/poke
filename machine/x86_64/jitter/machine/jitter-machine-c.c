@@ -1,6 +1,6 @@
 /* VM library: native code patching for x86_64 .
 
-   Copyright (C) 2017, 2019 Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -37,12 +37,27 @@ jitter_invalidate_icache (char *from, size_t byte_no)
   /* This doesn't need to do anything on x86_64. */
 }
 
+/* Return the distance in bytes, from the pointed address to the destination
+   address.  This is natural for branching instructions, but is in fact also
+   usable to materalise any constant which happens to be expressible as the
+   address of the instruction materialising plus a short offset.
+   Notice that on x86_64 %rip points to the byte right *after* the instruction
+   being executed, at all times. */
+static jitter_int
+jitter_distance_from (const char *destination_p, const char *from_p)
+{
+  return destination_p - from_p;
+}
+
 enum jitter_snippet_to_patch
 jitter_snippet_for_loading_register (const char *immediate_pointer,
                                      unsigned int residual_register_index,
                                      const char *loading_code_to_write)
 {
-  int64_t immediate = * (int64_t*) immediate_pointer;
+  int64_t immediate = * (int64_t *) immediate_pointer;
+  int64_t distance
+    = jitter_distance_from ((const char *) immediate, loading_code_to_write);
+
   if (immediate == 0)
     switch (residual_register_index)
       {
@@ -79,6 +94,15 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
       case 3:  return jitter_snippet_set_32bit_sign_extended_residual_register_3;
       default: jitter_fatal ("impossible C");
       }
+  else if (jitter_fits_in_bits_sign_extended (distance, 32))
+    switch (residual_register_index)
+      {
+      case 0:  return jitter_snippet_set_pcrel_address_residual_register_0;
+      case 1:  return jitter_snippet_set_pcrel_address_residual_register_1;
+      case 2:  return jitter_snippet_set_pcrel_address_residual_register_2;
+      case 3:  return jitter_snippet_set_pcrel_address_residual_register_3;
+      default: jitter_fatal ("impossible D");
+      }
   else
     switch (residual_register_index)
       {
@@ -86,7 +110,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
       case 1:  return jitter_snippet_set_64bit_residual_register_1;
       case 2:  return jitter_snippet_set_64bit_residual_register_2;
       case 3:  return jitter_snippet_set_64bit_residual_register_3;
-      default: jitter_fatal ("impossible D");
+      default: jitter_fatal ("impossible E");
       }
 }
 
@@ -149,6 +173,21 @@ jitter_patch_load_immediate_to_register (char *native_code,
     case jitter_snippet_set_64bit_residual_register_3:
       memcpy (native_code + native_code_size - 8, immediate_pointer, 8);
       break;
+
+    case jitter_snippet_set_pcrel_address_residual_register_0:
+    case jitter_snippet_set_pcrel_address_residual_register_1:
+    case jitter_snippet_set_pcrel_address_residual_register_2:
+    case jitter_snippet_set_pcrel_address_residual_register_3:
+      {
+        uint64_t immediate = * (uint64_t *) immediate_pointer;
+        int64_t distance = jitter_distance_from ((const char *) immediate,
+                                                 native_code + native_code_size);
+        if (! jitter_fits_in_bits_sign_extended (distance, 32))
+          jitter_fatal ("%%rip-relative lea: displacement too large");
+        int32_t distance_32 = distance;
+        memcpy (native_code + native_code_size - 4, & distance_32, 4);
+        break;
+      }
 
     default:
       jitter_unimplemented ("jitter_patch_load_immediate_to_register");

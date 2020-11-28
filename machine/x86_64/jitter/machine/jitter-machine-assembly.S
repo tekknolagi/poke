@@ -1,7 +1,6 @@
 /* VM library: assembly support for x86_64 .
 
-   Copyright (C) 2017, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -115,6 +114,18 @@ jitter_snippet set_32bit_sign_extended_residual_register_2,  \
            <movq $0, JITTER_RESIDUAL_REGISTER_2>
 jitter_snippet set_32bit_sign_extended_residual_register_3,  \
            <movq $0, JITTER_RESIDUAL_REGISTER_3>
+
+/* Materialise a 64-bit constant expressible as %rip plus a signed 32-bit offset
+   into a residual register.  This assembles to something like
+     4c 8d 25 0d 00 00 00    # leaq 0xd(%rip), %r12  */
+jitter_snippet set_pcrel_address_residual_register_0,         \
+  <1: leaq (1b + 1048576)(%rip), JITTER_RESIDUAL_REGISTER_0>
+jitter_snippet set_pcrel_address_residual_register_1,         \
+  <1: leaq (1b + 1048576)(%rip), JITTER_RESIDUAL_REGISTER_1>
+jitter_snippet set_pcrel_address_residual_register_2,         \
+  <1: leaq (1b + 1048576)(%rip), JITTER_RESIDUAL_REGISTER_2>
+jitter_snippet set_pcrel_address_residual_register_3,         \
+  <1: leaq (1b + 1048576)(%rip), JITTER_RESIDUAL_REGISTER_3>
 
 /* Load a 64-bit literal into residual argument memory at a fixed offset,
    using two separate 32-bit store instructions.  I decided to do this

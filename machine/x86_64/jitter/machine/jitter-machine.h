@@ -1,6 +1,6 @@
 /* VM library: x86_64 definitions, to be included from both C and assembly.
 
-   Copyright (C) 2017, 2019 Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -45,7 +45,7 @@
 #define _JITTER_ASM_CRASH                                                   \
   /* Return from interrupt.  This will cause an exception in user mode, of  \
      a kind not usually seen. */                                            \
-  "iret"
+  "iretq"
 
 
 
@@ -638,6 +638,10 @@ enum jitter_snippet_to_patch
     jitter_snippet_set_32bit_sign_extended_residual_register_1,
     jitter_snippet_set_32bit_sign_extended_residual_register_2,
     jitter_snippet_set_32bit_sign_extended_residual_register_3,
+    jitter_snippet_set_pcrel_address_residual_register_0,
+    jitter_snippet_set_pcrel_address_residual_register_1,
+    jitter_snippet_set_pcrel_address_residual_register_2,
+    jitter_snippet_set_pcrel_address_residual_register_3,
     jitter_snippet_set_64bit_residual_memory_two_32bit_stores,
     jitter_snippet_set_32bit_sign_extended_residual_memory,
     jitter_snippet_jump_unconditional_32bit_offset,
