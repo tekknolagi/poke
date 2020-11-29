@@ -1,7 +1,6 @@
 /* Jitter: runtime VM-independent header for generated executors.
 
-   Copyright (C) 2016, 2017, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2016, 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -109,6 +108,41 @@
    identifiers.  Again, this relies on the GNU C preprocessor. */
 #define JITTER_INTEGER_LITERAL_UNIQUE  \
   __COUNTER__
+
+
+
+
+/* Architecture-specific initialisation and finalisation.
+ * ************************************************************************** */
+
+/* Some ports may add their own custom code to be executed at initialisation and
+   finalisation of the executor.
+
+   This feature is meant for tasks such as reading and then restoring the state
+   of some register not visible from C.  Since in such a context it is useful to
+   introduce automatic variables visible from VM instruction bodies these macros
+   have a trailing underscore in their names, and are expanded in a context
+   where it is safe not to protect the definition with a do { ... } while
+   (false) loop. */
+
+/* This feature is only meant for minimal-threading and no-threading.  Disable
+   any architecture-specific execution begin and end code when using simple
+   dispatches. */
+#if (! defined(JITTER_DISPATCH_MINIMAL_THREADING)) \
+    && (! defined(JITTER_DISPATCH_NO_THREADING))
+# undef JITTER_EXECUTION_BEGINNING_
+# undef JITTER_EXECUTION_END_
+#endif
+
+/* Define a fallback JITTER_EXECUTION_BEGINNING_ if none is defined. */
+#if ! defined (JITTER_EXECUTION_BEGINNING_)
+# define JITTER_EXECUTION_BEGINNING_ {}
+#endif // #if ! defined (JITTER_EXECUTION_BEGINNING_)
+
+/* Define a fallback JITTER_EXECUTION_END_ if none is defined. */
+#if ! defined (JITTER_EXECUTION_END_)
+# define JITTER_EXECUTION_END_ {}
+#endif // #if ! defined (JITTER_EXECUTION_END_)
 
 
 

@@ -3084,6 +3084,14 @@ jitterc_emit_executor_main_function
   EMIT("  /* Initialization C code from the user */\n");
   EMIT("%s", vm->initialization_c_code);
   EMIT("  /* End of the initialization C code from the user */\n\n");
+  EMIT("\n");
+
+  /* Insert architecture-specific execution-beginning code. */
+  EMIT("  /* Execute architecture-specific execution-beginning code, if any.\n");
+  EMIT("     Make sure it is safe to expand the macro without do..while\n");
+  EMIT("     (false). */\n");
+  EMIT("  {}; JITTER_EXECUTION_BEGINNING_; {};\n");
+  EMIT("\n");
 
   EMIT("  /* Jump to the first instruction.  If replication is enabled this point\n");
   EMIT("     marks the boundary between the ordinary world of C compiled code and\n");
@@ -3281,6 +3289,13 @@ jitterc_emit_executor_main_function
   EMIT("  /* Finalization C code from the user */\n");
   EMIT("%s", vm->finalization_c_code);
   EMIT("  /* End of the finalization C code from the user */\n\n");
+  EMIT("\n");
+
+  /* Insert architecture-specific execution-end code. */
+  EMIT("  /* Execute architecture-specific execution-end code, if any.  Make \n");
+  EMIT("     sure it is safe to expand the macro without do..while (false). */\n");
+  EMIT("  {}; JITTER_EXECUTION_END_; {};\n");
+  EMIT("\n");
 
   EMIT("  /* This program point is reachable for both thread initialization and\n");
   EMIT("     execution.  In either case it is not performance-critical. */\n");
