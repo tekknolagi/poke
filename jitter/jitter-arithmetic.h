@@ -104,7 +104,7 @@
 #define JITTER_FITS_IN_BITS_ZERO_EXTENDED(word, bit_no)  \
   (((bit_no) >= 64)                                      \
    || (((uint64_t) (word))                               \
-       <= JITTER_MAXIMUM_SIGNED_IN_BITS (bit_no)))
+       <= JITTER_MOST_POSITIVE_SIGNED_IN_BITS (bit_no)))
 
 /* Like JITTER_FITS_IN_BITS_ZERO_EXTENDED, but use sign extension rather than
    zero extension. */
