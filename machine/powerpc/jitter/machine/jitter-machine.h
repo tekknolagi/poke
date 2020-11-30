@@ -23,6 +23,12 @@
 #define JITTER_NATIVE_MACHINE_H_
 
 
+#if ! defined (__ASSEMBLER__)
+# include <jitter/jitter-cpp.h>
+# include <jitter/jitter-arithmetic.h>
+#endif // #if ! defined (__ASSEMBLER__)
+
+
 /* Assembler syntax.
  * ************************************************************************** */
 
@@ -112,6 +118,41 @@
 
 /* The scratch register. */
 #define JITTER_SCRATCH_REGISTER       %r29
+
+
+
+
+/* Execution-beginning and execution-end code.
+ * ************************************************************************** */
+
+/* Save the initial state of the XER register at entry, clearing its overflow
+   and summary overflow bits.  This will be restored before executing
+   instructions checking for overflow.
+   Hopefully the XER copy will be kept in a register; however correctness does
+   not depend on this. */
+#define JITTER_EXECUTION_BEGINNING_                                          \
+  /* Read XER as it is now, in order to get a correct copy of the reserved   \
+     bits. */                                                                \
+  jitter_uint jitter_xer_at_entry;                                           \
+  asm ("mfxer %[xer_at_entry]"                                               \
+       : [xer_at_entry] "=r" (jitter_xer_at_entry) /* outputs */);           \
+  /* Explicitly clear the summary overflow and overflow bits in the copy.    \
+     This is the XER state we will set from inline assembly. */              \
+  const jitter_uint jitter_xer_no_overflow                                   \
+    = jitter_xer_at_entry & ~ (jitter_uint) 3;                               \
+  /* Set the actual XER register to the value we saved, just to make sure    \
+     that overflow and summary overflow are cleared at the beginning of the  \
+     VM program execution. */                                                \
+  asm ("mtxer %[xer_no_overflow]"                                            \
+       : /* outputs */                                                       \
+       : [xer_no_overflow] "r" (jitter_xer_no_overflow) /* inputs */);
+
+/* Restore xer before exiting. */
+#define JITTER_EXECUTION_END_                                        \
+  /* Set the XER register to the original value it had at entry. */  \
+  asm ("mtxer %[xer_at_entry]"                                       \
+       : /* outputs */                                               \
+       : [xer_at_entry] "r" (jitter_xer_at_entry) /* inputs */);
 
 
 
@@ -244,7 +285,175 @@
   _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_BINARY_                             \
      ("cmpl", "ble", (opd0), (opd1), (tgt))
 
-// FIXME: and, nand, overflow
+/* This factors the common code of overflow-checking operations. */
+#define _JITTER_LOW_LEVEL_OPERATION_BRANCH_FAST_IF_OVERFLOW_(insn,              \
+                                                             res, opd0, opd1,   \
+                                                             tgt)               \
+  /* This uses the same delicate trick as on x86_64, in which an inline asm     \
+     operand is actually an output, but must be declared as input.  See the     \
+     comment about similar macros in                                            \
+     machine/x86_64/jitter/machine/jitter-machine.h . */                        \
+  register jitter_int _jitter_operation_result                                  \
+     asm (JITTER_STRINGIFY(JITTER_SCRATCH_REGISTER));                           \
+  asm ("" : "=r" (_jitter_operation_result));                                   \
+  asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                        \
+            /* Reset XER to a state with summary overflow and overflow both     \
+               clear.  This is unfortunately necessary, as the operations       \
+               the overflow bit also update XER and copy the current state of   \
+               XER into CR.  XER keeps an incrmental overflow state, and its    \
+               summary overflow and overflow bits are reset only on demand. */  \
+            "mtxer %[jitter_xer_no_overflow]\n\t"                               \
+            /* Perform the operation.  This updates XER and then cr0 with a     \
+               copy of the overflow bit from XER. */                            \
+            insn " %[jitter_operation_result], "                                \
+               "%[jitter_operand0], %[jitter_operand1]\n\t"                     \
+            /* Branch on overflow.  This checks CR: it is impractical to check  \
+               XER. */                                                          \
+            JITTER_ASM_PATCH_IN_PLACEHOLDER /* See patch-in comments above */   \
+               (0 /* size in bytes */,                                          \
+                JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ANY /* case */,    \
+                (tgt), 0, 0, 0 /* not used for this case */)                    \
+            "1: bso cr0, 1b\n\t"                                                \
+            /* On overflow the branch is taken, and in that case the XER state  \
+               keeps its summary overflow and overflow bits set.  This should   \
+               not be a problem; if it is this code can be changed, at some     \
+               cost in performance because of an added branch.  */              \
+            : /* outputs */                                                     \
+            : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                            \
+              [jitter_operation_result] "r" (_jitter_operation_result)          \
+                                                    /* Actually an output! */,  \
+              [jitter_operand0] "r" ((jitter_int) (opd0)),                      \
+              [jitter_operand1] "r" ((jitter_int) (opd1)),                      \
+              [jitter_xer_no_overflow] "r" (jitter_xer_no_overflow),            \
+              JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */                \
+            : "xer", "cr0" /* clobbers */                                       \
+            : jitter_dispatch_label /* goto labels */);                         \
+  (res) = _jitter_operation_result
+
+/* Overflow-checking operations. */
+#define _JITTER_LOW_LEVEL_PLUS_BRANCH_FAST_IF_OVERFLOW_(res, opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_OPERATION_BRANCH_FAST_IF_OVERFLOW_("addo.",                \
+                                                       (res), (opd0), (opd1),  \
+                                                       (tgt))
+#define _JITTER_LOW_LEVEL_MINUS_BRANCH_FAST_IF_OVERFLOW_(res, opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_OPERATION_BRANCH_FAST_IF_OVERFLOW_("subo.",                 \
+                                                       (res), (opd0), (opd1),   \
+                                                       (tgt))
+#define _JITTER_LOW_LEVEL_TIMES_BRANCH_FAST_IF_OVERFLOW_(res, opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_OPERATION_BRANCH_FAST_IF_OVERFLOW_("mullwo.",               \
+                                                       (res), (opd0), (opd1),   \
+                                                       (tgt))
+#define _JITTER_LOW_LEVEL_DIVIDED_BRANCH_FAST_IF_OVERFLOW_(res, opd0, opd1,    \
+                                                           tgt)                \
+  _JITTER_LOW_LEVEL_OPERATION_BRANCH_FAST_IF_OVERFLOW_("divwo.",               \
+                                                       (res), (opd0), (opd1),  \
+                                                       (tgt))
+#define _JITTER_LOW_LEVEL_REMAINDER_BRANCH_FAST_IF_OVERFLOW_(res, opd0, opd1,  \
+                                                             tgt)              \
+  /* PowerPC has no remainder instruction but can check overflow on            \
+     division. */                                                              \
+  jitter_int _jitter_quotient;                                                 \
+  jitter_int _jitter_opd0_value = (jitter_int) (opd0);                         \
+  jitter_int _jitter_opd1_value = (jitter_int) (opd1);                         \
+  _JITTER_LOW_LEVEL_DIVIDED_BRANCH_FAST_IF_OVERFLOW_(_jitter_quotient,         \
+                                                     _jitter_opd0_value,       \
+                                                     _jitter_opd1_value,       \
+                                                     (tgt));                   \
+  /* If we arrived here the division operation did not overflow. */            \
+  (res) = _jitter_opd0_value - _jitter_quotient * _jitter_opd1_value
+
+/* The following macros serve to implement _JITTER_LOW_LEVEL_BRANCH_FAST_IF_AND_
+   in an optimal way, using andi. where possible instead of and. .  Some of this
+   logic could be made machine-independent, but for the time being I am
+   accepting to have this complexity here.
+   This feature is critical to tag-checking performance. */
+
+/* Expand to an expression evaluating to non-false iff the given argument
+   evaluates to a compile-time constant expression which fits in 16 bits,
+   zero-extended.  This is used to decide whether the expression can be passed
+   as an immediate to an andi. instruction. */
+#define JITTER_POWERPC_ANDI_IMMEDIATE_CANDIDATE(non_side_effecting_expression)  \
+  (__builtin_constant_p (non_side_effecting_expression)                         \
+   && JITTER_FITS_IN_BITS_ZERO_EXTENDED (non_side_effecting_expression, 16))
+
+/* Expand to an inline asm statement computing a bitwise and and branching when
+   the result is zero or nonzero, according to branch_insn.  This factors three
+   possible argument patterns:
+   - register, immediate;
+   - immediate, register (exchanged by the caller);
+   - register, register. */
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_AND_OR_NOTAND_ASM_(and_insn,           \
+                                                            opd0,               \
+                                                            opd0_constraint,    \
+                                                            opd1,               \
+                                                            opd1_constraint,    \
+                                                            branch_insn,        \
+                                                            tgt)                \
+  asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                        \
+            and_insn " %" JITTER_STRINGIFY (JITTER_SCRATCH_REGISTER)            \
+               ", %[jitter_operand0], %[jitter_operand1]\n\t"                   \
+            JITTER_ASM_PATCH_IN_PLACEHOLDER /* See patch-in comments above */   \
+               (0 /* size in bytes */,                                          \
+                JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ANY /* case */,    \
+                (tgt), 0, 0, 0 /* not used for this case */)                    \
+            "1: " branch_insn " cr0, 1b\n\t"                                    \
+            : /* outputs */                                                     \
+            : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                            \
+              [jitter_operand0] opd0_constraint (opd0),                         \
+              [jitter_operand1] opd1_constraint (opd1),                         \
+              JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */                \
+            : JITTER_STRINGIFY (JITTER_SCRATCH_REGISTER), "cr0" /* clobbers */  \
+            : jitter_dispatch_label /* goto labels */)
+
+/* This uses the macro above and itself factors two use cases: branch on and,
+   branch on not and. */
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_AND_OR_NOTAND_(branch_insn,            \
+                                                        opd0, opd1,             \
+                                                        tgt)                    \
+  jitter_int _jitter_opd0_value = (jitter_int) (opd0);                          \
+  jitter_int _jitter_opd1_value = (jitter_int) (opd1);                          \
+  if (JITTER_POWERPC_ANDI_IMMEDIATE_CANDIDATE (_jitter_opd0_value))             \
+    {                                                                           \
+      _JITTER_LOW_LEVEL_BRANCH_FAST_IF_AND_OR_NOTAND_ASM_ ("andi.",             \
+                                                           _jitter_opd1_value,  \
+                                                           "r",                 \
+                                                           _jitter_opd0_value,  \
+                                                           "i",                 \
+                                                           branch_insn,         \
+                                                           (tgt));              \
+    }                                                                           \
+  else if (JITTER_POWERPC_ANDI_IMMEDIATE_CANDIDATE (_jitter_opd1_value))        \
+    {                                                                           \
+      _JITTER_LOW_LEVEL_BRANCH_FAST_IF_AND_OR_NOTAND_ASM_ ("andi.",             \
+                                                           _jitter_opd0_value,  \
+                                                           "r",                 \
+                                                           _jitter_opd1_value,  \
+                                                           "i",                 \
+                                                           branch_insn,         \
+                                                           (tgt));              \
+    }                                                                           \
+  else                                                                          \
+    {                                                                           \
+      _JITTER_LOW_LEVEL_BRANCH_FAST_IF_AND_OR_NOTAND_ASM_ ("and.",              \
+                                                           _jitter_opd0_value,  \
+                                                           "r",                 \
+                                                           _jitter_opd1_value,  \
+                                                           "r",                 \
+                                                           branch_insn,         \
+                                                           (tgt));              \
+    }
+
+/* Fast-branch to the target if opd0 & opd0 gives a nonzero result. */
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_AND_(opd0, opd1, tgt)      \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_IF_AND_OR_NOTAND_ ("bne",           \
+                                                   (opd0), (opd1),  \
+                                                   (tgt))           \
+
+/* Fast-branch to the target if opd0 & opd0 gives a zero result. */
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NOTAND_(opd0, opd1, tgt)   \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_IF_AND_OR_NOTAND_ ("beq",           \
+                                                   (opd0), (opd1),  \
+                                                   (tgt))
 
 #endif // #if defined(JITTER_MACHINE_SUPPORTS_PATCH_IN) && defined(JITTER_DISPATCH_NO_THREADING)
 
