@@ -2377,7 +2377,7 @@ jitter_fast_branch_macros []
       "_IF_NOTGREATER_SIGNED",
       "_IF_NOTGREATER_UNSIGNED",
       "_IF_AND",
-      "_IF_NAND",
+      "_IF_NOTAND",
       "_IF_PLUS_OVERFLOWS",
       "_IF_MINUS_OVERFLOWS",
       "_IF_TIMES_OVERFLOWS",

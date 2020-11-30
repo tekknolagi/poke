@@ -1026,7 +1026,7 @@ if (jitter_ip != NULL) goto * jitter_ip; \
   _JITTER_BRANCH_IF(, jitter_uint, operand0, <=, operand1, target)
 #define JITTER_BRANCH_IF_AND(operand0, operand1, target)  \
   _JITTER_BRANCH_IF(, jitter_uint, operand0, &, operand1, target)
-#define JITTER_BRANCH_IF_NAND(operand0, operand1, target)  \
+#define JITTER_BRANCH_IF_NOTAND(operand0, operand1, target)  \
   _JITTER_BRANCH_IF(!, jitter_uint, operand0, &, operand1, target)
 
 /* This factors the common code for branch-on-overflow primitives. */

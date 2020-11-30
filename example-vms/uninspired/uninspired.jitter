@@ -1031,9 +1031,9 @@ instruction band (?Rn, ?Rn 3 7, ?f)
   end
 end
 
-instruction bnand (?Rn, ?Rn 3 7, ?f)
+instruction bnotand (?Rn, ?Rn 3 7, ?f)
   code
-    JITTER_BRANCH_FAST_IF_NAND (JITTER_ARGU0, JITTER_ARGU1, JITTER_ARGF2);
+    JITTER_BRANCH_FAST_IF_NOTAND (JITTER_ARGU0, JITTER_ARGU1, JITTER_ARGF2);
   end
 end
 

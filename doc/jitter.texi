@@ -1952,9 +1952,10 @@ enough indices @var{i} to cover every fast register and 32 slow registers.
 
 @table @code
 @item JITTER_BRANCH_FAST_IF_AND(@var{e0}, @var{e1}, @var{where})
-@item JITTER_BRANCH_FAST_IF_NAND(@var{e0}, @var{e1}, @var{where})
+@item JITTER_BRANCH_FAST_IF_NOTAND(@var{e0}, @var{e1}, @var{where})
 @end table
 @fixme{Document or possibly even remove the non-fast variants of these.}
+@fixme{Explain how not-and is different from nand, and why we do not want nand here.}
 
 @table @code
 @item JITTER_BRANCH_FAST_IF_NEGATE_OVERFLOWS(@var{e0} @var{where})

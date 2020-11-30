@@ -269,8 +269,8 @@
 #define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_AND_(opd0, opd1, tgt)  \
   _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                    \
      ("testq", "jnz", "rm", (opd0), "er", (opd1), (tgt))
-#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NAND_(opd0, opd1, tgt)  \
-  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                     \
+#define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NOTAND_(opd0, opd1, tgt)  \
+  _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                       \
      ("testq", "jz", "rm", (opd0), "er", (opd1), (tgt))
 
 /* This factors the common code of low-level primitives for checking overflow.

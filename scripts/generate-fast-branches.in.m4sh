@@ -295,7 +295,7 @@ has_match_in_pairs ()
 unaries="never always zero nonzero positive nonpositive negative nonnegative"
 
 # The list of binary relations.
-binaries="equal notequal less greater notless notgreater and nand"
+binaries="equal notequal less greater notless notgreater and notand"
 
 # Definition of unary relations having relation names as keys and C expressions,
 # written as unsafe macro bodies, as data.
@@ -316,7 +316,7 @@ unary_definitions='never/0 always/1 zero/(!.(x)) nonzero/(x) positive/((jitter_i
 
 # Definitions of binary relations, like above for unaries, with first formal
 # arguments named "x" and second formal arguments named "y".
-binary_definitions='equal/((x).==.(y)) notequal/((x).!=.(y)) less/((x).<.(y)) greater/((x).>.(y)) notless/((x).>=.(y)) notgreater/((x).<=.(y)) and/((x).&.(y)) nand/(~.((x).&.(y)))'
+binary_definitions='equal/((x).==.(y)) notequal/((x).!=.(y)) less/((x).<.(y)) greater/((x).>.(y)) notless/((x).>=.(y)) notgreater/((x).<=.(y)) and/((x).&.(y)) notand/(!.((x).&.(y)))'
 
 # Binary relations which admit two variants, one unsigned and another signed.
 sign_sensitives='less notless greater notgreater'
@@ -326,13 +326,13 @@ relations="${unaries} ${binaries}"
 
 # Pairs of each binary relation and its symmetrical.
 # For example, for every x,y : x <= y iff y >= x.
-symmetries="equal/equal notequal/notequal less/greater notless/notgreater and/and nand/nand"
+symmetries="equal/equal notequal/notequal less/greater notless/notgreater and/and notand/notand"
 
 # Pairs of each relation, unary or binary, and its opposite.
 # For example:
 #   for every x    : x is nonzero iff ! (x is zero).
 #   for every x, y : x <= y iff ! (x > y).
-oppositions="never/always zero/nonzero positive/nonpositive negative/nonnegative equal/notequal less/notless greater/notgreater and/nand"
+oppositions="never/always zero/nonzero positive/nonpositive negative/nonnegative equal/notequal less/notless greater/notgreater and/notand"
 
 # Given a relation name print its symmetrical.  Fail fatally on no match.
 # Arguments:
@@ -411,7 +411,7 @@ opposite ()
 #   0 < y    iff  y is positive
 #   0 & y    iff  never (y)
 #   ~(0 & y) iff  always (y)
-zerolefts="equal/zero notequal/nonzero less/positive notless/nonpositive greater/negative notgreater/nonnegative and/never nand/always"
+zerolefts="equal/zero notequal/nonzero less/positive notless/nonpositive greater/negative notgreater/nonnegative and/never notand/always"
 
 # FIXME: those special cases could be handled, but they do not follow the
 # pattern below for the automatic definition of zerorights.  I could add
@@ -600,6 +600,12 @@ emit_low_level ()
     elif test "x${macroized_r}" = 'xALWAYS'; then
         # Another optimization.
         body='_JITTER_LOW_LEVEL_BRANCH_FAST_ (_jitter_tgt)'
+    elif test "x${macroized_r}" = 'xNOTAND'; then
+        # Optimisation: this avoids the computation of a word-sized Boolean
+        # intermediate result, and if branches on zero and non-zero are optimal
+        # is enough to make branch-on-not-and also optimal on architectures
+        # having no hardware flags, such as RISC-V and MIPS.
+        body="_JITTER_LOW_LEVEL_BRANCH_FAST_IF_ZERO_ (_JITTER_C_CONDITION_AND_ ((x), (y)), _jitter_tgt)"
     elif test "x${macroized_r}" = 'xNONZERO'; then
         # This is the only case where it's appropriate, as a fallback solution,
         # to use a C branch to "branch around" an unconditional branch in
@@ -612,7 +618,7 @@ emit_low_level ()
                 }"
     else
         # Generic fallback code.
-        body="_JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONZERO_ ((jitter_uint) (${definition}), _jitter_tgt)"
+        body="_JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONZERO_ ((jitter_uint) _JITTER_C_CONDITION_${macroized_r}_ ((x), (y)), _jitter_tgt)"
     fi
         @SED@ "s/_jitter_type/$type/g" <<EOF
 #ifndef _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_r}_

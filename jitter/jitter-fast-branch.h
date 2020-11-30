@@ -1,6 +1,7 @@
 /* Jitter: fast-branch header.
 
    Copyright (C) 2017, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -403,7 +404,7 @@
 #define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_UNSIGNED     16
 #define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTLESS_SIGNED       17
 #define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_AND                  18
-#define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NAND                 19
+#define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_NOTAND               19
 
 #define JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ANY                  20
 
