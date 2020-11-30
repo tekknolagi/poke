@@ -1,6 +1,6 @@
 /* JitterLisp: s-expression header.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -99,6 +99,33 @@ typedef jitter_tagged_object jitterlisp_object;
 
 
 
+/* Fast-branch-unless helper macro.
+ * ************************************************************************** */
+
+/* Fast-branch to the given label if the given object does not have the given
+   tag, of the given number of bits.  The arguments may be evaluated more than
+   once. */
+#define JITTERLISP_BRANCH_FAST_UNLESS_HAS_TAG(jitterlisp_tagged_object,  \
+                                              tag,                       \
+                                              tag_bit_no,                \
+                                              label)                     \
+  do                                                                     \
+    {                                                                    \
+      JITTER_BRANCH_FAST_IF_AND (((jitterlisp_tagged_object)             \
+                                  /* xor would work just as well as      \
+                                     minus, except that on x86 the       \
+                                     lea instruction can simulate a      \
+                                     three-operand minus but not a       \
+                                     three-operand xor. */               \
+                                  - (jitter_uint) (tag)),                \
+                                 ((1LU << (tag_bit_no)) - 1),            \
+                                 label);                                 \
+    }                                                                    \
+  while (false)
+
+
+
+
 /* S-expression representation: dummy "anything" type.
  * ************************************************************************** */
 
@@ -107,6 +134,12 @@ typedef jitter_tagged_object jitterlisp_object;
    no actual check. */
 #define JITTERLISP_IS_ANYTHING(_jitterlisp_tagged_object)  \
   true
+
+/* Fast-branch to the given label iff the given object is not of "anything"
+   type -- which is to say, never fast branch. */
+#define JITTERLISP_BRANCH_FAST_UNLESS_ANYTHING(jitterlisp_tagged_object,  \
+                                               label)                     \
+  do {} while (false)
 
 
 
@@ -161,9 +194,17 @@ typedef jitter_tagged_object jitterlisp_object;
   JITTERLISP_FIXNUM_ENCODE (((jitter_uint) 1                                  \
                              << (JITTERLISP_FIXNUM_NON_TAG_BIT_NO - 1)) - 1)
 
+/* Fast-branch to the given label if the given object is not a fixnum.  The
+   arguments may be evaluated more than once. */
+#define JITTERLISP_BRANCH_FAST_UNLESS_FIXNUM(jitterlisp_tagged_object,  \
+                                             label)                     \
+  JITTERLISP_BRANCH_FAST_UNLESS_HAS_TAG (jitterlisp_tagged_object,      \
+                                         JITTERLISP_FIXNUM_TAG,         \
+                                         JITTERLISP_FIXNUM_TAG_BIT_NO,  \
+                                         label)
+
 
 
-
 
 /* S-expression representation: unique and character values.
  * ************************************************************************** */
@@ -413,6 +454,15 @@ struct jitterlisp_cons
                                JITTERLISP_CONS_TAG,           \
                                JITTERLISP_CONS_TAG_BIT_NO)))
 
+/* Fast-branch to the given label if the given object is not a cons.  The
+   arguments may be evaluated more than once. */
+#define JITTERLISP_BRANCH_FAST_UNLESS_CONS(jitterlisp_tagged_object,  \
+                                           label)                     \
+  JITTERLISP_BRANCH_FAST_UNLESS_HAS_TAG (jitterlisp_tagged_object,    \
+                                         JITTERLISP_CONS_TAG,         \
+                                         JITTERLISP_CONS_TAG_BIT_NO,  \
+                                         label)
+
 
 
 
@@ -426,6 +476,23 @@ struct jitterlisp_cons
   (JITTERLISP_IS_CONS(_jitterlisp_tagged_object)         \
    && (JITTERLISP_EXP_C_A_CDR(_jitterlisp_tagged_object) \
        == JITTERLISP_NOTHING))
+
+/* Fast-branch to the given label if the given object is not a box.  The
+   arguments may be evaluated more than once. */
+#define JITTERLISP_BRANCH_FAST_UNLESS_BOX(jitterlisp_tagged_object,    \
+                                          label)                       \
+  /* Again, this is obviously a temporary hack for the temporary       \
+     representation. */                                                \
+  do                                                                   \
+    {                                                                  \
+      JITTERLISP_BRANCH_FAST_UNLESS_CONS (jitterlisp_tagged_object,    \
+                                          label);                      \
+      JITTER_BRANCH_FAST_IF_NOTEQUAL (JITTERLISP_EXP_C_A_CDR           \
+                                         (jitterlisp_tagged_object),   \
+                                      JITTERLISP_NOTHING,              \
+                                      label);                          \
+    }                                                                  \
+  while (false)
 
 
 

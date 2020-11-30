@@ -138,22 +138,12 @@ debug_pointer (jitter_int index, const void *pointer)
 # define JITTERLISPVM_CHECK_NEXT_TYPE_(_jitterlisp_uppercase_type,     \
                                        _jitterlisp_error_fast_label)   \
     {                                                                  \
-      bool _jitterlisp_is_valid __attribute__ ((unused))               \
-        = (JITTER_CONCATENATE_TWO(JITTERLISP_IS_,                      \
-                                  _jitterlisp_uppercase_type)(         \
-              (JITTER_AT_DEPTH_MAINSTACK(_jitterlispvm_arg_depth))));  \
-      /* FIXME: None of the following four ways of jumping is really   \
-         satisfactory.  They are all slow or bloated in different      \
-         ways, and which one is the least bad depends on the           \
-         architecture. */                                              \
-      /* JITTER_BRANCH_FAST_IF_ZERO(_jitterlisp_is_valid,              \
-                                 _jitterlisp_error_fast_label); */     \
-      if (! __builtin_expect (_jitterlisp_is_valid, true))             \
-        JITTER_BRANCH_FAST(_jitterlisp_error_fast_label);              \
-      /* if (! __builtin_expect (_jitterlisp_is_valid, true))          \
-        jitterlisp_fail_from_vm (); */                                 \
-      /* if (! __builtin_expect (_jitterlisp_is_valid, true))          \
-         JITTERLISPVM_ERROR_INVALID_PRIMITIVE_ARGUMENT_TYPE_; */       \
+      /* Branch-fast to the given label if the next object type is     \
+         not the required one. */                                      \
+      JITTER_CONCATENATE_TWO (JITTERLISP_BRANCH_FAST_UNLESS_,          \
+                              _jitterlisp_uppercase_type)              \
+         (JITTER_AT_DEPTH_MAINSTACK(_jitterlispvm_arg_depth),          \
+          _jitterlisp_error_fast_label);                               \
       _jitterlispvm_arg_depth --;                                      \
       _jitterlispvm_arg_index ++;                                      \
     }
@@ -1060,21 +1050,27 @@ end
 instruction primitive-one-plus (?f)
   code
     JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
-    JITTERLISP_1PLUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_1PLUS_OR_OVERFLOW_(JITTER_TOP_MAINSTACK(),
+                                  JITTER_TOP_MAINSTACK(),
+                                  JITTER_ARGF0);
   end
 end
 
 instruction primitive-one-minus (?f)
   code
     JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
-    JITTERLISP_1MINUS_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_1MINUS_OR_OVERFLOW_(JITTER_TOP_MAINSTACK(),
+                                   JITTER_TOP_MAINSTACK(),
+                                   JITTER_ARGF0);
   end
 end
 
 instruction primitive-two-times (?f)
   code
     JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
-    JITTERLISP_2TIMES_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_2TIMES_OR_OVERFLOW_(JITTER_TOP_MAINSTACK(),
+                                   JITTER_TOP_MAINSTACK(),
+                                   JITTER_ARGF0);
   end
 end
 
@@ -1102,134 +1098,30 @@ end
 instruction primitive-negate (?f)
   code
     JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF0);
-    JITTERLISP_NEGATE_(JITTER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_NEGATE_OR_OVERFLOW_(JITTER_TOP_MAINSTACK(),
+                                   JITTER_TOP_MAINSTACK(),
+                                   JITTER_ARGF0);
   end
 end
 
 instruction primitive-primordial-plus (?f)
   code
-  /* FIXME: incredibly, GCC 9 is able to generate the exact same code for the
-     following two blocks:
-     // Hand-optimized version:
-     {
-       JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
-       JITTERLISP_PLUS_(JITTER_TOP_MAINSTACK(),
-                        JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
-       JITTER_NIP_MAINSTACK();
-     }
-     // Intuitive version.  Notice that operand0 and operand1 are not even const.
-     {
-       JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
-       jitterlisp_object operand0 = JITTER_TOP_MAINSTACK();
-       JITTER_DROP_MAINSTACK();
-       jitterlisp_object operand1 = JITTER_TOP_MAINSTACK();
-       JITTER_DROP_MAINSTACK();
-       jitterlisp_object result;
-       JITTERLISP_PLUS_(result, operand0, operand1);
-       JITTER_PUSH_MAINSTACK(result);
-     }
-     Has this always been true?  [Checked: it is also true with GCC 6.]
-     I might have helped GCC by defined stacks
-     in a clever way, possibly thru the restrict qualifier.  But I still find
-     this hugely impressive on GCC's part.
-     FIXME: exploit this for a big change, supporting stacks as unspecialized
-     instruction operands, in alternative to registers and literals.  This
-     will make it possible to have, for example,
-       primitive-primordial-plus %s, 42, %s, $failure_label
-     ,
-       primitive-primordial-plus %r2, %s %r1, $failure_label
-     and
-       primitive-primordial-plus %s, %s, %s, $failure_label
-     , all variants defined as specializations of the same instruction.
-     The instruction definition should specify the behavior with stack
-     operands.  Do I just need "?" and "!" for pop and push?  I might add
-     a third mode "=", just for stacks, or possibly just use "?!".
-     In any case, the exact semantics of modes for stacks is crucial, and
-     I have to think about it.
-     I think I want to execute user code in a state where the arguments
-     have been already popped and space has been already made for every
-     result.  Assigining to an operand macro in order to set a result
-     will compile to a register write or a store, but not a stack
-     position change.  In other words, the effect on stack height is
-     determined by the instruction argument modes whenever an instruction
-     has a stack operand.  Changing the stack height from user code in
-     such a case will have weird effects (but it is allowed as it is now
-     in an instruction without an explicit stack operand).
-     Rationale: I cannot alter the stack and copy results to the right
-     stack position at the end machine-generated epilog C code for a VM
-     instruction: the epilog may not be reachable, while instead assignment
-     to operands macro should take effect, wherever they are.  Doing it
-     like this doesn't interfere with branches, fast branches and escaping
-     instructions such as the ones calling longjmp: any effect on "!"
-     operands will be correctly visible.
-     All of this will require rethinking of the type of immediates.  I may
-     need to add more flexibility by letting the user specify a type,
-     possibly per-instruction, and in an incompatible way compared to the
-     current solution.  All of this will be worth the trouble.
-  */
-//#define INTUITIVE 2
-#if defined(INTUITIVE) && (INTUITIVE == 1)
     JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
-    //asm volatile (JITTER_ASM_DEBUGGING_NOP(1):::);
-    jitterlisp_object operand0 = JITTER_TOP_MAINSTACK();
-    JITTER_DROP_MAINSTACK();
-    jitterlisp_object operand1 = JITTER_TOP_MAINSTACK();
-    JITTER_DROP_MAINSTACK();
-    jitterlisp_object result;
-    JITTERLISP_PLUS_(result, operand0, operand1);
-    JITTER_PUSH_MAINSTACK(result);
-#elif defined(INTUITIVE) && (INTUITIVE == 2)
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
-    //asm volatile (JITTER_ASM_DEBUGGING_NOP(2):::);
-    const jitterlisp_object INPUT0_RVALUE = JITTER_UNDER_TOP_MAINSTACK();
-    const jitterlisp_object INPUT1_RVALUE = JITTER_TOP_MAINSTACK();
-    JITTER_DROP_MAINSTACK();
-#define OUTPUT0_LVALUE JITTER_TOP_MAINSTACK()
-    JITTERLISP_PLUS_(OUTPUT0_LVALUE, INPUT0_RVALUE, INPUT1_RVALUE);
-#undef INPUT0_RVALUE
-#undef INPUT1_RVALUE
-#undef OUTPUT0_LVALUE
-#else
-    JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
-    //asm volatile (JITTER_ASM_DEBUGGING_NOP(0):::);
-    //JITTER_TOP_MAINSTACK() = JITTER_UNDER_TOP_MAINSTACK() + JITTER_TOP_MAINSTACK() ; // FIXME: a test, obviously not what I really want
-    JITTERLISP_PLUS_(JITTER_TOP_MAINSTACK(),
-                     JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_PLUS_OR_OVERFLOW_(JITTER_TOP_MAINSTACK(),
+                                 JITTER_UNDER_TOP_MAINSTACK(),
+                                 JITTER_TOP_MAINSTACK(),
+                                 JITTER_ARGF0);
     JITTER_NIP_MAINSTACK();
-#endif // #ifdef INTUITIVE
-#undef INTUITIVE
-/*
-// Same point, for swap.  Incredibly, the intuitive version is just as good.
-//#define INTUITIVE
-#ifdef INTUITIVE
-    JITTER_SWAP_MAINSTACK();
-#else
-    const jitterlisp_object INPUT0_RVALUE = JITTER_AT_DEPTH_MAINSTACK(1);
-    const jitterlisp_object INPUT1_RVALUE = JITTER_AT_DEPTH_MAINSTACK(0);;
-    JITTER_DROP_MAINSTACK();
-    JITTER_DROP_MAINSTACK();
-    JITTER_PUSH_UNSPECIFIED_MAINSTACK();
-    JITTER_PUSH_UNSPECIFIED_MAINSTACK();
-#define OUTPUT0_LVALUE JITTER_UNDER_TOP_MAINSTACK()
-#define OUTPUT1_LVALUE JITTER_TOP_MAINSTACK()
-    // The following two lines would be the only hand-written part:
-    OUTPUT0_LVALUE = INPUT1_RVALUE;
-    OUTPUT1_LVALUE = INPUT0_RVALUE;
-#undef INPUT0_RVALUE
-#undef INPUT1_RVALUE
-#undef OUTPUT0_LVALUE
-#undef OUTPUT1_LVALUE
-#endif // #ifdef INTUITIVE
-#undef INTUITIVE
-*/
   end
 end
 
 instruction primitive-primordial-minus (?f)
   code
     JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
-    JITTERLISP_MINUS_(JITTER_TOP_MAINSTACK(),
-                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_MINUS_OR_OVERFLOW_(JITTER_TOP_MAINSTACK(),
+                                  JITTER_UNDER_TOP_MAINSTACK(),
+                                  JITTER_TOP_MAINSTACK(),
+                                  JITTER_ARGF0);
     JITTER_NIP_MAINSTACK();
   end
 end
@@ -1237,8 +1129,10 @@ end
 instruction primitive-primordial-times (?f)
   code
     JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
-    JITTERLISP_TIMES_(JITTER_TOP_MAINSTACK(),
-                      JITTER_UNDER_TOP_MAINSTACK(), JITTER_TOP_MAINSTACK());
+    JITTERLISP_TIMES_OR_OVERFLOW_(JITTER_TOP_MAINSTACK(),
+                                  JITTER_UNDER_TOP_MAINSTACK(),
+                                  JITTER_TOP_MAINSTACK(),
+                                  JITTER_ARGF0);
     JITTER_NIP_MAINSTACK();
   end
 end
@@ -1246,14 +1140,10 @@ end
 instruction primitive-primordial-divided (?f)
   code
     JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
-#ifndef JITTERLISP_UNSAFE
-    JITTER_BRANCH_FAST_IF_EQUAL(JITTER_TOP_MAINSTACK(),
-                                JITTERLISP_FIXNUM_ENCODE (0),
-                                JITTER_ARGF0);
-#endif // #ifndef JITTERLISP_UNSAFE
-    JITTERLISP_DIVIDED_UNSAFE_(JITTER_TOP_MAINSTACK(),
-                               JITTER_UNDER_TOP_MAINSTACK(),
-                               JITTER_TOP_MAINSTACK());
+    JITTERLISP_DIVIDED_OR_OVERFLOW_(JITTER_TOP_MAINSTACK(),
+                                    JITTER_UNDER_TOP_MAINSTACK(),
+                                    JITTER_TOP_MAINSTACK(),
+                                    JITTER_ARGF0);
     JITTER_NIP_MAINSTACK();
   end
 end
@@ -1261,14 +1151,10 @@ end
 instruction primitive-quotient (?f)
   code
     JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
-#ifndef JITTERLISP_UNSAFE
-    JITTER_BRANCH_FAST_IF_EQUAL(JITTER_TOP_MAINSTACK(),
-                                JITTERLISP_FIXNUM_ENCODE (0),
-                                JITTER_ARGF0);
-#endif // #ifndef JITTERLISP_UNSAFE
-    JITTERLISP_QUOTIENT_UNSAFE_(JITTER_TOP_MAINSTACK(),
-                                JITTER_UNDER_TOP_MAINSTACK(),
-                                JITTER_TOP_MAINSTACK());
+    JITTERLISP_QUOTIENT_OR_OVERFLOW_(JITTER_TOP_MAINSTACK(),
+                                     JITTER_UNDER_TOP_MAINSTACK(),
+                                     JITTER_TOP_MAINSTACK(),
+                                     JITTER_ARGF0);
     JITTER_NIP_MAINSTACK();
   end
 end
@@ -1276,14 +1162,10 @@ end
 instruction primitive-remainder (?f)
   code
     JITTERLISPVM_CHECK_TYPES_2(FIXNUM, FIXNUM, JITTER_ARGF0);
-#ifndef JITTERLISP_UNSAFE
-    JITTER_BRANCH_FAST_IF_EQUAL(JITTER_TOP_MAINSTACK(),
-                                JITTERLISP_FIXNUM_ENCODE (0),
-                                JITTER_ARGF0);
-#endif // #ifndef JITTERLISP_UNSAFE
-    JITTERLISP_REMAINDER_UNSAFE_(JITTER_TOP_MAINSTACK(),
-                                 JITTER_UNDER_TOP_MAINSTACK(),
-                                 JITTER_TOP_MAINSTACK());
+    JITTERLISP_REMAINDER_OR_OVERFLOW_(JITTER_TOP_MAINSTACK(),
+                                      JITTER_UNDER_TOP_MAINSTACK(),
+                                      JITTER_TOP_MAINSTACK(),
+                                      JITTER_ARGF0);
     JITTER_NIP_MAINSTACK();
   end
 end

@@ -40,11 +40,9 @@
  * ************************************************************************** */
 
 /* JitterLisp operations are implemented as macros, with the number of function
-   calls reduced to a mininum..
-
-   Rationale: we want to avoid function calls from VM instructions, particularly
-   for common operations.  Wrapped functions introduce a memory indirection per
-   call at run time, so they are kept to a minimum. */
+   calls reduced to a mininum: we want to avoid function calls from VM
+   instructions, particularly for common operations; wrapped functions introduce
+   a memory indirection per call at run time which is best avoided. */
 
 /* JitterLisp operation macros expand to C *statements*, not C expressions.
    Operations having one or more results are macros with l-values as their
@@ -65,6 +63,23 @@
 
 /* The operations defined here perform no type checking: it is assumed, and not
    checked, that every operand has the required tag. */
+
+
+
+
+/* Tag assumptions.
+ * ************************************************************************** */
+
+/* This file assumes that fixnums are coded with a zero tag.  The rest of the
+   JitterLisp code is conditionalised to also allow less efficient solutions but
+   that has become pointless, and will be simplified at some point: the solution
+   of a zero tag for fixnums has proved to be the best. */
+#if JITTERLISP_FIXNUM_TAG != 0
+# error "Tagging fixnums with a tag different from 0 is not supported in this"
+# error "code, as of late 2020.  The older code still conditionalised on the"
+# error "value of fixnum tags will be simplified at some point: a zero tag for"
+# error "fixnums has proved to be the best solution."
+#endif
 
 
 
@@ -125,14 +140,14 @@
                                            _jitterlisp_tagged_fixnum_a,  \
                                            _jitterlisp_tagged_fixnum_b)  \
     /* Notice that the infix operation is on unsigned operands. */       \
-    JITTER_WITH_TAG_MASKED_ON(                                       \
+    JITTER_WITH_TAG_MASKED_ON(                                           \
        ((_jitterlisp_tagged_fixnum_a)                                    \
         _jitterlisp_infix                                                \
         (JITTERLISP_WITH_TAG_SUBTRACTED(                                 \
            (_jitterlisp_tagged_fixnum_b),                                \
-           JITTERLISP_FIXNUM_TAG,                                       \
-           JITTERLISP_FIXNUM_TAG_BIT_NO))),                             \
-       JITTERLISP_FIXNUM_TAG,                                           \
+           JITTERLISP_FIXNUM_TAG,                                        \
+           JITTERLISP_FIXNUM_TAG_BIT_NO))),                              \
+       JITTERLISP_FIXNUM_TAG,                                            \
        JITTERLISP_FIXNUM_TAG_BIT_NO)
 #endif // #if fixnum tag is zero
 
@@ -421,8 +436,6 @@
 
 /* Fixnums-to-fixnum operations.
  * ************************************************************************** */
-
-// FIXME: implement.
 
 #define JITTERLISP_PLUS_(_jitterlisp_out, _jitterlisp_in0, _jitterlisp_in1)  \
   JITTER_BEGIN_                                                              \
@@ -1409,6 +1422,131 @@
     jitterlisp_disassemble_compiled_closure (_jitterlisp_cc);      \
     (_jitterlisp_out) = JITTERLISP_NOTHING;                        \
   JITTER_END_
+
+
+
+
+/* Operations fast-branching on overflow, only used from VM code.
+ * ************************************************************************** */
+
+/* These operations are all defined just like the ones not checking for overflow
+   in the case of unsafe code, ignoring the label argument.
+   For safe code they use the Jitter operate-branch-fast-on-overflow macros,
+   which are only usable from VM code. */
+
+#if defined (JITTERLISP_UNSAFE)
+# define JITTERLISP_PLUS_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0,      \
+                                      jitterlisp_in1, label)               \
+  JITTERLISP_PLUS_ ((jitterlisp_out), (jitterlisp_in0), (jitterlisp_in1))
+# define JITTERLISP_MINUS_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0,      \
+                                       jitterlisp_in1, label)               \
+  JITTERLISP_MINUS_ ((jitterlisp_out), (jitterlisp_in0), (jitterlisp_in1))
+# define JITTERLISP_TIMES_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0,      \
+                                       jitterlisp_in1, label)               \
+  JITTERLISP_TIMES_ ((jitterlisp_out), (jitterlisp_in0), (jitterlisp_in1))
+# define JITTERLISP_DIVIDED_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0,      \
+                                         jitterlisp_in1, label)               \
+  JITTERLISP_DIVIDED_ ((jitterlisp_out), (jitterlisp_in0), (jitterlisp_in1))
+# define JITTERLISP_QUOTIENT_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0,     \
+                                          jitterlisp_in1, label)              \
+  JITTERLISP_DIVIDED_ ((jitterlisp_out), (jitterlisp_in0), (jitterlisp_in1))
+# define JITTERLISP_REMAINDER_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0,    \
+                                           jitterlisp_in1, label)             \
+  JITTERLISP_DIVIDED_ ((jitterlisp_out), (jitterlisp_in0), (jitterlisp_in1))
+# define JITTERLISP_1PLUS_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0, label)  \
+  JITTERLISP_1PLUS_ ((jitterlisp_out), (jitterlisp_in0))
+# define JITTERLISP_1MINUS_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0, label)  \
+  JITTERLISP_1MINUS_ ((jitterlisp_out), (jitterlisp_in0))
+# define JITTERLISP_2TIMES_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0, label)  \
+  JITTERLISP_2TIMES_ ((jitterlisp_out), (jitterlisp_in0))
+/* 2-divided never overflows. */
+/* 2-quotient never overflows. */
+/* 2-remainder never overflows. */
+# define JITTERLISP_NEGATE_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0, label)  \
+  JITTERLISP_NEGATE_ ((jitterlisp_out), (jitterlisp_in0))
+#else /* safe */
+# define JITTERLISP_PLUS_OR_OVERFLOW_(jitterlisp_out,                         \
+                                      jitterlisp_in0, jitterlisp_in1, label)  \
+    JITTER_BEGIN_                                                             \
+      JITTER_PLUS_BRANCH_FAST_IF_OVERFLOW ((jitterlisp_out),                  \
+                                           (jitterlisp_in0),                  \
+                                           (jitterlisp_in1),                  \
+                                           (label));                          \
+    JITTER_END_
+# define JITTERLISP_MINUS_OR_OVERFLOW_(jitterlisp_out,                         \
+                                       jitterlisp_in0, jitterlisp_in1, label)  \
+    JITTER_BEGIN_                                                              \
+      JITTER_MINUS_BRANCH_FAST_IF_OVERFLOW ((jitterlisp_out),                  \
+                                           (jitterlisp_in0),                   \
+                                           (jitterlisp_in1),                   \
+                                           (label));                           \
+    JITTER_END_
+# define JITTERLISP_TIMES_OR_OVERFLOW_(jitterlisp_out,                         \
+                                       jitterlisp_in0, jitterlisp_in1, label)  \
+    JITTER_BEGIN_                                                              \
+      jitter_int jitterlisp_in0_decoded                                        \
+        = JITTERLISP_FIXNUM_DECODE (jitterlisp_in0);                           \
+      JITTER_TIMES_BRANCH_FAST_IF_OVERFLOW ((jitterlisp_out),                  \
+                                            jitterlisp_in0_decoded,            \
+                                            (jitterlisp_in1),                  \
+                                            (label));                          \
+    JITTER_END_
+# define JITTERLISP_DIVIDED_OR_OVERFLOW_(jitterlisp_out,                     \
+                                         jitterlisp_in0, jitterlisp_in1,     \
+                                         label)                              \
+    JITTER_BEGIN_                                                            \
+      jitter_int jitterlisp_out_decoded;                                     \
+      JITTER_DIVIDED_BRANCH_FAST_IF_OVERFLOW (jitterlisp_out_decoded,        \
+                                              (jitterlisp_in0),              \
+                                              (jitterlisp_in1),              \
+                                              (label));                      \
+      (jitterlisp_out) = JITTERLISP_FIXNUM_ENCODE (jitterlisp_out_decoded);  \
+    JITTER_END_
+# define JITTERLISP_QUOTIENT_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0,  \
+                                          jitterlisp_in1, label)           \
+    JITTERLISP_DIVIDED_OR_OVERFLOW_ ((jitterlisp_out), (jitterlisp_in0),   \
+                                     (jitterlisp_in1), (label))
+# define JITTERLISP_REMAINDER_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0,   \
+                                           jitterlisp_in1, label)            \
+    JITTER_BEGIN_                                                            \
+      jitter_int jitterlisp_out_decoded;                                     \
+      jitter_int jitterlisp_in0_decoded                                      \
+        = JITTERLISP_FIXNUM_DECODE (jitterlisp_in0);                         \
+      jitter_int jitterlisp_in1_decoded                                      \
+        = JITTERLISP_FIXNUM_DECODE (jitterlisp_in1);                         \
+      JITTER_REMAINDER_BRANCH_FAST_IF_OVERFLOW (jitterlisp_out_decoded,      \
+                                                jitterlisp_in0_decoded,      \
+                                                jitterlisp_in1_decoded,      \
+                                                (label));                    \
+      (jitterlisp_out) = JITTERLISP_FIXNUM_ENCODE (jitterlisp_out_decoded);  \
+    JITTER_END_
+# define JITTERLISP_1PLUS_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0, label)  \
+    JITTER_BEGIN_                                                              \
+      JITTER_PLUS_BRANCH_FAST_IF_OVERFLOW ((jitterlisp_out),                   \
+                                           (jitterlisp_in0),                   \
+                                           JITTERLISP_FIXNUM_ENCODE (1),       \
+                                           (label));                           \
+    JITTER_END_
+# define JITTERLISP_1MINUS_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0, label)  \
+    JITTER_BEGIN_                                                               \
+      JITTER_MINUS_BRANCH_FAST_IF_OVERFLOW ((jitterlisp_out),                   \
+                                            (jitterlisp_in0),                   \
+                                            JITTERLISP_FIXNUM_ENCODE (1),       \
+                                            (label));                           \
+    JITTER_END_
+# define JITTERLISP_2TIMES_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0, label)  \
+    JITTERLISP_TIMES_OR_OVERFLOW_ ((jitterlisp_out),                            \
+                                   JITTERLISP_FIXNUM_ENCODE (2),                \
+                                   (jitterlisp_in0),                            \
+                                   (label))
+/* 2-divided never overflows. */
+/* 2-quotient never overflows. */
+/* 2-remainder never overflows. */
+# define JITTERLISP_NEGATE_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0, label)  \
+    JITTERLISP_MINUS_OR_OVERFLOW_ (jitterlisp_out,                         \
+                                   JITTERLISP_FIXNUM_ENCODE (0), \
+                                   jitterlisp_in0, label)
+#endif /* safe */
 
 
 
