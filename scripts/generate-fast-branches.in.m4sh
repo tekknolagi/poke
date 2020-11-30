@@ -618,7 +618,7 @@ emit_low_level ()
                 }"
     else
         # Generic fallback code.
-        body="_JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONZERO_ ((jitter_uint) _JITTER_C_CONDITION_${macroized_r}_ ((x), (y)), _jitter_tgt)"
+        body="_JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONZERO_ ((jitter_uint) _JITTER_C_CONDITION_${macroized_r}_ (${formals_protected}), _jitter_tgt)"
     fi
         @SED@ "s/_jitter_type/$type/g" <<EOF
 #ifndef _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_r}_
@@ -726,6 +726,7 @@ for_each_relation ()
             unary='yes'
             binary='no'
             formals='x'
+            formals_protected='(x)'
             definition=$(lookup "${r}" "${unary_definitions}")
             has_symmetrical='no'
             macroized_symmetrical_stem=''
@@ -735,6 +736,7 @@ for_each_relation ()
             unary='no'
             binary='yes'
             formals='x, y'
+            formals_protected='(x), (y)'
             definition=$(lookup "${r}" "${binary_definitions}")
             if has_zeroleft "${r}"; then
                 has_zeroleft='yes'
