@@ -23,6 +23,7 @@
 #include <sys/types.h> /* for getpid */
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 
 #include <jitter/jitter.h>
 #include <jitter/jitter-malloc.h>
@@ -303,9 +304,21 @@ jitter_disassemble_range_objdump (jitter_print_context output,
 
   /* Close the pipe, and remove the temporary file.  We get the subprocess exit
      status from pclose. */
+  int res = pclose (objdump_output);
   unlink (temporary_file_name); // !!! A useful line to disable when debugging.
   free (temporary_file_name);
-  return pclose (objdump_output);
+
+#if defined (JITTER_HOST_CPU_IS_RISCV) && (JITTER_SIZEOF_VOID_P == 4)
+  /* Work around a qemu-user bug I have seen appear in qemu-riscv (32-bit only)
+     when updating from a 2019 to a late 2020 snapshot, with qemu downloaded
+     from git: closing a pipe stream fails with errno set to ENOSYS, while the
+     operation still works reliably.  On every other architecture including
+     riscv64 pclose returns 0.  I might want to remove this workaround in the
+     future. */
+  if (res != 0 && errno == ENOSYS)
+    return 0;
+#endif // the configuration which is buggy for me
+  return res;
 }
 #endif // #ifdef JITTER_HAVE_POPEN
 
