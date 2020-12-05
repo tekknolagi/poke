@@ -1095,7 +1095,8 @@ AS_CASE([$default_host_cpu],
                         jitter_objdump_options="--architecture=i386 --disassembler-options=att,suffix"],
         [m68k*],       [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_M68K], [1], []
                                            ) # No ";": see the Autoconf manual.
-                        jitter_has_host_assembly=no;
+                        JITTER_ASSEMBLY_SUBDIRECTORY=m68k;
+                        jitter_has_host_assembly=yes;
                         jitter_objdump_options="--architecture= --disassembler-options=no-aliases"],
         [mips|mipsel], [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_MIPS], [1], []
                                            ) # No ";": see the Autoconf manual.

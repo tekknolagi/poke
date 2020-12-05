@@ -845,6 +845,9 @@ endif # if JITTER_ENABLE_ASSEMBLY
 # All the source files for every architecture have to be distributed,
 # independently from which ones we use, if any, in the current configuration.
 EXTRA_DIST += \
+  machine/m68k/jitter/machine/jitter-machine.h \
+  machine/m68k/jitter/machine/jitter-machine-assembly.S \
+  machine/m68k/jitter/machine/jitter-machine-c.c \
   machine/mips/jitter/machine/jitter-machine.h \
   machine/mips/jitter/machine/jitter-machine-assembly.S \
   machine/mips/jitter/machine/jitter-machine-c.c \
