@@ -410,7 +410,7 @@ opposite ()
 #   0 != y   iff  y is nonzero
 #   0 < y    iff  y is positive
 #   0 & y    iff  never (y)
-#   ~(0 & y) iff  always (y)
+#   !(0 & y) iff  always (y)
 zerolefts="equal/zero notequal/nonzero less/positive notless/nonpositive greater/negative notgreater/nonnegative and/never notand/always"
 
 # FIXME: those special cases could be handled, but they do not follow the
