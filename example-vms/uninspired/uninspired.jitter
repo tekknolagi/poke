@@ -1007,9 +1007,21 @@ instruction blt (?Rn 0 1, ?Rn 0 1, ?f)
   end
 end
 
+instruction bltu (?Rn 0 1, ?Rn 0 1, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_LESS_UNSIGNED (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
 instruction bgt (?Rn 0 1, ?Rn 0 1, ?f)
   code
     JITTER_BRANCH_FAST_IF_GREATER_SIGNED (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction bgtu (?Rn 0 1, ?Rn 0 1, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_GREATER_UNSIGNED (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
   end
 end
 
@@ -1019,9 +1031,21 @@ instruction ble (?Rn 0 1, ?Rn 0 1, ?f)
   end
 end
 
+instruction bleu (?Rn 0 1, ?Rn 0 1, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NOTGREATER_UNSIGNED (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
 instruction bge (?Rn 0 1, ?Rn 0 1, ?f)
   code
     JITTER_BRANCH_FAST_IF_NOTLESS_SIGNED (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
+  end
+end
+
+instruction bgeu (?Rn 0 1, ?Rn 0 1, ?f)
+  code
+    JITTER_BRANCH_FAST_IF_NOTLESS_UNSIGNED (JITTER_ARGN0, JITTER_ARGN1, JITTER_ARGF2);
   end
 end
 
