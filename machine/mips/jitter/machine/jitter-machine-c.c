@@ -1,6 +1,7 @@
 /* VM library: native code patching for MIPS .
 
    Copyright (C) 2017, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -44,7 +45,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
                                      const char *loading_code_to_write)
 {
   int32_t immediate = * (int32_t*) immediate_pointer;
-  if (jitter_fits_in_bits_zero_extended (immediate, 16))
+  if (JITTER_FITS_IN_BITS_ZERO_EXTENDED ((uint32_t) immediate, 16))
     switch (residual_register_index)
       {
       case 0:  return jitter_snippet_load_zero_extended_16bit_to_register_0;
@@ -55,7 +56,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
       case 5:  return jitter_snippet_load_zero_extended_16bit_to_register_5;
       default: jitter_fatal ("impossible");
       }
-  else if (jitter_fits_in_bits_sign_extended (immediate, 16))
+  else if (JITTER_FITS_IN_BITS_SIGN_EXTENDED (immediate, 16))
     switch (residual_register_index)
       {
       case 0:  return jitter_snippet_load_sign_extended_16bit_to_register_0;
@@ -208,7 +209,7 @@ jitter_patch_patch_in (char *native_code,
            are not represented), and fail if doesn't fit in the instruction. */
         int64_t jump_offset = jump_target - delay_slot_address;
         int64_t jump_offset_shifted_64bit = jump_offset >> 2;
-        if (! jitter_fits_in_bits_sign_extended (jump_offset_shifted_64bit, 16))
+        if (! JITTER_FITS_IN_BITS_SIGN_EXTENDED (jump_offset_shifted_64bit, 16))
           jitter_fatal ("conditional branch target too far");
         uint16_t jump_offset_shifted = jump_offset_shifted_64bit;
 

@@ -1,6 +1,7 @@
 /* VM library: native code patching for SH .
 
    Copyright (C) 2017, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -26,6 +27,7 @@
 #include <jitter/jitter-fatal.h>
 
 #include <jitter/jitter.h>
+#include <jitter/jitter-arithmetic.h>
 #include <jitter/jitter-patch.h>
 #include <jitter/jitter-machine-common.h>
 
@@ -56,7 +58,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
 
   /* The SH can load 8-bit sign-extended values to any register, in one
      instruction.  That's the easiest and fastest way. */
-  if (jitter_fits_in_bits_sign_extended (immediate, 8))
+  if (JITTER_FITS_IN_BITS_SIGN_EXTENDED (immediate, 8))
     return (jitter_snippet_load_signed_8bit_to_register_0
             + residual_register_index);
 
@@ -64,7 +66,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
      This takes five instructions if the 8th bit of the immediate is 1, four
      otherwise.  I wonder whether the fallback snippets below are actually
      faster. */
-  if (jitter_fits_in_bits_sign_extended (immediate, 16))
+  if (JITTER_FITS_IN_BITS_SIGN_EXTENDED (immediate, 16))
     {
       if ((uint32_t) immediate & 128)
         return (jitter_snippet_load_signed_16bit_8th_bit_1_to_register_0
@@ -253,7 +255,7 @@ jitter_patch_patch_in (char *native_code,
         uint16_t low_12_bits_mask = (1u << 12u) - 1;
         int64_t jump_offset = jump_target - delay_slot_end_address;
         int64_t jump_offset_shifted_64bit = jump_offset >> 1;
-        if (! jitter_fits_in_bits_sign_extended (jump_offset_shifted_64bit, 12))
+        if (! JITTER_FITS_IN_BITS_SIGN_EXTENDED (jump_offset_shifted_64bit, 12))
           jitter_fatal ("conditional branch target too far");
         uint16_t jump_offset_shifted_masked
           = jump_offset_shifted_64bit & low_12_bits_mask;

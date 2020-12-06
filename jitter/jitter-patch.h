@@ -1,7 +1,6 @@
 /* VM library: native code patching, machine-independent header file.
 
-   Copyright (C) 2017, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -24,7 +23,7 @@
 #define JITTER_MACHINE_INDEPENDENT_PATCH_
 
 
-/* Ignore the rest of this file if we have no host assembly support.
+/* Ignore the rest of this file if the dispatch is not no-threading.
  * ************************************************************************** */
 
 /* Import the preprocessor definition of JITTER_ENABLE_ASSEMBLY , if any. */
@@ -35,8 +34,9 @@
    sizes and endianness, and it is convenient to include the configuration file
    here rather than in every machine-specific file. */
 
-/* If we are not using assembly support ignore the rest of this file. */
-#ifdef JITTER_ENABLE_ASSEMBLY
+/* If the dispatch is different from no-threading then ignore the rest of this
+   file. */
+#if defined (JITTER_DISPATCH_NO_THREADING)
 
 
 
@@ -223,39 +223,5 @@ jitter_snippet_size (enum jitter_snippet_to_patch snippet);
 const char*
 jitter_snippet_name (enum jitter_snippet_to_patch snippet);
 
-
-
-
-/* Machine-independent utility functions for choosing snippets.
- * ************************************************************************** */
-
-/* The functions below are designed to be called by the architecture-specific
-   code, particularly for deciding which snippet is appropriate to use when
-   dealing with a given immediate. */
-
-/* Return true iff the given argument, taken as a word-sized integer, would be
-   represented as negative. */
-bool
-jitter_is_negative (int64_t word);
-
-/* Return true iff the given argument, taken as a word-sized unsigned integer,
-   fits within the specified number of bits.  For example 0, 4, 45 or 255 fit
-   in 8 bits, but 256 does not.
-   The number of bits does not need to be a power of two, and can even be
-   greater than 64. */
-// FIXME: this is now implemented as a macro in jitter/jitter-arithmetic.h .
-// Remove this version.
-bool
-jitter_fits_in_bits_zero_extended (uint64_t word, unsigned bit_no);
-
-/* Return true iff the given two's complement word can be truncated to the given
-   number of (low) bits and sign-extended back to a word without loss of
-   information.
-   The given number of bits must be between 0 and 64, included. */
-// FIXME: this is now implemented as a macro in jitter/jitter-arithmetic.h .
-// Remove this version.
-bool
-jitter_fits_in_bits_sign_extended (uint64_t word, unsigned bit_no);
-
-#endif // #ifdef JITTER_ENABLE_ASSEMBLY
+#endif // #if defined (JITTER_DISPATCH_NO_THREADING)
 #endif // #ifndef JITTER_MACHINE_INDEPENDENT_PATCH_

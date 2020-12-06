@@ -25,6 +25,7 @@
 
 #include <jitter/jitter-fatal.h>
 
+#include <jitter/jitter-arithmetic.h>
 #include <jitter/jitter-bitwise.h>
 #include <jitter/jitter-patch.h>
 #include <jitter/jitter-machine-common.h>
@@ -149,7 +150,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
     = ((uint32_t) jitter_distance_from_pc) >> 12;
   uint32_t distance_low __attribute__ ((unused)) // See [imprecise] below.
     = ((uint32_t) jitter_distance_from_pc) & ((1LU << 12) - 1);
-  if (jitter_fits_in_bits_sign_extended (immediate, 12))
+  if (JITTER_FITS_IN_BITS_SIGN_EXTENDED ((jitter_int) immediate, 12))
     switch (residual_register_index)
       {
       case 0:  return jitter_snippet_load_sign_extended_12bit_to_register_0;
@@ -165,7 +166,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
           before knowing the exact address.  I might re-enable them later after
           I rewrite the specialiser if the new design makes this possible -- I
           should rewrite the specialiser for other reasons as well. */
-  else if (JITTER_FITS_IN_BITS_SIGN_EXTENDED (immediate, 32)
+  else if (JITTER_FITS_IN_BITS_SIGN_EXTENDED ((jitter_int) immediate, 32)
            && (immediate & ((1LU << 12) - 1)) == 0)
     switch (residual_register_index)
       {
@@ -179,7 +180,9 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
       }
 #endif // #if 0
 #if 0 /* FIXME: see [imprecise] above. */
-  else if (jitter_fits_in_bits_sign_extended (jitter_distance_from_pc, 32)
+  else if (JITTER_FITS_IN_BITS_SIGN_EXTENDED (((jitter_int)
+                                               jitter_distance_from_pc),
+                                              32)
            && distance_low == 0)
     switch (residual_register_index)
       {
@@ -193,7 +196,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
       }
 #endif // #if 0
   else if (JITTER_XLEN == 32
-           || jitter_fits_in_bits_sign_extended (immediate, 32))
+           || JITTER_FITS_IN_BITS_SIGN_EXTENDED ((jitter_int) immediate, 32))
     switch (residual_register_index)
       {
       case 0:  return jitter_snippet_load_sign_extended_32bit_to_register_0;
@@ -204,7 +207,9 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
       case 5:  return jitter_snippet_load_sign_extended_32bit_to_register_5;
       default: jitter_fatal ("impossible");
       }
-  else if (jitter_fits_in_bits_sign_extended (jitter_distance_from_pc, 32))
+  else if (JITTER_FITS_IN_BITS_SIGN_EXTENDED (((jitter_int)
+                                               jitter_distance_from_pc),
+                                              32))
     switch (residual_register_index)
       {
       case 0:  return jitter_snippet_load_pcrel_address_to_register_0;
@@ -431,7 +436,7 @@ jitter_patch_patch_in (char *native_code,
     case jitter_snippet_jump_unconditional_20bit_pcrel:
     case jitter_snippet_jump_and_link_20bit_pcrel:
       {
-        if (! jitter_fits_in_bits_sign_extended (distance, 20))
+        if (! JITTER_FITS_IN_BITS_SIGN_EXTENDED (distance, 20))
           jitter_fatal ("far jump from J-type: not supported yet");
         if (distance & 1)
           jitter_fatal ("odd distance (J-type): this should never happen");
@@ -446,7 +451,7 @@ jitter_patch_patch_in (char *native_code,
       }
     case jitter_snippet_jump_conditional_13bit_pcrel:
       {
-        if (! jitter_fits_in_bits_sign_extended (distance, 13))
+        if (! JITTER_FITS_IN_BITS_SIGN_EXTENDED (distance, 13))
           jitter_fatal ("far jump from B-type: not supported yet");
         if (distance & 1)
           jitter_fatal ("odd distance (B-type): this should never happen");

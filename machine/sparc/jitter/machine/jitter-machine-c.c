@@ -1,6 +1,7 @@
 /* VM library: native code patching for SPARC (either bitness).
 
    Copyright (C) 2017, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -23,6 +24,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include <jitter/jitter-arithmetic.h>
 #include <jitter/jitter-fatal.h>
 
 #include <jitter/jitter.h>
@@ -48,9 +50,9 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
     jitter_fatal ("invalid residual register index");
 
   jitter_uint immediate = * (jitter_int*) immediate_pointer;
-  if (jitter_fits_in_bits_sign_extended (immediate, 13))
+  if (JITTER_FITS_IN_BITS_SIGN_EXTENDED ((jitter_int) immediate, 13))
     return jitter_snippet_load_or_to_reg_0 + 4 * residual_register_index;
-  else if (jitter_fits_in_bits_zero_extended (immediate, 32))
+  else if (JITTER_FITS_IN_BITS_ZERO_EXTENDED ((jitter_int) immediate, 32))
     return jitter_snippet_load_sethi_or_to_reg_0 + 4 * residual_register_index;
   // FIXME: also use the sethi-only version.
   else
@@ -253,7 +255,7 @@ jitter_patch_patch_in (char *native_code,
         jitter_int jump_distance
           = (jitter_int) jump_target_u - (jitter_int) jump_address_u;
         jitter_int shifted_jump_distance = jump_distance >> 2;
-        if (! jitter_fits_in_bits_sign_extended (shifted_jump_distance, 16))
+        if (! JITTER_FITS_IN_BITS_SIGN_EXTENDED (shifted_jump_distance, 16))
           jitter_fatal ("branch too far");
 
         /* Compute the immediate, in its split encoding.  Its 2 high bits are at
@@ -300,7 +302,7 @@ jitter_patch_patch_in (char *native_code,
         jitter_int jump_distance
           = (jitter_int) jump_target_u - (jitter_int) jump_address_u;
         jitter_int shifted_jump_distance = jump_distance >> 2;
-        if (! jitter_fits_in_bits_sign_extended (shifted_jump_distance, 19))
+        if (! JITTER_FITS_IN_BITS_SIGN_EXTENDED (shifted_jump_distance, 19))
           jitter_fatal ("branch too far");
 
         /* Compute the immediate. */

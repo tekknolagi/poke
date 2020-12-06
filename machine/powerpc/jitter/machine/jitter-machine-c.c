@@ -83,7 +83,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
 
   /* The PowerPC, differently from MIPS, has no good way of zero-extending a
      16-bit immediate into a word; however it can sign-extend. */
-  if (jitter_fits_in_bits_sign_extended (immediate, 16))
+  if (JITTER_FITS_IN_BITS_SIGN_EXTENDED (immediate, 16))
     switch (residual_register_index)
       {
       case 0:  return jitter_snippet_load_sign_extended_16bit_to_register_0;
@@ -244,7 +244,7 @@ jitter_patch_patch_in (char *native_code,
         /* Here the displacement must fit in 26 bits.  The two least significant
            bits are flags which I want to keep cleared; the six most significant
            bits are the opcode. */
-        if (! jitter_fits_in_bits_sign_extended (offset, 26))
+        if (! JITTER_FITS_IN_BITS_SIGN_EXTENDED (offset, 26))
           jitter_fatal ("branch displacement for b too far");
 
         /* The instruction might be unaligned with respect to a 64-bit word (for
@@ -287,7 +287,7 @@ jitter_patch_patch_in (char *native_code,
         /* Here the displacement must fit in 26 bits.  The two least significant
            bits are flags which I want to keep cleared; the six most significant
            bits are the opcode. */
-        if (! jitter_fits_in_bits_sign_extended (offset, 16))
+        if (! JITTER_FITS_IN_BITS_SIGN_EXTENDED (offset, 16))
           jitter_fatal ("branch displacement for bc too far");
 
         // FIXME: factor with the previous case, following the style I adopted

@@ -25,6 +25,7 @@
 
 #include <jitter/jitter-fatal.h>
 
+#include <jitter/jitter-arithmetic.h>
 #include <jitter/jitter-patch.h>
 #include <jitter/jitter-machine-common.h>
 
@@ -76,7 +77,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
       case 3:  return jitter_snippet_load_minus_1_to_64bit_residual_register_3;
       default: jitter_fatal ("impossible B");
       }
-  else if (jitter_fits_in_bits_zero_extended (immediate, 32))
+  else if (JITTER_FITS_IN_BITS_ZERO_EXTENDED (immediate, 32))
     switch (residual_register_index)
       {
       case 0:  return jitter_snippet_set_32bit_residual_register_0;
@@ -85,7 +86,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
       case 3:  return jitter_snippet_set_32bit_residual_register_3;
       default: jitter_fatal ("impossible C");
       }
-  else if (jitter_fits_in_bits_sign_extended (immediate, 32))
+  else if (JITTER_FITS_IN_BITS_SIGN_EXTENDED (immediate, 32))
     switch (residual_register_index)
       {
       case 0:  return jitter_snippet_set_32bit_sign_extended_residual_register_0;
@@ -94,7 +95,7 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
       case 3:  return jitter_snippet_set_32bit_sign_extended_residual_register_3;
       default: jitter_fatal ("impossible C");
       }
-  else if (jitter_fits_in_bits_sign_extended (distance, 32))
+  else if (JITTER_FITS_IN_BITS_SIGN_EXTENDED (distance, 32))
     switch (residual_register_index)
       {
       case 0:  return jitter_snippet_set_pcrel_address_residual_register_0;
@@ -126,7 +127,7 @@ jitter_snippet_for_loading_memory (const char *immediate_pointer,
      perform only once. */
 
   int64_t immediate = * (int64_t*) immediate_pointer;
-  if (jitter_fits_in_bits_sign_extended (immediate, 32))
+  if (JITTER_FITS_IN_BITS_SIGN_EXTENDED (immediate, 32))
     return jitter_snippet_set_32bit_sign_extended_residual_memory;
   else
     return jitter_snippet_set_64bit_residual_memory_two_32bit_stores;
@@ -182,7 +183,7 @@ jitter_patch_load_immediate_to_register (char *native_code,
         uint64_t immediate = * (uint64_t *) immediate_pointer;
         int64_t distance = jitter_distance_from ((const char *) immediate,
                                                  native_code + native_code_size);
-        if (! jitter_fits_in_bits_sign_extended (distance, 32))
+        if (! JITTER_FITS_IN_BITS_SIGN_EXTENDED (distance, 32))
           jitter_fatal ("%%rip-relative lea: displacement too large");
         int32_t distance_32 = distance;
         memcpy (native_code + native_code_size - 4, & distance_32, 4);
