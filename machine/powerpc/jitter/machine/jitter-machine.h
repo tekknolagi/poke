@@ -557,8 +557,9 @@
     }                                                                         \
   while (false)
 
-/* Perform a jal with return address in x1 .  Of course we need a patch-in,
-   since the destination address is encoded in the jumping instruction. */
+/* Perform an ordinary bl, writing the return address into the link register.
+   Of course we need a patch-in, since the destination address is encoded in
+   the jumping instruction. */
 #define _JITTER_BRANCH_FAST_AND_LINK_INTERNAL(target_index)                    \
   do                                                                           \
     {                                                                          \
