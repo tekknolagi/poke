@@ -236,15 +236,15 @@ native code, starting from a relatively high-level
 @cindex runtime data structure, state
 @cindex state, runtime data structure
 @cindex data structure (state)
-The VM state may use registers, stacks, a combination of both or any
-runtime structure defined by user code; whenever possible the generator
-attempts to map such state data structures into hardware machine
-registers.
+The VM state may include registers, stacks or a combination of both
+along with any runtime structure defined by user code; whenever
+possible the generator attempts to map such state data structures
+into hardware machine registers.
 @cindex C
 @cindex API
 The specification contains some C code associated to every VM
-instruction; the generator takes care of combining such small code
-snippets into a whole body of code with low---often zero---dispatching and
+instruction; the generator takes care of combining such small blocks
+of C into a whole body of code with low---usually zero---dispatching and
 branching overhead.
 The generated code includes a simple C API to dynamically emit and
 execute VM code, and a self-contained driver program for running VM
@@ -495,11 +495,10 @@ particularly at startup.
 @cindex VMs for portability
 @cindex JIT
 Moreover most languages need some form of compilation to machine code
-to attain an acceptable level of performance.
-JITs are now a part
-of all language VMs aiming at serious performance, but again they are
-not trivial to port, and nowadays most JITs will target just the one or
-two most popular hardware architectures.
+to attain an acceptable level of performance.  JITs are now part of
+every language VM at least attempting to obtain good performance, but
+again they are not trivial to port, and nowadays most JITs will target
+just the one or two most popular hardware architectures.
 @*
 @cindex portability
 @cindex rationalization
@@ -507,11 +506,12 @@ two most popular hardware architectures.
 @cindex Autoconf
 @cindex Automake
 @cindex GNU Autoconf
+@cindex Gnulib
 I have grown skeptical of claims about language VMs as a solution for
 portability: if that were really the main concern then simply using C
-plus some reasonable tool for handling configurations (GNU Autoconf
-comes to mind) would provide for even better portability, and without
-compromises on performance.
+plus some reasonable tool for handling the occasional system oddity
+(GNU Autoconf and Gnulib come to mind) would provide for even better
+portability, and without compromises on performance.
 
 @cindex JVM
 @cindex bytecode verification
@@ -564,7 +564,7 @@ language so difficult to execute efficiently---people started to use
 JavaScript as a compilation target for @emph{lower}-level languages,
 usually restricting the generated
 code to the JavaScript subset that current web browsers can JIT-compile
-better.  What would have been an entertaining hack turned
+well.  What would have been an entertaining hack turned
 into a grotesque perversion of huge machine-generated code with mediocre
 performance, and very troubling political implications:
 @cindex Nineteen eighty-four
@@ -578,12 +578,11 @@ performance, and very troubling political implications:
 @cindex web applications, political implications
 @cindex bloat
 @cindex abstraction inversion
-distributing
-important software as generated JavaScript code to run on a web browser
-over the network prevents its users from easily changing the source,
-introduces gratuitous dependencies on the network when none would be
-needed, and potentially exposes user data to the server opening the
-concrete possibility of Orwellian surveillance nightmares.
+distributing important software as generated JavaScript code to run on
+a web browser over the network prevents its users from easily changing
+the source, introduces gratuitous dependencies on the network when
+none would be needed, and potentially exposes user data to the server
+or to eavesdroppers.
 @*
 @cindex C
 @cindex Doom
@@ -599,7 +598,7 @@ do in 1993.
 @cindex JavaScript
 @cindex overhead
 @cindex multiplication, of overheads
-This is not sarcasm: the technical achievement @emph{is} truly
+This is not sarcasm: the technical achievement @emph{is} objectively
 impressive; the route from hand-written C code machine-translated
 to JavaScript, then after the network transfer loaded onto my client,
 turned into some intermediate representation and from there to native
@@ -624,11 +623,8 @@ The performance impact is @emph{not} invisible, and the supposed advantage
 questionable at best:
 being able to run page scripts in some other (very similar) language rather
 than JavaScript, or running programs without having an interpreter
-installed---because in 2019 people who install software and just
-@emph{compute} on their computers are definitely no longer hip.
-@c ,
-@c @c Saint Steve Jobs will come back to spank you
-@c or something.
+installed---because in 2021 the voice of the crowd says that people who run
+software and just @emph{compute on their computers} are no longer hip.
 
 @cindex craziness
 This craziness must stop.
@@ -642,7 +638,7 @@ This craziness must stop.
 @cindex redundant abstraction layer
 As competent programmers with a social conscience it is our duty to
 oppose and reverse the dumbing down of software, to empower users
-again, and make software architectures more rational and, where possible,
+again, to make software architectures more rational and, where possible,
 simpler; I believe that this entails, as a first step, moving
 applications away from the web and back to local computers directly
 controlled by the users.
@@ -2593,6 +2589,8 @@ rationalization?}
 
 @*
 @fixme{explain how to read the table}
+@fixme{As of late 2021 very out of date: the situation is now much
+better than this!}
 @multitable @columnfractions .55 .15 .3
 @headitem Triplet @tab Works @tab Best dispatch
 @c @c --
