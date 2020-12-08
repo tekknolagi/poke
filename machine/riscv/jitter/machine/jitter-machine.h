@@ -263,16 +263,16 @@
    initial value before starting, since the executor has already called C
    functions at initialization, which means that before the executor returns it
    will have to restore its original x1 from the stack anyway); just copy x1 to
-   link_lvalue . */
-#define _JITTER_PROCEDURE_PROLOG(link_lvalue)                                   \
+   the union . */
+#define _JITTER_PROCEDURE_PROLOG(link_union)                                    \
   do                                                                            \
     {                                                                           \
-      register const void * jitter_the_return_address asm ("x1");               \
+      register void * jitter_the_return_address asm ("x1");                     \
       /* Let GCC believe we are initializing x1 in the inline asm code; in      \
          reality it's already set. */                                           \
       asm ("# Pretend to set %[return_address], even if it's already set."      \
            : [return_address] "=r" (jitter_the_return_address) /* outputs */);  \
-      link_lvalue = (const void *) (jitter_the_return_address);                 \
+      (link_union).pointer = jitter_the_return_address;                         \
     }                                                                           \
   while (false)
 

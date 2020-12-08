@@ -348,16 +348,16 @@
    initial value before starting, since the executor has already called C
    functions at initialization, which means that before the executor
    returns it will have to restore its original $31 from the stack anyway);
-   just copy $31 to link_lvalue . */
-#define _JITTER_PROCEDURE_PROLOG(link_lvalue)                                   \
+   just copy $31 to the union . */
+#define _JITTER_PROCEDURE_PROLOG(link_union)                                    \
   do                                                                            \
     {                                                                           \
-      register const void * jitter_the_return_address asm ("$31");              \
+      register void * jitter_the_return_address asm ("$31");                    \
       /* Let GCC believe we are initializing $31 in the inline asm code; */     \
       /* in reality it's already set. */                                        \
-      asm ("# Pretend to set %[return_address], even if it's already set."      \
-           : [return_address] "=r" (jitter_the_return_address) /* outputs */);  \
-      link_lvalue = (const void *) (jitter_the_return_address);                 \
+      asm ("# Pretend to change %[return_address], even if it's already set."   \
+           : [return_address] "+r" (jitter_the_return_address) /* outputs */);  \
+      (link_union).pointer = jitter_the_return_address;                         \
     }                                                                           \
   while (false)
 

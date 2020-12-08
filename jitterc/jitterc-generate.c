@@ -2525,10 +2525,13 @@ jitterc_emit_executor_ordinary_specialized_instructions
         {
           EMIT("  /* This specialized instruction is a callee.  Set the link\n");
           EMIT("     pointer if needed... */\n");
-          EMIT("  const union jitter_word *_jitter_the_link;\n");
-          EMIT("  _JITTER_PROCEDURE_PROLOG(_jitter_the_link);\n");
-          EMIT("  /* ...And make it accessible to this instruction thru a macro. */\n");
-          EMIT("  #define JITTER_LINK ((const union jitter_word * const) _jitter_the_link)\n");
+          EMIT("  union jitter_word _jitter_the_link;\n");
+          EMIT("  _JITTER_PROCEDURE_PROLOG (_jitter_the_link);\n");
+          EMIT("  /* ...And make it accessible to this instruction, read-only,\n");
+          EMIT("     through a macro. */\n");
+          EMIT("  #define JITTER_LINK \\\n");
+          EMIT("    ((const void *) \\\n");
+          EMIT("     (_jitter_the_link.pointer))\n");
           EMIT("\n");
         }
 

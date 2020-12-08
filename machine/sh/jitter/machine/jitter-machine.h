@@ -1,6 +1,7 @@
 /* VM library: SH definitions, to be included from both C and assembly.
 
    Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -161,10 +162,10 @@
    (this is called "store system register" on SH).  We can do that in one
    instruction, as long as the destination is a general register; if not this
    macro will also generate one final store from the general register. */
-#define _JITTER_PROCEDURE_PROLOG(link_lvalue)                                  \
+#define _JITTER_PROCEDURE_PROLOG(link_union)                                   \
   do                                                                           \
     {                                                                          \
-      const void * jitter_the_return_address;                                  \
+      void * jitter_the_return_address;                                        \
       /* This inline asm statement must be volatile because it has no explicit \
          inputs; the actual input is pr , which is not visible from C.         \
          If this is not volatile GCC can move it somewhere else where it is    \
@@ -174,7 +175,7 @@
       asm volatile ("sts pr, %[return_address]"                                \
                     : [return_address] "=r" (jitter_the_return_address)        \
                       /* outputs */);                                          \
-      (link_lvalue) = jitter_the_return_address;                               \
+      (link_union).pointer = jitter_the_return_address;                        \
     }                                                                          \
   while (false)
 

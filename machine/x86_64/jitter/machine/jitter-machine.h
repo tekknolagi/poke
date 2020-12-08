@@ -355,15 +355,16 @@
    the scratch register as a link register. */
 
 /* Procedure prolog, the version not relying on callq / retq . */
-#define _JITTER_PROCEDURE_PROLOG(link_lvalue)                           \
-  do                                                                    \
-    {                                                                   \
-      asm volatile ("movq %" JITTER_STRINGIFY(JITTER_SCRATCH_REGISTER)  \
-                       ", %[the_link_lvalue]"                           \
-           : [the_link_lvalue] "=rm" (link_lvalue) /* outputs */        \
-           : /* inputs */                                               \
-           : /* clobbers */);                                           \
-    }                                                                   \
+#define _JITTER_PROCEDURE_PROLOG(link_union)                   \
+  do                                                           \
+    {                                                          \
+      asm ("movq %" JITTER_STRINGIFY(JITTER_SCRATCH_REGISTER)  \
+           ", %[the_link_pointer]"                             \
+           : [the_link_pointer] "=rm"                          \
+             ((link_union).pointer) /* outputs */              \
+           : /* inputs */                                      \
+           : /* clobbers */);                                  \
+    }                                                          \
   while (false)
 
 /* Procedure return, the version not relying on callq / retq . */
@@ -452,37 +453,28 @@
 
 #else // ! defined(JITTER_BRANCH_AND_LINK_NO_CALL)
 
-/* Procedure prolog, the version relying on callq / retq .
-
-   It is okay for %[the_link_lvalue] to be an offsettable memory operand
-   relative to %rsp: in this case, as per the intel documentation about the
-   "pop" instruction, its effective address is computed relative to the value of
-   %rsp *after* a quad has been popped, which is what we want here: the
-   temporary effect of altering %rsp by pushing and popping the return address
-   is not visible elsewhere.  Anyway, it is *not* okay for %[the_link_lvalue] to
-   be anything more complex, whose effective address needs to be computed using
-   one or more separate instructions: in that case %rsp would have the wrong
-   value.  This is why we introduce jitter_the_link_value (register or
-   %rsp-relative) as a temporary.  The idea is computing the effective address
-   for link_lvalue *after* the popq instruction.  But if link_lvalue is in a
-   register we lose no efficiency: the memory clobber won't affect it, so
-   jitter_the_link_value will be kept in the same register, and this entire
-   macro will expand to a single "popq %REGISTER" instruction.  As far as I can
-   see we should lose no efficiency even if link_lvalue were at an offset from
-   %rsp , but in this case I never see the generated cose as popq OFFSET(%rsp),
-   which is a pity.  I may have been too conservative here in some place I'm not
-   seeing, or maybe this inefficiency is necessary. */
-#define _JITTER_PROCEDURE_PROLOG(link_lvalue)                              \
-  do                                                                       \
-    {                                                                      \
-      const void *jitter_the_link_value;                                   \
-      asm volatile                                                         \
-         ("popq %[the_link_lvalue]"                                        \
-          : [the_link_lvalue] "=ro" (jitter_the_link_value) /* outputs */  \
-          : /* inputs */                                                   \
-          : /* clobbers */);                                               \
-      (link_lvalue) = jitter_the_link_value;                               \
-    }                                                                      \
+/* Code automatically emitted at the very beginning of callee instructions.
+   This is executed in a fragile state, when the stack is not what GCC
+   thinks.
+   This is the version relying on callq / retq . */
+#define _JITTER_PROCEDURE_PROLOG(link_union)                                 \
+  do                                                                         \
+    {                                                                        \
+      /* Pop the return address from the stack and save it into a register   \
+         variable.  It would be incorrect to accept a memory location, as    \
+         it could end up on the stack, and GCC does not know that the stack  \
+         has been pushed to.                                                 \
+         The asm statement must be volatile: the popq instruction must not   \
+         be optimised away in any circumstance, even in bizarre cases where  \
+         the user did not use the return value. */                           \
+      void *jitter_the_link_value;                                           \
+      asm volatile                                                           \
+         ("popq %[the_link_value]"                                           \
+          : [the_link_value] "=r" (jitter_the_link_value) /* outputs */      \
+          : /* inputs */                                                     \
+          : /* clobbers */);                                                 \
+      (link_union).pointer = jitter_the_link_value;                          \
+    }                                                                        \
   while (false)
 
 /* Procedure return, the version relying on callq / retq . */         \

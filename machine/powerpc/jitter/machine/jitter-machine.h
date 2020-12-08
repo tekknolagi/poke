@@ -473,12 +473,12 @@
     && defined(JITTER_DISPATCH_NO_THREADING)       \
     && defined(JITTER_MACHINE_SUPPORTS_PROCEDURE)
 
-/* Load the link register into the given l-value .  This is executed at the
+/* Load the link register into the given union.  This is executed at the
    very beginning of callee instructions. */
-#define _JITTER_PROCEDURE_PROLOG(link_lvalue)                                   \
+#define _JITTER_PROCEDURE_PROLOG(link_union)                                    \
   do                                                                            \
     {                                                                           \
-      const void * jitter_the_return_address;                                   \
+      void * jitter_the_return_address;                                         \
       /* This inline asm statement must be volatile because it has no explicit  \
          inputs; the actual input is lr , which is not visible from C.          \
          If this is not volatile GCC can move it somewhere else where it is     \
@@ -488,7 +488,7 @@
       asm volatile ("mflr %[return_address]"                                    \
                     : [return_address] "=r" (jitter_the_return_address)         \
                       /* outputs */);                                           \
-      link_lvalue = (const void *) (jitter_the_return_address);                 \
+      (link_union).pointer = jitter_the_return_address;                         \
     }                                                                           \
   while (false)
 

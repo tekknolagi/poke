@@ -845,22 +845,22 @@ if (jitter_ip != NULL) goto * jitter_ip; \
    instructions, and is not intended for the user.  The user is only supposed to
    read JITTER_LINK , which holds the value set by _JITTER_PROCEDURE_PROLOG --
    either as defined here or in a machine-specific definition. */
-# define __JITTER_PROCEDURE_PROLOG_COMMON(link_lvalue)                     \
-    do                                                                     \
-      {                                                                    \
-        link_lvalue                                                        \
-          = (const union jitter_word *)jitter_state_runtime._jitter_link;  \
-      }                                                                    \
+# define __JITTER_PROCEDURE_PROLOG_COMMON(link_union)      \
+    do                                                     \
+      {                                                    \
+        (link_union).pointer                               \
+          = (void *) (jitter_state_runtime._jitter_link);  \
+      }                                                    \
     while (false)
 #if    defined(JITTER_DISPATCH_SWITCH)             \
     || defined(JITTER_DISPATCH_DIRECT_THREADING)   \
     || defined(JITTER_DISPATCH_MINIMAL_THREADING)
-# define _JITTER_PROCEDURE_PROLOG(link_lvalue)  \
-    __JITTER_PROCEDURE_PROLOG_COMMON(link_lvalue)
+# define _JITTER_PROCEDURE_PROLOG(link_union)  \
+    __JITTER_PROCEDURE_PROLOG_COMMON(link_union)
 #elif    defined(JITTER_DISPATCH_NO_THREADING)
 # ifndef JITTER_MACHINE_SUPPORTS_PROCEDURE
-#   define _JITTER_PROCEDURE_PROLOG(link_lvalue)  \
-      __JITTER_PROCEDURE_PROLOG_COMMON(link_lvalue)
+#   define _JITTER_PROCEDURE_PROLOG(link_union)  \
+      __JITTER_PROCEDURE_PROLOG_COMMON(link_union)
 # endif // ifndef JITTER_MACHINE_SUPPORTS_PROCEDURE
 #else
 # error "unknown dispatching model"

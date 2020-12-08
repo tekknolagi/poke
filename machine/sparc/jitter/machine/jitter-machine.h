@@ -419,6 +419,7 @@
 /*     && defined(JITTER_DISPATCH_NO_THREADING)       \ */
 /*     && defined(JITTER_MACHINE_SUPPORTS_PROCEDURE) */
 
+// FIXME: this has now changed in the other architectures.  Do not simply uncomment.
 /* /\* The return address is in $31 (and I never need to worry about saving its */
 /*    initial value before starting, since the executor has already called C */
 /*    functions at initialization, which means that before the executor */
