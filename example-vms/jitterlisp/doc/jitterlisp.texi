@@ -4103,10 +4103,11 @@ No newline character or other terminator is added.
 @node Debugging information
 @subsection Debugging information
 
-@cindex data locations, dump
-@cindex dump data locations
-@syindex dump-data-locations
-@deffn {primitive wrapper} dump-data-locations
+@cindex location, print
+@cindex data location, print
+@cindex print, location
+@syindex print-locations
+@deffn {primitive wrapper} print-locations
 Print data location information, mapping runtime VM data structures
 into hardware machine resources.  This is convenient for reading
 disassemblies.
