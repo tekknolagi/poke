@@ -109,9 +109,11 @@ structured_help (void)
   printf ("                                   and hardware structures, to help humans\n");
   printf ("                                   read the disassembly\n");
   printf ("      --dry-run                    do not actually run the program\n");
-  printf ("      --print                      print VM instructions\n");
+  printf ("      --print-routine, --print     print VM instructions\n");
   printf ("      --no-dry-run                 run the program (default)\n");
   printf ("      --no-print-locations         do not print locations (default)\n");
+  printf ("      --no-print-routine,\n");
+  printf ("      --no-print                   do not print VM instructions (default)\n");
 
   structured_help_section ("Benchmarking options");
   printf ("      --slow-literals-only         disable fast literals\n");
@@ -309,8 +311,12 @@ structured_parse_command_line (struct structured_command_line *cl,
         cl->code_generator = structured_code_generator_stack;
       else if (handle_options && ! strcmp (arg, "--register"))
         cl->code_generator = structured_code_generator_register;
-      else if (handle_options && ! strcmp (arg, "--print"))
+      else if (handle_options && (! strcmp (arg, "--print")
+                                  || ! strcmp (arg, "--print-routine")))
         cl->print = true;
+      else if (handle_options && (! strcmp (arg, "--no-print")
+                                  || ! strcmp (arg, "--no-print-routine")))
+        cl->print = false;
       else if (handle_options && ! strcmp (arg, "--dry-run"))
         cl->dry_run = true;
       else if (handle_options && ! strcmp (arg, "--no-dry-run"))
