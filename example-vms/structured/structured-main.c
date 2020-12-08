@@ -130,8 +130,8 @@ structured_help (void)
   printf ("      --optimization-rewriting     enable optimization rewriting (default)\n");
 
   structured_help_section ("Code generation options");
-  printf ("      --stack                      generate stack-based instructions (default)\n");
-  printf ("      --register                   generate register-based instructions\n");
+  printf ("      --stack                      generate stack-based instructions\n");
+  printf ("      --register                   generate register-based instructions (default)\n");
 
   structured_help_section ("Common GNU-style options");
   printf ("      --help                       give this help list and exit\n");
@@ -230,7 +230,7 @@ structured_initialize_command_line (struct structured_command_line *cl)
   cl->optimization_rewriting = true;
   cl->slow_literals_only = false;
   cl->slow_registers_only = false;
-  cl->code_generator = structured_code_generator_stack;
+  cl->code_generator = structured_code_generator_register;
   cl->program_path = NULL;
 }
 
