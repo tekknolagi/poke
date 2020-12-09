@@ -328,6 +328,11 @@
               JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */                \
             : "xer", "cr0" /* clobbers */                                       \
             : jitter_dispatch_label /* goto labels */);                         \
+  /* Make sure to get the current value in the register as the result, and not  \
+     a previous copy.  In order to force this pretend to update the register    \
+     here, only if the branch was not taken.  Inline asm will use the same      \
+     register assignment for _jitter_operation_result. */                       \
+  asm ("" : "+r" (_jitter_operation_result));                                   \
   (res) = _jitter_operation_result
 
 /* Overflow-checking operations. */

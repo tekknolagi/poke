@@ -1,6 +1,7 @@
 /* VM library: MIPS definitions, to be included from both C and assembly.
 
    Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -324,6 +325,11 @@
               JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */                \
             : "hi", "lo", "$2", "$10" /* clobbers */                            \
             : jitter_dispatch_label /* goto labels */);                         \
+  /* Make sure to get the current value in the register as the result, and not  \
+     a previous copy.  In order to force this, pretend to update the resiter    \
+     here, only if the branch was not taken.  Inline asm will use the same      \
+     register assignment for _jitter_product. */                                \
+  asm ("" : "+r" (_jitter_product));                                            \
   (res) = _jitter_product
 
 #endif // #if defined(JITTER_MACHINE_SUPPORTS_PATCH_IN) && defined(JITTER_DISPATCH_NO_THREADING)
