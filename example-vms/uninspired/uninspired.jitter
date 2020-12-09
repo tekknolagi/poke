@@ -1280,26 +1280,42 @@ instruction install-signal-handler ()
   end
 end
 
+# Explicitly set the pending notification flag, in order to make the next safe
+# point branch.
 instruction set-pending ()
   code
     JITTER_PENDING_NOTIFICATIONS = true;
   end
 end
 
-instruction handle-pending ()
+# Clear the pending signal notification for every signal, plus the general
+# pending notification flag.
+instruction clear-pending ()
+  # This instruction could be relocated, but it is not critical for performance
+  # and its disassembly will almost always be a distraction.
+  non-relocatable
+  code
+    int i;
+    for (i = 0; i < JITTER_SIGNAL_NO; i ++)
+      JITTER_PENDING_SIGNAL_NOTIFICATION (i) = false;
+    JITTER_PENDING_NOTIFICATIONS = false;
+  end
+end
+
+# Print a message naming each singal for which a notification is currently
+# pending.
+instruction print-pending-signals ()
   non-relocatable
   code
     int i;
     for (i = 0; i < JITTER_SIGNAL_NO; i ++)
       if (JITTER_PENDING_SIGNAL_NOTIFICATION (i))
-        {
-          printf ("Handling signal %i\n", (int) i);
-          JITTER_PENDING_SIGNAL_NOTIFICATION (i) = false;
-        }
-    JITTER_PENDING_NOTIFICATIONS = false;
+        printf ("Handling signal %i\n", (int) i);
   end
 end
 
+# Do nothing if there are no pending notifications.  In the uncommon case where
+# a notification is pending fast-branch to the given label.
 instruction safe-point (?f)
   code
     JITTER_BRANCH_FAST_IF_NONZERO (JITTER_PENDING_NOTIFICATIONS, JITTER_ARGF0);

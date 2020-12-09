@@ -1067,6 +1067,7 @@ EXTRA_DIST += \
   example-vms/uninspired/examples/counter-iterator.py \
   example-vms/uninspired/examples/bubble-sort.vm \
   example-vms/uninspired/examples/bubble-sort-random.vm \
+  example-vms/uninspired/examples/signals.vm \
   example-vms/uninspired/examples/sqrt-2.vm \
   example-vms/uninspired/examples/threading-benchmark.vm \
   example-vms/uninspired/examples/vector-sum.vm

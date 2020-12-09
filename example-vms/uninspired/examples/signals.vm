@@ -1,0 +1,55 @@
+# This is an -*- asm -*-, so to speak, source file.
+
+# An example using signals and safe points.
+
+# Copyright (C) 2019, 2020 Luca Saiu
+# Written by Luca Saiu
+
+# This file is part of Jitter.
+
+# Jitter is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Jitter is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# An example using signals and safe points.  The user is invited to try SIGINT
+# and SIGQUIT -- from GNU by pressing respectively C-c and C-\
+# SIGINT will therefore print a snapshot of the current value, and then reset
+# it.  SIGQUIT, which is not handled, kills the program.
+
+
+# Install the signal handler.  This would be done from C rather than VM code
+# in most applications.
+#
+# This in particular handles SIGINT, but. not SIGQUIT.  When a signal arrives
+# the handler sets a notification flag and immediately returns.
+        install-signal-handler
+
+# An apparently infinite loop, incrementing a counter without checking for
+# overflow.  The loop contains a safe point, branching to $got_a_signal in case
+# of any pending notification.
+$before_loop:
+        mov 0, %r0
+$loop:
+        safe-point $got_a_signal
+        add %r0, 1, %r0
+        b $loop
+
+# Print the name of the received signal, or signals.  Clear the pending
+# notification in order not to branch here again at the next safe point; we want
+# to branch here again only if another signal arrives.  Print the current value
+# of the counter then go back into the loop, first resetting the counter.
+$got_a_signal:
+        print-pending-signals
+        clear-pending
+        printfixnum %r0
+        b $before_loop
