@@ -293,6 +293,10 @@ Right now the mode only provides font-locking support.
       ("^[^#\n]*\\<register-class\\>[ \t\n]+\\<\\([a-z]\\)\\>"
        1 font-lock-function-name-face t)
 
+      ;; Highlight stack letter.
+      ("^[^#\n]*\\<stack\\>[ \t\n]+\\<\\([a-z]\\)\\>"
+       1 font-lock-function-name-face t)
+
       ;; Highlight wrapped globals.  This is not 100% satisfactory, as it does
       ;; not font-lock comments within the block; however that cannot work with
       ;; the same form I'm using, since there could be an indeterminate number
@@ -306,8 +310,7 @@ Right now the mode only provides font-locking support.
        1 font-lock-function-name-face t)
 
       ;; Highlight keywords.
-      ;;("\\<\\(vm\\|set\\|register-class\\|stack\\|tos-stack\\|ntos-stack\\|initial-header-c\\|initial-vm-main-c\\|initial-vm-1-c\\|initial-vm-2-c\\|initial-vmmain-c\\|printer-c\\|rewriter-c\\|early-c\\|late-c\\|initialization-c\\|finalization-c\\|state-struct-backing-c\\|state-struct-runtime-c\\|state-initialization-c\\|state-finalization-c\\|instruction-beginning-c\\|instruction-end-c\\|wrapped-functions\\|wrapped-globals\\|instruction\\|hot\\|cold\\|relocatable\\|non-relocatable\\|caller\\|callee\\|code\\|end\\)\\>"
-      ("\\(set\\|register-class\\|stack\\|tos-stack\\|ntos-stack\\|initial-header-c\\|initial-vm-main-c\\|initial-vm1-c\\|initial-vm2-c\\|initial-vmmain-c\\|printer-c\\|rewriter-c\\|early-c\\|late-c\\|initialization-c\\|finalization-c\\|state-struct-backing-c\\|state-struct-runtime-c\\|state-initialization-c\\|state-finalization-c\\|instruction-beginning-c\\|instruction-end-c\\|wrapped-functions\\|wrapped-globals\\|instruction\\|hot\\|cold\\|relocatable\\|non-relocatable\\|caller\\|callee\\|code\\|end\\|vm\\)"
+      ("\\(set\\|register-class\\|fast-register-no\\|no-slow-registers\\|slow-registers\\|stack\\|letter\\|long-name\\|c-type\\|element-no\\|c-initial-value\\|c-element-type\\|non-tos-optimized\\|tos-optimized\\|guard-underflow\\|guard-overflow\\|initial-header-c\\|early-header-c\\|initial-vm-main-c\\|initial-vm1-c\\|initial-vm2-c\\|initial-vmmain-c\\|printer-c\\|rewriter-c\\|early-c\\|late-c\\|initialization-c\\|finalization-c\\|state-struct-backing-c\\|state-struct-runtime-c\\|state-initialization-c\\|state-finalization-c\\|instruction-beginning-c\\|instruction-end-c\\|wrapped-functions\\|wrapped-globals\\|instruction\\|hot\\|cold\\|relocatable\\|non-relocatable\\|caller\\|callee\\|code\\|end\\|vm\\)"
        (0 font-lock-keyword-face nil))
 
       ;; Highlight rule names.

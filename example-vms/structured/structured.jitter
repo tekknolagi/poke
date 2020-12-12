@@ -25,17 +25,27 @@
 
 vm
   set prefix "structuredvm"
-  tos-stack "jitter_int" "mainstack"
+#  tos-stack "jitter_int" "mainstack"
 end
 
 
-## Register classes.
+## Register classes and stacks.
 #################################################################
 
-register-class r 2
-  code
-    union jitter_word
-  end
+register-class r
+  c-type "union jitter_word"
+  c-initial-value "{.fixnum = 0}"
+  long-name "general-register"
+  fast-register-no 2
+  slow-registers
+end
+
+stack s
+  long-name "mainstack"
+  c-element-type "jitter_int"
+  tos-optimized
+  guard-underflow
+  guard-overflow
 end
 
 

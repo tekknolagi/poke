@@ -1,7 +1,7 @@
 /* Jitter: Flex scanner.
 
-   Copyright (C) 2016, 2017, 2018 Luca Saiu
-   Updated in 2019 and 2020 by Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2020 Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -103,11 +103,9 @@ UNSIGNEDFIXNUM   0|([1-9][0-9]*)
 FIXNUM           [-+]?{UNSIGNEDFIXNUM}
 IDENTIFIER       [_a-zA-Z][-+._~@/\\a-zA-Z0-9]*
 
-                 /* FIXME: the 'r' case will no longer be sufficient with register
-                    classes.  I have to think of a different syntax. */
-REGISTER_LETTER             [a-z]
-UPPER_CASE_REGISTER_LETTER  [A-Z]
-BARE_ARGUMENT               ([nlf]|{UPPER_CASE_REGISTER_LETTER})+
+REGISTER_OR_STACK_LETTER             [a-z]
+UPPER_CASE_REGISTER_OR_STACK_LETTER  [A-Z]
+BARE_ARGUMENT                        ([nlf]|{UPPER_CASE_REGISTER_OR_STACK_LETTER})+
 
 REGISTER         "%r"{UNSIGNEDFIXNUM}
 WHITESPACE       [\ \t\n\r\f]+
@@ -189,9 +187,26 @@ CODECONTENTLINEMIDDLE3 end{LINEWHITESPACE}?[^\ \t\n\r\f#][^\n\r\f]*
 "end"                     { return END; }
 "vm"                      { return VM; }
 "set"                     { return SET; }
-"ntos-stack"              { return NTOS_STACK; }
-"stack"                   { return NTOS_STACK; }
-"tos-stack"               { return TOS_STACK; }
+"stack"                   { return STACK; }
+
+  /*"letter"                  { return LETTER; }*/
+"c-type"                  { return C_TYPE; }
+"c-element-type"          { return C_ELEMENT_TYPE; }
+"c-initial-value"         { return C_INITIAL_VALUE; }
+
+"register-class"          { return REGISTER_CLASS; }
+"fast-register-no"        { return FAST_REGISTER_NO; }
+"no-slow-registers"       { return NO_SLOW_REGISTERS; }
+"slow-registers"          { return SLOW_REGISTERS; }
+
+"long-name"               { return LONG_NAME; }
+"element-no"              { return ELEMENT_NO; }
+"non-tos-optimized"       { return NON_TOS_OPTIMIZED; }
+"tos-optimized"           { return TOS_OPTIMIZED; }
+"no-guard-underflow"      { return NO_GUARD_UNDERFLOW; }
+"no-guard-overflow"       { return NO_GUARD_OVERFLOW; }
+"guard-underflow"         { return GUARD_UNDERFLOW; }
+"guard-overflow"          { return GUARD_OVERFLOW; }
 
 "initial-header-c"        { return INITIAL_HEADER_C; }
 "initial-vm1-c"           { return INITIAL_VM1_C; }
@@ -241,10 +256,10 @@ CODECONTENTLINEMIDDLE3 end{LINEWHITESPACE}?[^\ \t\n\r\f#][^\n\r\f]*
 "false"                   { return FALSE; }
 "rewrite"                 { return REWRITE; }
 "into"                    { return INTO; }
-"register-class"          { return REGISTER_CLASS; }
-{REGISTER_LETTER}         { /* When expecting an identifier the parser accepts
-                               a REGISTER_LETTER as well. */
-                            return REGISTER_LETTER; }
+
+{REGISTER_OR_STACK_LETTER} { /* When expecting an identifier the parser accepts
+                                a REGISTER_OR_STACK_LETTER as well. */
+                             return REGISTER_OR_STACK_LETTER; }
 {BARE_ARGUMENT}           { /* When expecting an identifier the parser accepts
                                a BARE_ARGUMENT as well. */
                             return BARE_ARGUMENT; }

@@ -1,7 +1,6 @@
 /* Jitter: header for VM generation-time data structures.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -77,44 +76,76 @@ struct jitterc_register_class
   /* The character uniquely identifying the register class within the VM.  For
      example registers of the class with character 'r' will be called "%r0",
      "%r1", and so on.  This must be a lower-case letter. */
-  char character;
+  char letter;
+
+  /* The long name for this register class as given by the user. */
+  char *long_name;
+
+  /* The long name converted to all lower-case and all upper-case characters. */
+  char *lower_case_long_name;
+  char *upper_case_long_name;
 
   /* The C code specifying the type of a variable for this class.  This is a C
      type expression, without delimiters.  A malloc-allocated-string, always
      non-NULL. */
   char *c_type;
 
-  /* How many fast registers exist for this class. */
-  size_t fast_register_no;
+  /* An expression in C specifying the initial value for a register of this
+     class. */
+  char *c_initial_value;
 
-  // FIXME: shall I specify here whether slow registers are allowed as well?
+  /* How many fast registers exist for this class.  This is int rather than
+     size_t because we want to distinguish a special value of -1 as
+     "uninitialised". */
+  int fast_register_no;
+
+  /* If 1, use slow registers for this class.  If 0, do not use slow registers
+     for this class.  Initialised to -1, to prevent multiple settings from the
+     .jitter file. */
+  int use_slow_registers;
 };
 
-/* Allocate a new register class with the given fields, add it to the pointed VM
-   and return a pointer to the new element.  Every malloc-allocated field in the
-   new structure is copied. */
+/* Allocate and return a new register class with default fields.  Some field
+   values will be invalid and will need to be set later. */
 struct jitterc_register_class*
-jitterc_add_register_class (struct jitterc_vm *vm,
-                            char character,
-                            const char *c_type,
-                            jitter_int fast_register_no)
-  __attribute__ ((returns_nonnull, nonnull (1)));
+jitterc_make_register_class (void)
+  __attribute__ ((returns_nonnull));
+
+/* Set a field of the pointed register class to a new value.  It is permitted to
+   change a field from a conventionally "uninitialised" value to an initialised
+   value, but not from an initialised value to another; this is to prevent
+   contradictions in Jitter specifications. */
+void
+jitterc_vm_register_class_set_letter (struct jitterc_register_class *rc,
+                                      char letter);
+void
+jitterc_vm_register_class_set_long_name (struct jitterc_register_class *rc,
+                                         const char* long_name);
+void
+jitterc_vm_register_class_set_c_type (struct jitterc_register_class *rc,
+                                      const char *c_type);
+void
+jitterc_vm_register_class_set_c_initial_value (struct jitterc_register_class *rc,
+                                               const char *c_initial_value);
+void
+jitterc_vm_register_class_set_fast_register_no (struct jitterc_register_class
+                                                *rc, size_t fast_register_no);
+void
+jitterc_vm_register_class_set_use_slow_registers (struct jitterc_register_class
+                                                  *rc, int use_slow_registers);
+
+/* Add the pointed register class to the pointed VM, checking that the fields
+   are valid. */
+void
+jitterc_vm_add_register_class (struct jitterc_vm *vm,
+                               struct jitterc_register_class* rc)
+  __attribute__ ((nonnull (1, 2)));
 
 /* Given a character identifying a register class, return a pointer to its
    register class in the pointed VM or fail fatally. */
 struct jitterc_register_class*
 jitterc_lookup_register_class (const struct jitterc_vm *vm, char c)
   __attribute__ ((returns_nonnull, nonnull (1)));
-
-// FIXME: rethink, possibly remove altogether.
-/* The class of a register (for example the m68k would have three: fixnum,
-   address and floating-point).  Right now there is only one valid class,
-   holding both fixnum and addresses. */
-enum jitterc_register_class_
-  {
-    jitterc_register_class_unspecified = 0,
-    jitterc_register_class_fixnum
-  };
 
 /* A specific register in the machine.  This is currently used for fast
    registers only, but it would work for slow registers as well without
@@ -611,31 +642,51 @@ jitterc_make_specialized_instruction (struct jitterc_vm *vm,
  * ************************************************************************** */
 
 /* The kind of implementation used for a VM stack. */
-enum jitterc_stack_optimization
+enum jitterc_stack_implementation
   {
     /* An ordinary stack without TOS optimization, implemented as a pointer. */
-    jitterc_stack_optimization_no_tos,
+    jitterc_stack_implementation_no_tos,
 
     /* A TOS-optimized stack, implemented as a field holding the top element and
        a pointer to the under-top element -- hopefully both held in physical
        machine registers. */
-    jitterc_stack_optimization_tos
+    jitterc_stack_implementation_tos,
+
+    /* An initial value for a stack, before the user sets a valid one.  If not
+       set this turns into the default. */
+    jitterc_stack_implementation_uninitialized
   };
 
 /* A declaration for a VM stack. */
 struct jitterc_stack
 {
+  /* The stack letter, lowercase ASCII. */
+  char letter;
+
   /* The stack element type, as expressed in C. */
-  char *c_element_type;
+  char *c_type;
 
-  /* The stack name, all in lower case. */
-  char *lower_case_name;
+  /* An expression in C specifying the initial value of each element. */
+  char *c_initial_value;
 
-  /* The stack name, all in upper case. */
-  char *upper_case_name;
+  /* The stack name, as given by the user. */
+  char *long_name;
 
-  /* The kind of optimization for this stack. */
-  enum jitterc_stack_optimization optimization;
+  /* The stack name, converted in all lower-case characters and all
+     upper-case characters. */
+  char *lower_case_long_name;
+  char *upper_case_long_name;
+
+  /* The stack size in elements. */
+  int element_no;
+
+  /* The implementation of this stack. */
+  enum jitterc_stack_implementation implementation;
+
+  /* Include underflow and/or overflow guard pages, where available.
+     Initialised to the invalid value -1. */
+  int guard_underflow;
+  int guard_overflow;
 };
 
 
@@ -680,9 +731,6 @@ struct jitterc_vm
 
   /* A list of struct jitterc_stack pointers, holding stack declarations. */
   gl_list_t stacks;
-
-  /* Residualize registers: slow registers exist iff this is true. */
-  bool use_slow_registers;
 
   /* Generate #line directives iff this is true. */
   bool generate_line;
@@ -749,14 +797,51 @@ jitterc_vm_add_setting (struct jitterc_vm *vm,
                         const char *value)
   __attribute__ ((nonnull (1, 2, 3)));
 
-/* Append a stack declaration setting to a VM. */
-void
-jitterc_vm_add_stack_declaration (struct jitterc_vm *vm,
-                                  const char *c_element_type,
-                                  const char *stack_lower_case_name,
-                                  enum jitterc_stack_optimization optimization)
-  __attribute__ ((nonnull (1, 2, 3)));
+/* Make a stack declaration with default values.  Some fields are initially
+   invalid and need to be set by the user before the stack can be added to a
+   VM. */
+struct jitterc_stack *
+jitterc_vm_make_stack (void)
+  __attribute__ ((returns_nonnull));
 
+/* Set a field of the pointed stack declaration to a new value.  It is permitted
+   to change a field from a conventionally "uninitialised" value to an
+   initialised value, but not from an initialised value to another; this is to
+   prevent contradictions in Jitter specifications. */
+void
+jitterc_vm_stack_set_letter (struct jitterc_stack *s,
+                             char letter);
+void
+jitterc_vm_stack_set_long_name (struct jitterc_stack *s,
+                                const char* long_name);
+void
+jitterc_vm_stack_set_c_element_type (struct jitterc_stack *s,
+                                     const char *c_type);
+void
+jitterc_vm_stack_set_element_no (struct jitterc_stack *s,
+                                 size_t element_no);
+void
+jitterc_vm_stack_set_c_initial_value (struct jitterc_stack *s,
+                                      const char *c_initial_value);
+void
+jitterc_vm_stack_set_fast_register_no (struct jitterc_stack *s,
+                                       size_t fast_register_no);
+void
+jitterc_vm_stack_set_implementation (struct jitterc_stack *s,
+                                     enum jitterc_stack_implementation i);
+void
+jitterc_vm_stack_set_guard_underflow (struct jitterc_stack *s,
+                                      int guard);
+void
+jitterc_vm_stack_set_guard_overflow (struct jitterc_stack *s,
+                                     int guard);
+
+/* Add the pointed stack descriptor to the pointed VM, checking that the
+   descriptor fields are valid. */
+void
+jitterc_vm_add_stack (struct jitterc_vm *vm,
+                      struct jitterc_stack *s)
+  __attribute__ ((nonnull (1, 2)));
 
 /* Return a pointer to the last instruction in the given VM. */
 struct jitterc_instruction *
@@ -803,14 +888,10 @@ jitterc_analyze_vm (struct jitterc_vm *vm) __attribute__ ((nonnull (1)));
  * ************************************************************************** */
 
 /* Specialize the given VM using the given number of fast registers and the
-   given limit on nonresidual literals (or -1 if there is no limit).  Fast
-   registers are always used (unless fast_register_no is zero); if
-   use_slow_registers is true then slow registers are used as well, and
-   registers can be residualized. */
+   given limit on nonresidual literals (or -1 if there is no limit). */
 void
 jitterc_specialize (struct jitterc_vm* vm,
                     int max_fast_register_no_per_class,
-                    int max_nonresidual_literal_no,
-                    bool use_slow_registers);
+                    int max_nonresidual_literal_no);
 
 #endif // #ifndef JITTERC_JITTERC_VM_H_

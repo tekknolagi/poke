@@ -70,7 +70,6 @@ struct jitterc_command_line
   char *output_directory;
   int max_fast_register_no_per_class; /* -1 means unlimited. */
   int max_nonresidual_literal_no;  /* -1 means unlimited. */
-  bool slow_registers; /* Use slow registers. */
 };
 
 /* Numeric identifiers for --no-* , or more in general "default" options having
@@ -83,8 +82,7 @@ enum jitterc_negative_option
     jitterc_negative_option_no_count_specialized_instructions = -1,
     jitterc_negative_option_no_frontend = -2,
     jitterc_negative_option_no_verbose = -3,
-    jitterc_negative_option_slow_registers = -4,
-    jitterc_negative_option_generate_line = -5
+    jitterc_negative_option_generate_line = -4
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
@@ -113,16 +111,12 @@ static struct argp_option jitterc_option_specification[] =
     "Generate a vm-main.c file as well, containing a main function for the "
     "default frontend (default: no)"},
    {"main", '\0', NULL, OPTION_ALIAS },
-   {"no-slow-registers", 's', NULL, 0,
-    "Don't use slow registers (default: use them)"},
    /* Frequently used negative options. */
    {NULL, '\0', NULL, OPTION_DOC, "", 21},
    {"no-frontend", jitterc_negative_option_no_frontend, NULL, 0,
     "Don't generate vm-main.c (default)"},
    {"no-main", '\0', NULL, OPTION_ALIAS,
     "Don't generate vm-main.c (default)"},
-   {"slow-registers", jitterc_negative_option_slow_registers, NULL, 0,
-    "Use slow registers (default)"},
 
    /* Tuning options. */
    {NULL, '\0', NULL, OPTION_DOC, "Tuning options:", 30},
@@ -224,7 +218,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
       cl->output_directory = NULL;
       cl->max_fast_register_no_per_class = -1;
       cl->max_nonresidual_literal_no = -1;
-      cl->slow_registers = true;
       break;
     case 'v':
       cl->verbose = true;
@@ -282,12 +275,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
         cl->max_nonresidual_literal_no = conversion;
         break;
       }
-    case 's':
-      cl->slow_registers = false;
-      break;
-    case jitterc_negative_option_slow_registers:
-      cl->slow_registers = true;
-      break;
     case ARGP_KEY_ARG:
       cl->input_file = arg;
       break;
@@ -333,7 +320,6 @@ main (int argc, char **argv)
             "generate_line = %s\n"
             "max_fast_register_no_per_class = %i\n"
             "max_nonresidual_literal_no = %i\n"
-            "use_slow_registers = %s\n"
             "template directory = %s\n",
             cl.input_file,
             cl.output_directory,
@@ -342,7 +328,6 @@ main (int argc, char **argv)
             cl.generate_line ? "yes" : "no",
             (int) cl.max_fast_register_no_per_class,
             (int) cl.max_nonresidual_literal_no,
-            cl.slow_registers ? "yes" : "no",
             cl.template_directory);
 
   struct jitterc_vm *vm;
@@ -353,8 +338,7 @@ main (int argc, char **argv)
 
   jitterc_specialize (vm,
                       cl.max_fast_register_no_per_class,
-                      cl.max_nonresidual_literal_no,
-                      cl.slow_registers);
+                      cl.max_nonresidual_literal_no);
 
   if (cl.count_specialized_instructions_and_exit)
     {

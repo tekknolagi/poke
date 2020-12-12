@@ -25,23 +25,30 @@
 
 vm
   set prefix "jitterlispvm"
-  tos-stack "jitterlisp_object" "mainstack"
-
-  # FIXME: the return stack might need a different type.  Or not.
-  ntos-stack "jitterlisp_object" "returnstack"
 end
 
 
 
 
-## Register classes.
+## Stacks and register classes.
 #################################################################
 
-# We only need one register class.
-register-class r 0
-  code
-    jitterlisp_object
-  end
+stack m
+  long-name "mainstack"
+  c-element-type "jitterlisp_object"
+  tos-optimized
+end
+
+stack t
+  long-name "returnstack"
+  c-element-type "jitterlisp_object"
+  non-tos-optimized
+end
+
+register-class r
+  c-type "jitterlisp_object"
+  c-initial-value "JITTERLISP_UNINITIALIZED"
+  fast-register-no 0 #2
 end
 
 

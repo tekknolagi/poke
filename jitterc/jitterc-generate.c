@@ -1263,7 +1263,7 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
   EMIT("    = vmprefix_recognize_specialized_instruction (p, ins);\n");
   EMIT("  if (opcode == vmprefix_specialized_instruction_opcode_%s)\n",
        jitterc_mangle ("!INVALID"));
-  EMIT("    jitter_fatal (\"specialization failed\");\n");
+  EMIT("    jitter_fatal (\"specialization failed: %%s\", ins->meta_instruction->name);\n");
   EMIT("\n");
   EMIT("#ifdef JITTER_HAVE_PATCH_IN\n");
   EMIT("  /* Replace the opcode with its non-defective counterpart. */\n");
@@ -1399,24 +1399,26 @@ jitterc_emit_stack_operation_definition (FILE *f,
                                          const char *lower_case_operation_name,
                                          size_t arity)
 {
+  assert (stack->implementation == jitterc_stack_implementation_tos
+          || stack->implementation == jitterc_stack_implementation_no_tos);
   EMIT("/* Wrapper definition of the %s operation for the %s stack \"%s\". */\n",
        lower_case_operation_name,
-       ((stack->optimization == jitterc_stack_optimization_tos)
+       ((stack->implementation == jitterc_stack_implementation_tos)
         ? "TOS-optimized" : "non-TOS-optimized"),
-       stack->lower_case_name);
+       stack->lower_case_long_name);
   EMIT("#define JITTER_");
   jitterc_emit_upper_case (f, lower_case_operation_name);
-  EMIT("_%s(", stack->upper_case_name);
+  EMIT("_%s(", stack->upper_case_long_name);
   int i;
   for (i = 0; i < arity; i ++)
     EMIT("x%i%s", i, i != (arity - 1) ? ", ": "");
   const char *optimization_suffix
-    = (stack->optimization == jitterc_stack_optimization_tos) ? "TOS" : "NTOS";
+    = (stack->implementation == jitterc_stack_implementation_tos) ? "TOS" : "NTOS";
   EMIT(")  \\\n");
   EMIT("  JITTER_STACK_%s_", optimization_suffix);
   jitterc_emit_upper_case (f, lower_case_operation_name);
-  EMIT("(%s, jitter_state_runtime. , %s", stack->c_element_type,
-       stack->lower_case_name);
+  EMIT("(%s, jitter_state_runtime. , %s", stack->c_type,
+       stack->lower_case_long_name);
   for (i = 0; i < arity; i ++)
     EMIT(", x%i", i);
   EMIT(")\n\n");
@@ -1476,7 +1478,7 @@ jitterc_emit_stack_backing_declarations (FILE *f, const struct jitterc_vm *vm)
     {
       const struct jitterc_stack *stack = gl_list_get_at (vm->stacks, i);
 
-      EMIT("  struct jitter_stack_backing jitter_stack_%s_backing;\n", stack->lower_case_name);
+      EMIT("  struct jitter_stack_backing jitter_stack_%s_backing;\n", stack->lower_case_long_name);
     }
   EMIT("\n");
 }
@@ -1492,13 +1494,15 @@ jitterc_emit_stack_runtime_declarations (FILE *f, const struct jitterc_vm *vm)
     {
       const struct jitterc_stack *stack = gl_list_get_at (vm->stacks, i);
 
+      assert (stack->implementation == jitterc_stack_implementation_tos
+              || stack->implementation == jitterc_stack_implementation_no_tos);
       const char *optimization_suffix
-        = ((stack->optimization == jitterc_stack_optimization_tos)
+        = ((stack->implementation == jitterc_stack_implementation_tos)
            ? "TOS" : "NTOS");
       EMIT("  JITTER_STACK_%s_DECLARATION(%s, %s);\n",
            optimization_suffix,
-           stack->c_element_type,
-           stack->lower_case_name);
+           stack->c_type,
+           stack->lower_case_long_name);
     }
   EMIT("\n");
 }
@@ -1515,23 +1519,25 @@ jitterc_emit_stack_initializations (FILE *f, const struct jitterc_vm *vm)
     {
       const struct jitterc_stack *stack = gl_list_get_at (vm->stacks, i);
 
+      assert (stack->implementation == jitterc_stack_implementation_tos
+              || stack->implementation == jitterc_stack_implementation_no_tos);
       const char *optimization_lower_case_suffix
-        = ((stack->optimization == jitterc_stack_optimization_tos)
+        = ((stack->implementation == jitterc_stack_implementation_tos)
            ? "tos" : "ntos");
       const char *optimization_upper_case_suffix
-        = ((stack->optimization == jitterc_stack_optimization_tos)
+        = ((stack->implementation == jitterc_stack_implementation_tos)
            ? "TOS" : "NTOS");
       const unsigned long element_no = 4096; // FIXME: make this customizable.
 
       EMIT("  jitter_stack_initialize_%s_backing(& jitter_state_backing->jitter_stack_%s_backing,\n",
-           optimization_lower_case_suffix, stack->lower_case_name);
+           optimization_lower_case_suffix, stack->lower_case_long_name);
       EMIT("                                      sizeof (%s),\n",
-           stack->c_element_type);
+           stack->c_type);
       EMIT("                                      %lu);\n", element_no);
       EMIT("  JITTER_STACK_%s_INITIALIZE(%s, jitter_state_runtime-> ,\n",
-           optimization_upper_case_suffix, stack->c_element_type);
+           optimization_upper_case_suffix, stack->c_type);
       EMIT("                              %s, jitter_state_backing->jitter_stack_%s_backing);\n",
-           stack->lower_case_name, stack->lower_case_name);
+           stack->lower_case_long_name, stack->lower_case_long_name);
     }
   EMIT("\n");
 }
@@ -1549,7 +1555,7 @@ jitterc_emit_stack_finalizations (FILE *f, const struct jitterc_vm *vm)
       const struct jitterc_stack *stack = gl_list_get_at (vm->stacks, i);
 
       EMIT("  jitter_stack_finalize_backing (& jitter_state_backing->jitter_stack_%s_backing);\n",
-           stack->lower_case_name);
+           stack->lower_case_long_name);
     }
   EMIT("\n");
 }
@@ -1626,7 +1632,7 @@ jitterc_emit_state_h (const struct jitterc_vm *vm)
       int j;
       for (j = c->fast_register_no - 1; j >= 0; j --)
         EMIT("  vmprefix_register_%c jitter_fast_register_%c_%i;\n",
-             c->character, c->character, j);
+             c->letter, c->letter, j);
     }
   EMIT("\n");
 
@@ -1755,12 +1761,12 @@ jitterc_emit_register_classes_h (const struct jitterc_vm *vm)
     {
       const struct jitterc_register_class *c
         = (gl_list_get_at (vm->register_classes, i));
-      EMIT("typedef\n%s vmprefix_register_%c;\n", c->c_type, c->character);
-      EMIT("#define VMPREFIX_REGISTER_%c_CLASS_ID %i\n", c->character, i);
-      EMIT("#define VMPREFIX_REGISTER_%c_FAST_REGISTER_NO %i\n", c->character,
+      EMIT("typedef\n%s vmprefix_register_%c;\n", c->c_type, c->letter);
+      EMIT("#define VMPREFIX_REGISTER_%c_CLASS_ID %i\n", c->letter, i);
+      EMIT("#define VMPREFIX_REGISTER_%c_FAST_REGISTER_NO %i\n", c->letter,
            (int) c->fast_register_no);
       EMIT("extern const struct jitter_register_class\n");
-      EMIT("vmprefix_register_class_%c;\n", c->character);
+      EMIT("vmprefix_register_class_%c;\n", c->letter);
     }
   EMIT("\n");
 
@@ -1779,7 +1785,7 @@ jitterc_emit_register_classes_h (const struct jitterc_vm *vm)
       const struct jitterc_register_class *c
         = (gl_list_get_at (vm->register_classes, i));
       EMIT("  vmprefix_register_%c %c /* A %c-class register */;\n",
-           c->character, c->character, c->character);
+           c->letter, c->letter, c->letter);
     }
   EMIT("};\n");
   EMIT("\n");
@@ -1792,7 +1798,7 @@ jitterc_emit_register_classes_h (const struct jitterc_vm *vm)
       const struct jitterc_register_class *c
         = (gl_list_get_at (vm->register_classes, i));
       EMIT("    vmprefix_register_class_id_%c = VMPREFIX_REGISTER_%c_CLASS_ID,\n",
-           c->character, c->character);
+           c->letter, c->letter);
     }
   EMIT("\n");
   EMIT("    /* The number of register class ids, not valid as a class id itself. */\n");
@@ -1816,13 +1822,16 @@ jitterc_emit_register_classes (const struct jitterc_vm *vm)
     {
       const struct jitterc_register_class *c
         = (gl_list_get_at (vm->register_classes, i));
-      EMIT("/* The register class descriptor for %c registers. */\n", c->character);
+      EMIT("/* The register class descriptor for %c registers. */\n", c->letter);
       EMIT("const struct jitter_register_class\n");
-      EMIT("vmprefix_register_class_%c\n", c->character);
+      EMIT("vmprefix_register_class_%c\n", c->letter);
       EMIT("  = {\n");
-      EMIT("      '%c',\n", c->character);
-      EMIT("      vmprefix_register_class_id_%c,\n", c->character);
-      EMIT("      VMPREFIX_REGISTER_%c_FAST_REGISTER_NO\n", c->character);
+      EMIT("      vmprefix_register_class_id_%c,\n", c->letter);
+      EMIT("      '%c',\n", c->letter);
+      EMIT("      \"%s\",\n", c->lower_case_long_name);
+      EMIT("      \"%s\",\n", c->upper_case_long_name);
+      EMIT("      VMPREFIX_REGISTER_%c_FAST_REGISTER_NO,\n", c->letter);
+      EMIT("      %i /* Use slow registers */\n", (int) c->use_slow_registers);
       EMIT("    };\n\n");
     }
   EMIT("\n");
@@ -1836,7 +1845,7 @@ jitterc_emit_register_classes (const struct jitterc_vm *vm)
     {
       const struct jitterc_register_class *c
         = (gl_list_get_at (vm->register_classes, i));
-      EMIT("      & vmprefix_register_class_%c%s\n", c->character, comma);
+      EMIT("      & vmprefix_register_class_%c%s\n", c->letter, comma);
     }
   EMIT("    };\n");
   EMIT("\n");
@@ -1853,7 +1862,7 @@ jitterc_emit_register_classes (const struct jitterc_vm *vm)
       const struct jitterc_register_class *c
         = (gl_list_get_at (vm->register_classes, i));
       EMIT("    case '%c': return & vmprefix_register_class_%c;\n",
-           c->character, c->character);
+           c->letter, c->letter);
     }
   EMIT("    default:  return NULL;\n");
   EMIT("    }\n");
@@ -1916,9 +1925,9 @@ jitterc_emit_executor_register_access_macros (FILE *f,
       for (j = 0; j < c->fast_register_no; j ++)
         {
           EMIT("/* Expand to the %i-th fast %c-register as an lvalue. */\n",
-               j, c->character);
+               j, c->letter);
           EMIT("#define JITTER_FAST_REGISTER_%c_%i JITTER_FAST_REGISTER(%c, %i)\n\n",
-               c->character, j, c->character, j);
+               c->letter, j, c->letter, j);
         }
     }
   EMIT("/* Expand to a slow register lvalue, given an offset in bytes from the base. */\n");
@@ -1951,13 +1960,13 @@ jitterc_emit_executor_register_access_macros (FILE *f,
         = (gl_list_get_at (vm->register_classes, i));
       for (j = 0; j < c->fast_register_no; j ++)
         EMIT("#define JITTER_REGISTER_%c_%-3i  JITTER_FAST_REGISTER(%c, %i)\n",
-             c->character, j, c->character, j);
+             c->letter, j, c->letter, j);
       for (;
            j < (c->fast_register_no
                 + vmprefix_slow_register_with_access_macro_no);
            j ++)
         EMIT("#define JITTER_REGISTER_%c_%-3i  JITTER_SLOW_REGISTER(%c, %i)\n",
-             c->character, j, c->character, j);
+             c->letter, j, c->letter, j);
     }
   EMIT("\n");
   EMIT("\n");
@@ -2829,8 +2838,8 @@ jitterc_emit_executor_data_locations (FILE *f, const struct jitterc_vm *vm)
   FOR_LIST(i, comma, vm->stacks)
     {
       const struct jitterc_stack *stack = gl_list_get_at (vm->stacks, i);
-      const char * stack_name = stack->lower_case_name;
-      if (stack->optimization == jitterc_stack_optimization_tos)
+      const char * stack_name = stack->lower_case_long_name;
+      if (stack->implementation == jitterc_stack_implementation_tos)
         {
           EMIT("  JITTER_DATA_LOCATION_DATUM (\"%s top\", \n", stack_name);
           EMIT("     JITTER_STACK_TOS_TOP_NAME (whatever, jitter_state_runtime., %s));\n",
@@ -2839,12 +2848,16 @@ jitterc_emit_executor_data_locations (FILE *f, const struct jitterc_vm *vm)
           EMIT("     JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME (whatever, jitter_state_runtime., %s));\n",
                stack_name);
         }
-      else
+      else if (stack->implementation == jitterc_stack_implementation_no_tos)
+
         {
           EMIT("  JITTER_DATA_LOCATION_DATUM (\"%s top ptr\", \n", stack_name);
           EMIT("     JITTER_STACK_NTOS_TOP_POINTER_NAME (whatever, jitter_state_runtime., %s));\n",
                stack_name);
         }
+      else
+        jitter_fatal ("stack implementation unknown: this should not happen");
+        
     }
 
   /* For each register class... */
@@ -2855,7 +2868,7 @@ jitterc_emit_executor_data_locations (FILE *f, const struct jitterc_vm *vm)
       /* Emit each fast register as a datum. */
       for (j = 0; j < c->fast_register_no; j ++)
         EMIT("JITTER_DATA_LOCATION_DATUM(\"%%%%%c%i\", JITTER_REGISTER_%c_%i);\n",
-             c->character, j, c->character, j);
+             c->letter, j, c->letter, j);
     }
   EMIT("#endif // #ifndef JITTER_DISPATCH_SWITCH\n");
 }
@@ -3020,8 +3033,7 @@ jitterc_emit_executor_main_function
   EMIT("#ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("# define jitter_array_base vmprefix_array_base_register_variable\n");
   EMIT("#else\n");
-  // FIXME: I recently (after finalizing big changes in the executor header) commented-out the volatile qualifier here.  Make sure it was not needed, by re-testing.
-  EMIT("  /*volatile*/ char * restrict jitter_array_base;\n");
+  EMIT("  char * restrict jitter_array_base __attribute__ ((unused));\n");
   EMIT("#endif // #ifdef JITTER_DISPATCH_NO_THREADING\n");
   EMIT("#pragma GCC diagnostic pop\n");
   EMIT("  jitter_array_base\n");

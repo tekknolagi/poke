@@ -1,7 +1,7 @@
 /* Jitter: Bison parser.
 
    Copyright (C) 2016, 2017, 2018, 2020 Luca Saiu
-   Updated in 2019 and 2020 by Luca Saiu
+   Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -245,10 +245,15 @@ jitterc_parse_file (const char *input_file_name, bool generate_line);
 
   /* List elements are pointers to struct jitterc_instruction_template . */
   gl_list_t instruction_templates;
+
+  /* Register-class section contents and stack section contents consist in
+     pointers to VM structs holding all the data. */
+  struct jitterc_register_class *register_class;
+  struct jitterc_stack *stack;
 }
 
 %token VM END CODE /*END_CODE*/ STRING
-%token SET NTOS_STACK TOS_STACK
+%token SET
 %token INITIAL_HEADER_C INITIAL_VM1_C INITIAL_VM2_C INITIAL_VM_MAIN_C
 %token EARLY_HEADER_C LATE_HEADER_C
 %token PRINTER_C REWRITER_C
@@ -262,13 +267,18 @@ jitterc_parse_file (const char *input_file_name, bool generate_line);
 %token RULE WHEN REWRITE INTO TRUE FALSE RULE_PLACEHOLDER
 %token HOT COLD RELOCATABLE NON_RELOCATABLE CALLER CALLEE
 %token COMMUTATIVE NON_COMMUTATIVE TWO_OPERANDS
-%token REGISTER_CLASS REGISTER_LETTER
+%token REGISTER_CLASS FAST_REGISTER_NO REGISTER_OR_STACK_LETTER
+%token SLOW_REGISTERS NO_SLOW_REGISTERS
+%token STACK /*LETTER*/ C_TYPE C_INITIAL_VALUE C_ELEMENT_TYPE LONG_NAME ELEMENT_NO
+%token NON_TOS_OPTIMIZED TOS_OPTIMIZED
+%token NO_GUARD_OVERFLOW NO_GUARD_UNDERFLOW GUARD_OVERFLOW GUARD_UNDERFLOW
+
 %token FIXNUM BITSPERWORD BYTESPERWORD LGBYTESPERWORD
 
 %type <string_list> identifiers;
 %type <string> identifier placeholder string;
 %type <string> optional_identifier optional_placeholder; /* either a heap-allocated string or NULL */
-%type <character> register_letter;
+%type <character> register_or_stack_letter;
 %type <code_block> code;
 %type <mode> modes mode_character modes_rest;
 %type <bare_argument> bare_argument;
@@ -287,6 +297,9 @@ jitterc_parse_file (const char *input_file_name, bool generate_line);
 %type <instruction_template> rule_instruction_template
 %type <instruction_templates> rule_instruction_templates_zero_or_more
 
+%type <register_class> register_class_section_contents
+%type <stack>          stack_section_contents
+
 %%
 
 vm:
@@ -304,38 +317,26 @@ section:
 | wrapped_functions_section
 | wrapped_globals_section
 | register_class_section
+| stack_section
 | instruction_section
 | rule_section
 ;
 
 vm_section:
   VM
-    vm_section_conents
+    vm_section_contents
   END /*VM*/
 ;
 
-vm_section_conents:
+vm_section_contents:
   /* nothing */
-| setting vm_section_conents
-| stack_declaration vm_section_conents
+| setting vm_section_contents
+/*| stack_declaration vm_section_contents*/
 ;
 
 setting:
   SET identifier string  { jitterc_vm_add_setting (vm, $2, $3);
                            free ($2); }
-;
-
-stack_declaration:
-  TOS_STACK string string
-    { jitterc_vm_add_stack_declaration (vm, $2, $3,
-                                        jitterc_stack_optimization_tos);
-      free ($2);
-      free ($3); }
-| NTOS_STACK string string
-    { jitterc_vm_add_stack_declaration (vm, $2, $3,
-                                        jitterc_stack_optimization_no_tos);
-      free ($2);
-      free ($3); }
 ;
 
 c_section:
@@ -566,12 +567,78 @@ rule_instruction_template:
 ;
 
 register_class_section:
-  REGISTER_CLASS register_letter literal code END
-    { jitterc_add_register_class (vm, $2, $4.code, $3); }
+  REGISTER_CLASS register_or_stack_letter register_class_section_contents END
+    { jitterc_vm_register_class_set_letter ($3, $2);
+      jitterc_vm_add_register_class (vm, $3); }
 ;
 
-register_letter:
-  REGISTER_LETTER { $$ = JITTERC_TEXT [0]; }
+register_class_section_contents:
+  /* nothing */
+    { $$ = jitterc_make_register_class (); }
+| LONG_NAME string register_class_section_contents
+    { jitterc_vm_register_class_set_long_name ($3, $2);
+      $$ = $3; }
+| C_TYPE string register_class_section_contents
+    { jitterc_vm_register_class_set_c_type ($3, $2);
+      $$ = $3; }
+| C_INITIAL_VALUE string register_class_section_contents
+    { jitterc_vm_register_class_set_c_initial_value ($3, $2);
+      $$ = $3; }
+| FAST_REGISTER_NO literal register_class_section_contents
+    { jitterc_vm_register_class_set_fast_register_no ($3, $2);
+      $$ = $3; }
+| NO_SLOW_REGISTERS register_class_section_contents
+    { jitterc_vm_register_class_set_use_slow_registers ($2, 0);
+      $$ = $2; }
+| SLOW_REGISTERS register_class_section_contents
+    { jitterc_vm_register_class_set_use_slow_registers ($2, 1);
+      $$ = $2; }
+;
+
+stack_section:
+  STACK register_or_stack_letter stack_section_contents END
+    { jitterc_vm_stack_set_letter ($3, $2);
+      jitterc_vm_add_stack (vm, $3); }
+;
+
+stack_section_contents:
+  /* nothing */
+    { $$ = jitterc_vm_make_stack (); }
+| LONG_NAME string stack_section_contents
+    { jitterc_vm_stack_set_long_name ($3, $2);
+      $$ = $3; }
+| C_ELEMENT_TYPE string stack_section_contents
+    { jitterc_vm_stack_set_c_element_type ($3, $2);
+      $$ = $3; }
+| ELEMENT_NO literal stack_section_contents
+    { jitterc_vm_stack_set_element_no ($3, $2);
+      $$ = $3; }
+| C_INITIAL_VALUE string stack_section_contents
+    { jitterc_vm_stack_set_c_initial_value ($3, $2);
+      $$ = $3; }
+| NO_GUARD_UNDERFLOW stack_section_contents
+    { jitterc_vm_stack_set_guard_underflow ($2, 0);
+      $$ = $2; }
+| NO_GUARD_OVERFLOW stack_section_contents
+    { jitterc_vm_stack_set_guard_overflow ($2, 0);
+      $$ = $2; }
+| GUARD_UNDERFLOW stack_section_contents
+    { jitterc_vm_stack_set_guard_underflow ($2, 1);
+      $$ = $2; }
+| GUARD_OVERFLOW stack_section_contents
+    { jitterc_vm_stack_set_guard_overflow ($2, 1);
+      $$ = $2; }
+| TOS_OPTIMIZED stack_section_contents
+    { jitterc_vm_stack_set_implementation ($2, jitterc_stack_implementation_tos);
+      $$ = $2; }
+| NON_TOS_OPTIMIZED stack_section_contents
+    { jitterc_vm_stack_set_implementation ($2,
+                                           jitterc_stack_implementation_no_tos);
+      $$ = $2; }
+;
+
+register_or_stack_letter:
+  REGISTER_OR_STACK_LETTER { $$ = JITTERC_TEXT [0]; }
 ;
 
 instruction_section:
@@ -682,11 +749,11 @@ mode_character:
 | OUT  { $$ = jitterc_instruction_argument_mode_out; }
 ;
 
-/* FIXME: this special case for REGISTER_LETTER is ugly, and should be
+/* FIXME: this special case for REGISTER_OR_STACK_LETTER is ugly, and should be
    simplified or eliminated altogether when I decide on a new syntax for
    kinds. */
 bare_argument:
-  REGISTER_LETTER
+  REGISTER_OR_STACK_LETTER
   {
     enum jitterc_instruction_argument_kind k
       = jitterc_instruction_argument_kind_unspecified;
@@ -747,9 +814,9 @@ callingness:
    the lexicon; but when we want an identifier we indifferently accept either a
    special case, or the general one. */
 identifier:
-  BARE_ARGUMENT   { $$ = JITTERC_TEXT_COPY; }
-| REGISTER_LETTER { $$ = JITTERC_TEXT_COPY; }
-| IDENTIFIER      { $$ = JITTERC_TEXT_COPY; }
+  BARE_ARGUMENT             { $$ = JITTERC_TEXT_COPY; }
+| REGISTER_OR_STACK_LETTER  { $$ = JITTERC_TEXT_COPY; }
+| IDENTIFIER                { $$ = JITTERC_TEXT_COPY; }
 ;
 
 string:

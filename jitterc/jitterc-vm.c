@@ -1,7 +1,6 @@
 /* Jitter: VM generation-time data structures.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -238,13 +237,13 @@ jitterc_vm_add_setting (struct jitterc_vm *vm,
     jitter_fatal ("unknown setting %s", name);
 }
 
-/* Return true iff the given character is valid as a register class
-   character. */
+/* Return true iff the given character is valid as a register class or stack
+   class character. */
 static bool
-jitterc_valid_register_character (char c)
+jitterc_valid_register_or_class_character (char c)
 {
-  /* This assumes characters to be sorted alphabetically and contiguous in their
-     representation, which should be true everywhere. */
+  /* This assumes characters to be sorted alphabetically and to be contiguous in
+     their representation, which should hopefully be true everywhere. */
   return c >= 'a' && c <= 'z';
 }
 
@@ -261,7 +260,7 @@ jitterc_lookup_register_class_or_NULL (const struct jitterc_vm *vm, char c)
       struct jitterc_register_class *a_class
         = ((struct jitterc_register_class *)
            gl_list_get_at (vm->register_classes, i));
-      if (a_class->character == c)
+      if (a_class->letter == c)
         return a_class;
     }
 
@@ -281,81 +280,332 @@ jitterc_lookup_register_class (const struct jitterc_vm *vm, char c)
     jitter_fatal ("no register class has the character '%c'", c);
 }
 
-
 struct jitterc_register_class*
-jitterc_add_register_class (struct jitterc_vm *vm,
-                            char character,
-                            const char *c_type,
-                            jitter_int fast_register_no)
+jitterc_make_register_class (void)
 {
-  /* First make sure that no other register is defined with the same character. */
-  if (jitterc_lookup_register_class_or_NULL (vm, character) != NULL)
-    jitter_fatal ("register class with letter '%c' defined twice", character);
-
-  /* Validate character and fast register number. */
-  if (! jitterc_valid_register_character (character))
-    jitter_fatal ("invalid register class letter '%c'", character);
-  if (fast_register_no < 0)
-    jitter_fatal ("negative fast register number for class '%c'", character);
-
-  /* Allocate an initialize the register class descriptor. */
+  // FIXME: validate fields later.
+  /* Allocate an initialize the register class descriptor.  Some fields have
+     intentionally invalid defaults which must be changed, or set to a natural
+     default. */
   struct jitterc_register_class *res
     = xmalloc (sizeof (struct jitterc_register_class));
-  res->character = character;
-  res->c_type = jitter_clone_string (c_type);
-  res->fast_register_no = fast_register_no;
-
-  /* Add it to the VM. */
-  gl_list_add_last (vm->register_classes, res);
+  res->letter = '\0';             /* INvalid default. */
+  res->long_name = NULL;          /* INvalid default. */
+  res->c_type = NULL;             /* INvalid default. */
+  res->c_initial_value = NULL;    /* VALID default. */
+  res->fast_register_no = -1;     /* INvalid default. */
+  res->use_slow_registers = -1;   /* INvalid default. */
 
   /* Return the new element. */
   return res;
 }
 
 void
-jitterc_vm_add_stack_declaration (struct jitterc_vm *vm,
-                                  const char *c_element_type,
-                                  const char *lower_case_name,
-                                  enum jitterc_stack_optimization optimization)
+jitterc_vm_register_class_set_letter (struct jitterc_register_class* rc,
+                                      char letter)
 {
-  /* Allocate and initialize the stack descriptor. */
-  struct jitterc_stack *stack
-    = xmalloc (sizeof (struct jitterc_stack));
-  stack->c_element_type = jitter_clone_string (c_element_type);
-  stack->lower_case_name = jitter_clone_string (lower_case_name);
-  stack->optimization = optimization;
+  if (rc->letter != '\0')
+    jitter_fatal ("register class letter '%c' set twice", letter);
+  rc->letter = letter;
+}
+void
+jitterc_vm_register_class_set_long_name (struct jitterc_register_class* rc,
+                                         const char *long_name)
+{
+  if (rc->long_name != NULL)
+    jitter_fatal ("register class: long name set twice");
+  rc->long_name = jitter_clone_string (long_name);
+}
+void
+jitterc_vm_register_class_set_c_type (struct jitterc_register_class* rc,
+                                      const char *c_type)
+{
+  if (rc->c_type != NULL)
+    jitter_fatal ("register class: c-type set twice");
+  rc->c_type = jitter_clone_string (c_type);
+}
+void
+jitterc_vm_register_class_set_c_initial_value (struct jitterc_register_class* rc,
+                                               const char *c_initial_value)
+{
+  if (rc->c_initial_value != NULL)
+    jitter_fatal ("register class: c-initial_value set twice");
+  rc->c_initial_value = jitter_clone_string (c_initial_value);
+}
+void
+jitterc_vm_register_class_set_fast_register_no (struct jitterc_register_class* rc,
+                                                size_t fast_register_no)
+{
+  if (rc->fast_register_no != -1)
+    jitter_fatal ("register class: fast-register-no set twice");
+  rc->fast_register_no = fast_register_no;
+}
+void
+jitterc_vm_register_class_set_use_slow_registers (struct jitterc_register_class
+                                                  * rc, int use_slow_registers)
+{
+  if (rc->use_slow_registers != -1)
+    jitter_fatal ("register class: slow register use set twice");
+  rc->use_slow_registers = use_slow_registers;
+}
 
-  /* Compute the upper-case version of the stack name, and validate the name at
-     the same time. */
-  stack->upper_case_name = jitter_clone_string (lower_case_name);
-  size_t name_length = strlen (lower_case_name);
-  if (name_length == 0)
-    jitter_fatal ("empty stack name");
-  int i;
-  for (i = 0; i < name_length; i ++)
+/* Destructively change the case of the pointed '\0'-terminated string, either
+   to lowercase or to uppercase according to the value of to_lower.  Fail
+   fatally if any of the following is true:
+   - the pointer is NULL;
+   - the string is empty;
+   - the first character is not an ASCII letter;
+   - any character is not an ASCII letter or number. */
+static void
+jitterc_change_case (char *s, bool to_lower, const char *name_for_errors)
+{
+  if (s == NULL)
+    jitter_fatal ("%s is empty", name_for_errors);
+  if (* s == '\0')
+    jitter_fatal ("%s is empty", name_for_errors);
+  if (! c_isalpha (* s))
+    jitter_fatal ("%s begins with '%c' which is not an ASCII letter",
+                  name_for_errors, * s);
+  char * p;
+  for (p = s; * p != '\0'; p ++)
     {
-      if (! c_isalpha (lower_case_name [i]))
-        jitter_fatal ("the stack name \"%s\" contains the non-alphabetic "
-                      " character '%c' (0x%x)", lower_case_name,
-                      lower_case_name [i], lower_case_name [i]);
-      if (! c_islower (lower_case_name [i]))
-        jitter_fatal ("the stack name \"%s\" contains the upper-case "
-                      "character '%c' (0x%x)", lower_case_name,
-                      lower_case_name [i], lower_case_name [i]);
-      stack->upper_case_name [i] = toupper (lower_case_name [i]);
+      if (* p == '-')
+        * p = '_';
+      if (! c_isalpha (* p) && *p != '_')
+        jitter_fatal ("%s \"%s\" contains the non-alphabetic non-'_' non-'-' "
+                      " character '%c' (0x%x)", name_for_errors, s,
+                      * p, *p);
+      if (to_lower)
+        * p = tolower (* p);
+      else
+        * p = toupper (* p);
     }
+}
 
-  /* Make sure that there is no other stack in the VM with the same name. */
+/* Fail fatally if the given letter or lower-case long name is already in use
+   for some existing register class or stack in the pointed VM. */
+static void
+jitterc_ensure_register_class_or_stack_consistency (struct jitterc_vm *vm,
+                                                    char letter,
+                                                    const char *
+                                                    lower_case_long_name)
+{
+  int i;
+  for (i = 0; i < gl_list_size (vm->register_classes); i ++)
+    {
+      const struct jitterc_register_class *other
+        = gl_list_get_at (vm->register_classes, i);
+      if (! strcmp (lower_case_long_name, other->lower_case_long_name))
+        jitter_fatal ("duplicate name \"%s\" in use by register class",
+                      lower_case_long_name);
+      if (letter == other->letter)
+        jitter_fatal ("duplicate letter \'%c\' in use by register class",
+                      letter);
+    }
   for (i = 0; i < gl_list_size (vm->stacks); i ++)
     {
-      const struct jitterc_stack *other = gl_list_get_at (vm->stacks, i);
-      if (! strcmp (lower_case_name, other->lower_case_name))
-        jitter_fatal ("duplicate stack name \"%s\"", lower_case_name);
+      const struct jitterc_stack *other
+        = gl_list_get_at (vm->stacks, i);
+      if (! strcmp (lower_case_long_name, other->lower_case_long_name))
+        jitter_fatal ("duplicate name \"%s\", in use by stack",
+                      lower_case_long_name);
+      if (letter == other->letter)
+        jitter_fatal ("duplicate letter \'%c\' in use by stack", letter);
     }
+}
+
+void
+jitterc_vm_add_register_class (struct jitterc_vm *vm,
+                               struct jitterc_register_class *rc)
+{
+  /* Fail if any fields which requires initialisation was not initialised. */
+  if (rc->letter == '\0')
+    jitter_fatal ("register class without a letter");
+  if (! jitterc_valid_register_or_class_character (rc->letter))
+    jitter_fatal ("invalid register class letter '%c'", rc->letter);
+  if (rc->long_name == NULL)
+    {
+      char long_name [100];
+      sprintf (long_name, "register_class_%c", rc->letter);
+      rc->long_name = jitter_clone_string (long_name);
+    }
+
+  /* Set any remaining uninitialised value to a reasonable default. */
+  if (rc->fast_register_no == -1)
+    rc->fast_register_no = 0;
+  if (rc->c_type == NULL)
+    rc->c_type = "union jitter_word";
+  if (rc->use_slow_registers == -1)
+    rc->use_slow_registers = 1;
+
+  /* Set fields which are always uninitalised at this point to a reasonable
+     default. */
+  rc->lower_case_long_name = jitter_clone_string (rc->long_name);
+  rc->upper_case_long_name = jitter_clone_string (rc->long_name);
+  jitterc_change_case (rc->lower_case_long_name, true,
+                       "register class long name");
+  jitterc_change_case (rc->upper_case_long_name, false,
+                       "register class long name");
+
+  /* Check that there are no name clashes with other register classes or with
+     stacks. */
+  jitterc_ensure_register_class_or_stack_consistency (vm,
+                                                      rc->letter,
+                                                      rc->lower_case_long_name);
+
+  /* Add the register class to the VM. */
+  gl_list_add_last (vm->register_classes, rc);
+}
+
+struct jitterc_stack *
+jitterc_vm_make_stack (void)
+{
+  /* Allocate a stack descriptor with default values, some of which are made
+     intentionally invalid at initialisation and need to be changed. */
+  struct jitterc_stack *stack
+    = xmalloc (sizeof (struct jitterc_stack));
+  stack->letter = '\0';                            /* INvalid. */
+  stack->c_type = NULL;                            /* INvalid. */
+  stack->long_name = NULL;                         /* INvalid. */
+  stack->c_initial_value = NULL;                   /* VALID. */
+  stack->element_no = -1;                          /* INvalid. */
+  stack->implementation
+    = jitterc_stack_implementation_uninitialized;  /* INvalid. */
+  stack->guard_underflow = -1;                     /* INvalid. */
+  stack->guard_overflow = -1;                      /* INvalid. */
+
+  return stack;
+}
+
+void
+jitterc_vm_stack_set_letter (struct jitterc_stack *s,
+                             char letter)
+{
+  if (s->letter != '\0')
+    jitter_fatal ("stack letter '%c' set twice", letter);
+  s->letter = letter;
+}
+void
+jitterc_vm_stack_set_long_name (struct jitterc_stack *s,
+                                const char *long_name)
+{
+  if (s->long_name != NULL)
+    jitter_fatal ("stack: long name set twice");
+  s->long_name = jitter_clone_string (long_name);
+}
+void
+jitterc_vm_stack_set_c_element_type (struct jitterc_stack *s,
+                                     const char *c_type)
+{
+  if (s->c_type != NULL)
+    jitter_fatal ("stack: c-type set twice");
+  s->c_type = jitter_clone_string (c_type);
+}
+void
+jitterc_vm_stack_set_element_no (struct jitterc_stack *s,
+                                 size_t element_no)
+{
+  if (s->element_no != -1)
+    jitter_fatal ("stack: element-no set twice");
+  s->element_no = element_no;
+}
+void
+jitterc_vm_stack_set_c_initial_value (struct jitterc_stack *s,
+                                      const char *c_initial_value)
+{
+  if (s->c_initial_value != NULL)
+    jitter_fatal ("stack: c-initial_value set twice");
+  s->c_initial_value = jitter_clone_string (c_initial_value);
+}
+void
+jitterc_vm_stack_set_implementation (struct jitterc_stack * s,
+                                     enum jitterc_stack_implementation i)
+{
+  if (s->implementation != jitterc_stack_implementation_uninitialized)
+    jitter_fatal ("stack: implementation set twice");
+  s->implementation = i;
+}
+void
+jitterc_vm_stack_set_guard_underflow (struct jitterc_stack * s,
+                                      int value)
+{
+  if (s->guard_underflow != -1)
+    jitter_fatal ("stack: guard-underflow set twice");
+  s->guard_underflow = value;
+}
+void
+jitterc_vm_stack_set_guard_overflow (struct jitterc_stack * s,
+                                      int value)
+{
+  if (s->guard_overflow != -1)
+    jitter_fatal ("stack: guard-overflow set twice");
+  s->guard_overflow = value;
+}
+
+void
+jitterc_vm_add_stack (struct jitterc_vm *vm,
+                      struct jitterc_stack *stack)
+{
+  /* Fail if any fields which requires initialisation was not initialised. */
+  if (stack->letter == '\0')
+    jitter_fatal ("stack without a letter");
+  if (! jitterc_valid_register_or_class_character (stack->letter))
+    jitter_fatal ("invalid stack letter '%c'", stack->letter);
+  if (stack->long_name == NULL)
+    jitter_fatal ("stack '%c' without a long name", stack->letter);
+
+  /* Set any remaining uninitialised value to a reasonable default. */
+  if (stack->element_no == -1)
+    stack->element_no = 8192;
+  if (stack->c_type == NULL)
+    stack->c_type = "union jitter_word";
+  if (stack->implementation == jitterc_stack_implementation_uninitialized)
+    stack->implementation = jitterc_stack_implementation_no_tos;
+  if (stack->guard_underflow == -1)
+    stack->guard_underflow = 1;
+  if (stack->guard_overflow == -1)
+    stack->guard_overflow = 1;
+
+  /* Set fields which are always uninitalised at this point to a reasonable
+     default. */
+  stack->lower_case_long_name = jitter_clone_string (stack->long_name);
+  stack->upper_case_long_name = jitter_clone_string (stack->long_name);
+  jitterc_change_case (stack->lower_case_long_name, true,
+                       "stack long name");
+  jitterc_change_case (stack->upper_case_long_name, false,
+                       "stack long name");
+
+  /* Make sure that there is no other stack or register in the VM with the
+     same name or letter. */
+  jitterc_ensure_register_class_or_stack_consistency
+     (vm, stack->letter, stack->lower_case_long_name);
 
   /* Add the descriptor to the VM. */
   gl_list_add_last (vm->stacks, stack);
 }
+
+
+/* Lookup a stack descriptor given its character; return a pointer to it, or
+   NULL if no stack uses the same letter. */
+__attribute__ ((unused))
+static struct jitterc_stack*
+jitterc_lookup_stack_or_NULL (const struct jitterc_vm *vm, char c)
+{
+  /* I expect stacks to be very few in number; it's useless to use
+     elaborate data structure for this. */
+  int i;
+  for (i = 0; i < gl_list_size (vm->stacks); i ++)
+    {
+      struct jitterc_stack *a_class
+        = ((struct jitterc_stack *) gl_list_get_at (vm->stacks, i));
+      if (a_class->letter == c)
+        return a_class;
+    }
+
+  /* We didn't find the stack. */
+  return NULL;
+}
+
 
 
 
@@ -713,7 +963,7 @@ jitterc_make_specialized_instruction_argument_specialized_register
                                  unspecialized->register_class_character);
   /* Make sure that the register we are specializing on is actually allowed for
      the original argument. */
-  assert (unspecialized->register_class_character == register_->class->character);
+  assert (unspecialized->register_class_character == register_->class->letter);
 
   res->residual = false;
   res->nonresidual_register = (struct jitterc_register *) register_;
@@ -1248,8 +1498,8 @@ jitterc_specialize_recursive (struct jitterc_vm *vm,
   while (false)
 
   /* The order is important here, because it will be followed in the recognizer.
-     Specific cases must always come before general case so that, for example, a
-     specific literal is matched before a residual literal. */
+     Specific cases must always come before general case so that a non-residual
+     literal is matched before a residual literal. */
   if (kind & jitterc_instruction_argument_kind_register)
     {
       struct jitterc_register_class *class
@@ -1269,8 +1519,8 @@ jitterc_specialize_recursive (struct jitterc_vm *vm,
         }
 
       /* Also residualize the register to support the slow-register case, when
-         slow registers are enabled. */
-      if (vm->use_slow_registers)
+         slow registers are enabled in the class. */
+      if (class->use_slow_registers)
         {
           struct jitterc_specialized_argument *rsa
             = jitterc_make_specialized_instruction_argument_residual_register
@@ -1331,15 +1581,13 @@ jitterc_specialize_recursive (struct jitterc_vm *vm,
 void
 jitterc_specialize (struct jitterc_vm *vm,
                     int max_fast_register_no_per_class,
-                    int max_nonresidual_literal_no,
-                    bool use_slow_registers)
+                    int max_nonresidual_literal_no)
 {
   /* Remember the limits on how many fast registers we want per class and on the
      number of nonresidual literals (or -1 if there is no limit, in either case),
      and whether we should use slow registers as well. */
   vm->max_fast_register_no_per_class = max_fast_register_no_per_class;
   vm->max_nonresidual_literal_no = max_nonresidual_literal_no;
-  vm->use_slow_registers = use_slow_registers;
 
   /* First generate the special specialized instructions.  Those have to be the
      first ones, an in particular the !INVALID specialized instruction must have

@@ -1,7 +1,6 @@
 ## An uninspired and unoriginal Jitter VM, useful as an example.
 
-## Copyright (C) 2016, 2017, 2019 Luca Saiu
-## Updated in 2020 by Luca Saiu
+## Copyright (C) 2016, 2017, 2019, 2020 Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -36,11 +35,6 @@ end
 
 vm
   set prefix "uninspired"
-  tos-stack "union jitter_word" "stack"
-#  ntos-stack "union jitter_word" "stack"
-
-#  ntos-stack "union jitter_word" "return"
-  ntos-stack "struct exception_handler" "handlers"
 end
 
 
@@ -53,7 +47,7 @@ state-struct-runtime-c
 end
 
 
-## Register classes.
+## Runtime VM data structures.
 #################################################################
 
 early-header-c
@@ -90,30 +84,46 @@ early-header-c
   end
 end
 
-register-class r 1 # 1 #2 #3
-  code
-    union vmprefix_currently_unique_kind_register_t
-  end
+stack s
+  long-name "stack"
+  c-element-type "union jitter_word"
+  c-initial-value "0"
+  element-no 4096
+  tos-optimized
+  guard-underflow
+  guard-overflow
 end
 
-register-class f 0 # 0 #2
-  code
-    //float
-    //double
-    VECTOR_ELEMENT_TYPE
-  end
+stack h
+  long-name "handlers"
+  c-element-type "struct exception_handler"
+  element-no 4096
+  non-tos-optimized
+  guard-underflow
+  guard-overflow
 end
 
-register-class v 0
-  code
-    vector
-  end
+register-class r
+  long-name "general_registers"
+  c-type "union vmprefix_currently_unique_kind_register_t"
+  fast-register-no 1 #2 #2
 end
 
-register-class c 0
-  code
-    unsigned char
-  end
+register-class f
+  # c-type "float"
+  # c-type "double"
+  c-type "VECTOR_ELEMENT_TYPE"
+  fast-register-no 0 #2
+end
+
+register-class v
+  c-type "vector"
+  fast-register-no 0 #2
+end
+
+register-class c
+  c-type "char"
+  fast-register-no 0 #2
 end
 
 

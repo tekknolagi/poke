@@ -41,17 +41,24 @@
    machine-generated, statically-allocated constant. */
 struct jitter_register_class
 {
+  /* The register class identifier, to be cast to an enum
+     vmprefix_register_class_id value. */
+  jitter_uint register_class_id;
+
   /* The character uniquely identifying the register class within the VM.  For
      example registers of the class with character 'r' will be called "%r0",
      "%r1", and so on. */
   char character;
 
-  /* The register class identifier, to be cast to an enum
-     vmprefix_register_class_id value. */
-  jitter_uint register_class_id;
+  /* A long name for this register class. */
+  char *lower_case_long_name;
+  char *upper_case_long_name;
 
   /* How many fast registers exist for this class. */
   size_t fast_register_no;
+
+  /* Non-false iff this class admits slow registers as well. */
+  bool use_slow_registers;
 };
 
 
