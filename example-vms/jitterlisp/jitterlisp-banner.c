@@ -89,9 +89,9 @@ jitterlisp_interactive_banner (void)
                                          JITTER_DISPATCH_NAME_STRING);
   jitterlisp_interactive_banner_feature ("Compiled primitive safety",
 #if defined (JITTERLISP_UNSAFE)
-                                         "no type checking (unsafe!)"
+                                         "no type or overflow checking (unsafe!)"
 #else
-                                         "run-time type checking"
+                                         "run-time type and overflow checking"
 #endif // safety
                                          );
   jitterlisp_interactive_banner_feature ("Heap memory handling",
