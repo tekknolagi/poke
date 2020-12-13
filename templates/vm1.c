@@ -482,8 +482,10 @@ vmprefix_finalize (void)
 
   /* Finalize the state list.  If it is not empty then something has gone
      wrong earlier. */
-  assert (the_vmprefix_vm.states.first == NULL);
-  assert (the_vmprefix_vm.states.last == NULL);
+  if (the_vmprefix_vm.states.first != NULL
+      || the_vmprefix_vm.states.last != NULL)
+    jitter_fatal ("not every state structure was destroyed before VMPREFIX "
+                  "finalisation.");
 }
 
 
