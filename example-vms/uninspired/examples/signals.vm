@@ -27,11 +27,10 @@
 # it.  SIGQUIT, which is not handled, kills the program.
 
 
-# Install the signal handler.  This would be done from C rather than VM code
-# in most applications.
-#
-# This in particular handles SIGINT, but. not SIGQUIT.  When a signal arrives
-# the handler sets a notification flag and immediately returns.
+# Install the signal handler.  This would be done from C rather than from VM
+# code in most applications.
+# This VM instruction installs a handler for SIGINT.  When a signal arrives the
+# handler sets a notification flag in every VM state, then immediately returns.
         install-signal-handler
 
 # An apparently infinite loop, incrementing a counter without checking for
