@@ -3421,6 +3421,16 @@ jitterc_emit_vm_name_macros_vm1 (const struct jitterc_vm *vm)
   jitterc_fclose (f);
 }
 
+static void
+jitterc_emit_executor_general_purpose_state_data_access_macros
+   (FILE *f, const struct jitterc_vm *vm)
+{
+  EMIT("/* Most of the needed macros are in jitter-executor.h .  This however\n");
+  EMIT("   needs to be here, as it relies on a prefix to be substituted. */\n");
+  EMIT("#define JITTER_STATE_BACKING  \\\n");
+  EMIT("  (jitter_original_state->vmprefix_state_backing)\n");
+}
+
 /* Emit access macros for special-purpose data, to be used from VM code. */
 static void
 jitterc_emit_executor_special_purpose_state_data_access_macros
@@ -3491,6 +3501,9 @@ jitterc_emit_executor (const struct jitterc_vm *vm)
   EMIT("#define JITTER_FAST_BRANCH_PREFIX vmprefix_\n\n");
 
   jitterc_emit_vm_name_macros (f, vm);
+
+  /* Emit macros to access general-purpose state data. */
+  jitterc_emit_executor_general_purpose_state_data_access_macros (f, vm);
 
   /* Emit macros to access special-purpose state data. */
   jitterc_emit_executor_special_purpose_state_data_access_macros (f, vm);

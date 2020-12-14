@@ -441,9 +441,8 @@
 #define JITTER_STATE_RUNTIME  \
   jitter_state_runtime
 
-/* Expand to the current VM state backing, as a struct. */
-#define JITTER_STATE_BACKING  \
-  (jitter_original_state->vmprefix_state_backing)
+/* The macro JITTER_STATE_BACKING expands to the current VM state backing, as a
+   struct.  It is defined in machine-generated code. */
 
 /* Expand to an l-value referrign the named field in the current VM state
    runtime. */
