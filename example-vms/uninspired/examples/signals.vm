@@ -23,7 +23,7 @@
 
 # An example using signals and safe points.  The user is invited to try SIGINT
 # and SIGQUIT -- from GNU by pressing respectively C-c and C-\
-# SIGINT will therefore print a snapshot of the current value, and then reset
+# .  SIGINT will therefore print a snapshot of the current value, and then reset
 # it.  SIGQUIT, which is not handled, kills the program.
 
 
