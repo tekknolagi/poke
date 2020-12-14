@@ -121,6 +121,10 @@
 /* Define if the CPU is a MIPS, either 32-bit or 64-bit. */
 #undef JITTER_HOST_CPU_IS_MIPS
 
+/* Define if the CPU is a MIPS, either 32-bit or 64-bit, release 6 or later.
+   Release 6 introduces many useful but incompatible changes. */
+#undef JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER
+
 /* Define if the CPU is a PA-RISC, either 32-bit or 64-bit. */
 #undef JITTER_HOST_CPU_IS_PARISC
 

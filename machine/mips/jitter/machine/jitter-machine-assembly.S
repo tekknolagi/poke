@@ -19,11 +19,18 @@
    along with Jitter.  If not, see <http://www.gnu.org/licenses/>. */
 
 
+/* Include headers and common code.
+ * ************************************************************************** */
+
 /* Include the architecture-dependent CPP macro definitions. */
 #include <jitter/machine/jitter-machine.h>
 
 /* Include the architecture-independent Gas macro definitions. */
 #include <jitter/jitter-machine-common.S>
+
+
+/* Global configuration.
+ * ************************************************************************** */
 
 .text
 
@@ -31,6 +38,15 @@
    about the encoding of each assembly instruction, I will certainly not use
    pseudo-instructions expanding to hidden uses of $1. */
 .set noat
+
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+/* Make sure we are using the correct MIPS variant. */
+.set arch=mips32r6
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+
+
+/* Snippets.
+ * ************************************************************************** */
 
 /* Here come the actual snippet definitions, containing the code to be copied
    and patched.  Notice that the order matters, and the calls to jitter_snippet
@@ -106,6 +122,16 @@ jitter_snippet load_sign_extended_16bit_to_memory,  \
 jitter_snippet load_32bit_to_memory,  \
            <nop>
 
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+/* Branch relative using a 26-bit displacement from the next instruction,
+   left-shifted by two bits.  No delay slot. */
+jitter_snippet branch_unconditional_28bit_compact,  \
+           <1: bc 1b> 
+
+/* The linking equivalent of the instruction above. */
+jitter_snippet branch_and_link_28bit_compact,  \
+           <1: balc 1b>
+#else /* pre-r6 */
 /* Jump to an absolute address whose six most significant bits are the same
    as the ones in the address of the jumping instruction, the next 26 are
    specified as an immediate, and the last two are zero.  The opcode takes
@@ -131,7 +157,18 @@ jitter_snippet jump_unconditional_28bit_pseudo_direct,  \
 jitter_snippet jump_and_link_28bit_pseudo_direct,  \
            <.long 0xc000000>,                      \
            <JITTER_MIPS_NOP>
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
 
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+/* Again, this snippet is empty because the inline asm code is sufficient.  Its
+   offset field is the only part to be patched. */
+jitter_snippet branch_conditional_compact_18bit_offset,  \
+        <>
+
+/* Likewise, this is an empty snippet. */
+jitter_snippet branch_conditional_compact_23bit_offset,  \
+        <>
+#else /* pre-r6 */
 /* This snippet does nothing and takes zero bytes: all the complexity is in the
    inline asm and in the patch-in replacement code, which only replaces the
    branch offset without touching the rest of the instruction.  This solution is
@@ -141,3 +178,5 @@ jitter_snippet jump_and_link_28bit_pseudo_direct,  \
    register assignment. */
 jitter_snippet branch_conditional_18bit_offset,  \
         <>
+
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)

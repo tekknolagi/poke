@@ -26,11 +26,68 @@
 
 #include <jitter/jitter-fatal.h>
 
+#include <jitter/jitter-arithmetic.h>
 #include <jitter/jitter-patch.h>
 #include <jitter/jitter-machine-common.h>
 
 #include "jitter-machine.h"
 
+
+/* Instruction encoding.
+ * ************************************************************************** */
+
+/* In the specification "MIPS bit designations are always little-endian"; here I
+   must explicitly reverse the field order for big-endian configurations.  I
+   wish there was a prettier way to do it, but luckily the instruction encodings
+   to patch are very few in number. */
+
+/* Expand to a struct definition with the given name, suitable to represent an
+   instruction encoded with an immediate of the given represented size (in the
+   base of branch displacements two low 0 bits may not be represented) in the
+   little-endian-low bits. */
+#if JITTER_WORDS_BIGENDIAN
+# define JITTER_MIPS_INSTRUCTION_STRUCT(struct_name, offset_represented_width)  \
+    __attribute__ ((packed))                                                    \
+    struct struct_name                                                          \
+    {                                                                           \
+      /* Other fields, including the opcode. */                                 \
+      unsigned uninteresting  : (32 - (offset_represented_width));              \
+      /* The displacement, of which two low bits are not represented. */        \
+      unsigned immediate      : (offset_represented_width);                     \
+    };
+#else /* little-endian */
+# define JITTER_MIPS_INSTRUCTION_STRUCT(struct_name, offset_represented_width)  \
+    __attribute__ ((packed))                                                    \
+    struct struct_name                                                          \
+    {                                                                           \
+      /* The same fields above, swapped for the little-endian case. */          \
+      unsigned immediate      : (offset_represented_width);                     \
+      unsigned uninteresting  : (32 - (offset_represented_width));              \
+    };
+#endif // #if JITTER_WORDS_BIGENDIAN
+
+/* Encoding for the instructions we have to patch. */
+
+/* An or, xor or add instruction having a 16-bit immediate. */
+JITTER_MIPS_INSTRUCTION_STRUCT (jitter_mips_16_bit_immediate_instruction, 16);
+
+/* A branch instruction having a 28-bit immediate displacement, of which the low
+   26 bits are encoded. */
+JITTER_MIPS_INSTRUCTION_STRUCT (jitter_mips_28_bit_branch_instruction, 26);
+
+/* A branch instruction having a 18-bit immediate displacement, of which the low
+   16 bits are encoded. */
+JITTER_MIPS_INSTRUCTION_STRUCT (jitter_mips_18_bit_branch_instruction, 16);
+
+/* A branch instruction having a 23-bit immediate displacement, of which the low
+   21 bits are encoded. */
+JITTER_MIPS_INSTRUCTION_STRUCT (jitter_mips_23_bit_branch_instruction, 21);
+
+
+
+
+/* Icache invalidation.
+ * ************************************************************************** */
 
 void
 jitter_invalidate_icache (char *from, size_t byte_no)
@@ -38,6 +95,12 @@ jitter_invalidate_icache (char *from, size_t byte_no)
   /* This doesn't need to do anything on MIPS.  The GCC builtin
      __builtin___clear_cache seems sufficient, on the machines I've tested. */
 }
+
+
+
+
+/* Snippet selection.
+ * ************************************************************************** */
 
 enum jitter_snippet_to_patch
 jitter_snippet_for_loading_register (const char *immediate_pointer,
@@ -114,15 +177,12 @@ jitter_patch_load_immediate_to_register (char *native_code,
     case jitter_snippet_load_sign_extended_16bit_to_register_5:
     case jitter_snippet_load_zero_extended_16bit_to_memory:
     case jitter_snippet_load_sign_extended_16bit_to_memory:
-      /* Each of these snippets is implemented by a single 32-bit instruction
-         with a literal in the rightmost 16 bits; they can all be patched in
-         the same way. */
-#ifdef JITTER_WORDS_BIGENDIAN
-      memcpy (native_code + 2, &low, 2);
-#else
-      memcpy (native_code + 0, &low, 2);
-#endif // #ifdef JITTER_WORDS_BIGENDIAN
-      break;
+      {
+        struct jitter_mips_16_bit_immediate_instruction *instruction
+          = (struct jitter_mips_16_bit_immediate_instruction *) native_code;
+        instruction->immediate = low;
+        break;
+      }
     case jitter_snippet_load_32bit_to_register_0:
     case jitter_snippet_load_32bit_to_register_1:
     case jitter_snippet_load_32bit_to_register_2:
@@ -130,18 +190,17 @@ jitter_patch_load_immediate_to_register (char *native_code,
     case jitter_snippet_load_32bit_to_register_4:
     case jitter_snippet_load_32bit_to_register_5:
     case jitter_snippet_load_32bit_to_memory:
-      /* Not much more difficult.  Here we have two 32-bit instructions to
-         patch, each with a 16-bit literal in the end.  The high part comes
-         first. */
-#ifdef JITTER_WORDS_BIGENDIAN
-      memcpy (native_code + 2, &high, 2);
-      memcpy (native_code + 6, &low, 2);
-#else
-      memcpy (native_code + 0, &high, 2);
-      memcpy (native_code + 4, &low, 2);
-#endif // #ifdef JITTER_WORDS_BIGENDIAN
-      break;
-
+      {
+        /* Not much more difficult than the previous case.  Here we have two
+           32-bit instructions to patch, each with a 16-bit immediate always in
+           the same position.  The high part comes first. */
+        struct jitter_mips_16_bit_immediate_instruction *first
+          = (struct jitter_mips_16_bit_immediate_instruction *) native_code;
+        struct jitter_mips_16_bit_immediate_instruction *second = first + 1;
+        first->immediate = high;
+        second->immediate = low;
+        break;
+      }
     default:
       jitter_fatal ("impossible");
     }
@@ -165,13 +224,28 @@ jitter_snippet_for_patch_in (const struct jitter_patch_in_descriptor *dp)
   switch (patch_in_case)
     {
     case JITTER_PATCH_IN_CASE_FAST_BRANCH_UNCONDITIONAL:
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+      return jitter_snippet_branch_unconditional_28bit_compact;
+#else
       return jitter_snippet_jump_unconditional_28bit_pseudo_direct;
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
 
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+    case JITTER_PATCH_IN_CASE_FAST_BRANCH_R6_CONDITIONAL_ZERO:
+      return jitter_snippet_branch_conditional_compact_23bit_offset;
+    case JITTER_PATCH_IN_CASE_FAST_BRANCH_R6_CONDITIONAL_OTHER:
+      return jitter_snippet_branch_conditional_compact_18bit_offset;
+#else
     case JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ANY:
       return jitter_snippet_branch_conditional_18bit_offset;
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
 
     case JITTER_PATCH_IN_CASE_FAST_BRANCH_BRANCH_AND_LINK:
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+      return jitter_snippet_branch_and_link_28bit_compact;
+#else
       return jitter_snippet_jump_and_link_28bit_pseudo_direct;
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
 
     default:
       jitter_fatal ("jitter_snippet_for_patch_in: unsupported patch-in case");
@@ -188,13 +262,51 @@ jitter_patch_patch_in (char *native_code,
                        const struct jitter_patch_in_descriptor *descriptor,
                        enum jitter_snippet_to_patch snippet)
 {
+  char *jump_target = * (char**) immediate_pointer;
+  char *jump_address __attribute__ ((unused)) = native_code;
+
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+  /* Every R6 branch is patched in exactly the same way.  Only the displacement
+     width changes. */
+# define JITTER_R6_CASE_(snippet_name, branch_width)                           \
+    case snippet_name:                                                         \
+      {                                                                        \
+        /* The branch displacement is measured from the beginning of the       \
+           instruction following the branch. */                                \
+        char *jump_origin = native_code + 4;                                   \
+        int64_t displacement = jump_target - jump_origin;                      \
+                                                                               \
+        /* Make a quick sanity check then patch the branching instruction      \
+           with the offset. */                                                 \
+        struct JITTER_CONCATENATE_THREE (jitter_mips_,                         \
+                                         branch_width,                         \
+                                         _bit_branch_instruction)              \
+          *instruction                                                         \
+          = (struct JITTER_CONCATENATE_THREE (jitter_mips_,                    \
+                                              branch_width,                    \
+                                              _bit_branch_instruction)         \
+             *) native_code;                                                   \
+        if (displacement % 4 != 0)                                             \
+          jitter_fatal (JITTER_STRINGIFY (snippet_name)                        \
+                        " %i-bit displacement branch: misaligned "             \
+                        "instruction", (int) (branch_width));                  \
+        if (! JITTER_FITS_IN_BITS_SIGN_EXTENDED (displacement, branch_width))  \
+          jitter_fatal (JITTER_STRINGIFY (snippet_name)                        \
+                        " %i-bit displacement branch: far branch",             \
+                        (int) (branch_width));                                 \
+        /* GCC guarantees that this is an arithmetic right shift, and this     \
+           code is only used with GCC. */                                      \
+        instruction->immediate = displacement >> 2;                            \
+        break;                                                                 \
+      }
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+
   switch (snippet)
     {
+#if ! defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
     case jitter_snippet_branch_conditional_18bit_offset:
       {
-        char *jump_target = * (char**) immediate_pointer;
-        char *jump_address = native_code;
-        char *delay_slot_address = jump_address + 4;
+        char *delay_slot_address = native_code + 4;
 
         /* Check that the jump origin and target addresses are 32-bit
            aligned. */
@@ -219,31 +331,30 @@ jitter_patch_patch_in (char *native_code,
         uint32_t instruction
           = (old_instruction & ~ 0xffff) | jump_offset_shifted;
 
-        /* Write the patched instruction in place of the original instruction. */
-        memcpy (native_code, & instruction, 4);
+        /* Write the patched instruction in place of the original instruction.
+           This store is aligned to 32 bits if the native_code pointer actually
+           points to a MIPS instruction. */
+        * (uint32_t *) native_code = instruction;
         break;
       }
+#endif // #if ! defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
 
+#if ! defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
     case jitter_snippet_jump_unconditional_28bit_pseudo_direct:
     case jitter_snippet_jump_and_link_28bit_pseudo_direct:
       {
-        char *jump_target = * (char**) immediate_pointer;
-        char *jump_address = native_code;
-
-        uint32_t jump_target_u = (uint32_t) (jitter_uint) jump_target;
-        uint32_t jump_address_u = (uint32_t) (jitter_uint) jump_address;
-
         /* Check that the jump origin and target addresses are 32-bit
            aligned. */
-        if (jump_address_u % 4 != 0)
+        if ((jitter_uint) jump_address % 4 != 0)
           jitter_fatal ("j instruction not 32-bit aligned");
-        if (jump_target_u % 4 != 0)
+        if ((jitter_uint) jump_target % 4 != 0)
           jitter_fatal ("j instruction target not 32-bit aligned");
 
-        /* Do a logical right shift of the two address, so as to ignore the two
-           least significatn zero bits. */
-        jump_target_u >>= 2;
-        jump_address_u >>= 2;
+        /* Perform an arithmetic right shift of the two address, so as to ignore
+           the two least significatn zero bits.  This is GCC, so we can rely on
+           signed right shift. */
+        uint32_t jump_target_u = ((jitter_int) jump_target) >> 2;
+        uint32_t jump_address_u = ((jitter_int) jump_address) >> 2;
 
 #define JITTER_INSTRUCTION_INDEX(address_as_uint32) \
   (address_as_uint32 & ((1u << 26) - 1u))
@@ -268,11 +379,22 @@ jitter_patch_patch_in (char *native_code,
 #undef JITTER_INSTRUCTION_INDEX
 #undef JITTER_REGION
 
-        /* Write the instruction to memory. */
-        memcpy (native_code, & instruction, 4);
-        //* (uint32_t *) jump_address = instruction; // FIXME: would 32-bit alignment suffice for MIPS64 as well?
+        /* Write the patched instruction in place of the original instruction.
+           This store is aligned to 32 bits if the native_code pointer actually
+           points to a MIPS instruction. */
+        * (uint32_t *) native_code = instruction;
         break;
       }
+#endif // #if ! defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+    /* Handle every r6 branch. */
+    JITTER_R6_CASE_ (jitter_snippet_branch_unconditional_28bit_compact, 28);
+    JITTER_R6_CASE_ (jitter_snippet_branch_and_link_28bit_compact, 28);
+    JITTER_R6_CASE_ (jitter_snippet_branch_conditional_compact_18bit_offset, 18);
+    JITTER_R6_CASE_ (jitter_snippet_branch_conditional_compact_23bit_offset, 23);
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+
     default:
       jitter_fatal ("jitter_patch_patch_in: unsupported snippet %li",
                     (long) snippet);

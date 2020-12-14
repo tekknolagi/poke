@@ -172,6 +172,16 @@ jitter_cpp_preprocess ()
   $CC -E - | grep -v '^@%:@' | grep -v '^@<:@ \t\n\r@:>@*$'
 }
 
+# Print the definition of the CPP macro given as the sole argument.  Print
+# nothing if the macro has no defintion.
+# This may not work with compilers other than GCC.
+jitter_gcc_print_cpp_macro ()
+{
+  $CC -dM -E -P - < /dev/null \
+    | grep "^#define $1 " \
+    | sed "s/^#define $1 //"
+}
+
 
 # Sub-package mode support.
 ################################################################
@@ -559,7 +569,7 @@ fi
 
 # Check for Bison.
 AC_PROG_YACC
-if ! (echo "x$YACC" | grep -q bison); then
+if ! (echo "x$YACC" | grep bison > /dev/null); then
   if test -e "$srcdir/jitterc/jitterc-parser.c"; then
     AC_MSG_WARN([you will need GNU Bison (instead of $YACC) if you modify
                  the distributed C parsers])
@@ -1020,7 +1030,7 @@ AC_DEFINE_UNQUOTED([JITTER_BUILD_TRIPLET], ["$build"],
 
 # Define a feature macro if the host system is GNU.  This is useful for
 # conditionalizing on GNU libc features.
-if echo "$host_os" | grep -q gnu; then
+if echo "$host_os" | grep gnu > /dev/null; then
   AC_DEFINE_UNQUOTED([JITTER_HOST_OS_IS_GNU], [1],
                      [Is the host operating system GNU?])
 fi
@@ -1102,7 +1112,31 @@ AS_CASE([$default_host_cpu],
                                            ) # No ";": see the Autoconf manual.
                         JITTER_ASSEMBLY_SUBDIRECTORY=mips;
                         jitter_has_host_assembly=yes;
-                        jitter_objdump_options="--architecture=mips:isa32 --disassembler-options=no-aliases,reg-names=numeric"],
+                        # Check for the nice but incompatible MIPS release 6 (or
+                        # later); in particular objdump needs an option to be
+                        # able to recognize some instructions whose encoding
+                        # changed.
+                        if echo $default_host_cpu | grep 64 > /dev/null; then
+                          jitter_bitness=64;
+                        else
+                          jitter_bitness=32;
+                        fi;
+                        if test "x$JITTER_HAVE_ACTUAL_GCC" = 'xyes'; then
+                          jitter_mips_release=$(jitter_gcc_print_cpp_macro \
+                            __mips_isa_rev);
+                        fi;
+                        if test "x$jitter_mips_release" = 'x'; then
+                          jitter_mips_release=0;
+                        fi;
+                        if test "$jitter_mips_release" -ge 6; then
+                          jitter_mips_architecture=mips:isa${jitter_bitness}r6;
+                          AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER],
+                                             [1], []
+                                             ) # No ";": see the Autoconf manual.
+                        else
+                          jitter_mips_architecture=mips:isa${jitter_bitness};
+                        fi;
+                        jitter_objdump_options="--architecture=$jitter_mips_architecture --disassembler-options=no-aliases,reg-names=numeric"],
         [mips64|mips64el],
                        [AC_DEFINE_UNQUOTED([JITTER_HOST_CPU_IS_MIPS], [1], []
                                            ) # No ";": see the Autoconf manual.

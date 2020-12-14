@@ -1,7 +1,6 @@
 /* Jitter: fast-branch header.
 
-   Copyright (C) 2017, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2017, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -410,6 +409,9 @@
 
 #define JITTER_PATCH_IN_CASE_FAST_BRANCH_BRANCH_AND_LINK                  21
 /* These should be extended in the future with floating-point conditionals. */
+
+/* The other values up to 999 included are reserved.  Fast branch cases starting
+   at 1000 are available for architecture-specific code to define. */
 
 #endif // #ifdef JITTER_HAVE_PATCH_IN
 #endif // #ifndef JITTER_FAST_BRANCH_H_
