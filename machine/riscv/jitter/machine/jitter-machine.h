@@ -128,6 +128,25 @@
 # define JITTER_SCRATCH_REGISTER      x18
 #endif // #if JITTER_XLEN == 64
 
+/* These registers are not reserved, but only used internally as assembly
+   operands for register local variables or as clobbered assembly temporaries
+   from a few macros here.  They do not even need to be caller-save; however 
+   they must not conflict with reserved registers, other than the scratch
+   register.
+   These identifiers are specific to the RISC-V port and not part of the Jitter
+   API. */
+#define JITTER_NON_RESERVED_REGISTER_TEMPORARY_RESULT  x28
+#define JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER1  x29
+#define JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER2  x30
+
+/* Same as above, as literal strings. */
+#define JITTER_NON_RESERVED_REGISTER_TEMPORARY_RESULT_STRING  \
+  JITTER_STRINGIFY (JITTER_NON_RESERVED_REGISTER_TEMPORARY_RESULT)
+#define JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER1_STRING  \
+  JITTER_STRINGIFY (JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER1)
+#define JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER2_STRING  \
+  JITTER_STRINGIFY (JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER2)
+
 
 
 
@@ -236,10 +255,52 @@
   _JITTER_LOW_LEVEL_BRANCH_FAST_CONDITIONAL_                                    \
      ("bleu", (opd0), ", %[jitter_operand1]", (opd1), (tgt))
 
-/* Jitter's default solution for overflow-checking on sum and subtraction
-   appears to work well on RISC-V.  Mutliplication is suboptimal, but the
-   solution might be machine-independent: I saw the same problem on PowerPC,
-   and on MIPS as well before I implemented a solution in assembly. */
+/* Jitter's default solution for overflow-checking on sum and subtraction works
+   well on RISC-V.  The solution for multiplication, right below, is essentially
+   identical to the one in MIPS r6. */
+
+/* There is no instruction similar to bovc for subtraction, and adding opd1
+   with its sign changed might itself overflow, when opd1 is
+   JITTER_MOST_NEGATIVE_SIGNED. */
+#define _JITTER_LOW_LEVEL_TIMES_BRANCH_FAST_IF_OVERFLOW_(res, opd0, opd1, tgt)  \
+  /* This uses the same fragile trick as on x86_64, in which an inline asm      \
+     operand is actually an output, but must be declared as input.  See the     \
+     comment about a macro named like this in                                   \
+     machine/x86_64/jitter/machine/jitter-machine.h . */                        \
+  register jitter_int _jitter_product                                           \
+     asm (JITTER_NON_RESERVED_REGISTER_TEMPORARY_RESULT_STRING);                \
+  asm volatile ("" : "=r" (_jitter_product));                                   \
+  asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                                        \
+            "mul %[jitter_product], %[jitter_operand0], %[jitter_operand1]\n\t" \
+            "mulh " JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER1_STRING        \
+               ", %[jitter_operand0], %[jitter_operand1]\n\t"                   \
+            "srai " JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER2_STRING        \
+               ", %[jitter_product], "                                          \
+               "(" JITTER_STRINGIFY (JITTER_XLEN) "- 1)\n\t"                    \
+            JITTER_ASM_PATCH_IN_PLACEHOLDER /* See patch-in comment above */    \
+               (0 /* size in bytes */,                                          \
+                JITTER_PATCH_IN_CASE_FAST_BRANCH_CONDITIONAL_ANY /* case */,    \
+                (tgt), 0, 0, 0 /* not used for this case */)                    \
+            "1: bne " JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER1_STRING      \
+               ", " JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER2_STRING        \
+               ", 1b\n\t"                                                       \
+            : /* outputs */                                                     \
+            : JITTER_PATCH_IN_INPUTS_FOR_EVERY_CASE,                            \
+              [jitter_product] "r" (_jitter_product), /* actually an output! */ \
+              [jitter_operand0] "r" (opd0),                                     \
+              [jitter_operand1] "r" (opd1),                                     \
+              JITTER_INPUT_VM_INSTRUCTION_BEGINNING /* inputs */                \
+            : JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER1_STRING,             \
+              JITTER_NON_RESERVED_REGISTER_TEMPORARY_OTHER2_STRING              \
+              /* clobbers */                                                    \
+            : jitter_dispatch_label /* goto labels */);                         \
+  /* Make sure to get the current value in the register as the result, and not  \
+     a previous copy.  In order to force this, pretend to update the resiter    \
+     here, only if the branch was not taken.  Inline asm will use the same      \
+     register assignment for _jitter_product. */                                \
+  asm ("" : "+r" (_jitter_product));                                            \
+  (res) = _jitter_product
+
 
 #endif // #if defined(JITTER_MACHINE_SUPPORTS_PATCH_IN) && defined(JITTER_DISPATCH_NO_THREADING)
 
