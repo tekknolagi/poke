@@ -89,13 +89,13 @@
 
 /* This is a good default solution for overflow-checking on sum and subtraction,
    which appears to yield optimal code on machines without special support for
-   overflow checks such as MIPS and --apparently, from my tests: there is no
-   Jitter port yet-- RISC-V, provided that the fast-branch-on-negative operation
-   is efficient.  Instead of using the builtin plus inline asm (which would need
-   to generate a Boolean and then test that same Boolean in another conditional)
-   I can generate better code by computing the condition as a signed word in
-   simple C and then using a low-level fast-branch primitive, presumably written
-   in assembly, only for fast-branching on its sign. */
+   overflow checks such as RISC-V and pre-r6 MIPS, provided that the
+   fast-branch-on-negative operation is efficient.  Instead of using the builtin
+   plus inline asm (which would need to generate a Boolean and then test that
+   same Boolean in another conditional) I can generate better code by computing
+   the condition as a signed word in simple C and then using a low-level
+   fast-branch primitive, presumably written in assembly, only for
+   fast-branching on its sign. */
 #if (! defined (_JITTER_LOW_LEVEL_BRANCH_FAST_IF_PLUS_OVERFLOWS_)     \
      && ! defined (_JITTER_LOW_LEVEL_PLUS_BRANCH_FAST_IF_OVERFLOW_))
 # define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_PLUS_OVERFLOWS_(opd0, opd1, tgt)  \
