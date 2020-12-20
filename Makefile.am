@@ -1760,13 +1760,6 @@ EXTRA_DIST += \
   example-build-systems/structured-with-library/Makefile.am
 
 
-# Brainfuck example VM.
-# ################################################################
-
-# FIXME: this has not been tested in a long time.
-JITTER_NON_GENERATED_FILES += example-vms/brainfuck/brainfuck.jitter
-
-
 # Generate debugging assembly and preprocessed files for humans.
 # ################################################################
 
