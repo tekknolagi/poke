@@ -547,18 +547,18 @@ main (int argc, char **argv)
     fprintf (progress, "The requried slow register number is %li per class.\n",
              (long) r->slow_register_per_class_no);
 
+  /* Make an executable jittery routine. */
+  if (cl.debug)
+    fprintf (progress, "Making executable...\n");
+  struct vmprefix_executable_routine *er
+    = vmprefix_make_executable_routine (r);
+
   if (cl.print_routine)
     {
       if (cl.debug)
         fprintf (progress, "Printing back the routine...\n");
       vmprefix_mutable_routine_print (ctx, r);
     }
-
-  /* Make an executable jittery routine. */
-  if (cl.debug)
-    fprintf (progress, "Making executable...\n");
-  struct vmprefix_executable_routine *er
-    = vmprefix_make_executable_routine (r);
 
   if (cl.print_locations)
     {
