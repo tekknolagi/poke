@@ -129,7 +129,7 @@ jitterc_vm_register_class_set_c_initial_value (struct jitterc_register_class *rc
                                                const char *c_initial_value);
 void
 jitterc_vm_register_class_set_fast_register_no (struct jitterc_register_class
-                                                *rc, size_t fast_register_no);
+                                                *rc, int fast_register_no);
 void
 jitterc_vm_register_class_set_use_slow_registers (struct jitterc_register_class
                                                   *rc, int use_slow_registers);

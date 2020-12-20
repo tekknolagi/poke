@@ -1124,8 +1124,14 @@ jitterc_emit_specializer_recognizers
   if (gl_list_size (tree->children) == 0)
     {
       EMIT("  /* The prefix is a full specialized instruction.  We're done recognizing it. */\n");
-      EMIT("  return vmprefix_specialized_instruction_opcode_%s;\n",
-           tree->specialized_instruction->mangled_name);
+      if (tree->specialized_instruction == NULL)
+        EMIT("  jitter_fatal (\"No specialised instruction exists to \"\n"
+             "                \"complete %s/... (zero fast registers and no \"\n"
+             "                \"slow registers?)\");\n",
+             tree->prefix_name);
+      else
+        EMIT("  return vmprefix_specialized_instruction_opcode_%s;\n",
+             tree->specialized_instruction->mangled_name);
       EMIT("}\n\n");
       /* There's nothing more in this subtree. */
       return;
@@ -1205,9 +1211,9 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
   EMIT("/* Recognizer function prototypes. */\n");
   int i; char *comma __attribute__ ((unused));
 #define LET_TREE                                               \
-  const struct jitterc_specialized_instruction_tree *tree    \
-    = ((const struct jitterc_specialized_instruction_tree*)  \
-       gl_list_get_at (vm->specialized_instruction_forest, i))
+    const struct jitterc_specialized_instruction_tree *tree    \
+      = ((const struct jitterc_specialized_instruction_tree*)  \
+         gl_list_get_at (vm->specialized_instruction_forest, i))
   /* First generate a function prototype per specialized instruction prefix
      recognizer.  I want to declare them all before the first definition, to
      be able to call the functions in any order. */

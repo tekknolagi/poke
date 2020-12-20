@@ -334,10 +334,12 @@ jitterc_vm_register_class_set_c_initial_value (struct jitterc_register_class* rc
 }
 void
 jitterc_vm_register_class_set_fast_register_no (struct jitterc_register_class* rc,
-                                                size_t fast_register_no)
+                                                int fast_register_no)
 {
   if (rc->fast_register_no != -1)
     jitter_fatal ("register class: fast-register-no set twice");
+  if (fast_register_no < 0)
+    jitter_fatal ("register class: fast-register-no must be non-negative");
   rc->fast_register_no = fast_register_no;
 }
 void
