@@ -250,7 +250,7 @@ end
 ## (Scratch) f-register instructions.
 #################################################################
 
-instruction fset (?Rn 0 1, !F)
+instruction fset (?Rn, !F)
   code
     JITTER_ARG1 = (double) JITTER_ARGN0;
   end
