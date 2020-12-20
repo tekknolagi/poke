@@ -64,7 +64,9 @@ void
 jitter_routine_print (jitter_print_context out, const jitter_routine r)
 {
   /* Labels must be resolved before we can print. */
-  jitter_routine_make_executable_if_needed (r);
+  if (r->stage == jitter_routine_stage_unspecialized)
+    jitter_mutable_routine_resolve_labels (r);
+  /* Otherwise labels are already resolved. */
 
   /* Now printing is possible. */
   jitter_mutable_routine_print (out, r);
