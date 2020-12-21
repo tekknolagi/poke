@@ -1909,6 +1909,22 @@ AC_SUBST([JITTER_TEMPLATE_SUBDIRECTORY],
 # Flags.
 ################################################################
 
+# Some flags such as -fno-reorder-blocks are useful with switch and
+# direct-threading dispatches only to make disassembly of VM instructions
+# possible, by reading the assembly code starting from a given point up to
+# another given point; they actually make performance worse, so they are not
+# enabled by default.
+AC_MSG_CHECKING([if disassemble-friendly CFLAGS should be enabled])
+AC_ARG_ENABLE([disassemble-friendly-cflags],
+              AS_HELP_STRING([--enable-disassemble-friendly-cflags],
+                 [Compile VM code with some GCC options which make disassembly
+                  possible, even if they make performance worse.  This is only
+                  relevant to switch and direct-threading dispatches.
+                  (default: no)]),
+              jitter_enable_disassemble_friendly_cflags="$enableval",
+              jitter_enable_disassemble_friendly_cflags="no")
+AC_MSG_RESULT([$jitter_enable_disassemble_friendly_cflags])
+
 # Generate flag files in $builddir/flags/$dispatch_model , for every enabled
 # dispatch_model .  Cleanup at the beginning, cd back to $builddir at the end.
 rm -rf flags
@@ -1920,18 +1936,32 @@ for dispatch_model in $jitter_enabled_dispatch_models; do
   mkdir "flags/$dispatch_model"
   AC_MSG_NOTICE([generating flags for dispatching model \"$dispatch_model\"...])
   JITTER_FLAGS_CFLAGS=""
+
+  # We always want these options.  See the comment below about why
+  # -fno-reorder-functions is not desirable.
   jitter_check_cc_options JITTER_FLAGS_CFLAGS -O2 -fomit-frame-pointer
-  jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-reorder-blocks
-  jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-reorder-blocks-and-partition
-  jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-crossjumping
-  jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-thread-jumps
-  jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-tree-tail-merge
-  jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-isolate-erroneous-paths-dereference
-  jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-split-paths
+  jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-reorder-functions
+
+  # We want ELF visibility flags when enabled, independently from the dispatch.
   if test "x$jitter_enable_visibility_hidden" = 'xyes'; then
     jitter_check_cc_options JITTER_FLAGS_CFLAGS -fvisibility=hidden
     jitter_check_cc_options JITTER_FLAGS_LDFLAGS -fvisibility=hidden
   fi
+
+  # Use disassemble-friendly flags for simple dispatches, if the user requested
+  # them.
+  case "$dispatch_model" in
+    switch|direct-threading)
+      if test "x$jitter_enable_disassemble_friendly_cflags" != 'xno'; then
+        jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-reorder-blocks
+        jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-reorder-blocks-and-partition
+        jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-crossjumping
+        jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-thread-jumps
+        jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-tree-tail-merge
+        jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-isolate-erroneous-paths-dereference
+        jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-split-paths
+      fi;;
+  esac
 
   # LTO, impressive as it is in general, is a bad match for Jitter, for
   # correctness reasons on complex dispatches and for performance reasons with
@@ -1983,11 +2013,30 @@ for dispatch_model in $jitter_enabled_dispatch_models; do
 
 #  jitter_check_cc_options JITTER_FLAGS_CFLAGS -frename-registers
 #  jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-plt
-  if test "$dispatch_model" != "switch"; then
-    jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-gcse
-  fi
+
+  # The GCC manual recommends -fno-gcse for code relying heavily on computed
+  # goto.  Jittery VMs would qualify at least with direct-threading and
+  # minimal-threading dispatches (the situation with no-threading is less
+  # clear since the inline asm goto code systematically lies to the compiler
+  # about branch destinations but there are few reachable computed goto
+  # statements); however in my tests -fno-gcse appears to only have a little
+  # *negative* effect on performance.
+  # Disabling it for the time being.
+  # if test "$dispatch_model" != "switch"; then
+  #   jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-gcse
+  # fi
   case "$dispatch_model" in
     minimal-threading|no-threading)
+      # The same options which were just disassemble-friendly with switch and
+      # direct-threading are important for correctness here.
+      jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-reorder-blocks
+      jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-reorder-blocks-and-partition
+      jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-crossjumping
+      jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-thread-jumps
+      jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-tree-tail-merge
+      jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-isolate-erroneous-paths-dereference
+      jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-split-paths
+
       jitter_check_cc_options JITTER_FLAGS_CFLAGS -fPIC
       jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-align-loops
       jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-align-jumps
@@ -1999,7 +2048,6 @@ for dispatch_model in $jitter_enabled_dispatch_models; do
       jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-ipa-icf
       jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-ipa-cp
       jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-ipa-cp-clone
-      jitter_check_cc_options JITTER_FLAGS_CFLAGS -fno-gcse
       ;;
   esac
   case "$host_cpu" in
