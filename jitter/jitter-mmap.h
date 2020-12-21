@@ -1,6 +1,7 @@
 /* Jitter: mmap abstraction: header.
 
    Copyright (C) 2018 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -29,21 +30,16 @@
 /* Executable memory allocation: introdution.
  * ************************************************************************** */
 
-/* This used the memory heap implemented in jitter-heap.[ch] over executable
+/* This uses the memory heap implemented in jitter-heap.[ch] over executable
    memory allocated by mmap; if portability to system without mmap is required
    in the future, the use of mmap itself will be easy to replace with something
    else.
 
    There is no support yet for W^X systems.
 
-   The API as it stands now is not reentrant with respect to mulithreading.
-   If excutable memory allocation is desired from multiple threads at the same time,
-   the user is supposed to synchronize with a mutex. */
-
-/* Portability note: all of this currently relies on mmap, unconditionally.
-   Inferior systems without mmap, such as windows, will not be able to use this
-   functionality at all.  But it won't be needed unless using advanced dispatching
-   techniques, which aren't supported on inferior systems anyway. */
+   The API as it stands now is not reentrant with respect to mulithreading.  If
+   excutable memory allocation is desired from multiple threads at the same
+   time, the user is supposed to synchronize with a mutex. */
 
 
 

@@ -1,6 +1,7 @@
 /* Jitter: mmap abstraction for executable memory allocation.
 
    Copyright (C) 2018, 2019 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -71,8 +72,8 @@ jitter_executable_block_size;
    This function is of type jitter_heap_primitive_allocate_function .
 
    This allocates space for (possibly more than) an entire heap block or big
-   object.  Single object allocation will be based on heap functions, and will
-   use space obtained from this function. */
+   object.  Single object allocation is be based on heap functions, and uses
+   space obtained from this function. */
 static void *
 jitter_executable_make_block_primitive (size_t size_in_bytes)
 {
