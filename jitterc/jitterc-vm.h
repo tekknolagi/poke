@@ -678,7 +678,7 @@ struct jitterc_stack
   char *upper_case_long_name;
 
   /* The stack size in elements. */
-  int element_no;
+  jitter_uint element_no;
 
   /* The implementation of this stack. */
   enum jitterc_stack_implementation implementation;
@@ -819,7 +819,7 @@ jitterc_vm_stack_set_c_element_type (struct jitterc_stack *s,
                                      const char *c_type);
 void
 jitterc_vm_stack_set_element_no (struct jitterc_stack *s,
-                                 size_t element_no);
+                                 jitter_int element_no);
 void
 jitterc_vm_stack_set_c_initial_value (struct jitterc_stack *s,
                                       const char *c_initial_value);

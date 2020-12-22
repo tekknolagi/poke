@@ -505,10 +505,12 @@ jitterc_vm_stack_set_c_element_type (struct jitterc_stack *s,
 }
 void
 jitterc_vm_stack_set_element_no (struct jitterc_stack *s,
-                                 size_t element_no)
+                                 jitter_int element_no)
 {
   if (s->element_no != -1)
     jitter_fatal ("stack: element-no set twice");
+  if (element_no <= 0)
+    jitter_fatal ("stack: element-no must be positive");
   s->element_no = element_no;
 }
 void
