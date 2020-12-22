@@ -106,6 +106,7 @@ end
 register-class r
   long-name "general_registers"
   c-type "union vmprefix_currently_unique_kind_register_t"
+  c-initial-value "(union vmprefix_currently_unique_kind_register_t) {.ufixnum = 0x11223344}"
   fast-register-no 1 #2 #2
 end
 
