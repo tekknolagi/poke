@@ -68,18 +68,18 @@ struct jitter_stack_backing
   enum jitter_stack_optimization optimization;
 
   /* How many bytes each element takes. */
-  size_t element_size_in_bytes;
+  jitter_uint element_size_in_bytes;
 
   /* How many elements are allocated for this stack, not including the TOS
      element in the case of TOS optimization.  This is always at least as
      large as the number of elements requested at initialisation, but may
      be larger in order to accommodate guard pages which must begin at page
      boundaries. */
-  size_t element_no;
+  jitter_uint element_no;
 
   /* How many bytes were allocated with mmap.  Only used if mmap is available
      and guard pages are used for this backing. */
-  size_t mmapped_memory_size;
+  jitter_uint mmapped_memory_size;
   
   /* A local malloc-allocated copy of the initial element, if any; NULL if there
      is no initial element. */
@@ -89,6 +89,13 @@ struct jitter_stack_backing
      respectively, underflow and overflow. */
   bool guard_underflow;
   bool guard_overflow;
+
+  /* These fields, recording the beginning of the underflow and overflow guard
+     pages and the page length in bytes, are useful for debugging or for
+     trapping underflow and overflow, for example using GNU libsigsegv. */
+  char *underflow_page_beginning;
+  char *overflow_page_beginning;
+  size_t page_length_in_bytes;
 
   /* A pointer to the beginning of the memory holding the stack elements.
      When stack elements are pushed or popped a pointer moves in the stack
@@ -117,8 +124,8 @@ struct jitter_stack_backing
    The same for guard_overflow, adding a page after the end of usable memory. */
 void
 jitter_stack_initialize_tos_backing (struct jitter_stack_backing *backing,
-                                     size_t element_size_in_bytes,
-                                     size_t element_no,
+                                     jitter_int element_size_in_bytes,
+                                     jitter_int element_no,
                                      char *initial_element_p_or_NULL,
                                      bool guard_underflow,
                                      bool guard_overflow)
@@ -127,8 +134,8 @@ jitter_stack_initialize_tos_backing (struct jitter_stack_backing *backing,
 /* Like jitter_stack_initialize_tos_backing, for a non-TOS stack. */
 void
 jitter_stack_initialize_ntos_backing (struct jitter_stack_backing *backing,
-                                      size_t element_size_in_bytes,
-                                      size_t element_no,
+                                      jitter_int element_size_in_bytes,
+                                      jitter_int element_no,
                                       char *initial_element_p_or_NULL,
                                       bool guard_underflow,
                                       bool guard_overflow)

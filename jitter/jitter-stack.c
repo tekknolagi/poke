@@ -116,8 +116,8 @@ jitter_stack_backing_update_and_allocate (struct jitter_stack_backing *backing)
     {
       /* Round the size up to a multiple of a page, if we need guard pages and
          can support them.  This also changes the number of elements. */
-      size_t page_size = jitter_page_size ();
-      size_t non_guard_size_in_bytes
+      jitter_int page_size = jitter_page_size ();
+      jitter_int non_guard_size_in_bytes
         = JITTER_NEXT_MULTIPLE_OF_POWER_OF_TWO ((backing->element_size_in_bytes
                                                  * backing->element_no),
                                                 page_size);
@@ -125,7 +125,7 @@ jitter_stack_backing_update_and_allocate (struct jitter_stack_backing *backing)
         = non_guard_size_in_bytes / backing->element_size_in_bytes;
 
       /* Compute the allocated size in bytes. */
-      size_t size_in_bytes = non_guard_size_in_bytes;
+      jitter_int size_in_bytes = non_guard_size_in_bytes;
       if (backing->guard_underflow)
         size_in_bytes += page_size;
       if (backing->guard_overflow)
@@ -143,11 +143,19 @@ jitter_stack_backing_update_and_allocate (struct jitter_stack_backing *backing)
         jitter_fatal ("could not mmap stack memory");
 
       /* Set permissions for, which is to say remove every permission from,
-         guard pages. */
+         guard pages.  Also record guard page information in the backing. */
+      backing->page_length_in_bytes = page_size;
       if (backing->guard_underflow)
-        mprotect (backing->memory, page_size, 0);
+        {
+          backing->underflow_page_beginning = backing->memory;
+          mprotect (backing->underflow_page_beginning, page_size, 0);
+        }
       if (backing->guard_overflow)
-        mprotect (backing->memory + size_in_bytes - page_size, page_size, 0);
+        {
+          backing->overflow_page_beginning
+            = backing->memory + size_in_bytes - page_size;
+          mprotect (backing->overflow_page_beginning, page_size, 0);
+        }
 
       /* If there is an underflow guard page set the memory pointer to begin
          right after it. */
@@ -172,10 +180,9 @@ jitter_stack_backing_destroy_content (struct jitter_stack_backing *backing)
     jitter_stack_backing_destroy_content_trivial (backing);
   else
     {
-      size_t page_size = jitter_page_size ();
       char *beginning = backing->memory;
       if (backing->guard_underflow)
-        beginning -= page_size;
+        beginning -= backing->page_length_in_bytes;
       munmap (beginning, backing->mmapped_memory_size);
     }
 }
@@ -196,8 +203,8 @@ jitter_stack_backing_destroy_content (struct jitter_stack_backing *backing)
 static void
 jitter_stack_initialize_backing (struct jitter_stack_backing *backing,
                                  enum jitter_stack_optimization optimization,
-                                 size_t element_size_in_bytes,
-                                 size_t element_no,
+                                 jitter_int element_size_in_bytes,
+                                 jitter_int element_no,
                                  char *initial_element_p_or_NULL,
                                  bool guard_underflow,
                                  bool guard_overflow)
@@ -208,7 +215,6 @@ jitter_stack_initialize_backing (struct jitter_stack_backing *backing,
   backing->element_no = element_no;
   backing->guard_underflow = guard_underflow;
   backing->guard_overflow = guard_overflow;
-  backing->mmapped_memory_size = 0; /* This will be changed if we use mmap. */
   if (initial_element_p_or_NULL == NULL)
     backing->initial_element_copy = NULL;
   else
@@ -219,6 +225,12 @@ jitter_stack_initialize_backing (struct jitter_stack_backing *backing,
               initial_element_p_or_NULL,
               element_size_in_bytes);
     }
+
+  /* Set default values for fields which may be changed if we use mmap. */
+  backing->mmapped_memory_size = 0;
+  backing->underflow_page_beginning = NULL;
+  backing->overflow_page_beginning = NULL;
+  backing->page_length_in_bytes = 0;
 
   /* Update fields keeping into account the available features and whether we
      need guards.  Allocate. */
@@ -234,12 +246,20 @@ jitter_stack_initialize_backing (struct jitter_stack_backing *backing,
                 initial_element_p_or_NULL,
                 element_size_in_bytes);
     }
+#if 0
+  if (backing->guard_underflow)
+    printf ("Guarded underflow addresses: [%p, %p]\n", backing->underflow_page_beginning, backing->underflow_page_beginning + backing->page_length_in_bytes - 1);
+  if (backing->guard_underflow || backing->guard_overflow)
+    printf ("Correct addresses:           [%p, %p] (%li B)\n", backing->memory, backing->memory + backing->element_no * backing->element_size_in_bytes - 1, (long) (backing->element_no * backing->element_size_in_bytes));
+  if (backing->guard_overflow)
+    printf ("Guarded overflow addresses:  [%p, %p]\n", backing->overflow_page_beginning, backing->overflow_page_beginning + backing->page_length_in_bytes - 1);
+#endif
 }
 
 void
 jitter_stack_initialize_tos_backing (struct jitter_stack_backing *backing,
-                                     size_t element_size_in_bytes,
-                                     size_t element_no,
+                                     jitter_int element_size_in_bytes,
+                                     jitter_int element_no,
                                      char *initial_element_p_or_NULL,
                                      bool guard_underflow,
                                      bool guard_overflow)
@@ -255,8 +275,8 @@ jitter_stack_initialize_tos_backing (struct jitter_stack_backing *backing,
 
 void
 jitter_stack_initialize_ntos_backing (struct jitter_stack_backing *backing,
-                                      size_t element_size_in_bytes,
-                                      size_t element_no,
+                                      jitter_int element_size_in_bytes,
+                                      jitter_int element_no,
                                       char *initial_element_p_or_NULL,
                                       bool guard_underflow,
                                       bool guard_overflow)
