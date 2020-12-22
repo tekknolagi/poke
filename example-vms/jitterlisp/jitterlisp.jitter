@@ -36,18 +36,20 @@ end
 stack m
   long-name "mainstack"
   c-element-type "jitterlisp_object"
+  c-initial-value "JITTERLISP_UNDEFINED"
   tos-optimized
 end
 
 stack t
   long-name "returnstack"
   c-element-type "jitterlisp_object"
+  c-initial-value "JITTERLISP_UNDEFINED"
   non-tos-optimized
 end
 
 register-class r
   c-type "jitterlisp_object"
-  c-initial-value "JITTERLISP_UNINITIALIZED"
+  c-initial-value "JITTERLISP_UNDEFINED"
   fast-register-no 0 #2
 end
 
