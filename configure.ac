@@ -993,6 +993,9 @@ AC_CHECK_FUNCS([mmap64 mmap mremap munmap])
 # the buffer they allocate.
 AC_CHECK_FUNCS([aligned_alloc posix_memalign])
 
+# Check for functions letting me set permissions on memory pages.
+AC_CHECK_FUNCS([mprotect])
+
 # Check for getrlimit/setrlimit and alarm.
 AC_CHECK_FUNCS([getrlimit setrlimit alarm])
 
@@ -2550,6 +2553,8 @@ jitter_define_prefixed_feature_macro([ac_cv_func_posix_memalign], [yes],
                                      [HAVE_POSIX_MEMALIGN])
 jitter_define_prefixed_feature_macro([gl_have_mmap_anonymous], [yes],
                                      [HAVE_MMAP_ANONYMOUS])
+jitter_define_prefixed_feature_macro([ac_cv_func_mprotect], [yes],
+                                     [HAVE_MPROTECT])
 jitter_define_prefixed_feature_macro([ac_cv_func_setrlimit], [yes],
                                      [HAVE_SETRLIMIT])
 jitter_define_prefixed_feature_macro([ac_cv_func_flockfile], [yes],
