@@ -508,9 +508,12 @@ vmprefix_make_mutable_routine (void)
 
 char *
 vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
-                                        size_t new_slow_register_no_per_class)
+                                        jitter_int new_slow_register_no_per_class)
 {
-  size_t old_slow_register_no_per_class
+  if (new_slow_register_no_per_class < 0)
+    jitter_fatal ("vmprefix_make_place_for_slow_registers: negative slow "
+                  "register number");
+  jitter_int old_slow_register_no_per_class
     = s->vmprefix_state_backing.jitter_slow_register_no_per_class;
   /* Change nothing if we already have enough space for the required number of
      slow registers.  The no-change case will be the most common one, and
@@ -520,8 +523,8 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
                         false))
     {
 #if 0
-      printf ("Increasing slow register-nos per class from %i to %i\n", (int) old_slow_register_no_per_class, (int)new_slow_register_no_per_class);
-      printf ("Array size %i -> %i\n", (int) VMPREFIX_ARRAY_SIZE(old_slow_register_no_per_class), (int) VMPREFIX_ARRAY_SIZE(new_slow_register_no_per_class));
+      printf ("Increasing slow register-no (per class) from %li to %li\n", (long) old_slow_register_no_per_class, (long)new_slow_register_no_per_class);
+      printf ("Array size %li -> %li\n", (long) VMPREFIX_ARRAY_SIZE(old_slow_register_no_per_class), (long) VMPREFIX_ARRAY_SIZE(new_slow_register_no_per_class));
 #endif
       /* Save the new value for new_slow_register_no_per_class in the state
          structure; reallocate the Array. */
@@ -536,7 +539,7 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
         = ((union vmprefix_any_register *)
            ((char *) s->vmprefix_state_backing.jitter_array
             + VMPREFIX_FIRST_SLOW_REGISTER_UNBIASED_OFFSET));
-      int i;
+      jitter_int i;
       for (i = old_slow_register_no_per_class;
            i < new_slow_register_no_per_class;
            i ++)
@@ -548,6 +551,9 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
             = first_slow_register + (i * VMPREFIX_REGISTER_CLASS_NO);
           VMPREFIX_INITIALIZE_SLOW_REGISTER_RANK (rank);
         }
+#if 0
+      printf ("Done resizing The Array\n");
+#endif
     }
 
   /* Return the new (or unchanged) base, by simply adding the bias to the

@@ -915,7 +915,7 @@ vmprefix_regiter_classes [];
    content remains valid. */
 char *
 vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
-                                        size_t slow_register_no_per_class)
+                                        jitter_int slow_register_no_per_class)
   __attribute__ ((noinline));
 
 

@@ -1657,7 +1657,7 @@ jitterc_emit_state_h (const struct jitterc_vm *vm)
   EMIT("\n");
   EMIT("  /* How many slow registers per class the Array can hold, without being\n");
   EMIT("     reallocated.  This number is always the same for evey class. */\n");
-  EMIT("  size_t jitter_slow_register_no_per_class;\n");
+  EMIT("  jitter_int jitter_slow_register_no_per_class;\n");
   EMIT("\n");
 
   /* Emit declarations for stack backing data structures. */
