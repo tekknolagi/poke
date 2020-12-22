@@ -1,6 +1,7 @@
 /* JitterLisp: heap allocation.
 
    Copyright (C) 2017, 2018 Luca Saiu
+   Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -32,6 +33,7 @@
 #include <jitter/jitter-fatal.h>
 #include <jitter/jitter-malloc.h>
 
+#include "jitterlisp-printer.h"
 #include "jitterlisp-sexpression.h"
 #include "jitterlisp-config.h"
 
@@ -285,7 +287,7 @@ jitterlisp_add_litter_block (size_t block_size_in_bytes)
   bool is_this_block_the_first = jitterlisp_litter_heap_size == 0;
   jitterlisp_litter_heap_size += block_size_in_bytes;
 
-#define JITTERLIST_TO_MIB(x) ((x) / 1024.0 / 1024.0)
+#define JITTERLISP_TO_MIB(x) ((x) / 1024.0 / 1024.0)
   /* Log, unless disabled, if the block is not the first (the first block
      allocation is uninteresting). */
   if (jitterlisp_settings.verbose_litter && ! is_this_block_the_first)
@@ -294,11 +296,13 @@ jitterlisp_add_litter_block (size_t block_size_in_bytes)
          this slightly annoying message. */
       fflush (stdout);
       /* Write a very compact mesasge to stderr, and flush. */
-      fprintf (stderr, "[Litter%luMiB]",
-               (unsigned long) JITTERLIST_TO_MIB(jitterlisp_litter_heap_size));
+      char text [500];
+      sprintf (text, "[Litter%luMiB]",
+               (unsigned long) JITTERLISP_TO_MIB(jitterlisp_litter_heap_size));
+      jitterlisp_log_char_star (text);
       fflush (stderr);
     }
-#undef JITTERLIST_TO_MIB
+#undef JITTERLISP_TO_MIB
 }
 
 static void
