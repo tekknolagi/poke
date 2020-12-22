@@ -297,7 +297,7 @@ jitterlisp_add_litter_block (size_t block_size_in_bytes)
       fflush (stdout);
       /* Write a very compact mesasge to stderr, and flush. */
       char text [500];
-      sprintf (text, "[Litter%luMiB]",
+      sprintf (text, "[Litter%luMiB]\n",
                (unsigned long) JITTERLISP_TO_MIB(jitterlisp_litter_heap_size));
       jitterlisp_log_char_star (text);
       fflush (stderr);

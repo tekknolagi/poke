@@ -575,13 +575,16 @@ jitterlisp_print_char_star_internal (char *class_suffix, const char *message)
   jitterlisp_begin_class (jitterlisp_print_context, class_suffix);
   jitter_print_char_star (jitterlisp_print_context, message);
   jitterlisp_end_class (jitterlisp_print_context);
+  jitter_print_flush (jitterlisp_print_context);
+
 }
-void
+static void
 jitterlisp_print_internal (char *class_suffix, jitterlisp_object o)
 {
   jitterlisp_begin_class (jitterlisp_print_context, class_suffix);
   jitterlisp_print (jitterlisp_print_context, o);
   jitterlisp_end_class (jitterlisp_print_context);
+  jitter_print_flush (jitterlisp_print_context);
 }
 
 void
