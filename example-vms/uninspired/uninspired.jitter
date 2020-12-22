@@ -87,7 +87,7 @@ end
 stack s
   long-name "stack"
   c-element-type "union jitter_word"
-  c-initial-value "(union jitter_word) {.ufixnum = 0xaabbccdd00112233}"
+  c-initial-value "(union jitter_word) {.ufixnum = 0xaabbccdd}"
   element-no 4096
   tos-optimized
   guard-underflow
