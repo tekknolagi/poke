@@ -1533,13 +1533,32 @@ jitterc_emit_stack_initializations (FILE *f, const struct jitterc_vm *vm)
       const char *optimization_upper_case_suffix
         = ((stack->implementation == jitterc_stack_implementation_tos)
            ? "TOS" : "NTOS");
-      const unsigned long element_no = 4096; // FIXME: make this customizable.
+      char *c_type = stack->c_type;
+      char *c_initial_value = stack->c_initial_value;
+      const unsigned long element_no = stack->element_no;
+      int guard_underflow = stack->guard_underflow;
+      int guard_overflow = stack->guard_overflow;
+      char element_pointer_name [121];
+      if (c_initial_value != NULL)
+        {
+          char element_name [100];
+          sprintf (element_name,
+                   "jitter_stack_%c_initial_element", stack->letter);
+          EMIT("  %s %s = (%s) (%s);\n",
+               c_type, element_name, c_type, c_initial_value);
+          sprintf (element_pointer_name, "(char *) & %s", element_name);
+        }
+      else
+        sprintf (element_pointer_name, "NULL");
 
       EMIT("  jitter_stack_initialize_%s_backing(& jitter_state_backing->jitter_stack_%s_backing,\n",
            optimization_lower_case_suffix, stack->lower_case_long_name);
       EMIT("                                      sizeof (%s),\n",
            stack->c_type);
-      EMIT("                                      %lu);\n", element_no);
+      EMIT("                                      %lu,\n", element_no);
+      EMIT("                                      %s,\n", element_pointer_name);
+      EMIT("                                      %i,\n", guard_underflow);
+      EMIT("                                      %i);\n", guard_overflow);
       EMIT("  JITTER_STACK_%s_INITIALIZE(%s, jitter_state_runtime-> ,\n",
            optimization_upper_case_suffix, stack->c_type);
       EMIT("                              %s, jitter_state_backing->jitter_stack_%s_backing);\n",

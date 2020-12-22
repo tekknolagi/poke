@@ -1,6 +1,6 @@
 /* Jitter: Forth-style stacks with optional TOS optimization: header.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -71,15 +71,33 @@ struct jitter_stack_backing
   size_t element_size_in_bytes;
 
   /* How many elements are allocated for this stack, not including the TOS
-     element in the case of TOS optimization. */
+     element in the case of TOS optimization.  This is always at least as
+     large as the number of elements requested at initialisation, but may
+     be larger in order to accommodate guard pages which must begin at page
+     boundaries. */
   size_t element_no;
+
+  /* How many bytes were allocated with mmap.  Only used if mmap is available
+     and guard pages are used for this backing. */
+  size_t mmapped_memory_size;
+  
+  /* A local malloc-allocated copy of the initial element, if any; NULL if there
+     is no initial element. */
+  char *initial_element_copy;
+  
+  /* A Boolean, non-false iff the backing memory contains a guard page for,
+     respectively, underflow and overflow. */
+  bool guard_underflow;
+  bool guard_overflow;
 
   /* A pointer to the beginning of the memory holding the stack elements.
      When stack elements are pushed or popped a pointer moves in the stack
      data structure, but this field keeps pointing the the beginning of the
      allocated space, making initialization and finalization easier.  The
      memory is heap-allocated, and its beginning is aligned like the result of
-     malloc . */
+     malloc .
+     This points to the beginning of usable memory, past the underflow guard
+     page if present. */
   char *memory;
 };
 
@@ -87,36 +105,39 @@ struct jitter_stack_backing
    application, and therefore their implementation can safely involve non-inline
    C functions. */
 
-/* Initialize the pointed stack backing, allocating space from the heap for the
-   given number of elements, each of the given size.  Also store the fact that
-   the stack is TOS-optimized in the backing, for debugging purposes. */
+/* Initialise the pointed stack backing, allocating space from the heap for the
+   given number of elements, each of the given size.  Also store implementation
+   data in the backing, in order to make finalisation possible and to enable
+   debugging.
+   If initial_element_p_or_NULL is non-NULL initialise every stack element with
+   a copy of the given object.
+   If guard_underflow is non-false, add an underflow guard page (in
+   configurations where this is possible; ignore the option otherwise) before
+   the beginning of usable memory.
+   The same for guard_overflow, adding a page after the end of usable memory. */
 void
 jitter_stack_initialize_tos_backing (struct jitter_stack_backing *backing,
                                      size_t element_size_in_bytes,
-                                     size_t element_no)
+                                     size_t element_no,
+                                     char *initial_element_p_or_NULL,
+                                     bool guard_underflow,
+                                     bool guard_overflow)
   __attribute__ ((nonnull (1)));
 
-/* Initialize the pointed stack backing, allocating space from the heap for the
-   given number of elements, each of the given size.  Also store the fact that
-   the stack is not TOS-optimized in the backing, for debugging purposes. */
+/* Like jitter_stack_initialize_tos_backing, for a non-TOS stack. */
 void
 jitter_stack_initialize_ntos_backing (struct jitter_stack_backing *backing,
                                       size_t element_size_in_bytes,
-                                      size_t element_no)
+                                      size_t element_no,
+                                      char *initial_element_p_or_NULL,
+                                      bool guard_underflow,
+                                      bool guard_overflow)
   __attribute__ ((nonnull (1)));
 
 /* Finalize the pointed stack backing, releasing memory. */
 void
 jitter_stack_finalize_backing (struct jitter_stack_backing *backing)
   __attribute__ ((nonnull (1)));
-
-
-/* FIXME: if it's acceptable to use three memory pages per stack backing we can
-   use mmap to allocate two non-readable and non-writable pages around a
-   readable and writable page used for the memory backing.  This would cause a
-   segfault on overflow and underflow -- with a one-element delay if TOS
-   optimization is enabled, but still useful.
-   The implementation, relying on mmap , would be easy. */
 
 
 
