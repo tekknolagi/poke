@@ -978,6 +978,7 @@ $(srcdir)/example-vms/uninspired/uninspired-vm.h: example-vms/uninspired/uninspi
           "$(srcdir)/example-vms/uninspired/uninspired.jitter" \
           --output "$(srcdir)/example-vms/uninspired/" \
           --frontend \
+          --no-line \
           --max-fast-register-no=$(UNINSPIRED_MAX_FAST_REGISTER_NO) \
           --max-nonresidual-no=$(UNINSPIRED_MAX_NONRESIDUAL_NO) \
           --template-directory="$(srcdir)/templates/"
@@ -1307,6 +1308,7 @@ $(srcdir)/example-vms/structured/structuredvm-vm-main.c: example-vms/structured/
           "$(srcdir)/example-vms/structured/structured.jitter" \
           --output "$(srcdir)/example-vms/structured/" \
           --frontend \
+          --no-line \
           --max-fast-register-no=$(STRUCTUREDVM_MAX_FAST_REGISTER_NO) \
           --max-nonresidual-no=$(STRUCTUREDVM_MAX_NONRESIDUAL_NO) \
           --template-directory="$(srcdir)/templates/"
@@ -1408,6 +1410,7 @@ $(srcdir)/example-vms/jitterlisp/jitterlispvm-vm.h: example-vms/jitterlisp/jitte
 	$(JITTER_EMULATOR) bin/jitter$(EXEEXT) \
           "$(srcdir)/example-vms/jitterlisp/jitterlisp.jitter" \
           --output "$(srcdir)/example-vms/jitterlisp/" \
+          --no-line \
           --template-directory="$(srcdir)/templates/"
 $(srcdir)/example-vms/jitterlisp/jitterlispvm-vm1.c: example-vms/jitterlisp/jitterlispvm-vm.h
 $(srcdir)/example-vms/jitterlisp/jitterlispvm-vm2.c: example-vms/jitterlisp/jitterlispvm-vm.h
