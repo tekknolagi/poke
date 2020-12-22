@@ -195,7 +195,12 @@ jitter_stack_finalize_backing (struct jitter_stack_backing *backing)
          there.  This is as empty as a TOS-optimized stack can get.  */     \
       JITTER_STACK_TOS_UNDER_TOP_POINTER_NAME(type, stack_container, name)  \
         = ((type *) ((backing).memory)) - 1;                                \
-      /* No need to initialize the TOS. */                                  \
+      /* Initialise the TOS.  The backing contains a pointer to a copy of   \
+         the initial element chosen by the user, non-NULL iff any was       \
+         specified. */                                                      \
+      if ((backing).initial_element_copy != NULL)                           \
+        JITTER_STACK_TOS_TOP_NAME(type, stack_container, name)              \
+          = * (type *) ((backing).initial_element_copy);                    \
     }                                                                       \
   while (false)
 #define JITTER_STACK_NTOS_INITIALIZE(type, stack_container, name, backing)  \
@@ -207,7 +212,6 @@ jitter_stack_finalize_backing (struct jitter_stack_backing *backing)
          first valid position. */                                           \
       JITTER_STACK_NTOS_TOP_POINTER_NAME(type, stack_container, name)       \
         = ((type *) ((backing).memory)) - 1;                                \
-      /* No need to initialize the TOS. */                                  \
     }                                                                       \
   while (false)
 
