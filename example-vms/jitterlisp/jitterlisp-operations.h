@@ -1450,9 +1450,9 @@
 # define JITTERLISP_QUOTIENT_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0,     \
                                           jitterlisp_in1, label)              \
   JITTERLISP_DIVIDED_ ((jitterlisp_out), (jitterlisp_in0), (jitterlisp_in1))
-# define JITTERLISP_REMAINDER_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0,    \
-                                           jitterlisp_in1, label)             \
-  JITTERLISP_DIVIDED_ ((jitterlisp_out), (jitterlisp_in0), (jitterlisp_in1))
+# define JITTERLISP_REMAINDER_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0,      \
+                                           jitterlisp_in1, label)               \
+  JITTERLISP_REMAINDER_ ((jitterlisp_out), (jitterlisp_in0), (jitterlisp_in1))
 # define JITTERLISP_1PLUS_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0, label)  \
   JITTERLISP_1PLUS_ ((jitterlisp_out), (jitterlisp_in0))
 # define JITTERLISP_1MINUS_OR_OVERFLOW_(jitterlisp_out, jitterlisp_in0, label)  \
