@@ -508,23 +508,46 @@ vmprefix_make_mutable_routine (void)
 
 char *
 vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
-                                        size_t slow_register_no_per_class)
+                                        size_t new_slow_register_no_per_class)
 {
+  size_t old_slow_register_no_per_class
+    = s->vmprefix_state_backing.jitter_slow_register_no_per_class;
   /* Change nothing if we already have enough space for the required number of
      slow registers.  The no-change case will be the most common one, and
      this function might be worth optimizing. */
-  if (__builtin_expect (  slow_register_no_per_class
-                        > s->vmprefix_state_backing
-                             .jitter_slow_register_no_per_class,
+  if (__builtin_expect (new_slow_register_no_per_class
+                        > old_slow_register_no_per_class,
                         false))
     {
-      /* Save the new value for slow_register_no_per_class in the state
+#if 0
+      printf ("Increasing slow register-nos per class from %i to %i\n", (int) old_slow_register_no_per_class, (int)new_slow_register_no_per_class);
+      printf ("Array size %i -> %i\n", (int) VMPREFIX_ARRAY_SIZE(old_slow_register_no_per_class), (int) VMPREFIX_ARRAY_SIZE(new_slow_register_no_per_class));
+#endif
+      /* Save the new value for new_slow_register_no_per_class in the state
          structure; reallocate the Array. */
       s->vmprefix_state_backing.jitter_slow_register_no_per_class
-        = slow_register_no_per_class;
+        = new_slow_register_no_per_class;
       s->vmprefix_state_backing.jitter_array
         = jitter_xrealloc ((void *) s->vmprefix_state_backing.jitter_array,
-                           VMPREFIX_ARRAY_SIZE(slow_register_no_per_class));
+                           VMPREFIX_ARRAY_SIZE(new_slow_register_no_per_class));
+
+      /* Initialise the slow registers we have just added, for every class. */
+      union vmprefix_any_register *first_slow_register
+        = ((union vmprefix_any_register *)
+           ((char *) s->vmprefix_state_backing.jitter_array
+            + VMPREFIX_FIRST_SLOW_REGISTER_UNBIASED_OFFSET));
+      int i;
+      for (i = old_slow_register_no_per_class;
+           i < new_slow_register_no_per_class;
+           i ++)
+        {
+          /* A pointer to the i-th rank of slow registers.  Every register
+             in the rank is new and in general (according to its class) may
+             need initialisation. */
+          union vmprefix_any_register *rank
+            = first_slow_register + (i * VMPREFIX_REGISTER_CLASS_NO);
+          VMPREFIX_INITIALIZE_SLOW_REGISTER_RANK (rank);
+        }
     }
 
   /* Return the new (or unchanged) base, by simply adding the bias to the

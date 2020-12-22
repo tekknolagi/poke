@@ -1585,6 +1585,47 @@ jitterc_emit_stack_finalizations (FILE *f, const struct jitterc_vm *vm)
   EMIT("\n");
 }
 
+/* Emit initialisation code for VM registers.  This generates code within the VM
+   state initialisation function. */
+static void
+jitterc_emit_register_initializations (FILE *f, const struct jitterc_vm *vm)
+{
+  EMIT("  /* Initialise the link register, if present. */\n");
+  EMIT("#if    defined(JITTER_DISPATCH_SWITCH)                   \\\n");
+  EMIT("    || defined(JITTER_DISPATCH_DIRECT_THREADING)         \\\n");
+  EMIT("    || defined(JITTER_DISPATCH_MINIMAL_THREADING)        \\\n");
+  EMIT("    || (   defined(JITTER_DISPATCH_NO_THREADING)         \\\n");
+  EMIT("        && ! defined(JITTER_MACHINE_SUPPORTS_PROCEDURE))\n");
+  EMIT("  jitter_state_runtime->_jitter_link = NULL;\n");
+  EMIT("#endif\n");
+  EMIT("\n");
+
+  int i; char *comma __attribute__ ((unused));
+  FOR_LIST(i, comma, vm->register_classes)
+    {
+      const struct jitterc_register_class *rc
+        = gl_list_get_at (vm->register_classes, i);
+
+      if (rc->c_initial_value != NULL)
+        {
+          EMIT("  /* Initialise %c-class fast registers. */\n", rc->letter);
+          int j;
+          for (j = 0; j < rc->fast_register_no; j ++)
+            {
+              EMIT("  jitter_state_runtime->jitter_fast_register_%c_%i\n",
+                   rc->letter, j);
+              EMIT("    = (%s) (%s);\n", rc->c_type, rc->c_initial_value);
+            }
+        }
+      else
+        EMIT("  /* No need to initialise %c-class fast registers. */\n", rc->letter);
+      EMIT("\n");
+    }
+  EMIT("\n");
+}
+
+/* There is no register finalisation code. */
+
 
 
 
@@ -1717,8 +1758,9 @@ jitterc_emit_state (const struct jitterc_vm *vm)
   EMIT("  vmprefix_initialize_special_purpose_data (VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA (jitter_state_backing->jitter_array));\n");
   EMIT("\n");
 
-  /* Emit initialization for stacks. */
+  /* Emit initialisation code for stacks and registers. */
   jitterc_emit_stack_initializations (f, vm);
+  jitterc_emit_register_initializations (f, vm);
 
   EMIT("  /* User code for state initialization. */\n");
   EMIT("%s\n", vm->state_initialization_c_code);
@@ -1829,8 +1871,32 @@ jitterc_emit_register_classes_h (const struct jitterc_vm *vm)
   EMIT("    /* The number of register class ids, not valid as a class id itself. */\n");
   EMIT("    vmprefix_register_class_id_no = VMPREFIX_REGISTER_CLASS_NO\n");
   EMIT("  };\n");
-
   EMIT("\n");
+
+  EMIT("/* A macro expanding to a statement initialising a rank of slow\n");
+  EMIT("   registers.  The argument has type union vmprefix_any_register *\n");
+  EMIT("   and points to the first register in a rank. */\n");
+  EMIT("#define VMPREFIX_INITIALIZE_SLOW_REGISTER_RANK(rank) \\\n");
+  EMIT("  do \\\n");
+  EMIT("    { \\\n");
+  EMIT("      union vmprefix_any_register *_jitter_rank __attribute__ ((unused)) \\\n");
+  EMIT("        = (rank); \\\n");
+  FOR_LIST(i, comma, vm->register_classes)
+    {
+      const struct jitterc_register_class *c
+        = (gl_list_get_at (vm->register_classes, i));
+      if (c->c_initial_value != NULL)
+        EMIT("      _jitter_rank [%i].%c = (%s) (%s); \\\n",
+             (int) i, c->letter, c->c_type, c->c_initial_value);
+      else
+        EMIT("      /* %c-class registers need no initialisation. */ \\\n",
+             c->letter);
+    }
+  EMIT("    } \\\n");
+  EMIT("  while (false)\n");
+  EMIT("\n");
+  EMIT("\n");
+
   jitterc_fclose (f);
 }
 

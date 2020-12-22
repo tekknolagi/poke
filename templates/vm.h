@@ -498,6 +498,8 @@ struct jitter_special_purpose_state_data
    registers and "q" with 2 fast registers, slow registers can be accessed in
    this order:
      r4, f7, q2, r5, r8, q3, r6, r9, q4, and so on.
+   Each contiguous group of slow registers spanning every class and starting
+   from the first class (here for example <r5, r6, q3>) is called a "rank".
    This organization is convenient since changing the number of slow registers
    doesn't invalidate any offset computed in the past: the Array can simply be
    resized and its base pointer updated, without changing the code accessing it.
