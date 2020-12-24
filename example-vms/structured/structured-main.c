@@ -105,12 +105,14 @@ structured_help (void)
   printf ("      --cross-disassemble          use the cross-disassembler rather than\n");
   printf ("                                   the native disassembler; also enable\n");
   printf ("                                   disassembly as per --disassemble\n");
+  printf ("      --profile                    print profiling information (if configured)\n");
   printf ("      --print-locations            print the mapping between VM structures\n");
   printf ("                                   and hardware structures, to help humans\n");
   printf ("                                   read the disassembly\n");
   printf ("      --dry-run                    do not actually run the program\n");
   printf ("      --print-routine, --print     print VM instructions\n");
   printf ("      --no-dry-run                 run the program (default)\n");
+  printf ("      --no-profile                 omit profiling information (default)\n");
   printf ("      --no-print-locations         do not print locations (default)\n");
   printf ("      --no-print-routine,\n");
   printf ("      --no-print                   do not print VM instructions (default)\n");
@@ -194,6 +196,9 @@ struct structured_command_line
   /* True iff we should disassemble the VM routine. */
   bool disassemble;
 
+  /* True iff we should print profiling information. */
+  bool profile;
+
   /* True iff we should print data locations. */
   bool print_locations;
 
@@ -225,6 +230,7 @@ structured_initialize_command_line (struct structured_command_line *cl)
   cl->print = false;
   cl->cross_disassemble = false;
   cl->disassemble = false;
+  cl->profile = false;
   cl->print_locations = false;
   cl->dry_run = false;
   cl->optimization_rewriting = true;
@@ -281,6 +287,10 @@ structured_parse_command_line (struct structured_command_line *cl,
           cl->cross_disassemble = true;
           cl->disassemble = true;
         }
+      else if (handle_options && ! strcmp (arg, "--profile"))
+        cl->profile = true;
+      else if (handle_options && ! strcmp (arg, "--no-profile"))
+        cl->profile = false;
       else if (handle_options && ! strcmp (arg, "--print-locations"))
         cl->print_locations = true;
       else if (handle_options && ! strcmp (arg, "--no-print-locations"))
@@ -423,6 +433,11 @@ structured_work (struct structured_command_line *cl)
       struct structuredvm_state s;
       structuredvm_state_initialize (& s);
       structuredvm_execute_routine (vmr, & s);
+      if (cl->profile)
+        {
+          structuredvm_profile p = structuredvm_state_profile (& s);
+          structuredvm_profile_print_specialized (ctx, p);
+        }
       structuredvm_state_finalize (& s);
 
       /* Destroy the Jittery routine.  Since here the reference count is exactly

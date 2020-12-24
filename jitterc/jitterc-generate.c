@@ -2690,6 +2690,13 @@ jitterc_emit_executor_ordinary_specialized_instructions
           EMIT("#endif\n\n");
         }
 
+      /* Emit profiling code for the instruction. */
+      EMIT ("#if defined (JITTER_INSTRUMENT_FOR_PROFILING)\n");
+      EMIT ("  JITTER_PROFILE_ADD_SPECIALIZED_INSTRUCTION\n");
+      EMIT ("     (VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA->profile,\n");
+      EMIT ("      JITTER_SPECIALIZED_INSTRUCTION_OPCODE);\n");
+      EMIT ("#endif // #if defined (JITTER_INSTRUMENT_FOR_PROFILING)\n");
+      
       /* Emit the user C code for the beginning of every instruction, if any. */
       jitterc_emit_user_c_code_to_stream
          (vm, f, vm->instruction_beginning_c_code, "instruction-beginning-c");

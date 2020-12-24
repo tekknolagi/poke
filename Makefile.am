@@ -542,6 +542,7 @@ SOURCES_FOR_LIBJITTER = \
   jitter/jitter-config.h \
   jitter/jitter-instruction.c jitter/jitter-instruction.h \
   jitter/jitter-mutable-routine.c jitter/jitter-mutable-routine.h \
+  jitter/jitter-profile.c jitter/jitter-profile.h \
   jitter/jitter-routine.c jitter/jitter-routine.h \
   jitter/jitter-rewrite.c jitter/jitter-rewrite.h \
   jitter/jitter-specialize.c jitter/jitter-specialize.h \
@@ -579,6 +580,7 @@ jitterinclude_HEADERS += \
   jitter/jitter-instruction.h \
   jitter/jitter-machine-common.h \
   jitter/jitter-mmap.h \
+  jitter/jitter-profile.h \
   jitter/jitter-signals.h \
   jitter/jitter-mutable-routine.h \
   jitter/jitter-routine.h \

@@ -70,6 +70,7 @@
 struct vmprefix_main_command_line
 {
   bool debug;
+  bool profile;
   bool progress_on_stderr;
   bool print_locations, print_routine, disassemble_routine, run_routine;
   bool slow_literals_only, slow_registers_only;
@@ -103,11 +104,12 @@ enum vmprefix_vm_negative_option
     vmprefix_vm_negative_option_no_dry_run = -4,
     vmprefix_vm_negative_option_no_print_locations = -5,
     vmprefix_vm_negative_option_no_print_routine = -6,
-    vmprefix_vm_negative_option_no_progress_on_stderr = -7,
-    vmprefix_vm_negative_option_no_slow_literals_only = -8,
-    vmprefix_vm_negative_option_no_slow_registers_only = -9,
-    vmprefix_vm_negative_option_no_slow_only = -10,
-    vmprefix_vm_negative_option_optimization_rewriting = -11
+    vmprefix_vm_negative_option_no_profile = -7,
+    vmprefix_vm_negative_option_no_progress_on_stderr = -8,
+    vmprefix_vm_negative_option_no_slow_literals_only = -9,
+    vmprefix_vm_negative_option_no_slow_registers_only = -10,
+    vmprefix_vm_negative_option_no_slow_only = -11,
+    vmprefix_vm_negative_option_optimization_rewriting = -12
   };
 
 /* Numeric keys for options having only a long format.  These must not conflict
@@ -115,8 +117,9 @@ enum vmprefix_vm_negative_option
 enum vmprefix_vm_long_only_option
   {
     vmprefix_vm_long_only_option_print_locations = -109,
-    vmprefix_vm_long_only_option_dump_jitter_version = -110,
-    vmprefix_vm_long_only_option_slow_only = -111
+    vmprefix_vm_long_only_option_profile = -110,
+    vmprefix_vm_long_only_option_dump_jitter_version = -111,
+    vmprefix_vm_long_only_option_slow_only = -112
   };
 
 /* Update our option state with the information from a single command-line
@@ -134,6 +137,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       cl->debug = false;
       cl->progress_on_stderr = false;
       cl->print_locations = false;
+      cl->profile = false;
       cl->print_routine = false;
       cl->disassemble_routine = false;
       cl->run_routine = true;
@@ -202,6 +206,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case vmprefix_vm_long_only_option_print_locations:
       cl->print_locations = true;
       break;
+    case vmprefix_vm_long_only_option_profile:
+      cl->profile = true;
+      break;
     case 'p':
       cl->print_routine = true;
       break;
@@ -210,6 +217,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case vmprefix_vm_negative_option_no_print_routine:
       cl->print_routine = false;
+      break;
+    case vmprefix_vm_negative_option_no_profile:
+      cl->profile = false;
       break;
     case 'b':
       cl->objdump_name = arg;
@@ -356,6 +366,8 @@ static struct argp_option vmprefix_main_option_specification[] =
    {"progress-on-stderr", 'e', NULL, 0,
     "Show progress information on stderr instead of stdout"},
    {"debug", 'd', NULL, 0, "Enable debugging" },
+   {"profile", vmprefix_vm_long_only_option_profile, NULL, 0,
+    "Print VM instruction profiling information, if configured in"},
    {"slow-literals-only", 'L', NULL, 0,
     "Use slow literals even where fast literals would be available"
     " (this is mostly useful to measure the speedup introduced by fast"
@@ -381,6 +393,8 @@ static struct argp_option vmprefix_main_option_specification[] =
     NULL, 0, "Show progress information on stdout (default)"},
    {"no-debug", vmprefix_vm_negative_option_no_debug,
     NULL, 0, "Disable debugging (default)"},
+   {"no-profile", vmprefix_vm_negative_option_no_profile,
+    NULL, 0, "Disable profiling (default)"},
    {"no-slow-literals-only", vmprefix_vm_negative_option_no_slow_literals_only,
     NULL, 0, "Use fast literals when possible (default)"},
    {"no-slow-registers-only", vmprefix_vm_negative_option_no_slow_registers_only,
@@ -596,6 +610,14 @@ main (int argc, char **argv)
       if (cl.debug)
         fprintf (progress, "Interpreting...\n");
       vmprefix_execute_executable_routine (er, & s);
+
+      if (cl.profile)
+        {
+          if (cl.debug)
+            fprintf (progress, "Printing profiling information...\n");
+          vmprefix_profile profile = vmprefix_state_profile (& s);
+          vmprefix_profile_print_specialized (ctx, profile);
+        }
 
       if (cl.debug)
         fprintf (progress, "Finalizing VM state...\n");

@@ -146,6 +146,8 @@ vmprefix_initialize_special_purpose_data
   d->pending_notifications = 0;
   jitter_initialize_pending_signal_notifications
      (& d->pending_signal_notifications);
+
+  d->profile = jitter_profile_make (vmprefix_vm);
 }
 
 /* Finalize the pointed special-purpose data structure. */
@@ -155,6 +157,7 @@ vmprefix_finalize_special_purpose_data
 {
   jitter_finalize_pending_signal_notifications
      (d->pending_signal_notifications);
+  jitter_profile_destroy (d->profile);
 }
 
 
@@ -617,6 +620,43 @@ vmprefix_execute_routine (jitter_routine r,
   struct jitter_executable_routine *e
     = jitter_routine_make_executable_if_needed (r);
   vmprefix_execute_executable_routine (e, s);
+}
+
+
+
+
+/* Profiling.
+ * ************************************************************************** */
+
+/* These functions are all trivial wrappers around the functionality declared
+   in jitter/jitter-profile.h, hiding the VM pointer. */
+
+vmprefix_profile
+vmprefix_state_profile (struct vmprefix_state *s)
+{
+  volatile struct jitter_special_purpose_state_data *spd
+    = VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA
+        (s->vmprefix_state_backing.jitter_array);
+  return spd->profile;
+}
+
+vmprefix_profile
+vmprefix_profile_make (void)
+{
+  return jitter_profile_make (vmprefix_vm);
+}
+
+void
+vmprefix_profile_merge_from (vmprefix_profile to, const vmprefix_profile from)
+{
+  jitter_profile_merge_from (vmprefix_vm, to, from);
+}
+
+void
+vmprefix_profile_print_specialized (jitter_print_context ct,
+                                    const vmprefix_profile p)
+{
+  jitter_profile_print_specialized (ct, vmprefix_vm, p);
 }
 
 

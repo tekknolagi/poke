@@ -52,6 +52,7 @@
 //#include <jitter/jitter-specialize.h> // FIXME: what about only declaring jitter_specialize in another header, and not including this?
 #include <jitter/jitter-disassemble.h>
 #include <jitter/jitter-vm.h>
+#include <jitter/jitter-profile.h>
 #include <jitter/jitter-data-locations.h>
 #include <jitter/jitter-arithmetic.h>
 #include <jitter/jitter-bitwise.h>
@@ -315,6 +316,10 @@ struct jitter_special_purpose_state_data
      details (including in pending_signal_notifications) only in the rare case
      of pending_notifications being true. */
   struct jitter_signal_notification *pending_signal_notifications;
+
+  /* A pointer to a profiling array holding an execution count for each
+     specialised instruction. */
+  jitter_profile profile;
 };
 
 
@@ -865,6 +870,29 @@ vmprefix_vm_configuration;
 /* The unified API has no facility to explicitly make executable routines: their
    very existence is hidden.  For this reason some of the macros above, such
    vmprefix_make_executable_routine, have no unified counterpart here. */
+
+/* Profiling.  Apart from vmprefix_state_profile, which returns a pointer to
+   the profile within a pointed state structure, everything else here has the
+   same API as the functionality in jitter/jitter-profile.h , without the VM
+   pointer.
+   Notice that this API does nothing useful if JITTER_INSTRUMENT_FOR_PROFILING
+   is not defined. */
+#define vmprefix_profile  \
+  jitter_profile
+vmprefix_profile
+vmprefix_state_profile (struct vmprefix_state *s)
+  __attribute__ ((returns_nonnull, nonnull (1)));
+vmprefix_profile
+vmprefix_profile_make (void)
+  __attribute__ ((returns_nonnull));
+#define vmprefix_profile_destroy jitter_profile_destroy
+void
+vmprefix_profile_merge_from (vmprefix_profile to, const vmprefix_profile from)
+  __attribute__ ((nonnull (1, 2)));
+void
+vmprefix_profile_print_specialized (jitter_print_context ct,
+                                    const vmprefix_profile p)
+  __attribute__ ((nonnull (1, 2)));
 
 
 
