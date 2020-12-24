@@ -74,8 +74,28 @@ vmprefix_vm = & the_vmprefix_vm;
 struct jitter_list_header * const
 vmprefix_states = & the_vmprefix_vm.states;
 
+/* It is convenient to have this initialised at start up, even before calling
+   any initialisation function.  This makes it reliable to read this when, for
+   example, handling --version . */
+static const struct jitter_vm_configuration
+vmprefix_vm_the_configuration
+  = {
+      VMPREFIX_LOWER_CASE_PREFIX /* lower_case_prefix */,
+      VMPREFIX_UPPER_CASE_PREFIX /* upper_case_prefix */,
+      VMPREFIX_MAX_FAST_REGISTER_NO_PER_CLASS
+        /* max_fast_register_no_per_class */,
+      VMPREFIX_MAX_NONRESIDUAL_LITERAL_NO /* max_nonresidual_literal_no */,
+      VMPREFIX_DISPATCH_HUMAN_READABLE /* dispatch_human_readable */,
+#if defined (JITTER_INSTRUMENT_FOR_PROFILING)
+      true /* profile_instrumented */
+#else
+      false /* profile_instrumented */
+#endif
+    };
+
 const struct jitter_vm_configuration * const
-vmprefix_vm_configuration = & the_vmprefix_vm.configuration;
+vmprefix_vm_configuration
+  = & vmprefix_vm_the_configuration;
 
 
 
@@ -131,12 +151,6 @@ vmprefix_check_specialized_instruction_opcode_once (void)
 int
 vmprefix_specialize_instruction (struct jitter_mutable_routine *p,
                                  const struct jitter_instruction *ins);
-
-/* Forward-declaration.  The implementation of this is machine-generated, and
-   occurs further down in this file. */
-static void
-vmprefix_initialize_vm_configuration (struct jitter_vm_configuration *c);
-
 
 /* Initialize the pointed special-purpose data structure. */
 static void
@@ -353,9 +367,8 @@ vmprefix_initialize (void)
     {
       memset (& the_vmprefix_vm, 0xff, sizeof (struct jitter_vm));
 
-      /* The global pointer vmprefix_vm_configuration points within the_vmprefix_vm ,
-         so its data structure has just been invalidated as well. */
-      vmprefix_initialize_vm_configuration (& the_vmprefix_vm.configuration);
+      /* Make the configuration struct reachable from the VM struct. */
+      the_vmprefix_vm.configuration = vmprefix_vm_configuration;
       //vmprefix_print_vm_configuration (stdout, & the_vmprefix_vm.configuration);
 
       /* Initialize meta-instruction pointers for implicit instructions.
@@ -647,8 +660,23 @@ vmprefix_profile_make (void)
 }
 
 void
+vmprefix_profile_reset (vmprefix_profile p)
+{
+  jitter_profile_reset (vmprefix_vm, p);
+}
+
+void
 vmprefix_profile_merge_from (vmprefix_profile to, const vmprefix_profile from)
 {
+  jitter_profile_merge_from (vmprefix_vm, to, from);
+}
+
+void
+vmprefix_profile_merge_from_state (vmprefix_profile to,
+                                   const struct vmprefix_state *from_state)
+{
+  const vmprefix_profile from
+    = vmprefix_state_profile ((struct vmprefix_state *) from_state);
   jitter_profile_merge_from (vmprefix_vm, to, from);
 }
 

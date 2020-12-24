@@ -638,9 +638,18 @@ JITTERLISP_PRIMITIVE_FUNCTION_1_(compiled_closure_print, COMPILED_CLOSURE,
   { JITTERLISP_COMPILED_CLOSURE_PRINT_(res, args [0]); })
 JITTERLISP_PRIMITIVE_FUNCTION_1_(compiled_closure_disassemble, COMPILED_CLOSURE,
   { JITTERLISP_COMPILED_CLOSURE_DISASSEMBLE_(res, args [0]); })
-/* Operations displaying debugging information. */
+/* Operations for handling debugging and profiling information. */
 JITTERLISP_PRIMITIVE_FUNCTION_0_(print_locations,
   { jitterlispvm_dump_data_locations (jitterlisp_print_context); })
+JITTERLISP_PRIMITIVE_FUNCTION_0_(print_profile_specialized,
+  { jitterlispvm_profile profile
+      = jitterlispvm_state_profile (& jitterlispvm_state);
+    jitterlispvm_profile_print_specialized (jitterlisp_print_context,
+                                            profile); })
+JITTERLISP_PRIMITIVE_FUNCTION_0_(reset_profileb,
+  { jitterlispvm_profile profile
+      = jitterlispvm_state_profile (& jitterlispvm_state);
+    jitterlispvm_profile_reset (profile); })
 /* Operations to display legal notices. */
 JITTERLISP_PRIMITIVE_FUNCTION_0_(copying,
   { jitter_print_char_star (jitterlisp_print_context, jitterlisp_gpl); })
@@ -887,9 +896,13 @@ jitterlisp_primitives []
                                              compiled_closure_print),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("compiled-closure-disassemble", 1,
                                              compiled_closure_disassemble),
-      /* Operations displaying debugging information. */
+      /* Operations for handling debugging and profiling information. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("print-locations", 0,
                                              print_locations),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("print-profile-specialized", 0,
+                                             print_profile_specialized),
+      JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("reset-profile!", 0,
+                                             reset_profileb),
       /* Operations to display legal notices. */
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("copying", 0, copying),
       JITTERLISP_PRIMITIVE_PROCEDURE_STRUCT_("no-warranty", 0, no_warranty),

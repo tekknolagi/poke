@@ -1,6 +1,6 @@
 /* VM default frontend for vmprefix VM.
 
-   Copyright (C) 2016, 2017, 2018, 2019 Luca Saiu
+   Copyright (C) 2016, 2017, 2018, 2019, 2020 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -431,24 +431,32 @@ static struct argp_option vmprefix_main_option_specification[] =
    /* Option terminator. */
    { 0 }};
 
-/* Short help text to print on --help and --version .  Defaults are
-   supplied by the library if these are not defined; I guess they
-   use weak symbols on reasonable platforms. */
-const char *argp_program_version
-/*  = VMPREFIX_VM_NAME " VM driver ("
-       JITTER_DISPATCH_NAME_STRING " dispatch, " JITTER_PACKAGE_NAME
-       " " JITTER_PACKAGE_VERSION ")\n"*/
-  = VMPREFIX_VM_NAME " VM driver (" JITTER_PACKAGE_NAME ") "
-    JITTER_PACKAGE_VERSION "\n"
-    "(Dispatching model: " JITTER_DISPATCH_NAME_STRING ")\n"
-    "Copyright (C) 2016, 2017, 2019 Luca Saiu.\n"
-    "Jitter comes with ABSOLUTELY NO WARRANTY.\n"
-    "You may redistribute copies of Jitter under the terms of the\n"
-    "GNU General Public License, version 3 or any later version published by\n"
-    "the Free Software Foundation.  For more information see the file named\n"
-    "COPYING in the source distribution or the git repository.\n\n"
-    "Written by Luca Saiu <http://ageinghacker.net> (Jitter, its runtime, "
-    "this driver program).";
+/* Customised text text to print on --help and --version . */
+static void
+the_argp_program_version_hook (FILE * restrict stream, struct argp_state *s)
+{
+  const struct jitter_vm_configuration *c = vmprefix_vm_configuration;
+
+  fprintf (stream,
+           "VM driver for %s: %s%s dispatch "
+           "(" JITTER_PACKAGE_NAME " " JITTER_PACKAGE_VERSION ")\n",
+           c->lower_case_prefix,
+           (c->profile_instrumented ? "profile-instrumented, " : ""),
+           c->dispatch_human_readable);
+  fprintf
+     (stream,
+      "Copyright (C) 2016-2020 Luca Saiu.\n"
+      "Jitter comes with ABSOLUTELY NO WARRANTY.\n"
+      "You may redistribute copies of Jitter under the terms of the\n"
+      "GNU General Public License, version 3 or any later version published by\n"
+      "the Free Software Foundation.  For more information see the file named\n"
+      "COPYING in the source distribution or the git repository.\n"
+      "\n"
+      "Written by Luca Saiu <http://ageinghacker.net> (Jitter, its runtime,\n"
+      "this driver program).\n");
+}
+void (*argp_program_version_hook) (FILE * restrict stream, struct argp_state *s)
+  = the_argp_program_version_hook;
 const char *argp_program_bug_address = JITTER_PACKAGE_BUGREPORT;
 
 /* The parser main data structure. */

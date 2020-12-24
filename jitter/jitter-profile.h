@@ -35,8 +35,8 @@
    instructions, by instrumentation.  This style of profiling is exact and
    deterministic but disruptive for performance and therefore not enabled by
    default.
-   When JITTER_INSTRUMENT_FOR_PROFILING is not defined this API remains
-   available for compatibility, but the functions do nothing useful.
+   In the case of a VM not instrumented for profiling this API remains available
+   for compatibility, but the functions do nothing useful.
 
    The functions in this header are independent from the VM, and serve to factor
    the the common logic.  The user should use the equivalent VM-specific
@@ -51,6 +51,11 @@
 /* A profile contains execution counts for specialised VM instructions, in an
    array indexed by specialised opcode.  Each count is a jitter_ulong_long
    number.
+
+   If the VM was not instrumented for profiling then the functions constructing
+   a profile always return NULL, the functions for merging profiles do nothing,
+   and the functions for printing profiles print a warning.
+
    The user should treat this data type as abstract. */
 typedef jitter_ulong_long *
 jitter_profile;
@@ -65,6 +70,12 @@ jitter_profile_make (const struct jitter_vm *vm)
 void
 jitter_profile_destroy (jitter_profile p)
   __attribute__ ((nonnull (1)));
+
+/* Reset the given profile, changing the instruction count for every instruction
+   back to zero.  The profile must belong to the pointed VM. */
+void
+jitter_profile_reset (const struct jitter_vm *vm, jitter_profile p)
+  __attribute__ ((nonnull (1, 2)));
 
 /* Modify the first profile by adding values from the second profile.  Both
    must have been created for the same pointed VM. */

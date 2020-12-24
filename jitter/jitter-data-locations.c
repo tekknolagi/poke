@@ -155,7 +155,7 @@ jitter_locations_begin_class (jitter_print_context ctx,
                               const struct jitter_vm *vm,
                               const char *suffix)
 {
-  char *prefix = vm->configuration.lower_case_prefix;
+  char *prefix = vm->configuration->lower_case_prefix;
   size_t size = strlen (prefix) + 1 + strlen (suffix) + 1;
   char *buffer = jitter_xmalloc (size);
   sprintf (buffer, "%s-%s", prefix, suffix);

@@ -45,7 +45,9 @@ jitter_print_vm_configuration (FILE *f,
   PRINT("max_fast_register_no_per_class: %i\n",
         (int) c->max_fast_register_no_per_class);
   PRINT("max_nonresidual_literal_no:     %i\n", (int) c->max_nonresidual_literal_no);
-  PRINT("dispatch:                       %s\n", c->dispatch);
+  PRINT("dispatch:                       %s\n", c->dispatch_human_readable);
+  PRINT("profile instrumentation:        %s\n",
+        (c->profile_instrumented ? "enabled (low-performance !)" : "disabled"));
 
 #undef PRINT
 }

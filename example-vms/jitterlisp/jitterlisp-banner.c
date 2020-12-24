@@ -33,7 +33,7 @@ static const char *
 jitterlisp_interactive_banner_text =
 "================================================================\n"
 "JitterLisp (from Jitter version " JITTER_PACKAGE_VERSION ")\n"
-"Copyright (C) 2018, 2019, 2020 Luca Saiu\n"
+"Copyright (C) 2017-2020 Luca Saiu\n"
 "\n"
 "JitterLisp comes with ABSOLUTELY NO WARRANTY; type (no-warranty)\n"
 "for details.  This program is free software, and you are welcome\n"
@@ -85,8 +85,15 @@ jitterlisp_interactive_banner (void)
   jitterlisp_end_class (jitterlisp_print_context);
 
   /* Show information about configured or enabled features. */
+  const struct jitter_vm_configuration *c = jitterlispvm_vm_configuration;
   jitterlisp_interactive_banner_feature ("VM dispatch",
-                                         JITTER_DISPATCH_NAME_STRING);
+                                         c->dispatch_human_readable);
+  /* Do not waste a line in the banner for every run when profiling is disabled,
+     which will be almost all the time: only print when profiling is on. */
+  if (c->profile_instrumented)
+    jitterlisp_interactive_banner_feature
+       ("VM profiling",
+        "instrumentation enabled (slow!)");
   jitterlisp_interactive_banner_feature ("Compiled primitive safety",
 #if defined (JITTERLISP_UNSAFE)
                                          "no type or overflow checking (unsafe!)"

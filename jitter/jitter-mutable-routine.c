@@ -790,7 +790,7 @@ jitter_mutable_routine_begin_class (jitter_print_context ctx,
                                     const struct jitter_mutable_routine *p,
                                     const char *suffix)
 {
-  char *prefix = p->vm->configuration.lower_case_prefix;
+  char *prefix = p->vm->configuration->lower_case_prefix;
   size_t size = strlen (prefix) + 1 + strlen (suffix) + 1;
   char *buffer = jitter_xmalloc (size);
   sprintf (buffer, "%s-%s", prefix, suffix);

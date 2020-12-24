@@ -48,7 +48,7 @@ jitter_disassemble_begin_class (jitter_print_context ctx,
                                 const struct jitter_executable_routine *er,
                                 const char *suffix)
 {
-  char *prefix = er->vm->configuration.lower_case_prefix;
+  char *prefix = er->vm->configuration->lower_case_prefix;
   size_t size = strlen (prefix) + 1 + strlen (suffix) + 1;
   char *buffer = jitter_xmalloc (size);
   sprintf (buffer, "%s-%s", prefix, suffix);

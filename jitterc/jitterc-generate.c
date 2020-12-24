@@ -261,25 +261,6 @@ jitterc_emit_user_c_code (const struct jitterc_vm *vm,
   jitterc_fclose (f);
 }
 
-/* Emit a macro definition holding the VM name.  This is mostly useful for
-   vm-main.c . */
-static void
-jitterc_emit_vm_name (const struct jitterc_vm *vm)
-{
-  FILE *f = jitterc_fopen_a_basename (vm, "vm.h");
-  EMIT("/* A nice human-readable name for this VM. */\n");
-  char *name = vm->name;
-  if (name == NULL)
-    {
-      name = jitter_clone_string (vm->lower_case_prefix);
-      if (strlen (name) > 0)
-        name [0] = toupper (name [0]);
-    }
-  EMIT("#define VMPREFIX_VM_NAME JITTER_STRINGIFY(%s)\n", name);
-  EMIT("\n");
-  jitterc_fclose (f);
-}
-
 /* Emit the initial part of the user-specified code for the header.  This user code
    comes before everything, even before standard #include directives. */
 static void
@@ -1361,26 +1342,6 @@ jitterc_emit_specializer (const struct jitterc_vm *vm)
   jitterc_fclose (f);
 }
 
-static void
-jitterc_emit_configuration (const struct jitterc_vm *vm)
-{
-  FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
-  EMIT("\n\n/* Initialize the VM configuration set by jitterc and CPP options. */\n");
-  EMIT("void\n");
-  EMIT("vmprefix_initialize_vm_configuration (struct jitter_vm_configuration *c)\n");
-  EMIT("{\n");
-  EMIT("  c->lower_case_prefix = \"%s\";\n", vm->lower_case_prefix);
-  EMIT("  c->upper_case_prefix = \"%s\";\n", vm->upper_case_prefix);
-
-  EMIT("  c->max_fast_register_no_per_class = %i;\n",
-       (int) vm->max_fast_register_no_per_class);
-  EMIT("  c->max_nonresidual_literal_no = %i;\n",
-       (int)vm->max_nonresidual_literal_no);
-  EMIT("  c->dispatch = JITTER_DISPATCH_NAME_STRING;\n");
-  EMIT("}\n\n");
-  jitterc_fclose (f);
-}
-
 
 
 
@@ -1802,6 +1763,42 @@ jitterc_emit_state (const struct jitterc_vm *vm)
   EMIT("\n");
   EMIT("}\n\n");
 
+  jitterc_fclose (f);
+}
+
+
+
+
+/* VM configuration.
+ * ************************************************************************** */
+
+/* Emit configuration macros.  These are mostly useful to statically initialise
+   the one instance of struct jitter_vm_configuration , to be used in --version
+   and similar, and for for vm-main.c . */
+static void
+jitterc_emit_configuration_macros (const struct jitterc_vm *vm)
+{
+  FILE *f = jitterc_fopen_a_basename (vm, "vm.h");
+
+  EMIT("/* Configuration data for struct jitter_vm_configuration. */\n");
+  char *name = vm->name;
+  if (name == NULL)
+    {
+      name = jitter_clone_string (vm->lower_case_prefix);
+      if (strlen (name) > 0)
+        name [0] = toupper (name [0]);
+    }
+  EMIT("#define VMPREFIX_VM_NAME JITTER_STRINGIFY(%s)\n", name);
+  EMIT("#define VMPREFIX_LOWER_CASE_PREFIX \"%s\"\n", vm->lower_case_prefix);
+  EMIT("#define VMPREFIX_UPPER_CASE_PREFIX \"%s\"\n", vm->upper_case_prefix);
+  EMIT("#define VMPREFIX_DISPATCH_HUMAN_READABLE \\\n");
+  EMIT("  JITTER_DISPATCH_NAME_STRING\n");
+  EMIT("#define VMPREFIX_MAX_FAST_REGISTER_NO_PER_CLASS %i\n",
+       (int) vm->max_fast_register_no_per_class);
+  EMIT("#define VMPREFIX_MAX_NONRESIDUAL_LITERAL_NO %i\n",
+       (int) vm->max_nonresidual_literal_no);
+
+  EMIT("\n");
   jitterc_fclose (f);
 }
 
@@ -3028,6 +3025,17 @@ jitterc_emit_executor_main_function
   EMIT("  /* Initialization.  This is only called once at startup. */\n");
   EMIT("  if (__builtin_expect (jitter_initialize, false))\n");
   EMIT("    {\n");
+  EMIT("      /* Make sure that vm1 and vm2 were macroexpanded consistently\n");
+  EMIT("         with respect to profiling support. */\n");
+  EMIT("#if defined (JITTER_INSTRUMENT_FOR_PROFILING)\n");
+  EMIT("      if (! vmprefix_vm_configuration->profile_instrumented)\n");
+  EMIT("        jitter_fatal (\"vm1 has profiling disabled, vm2 enabled: \"\n");
+  EMIT("#else // ! defined (JITTER_INSTRUMENT_FOR_PROFILING)\n");
+  EMIT("      if (vmprefix_vm_configuration->profile_instrumented)\n");
+  EMIT("        jitter_fatal (\"vm1 has profiling enabled, vm2 disabled: \"\n");
+  EMIT("#endif /* #if defined (JITTER_INSTRUMENT_FOR_PROFILING) */\n");
+  EMIT("                      \"recompile with consistent CPPFLAGS\");\n");
+  EMIT("\n");
   EMIT("#ifndef JITTER_DISPATCH_SWITCH\n");
   EMIT("      /* FIXME: I can do this with only one relocation, by keeping\n");
   EMIT("         a pointer to the first VM instruction beginning in a static\n");
@@ -3610,8 +3618,6 @@ jitterc_emit_executor (const struct jitterc_vm *vm)
   EMIT("#include <jitter/jitter-fast-branch.h>\n\n");
   EMIT("#define JITTER_FAST_BRANCH_PREFIX vmprefix_\n\n");
 
-  jitterc_emit_vm_name_macros (f, vm);
-
   /* Emit macros to access general-purpose state data. */
   jitterc_emit_executor_general_purpose_state_data_access_macros (f, vm);
 
@@ -3917,9 +3923,8 @@ jitterc_generate (struct jitterc_vm *vm,
   /* Append machine-generated code to the copied templates in the temporary
      directory, and generate a separate file for the heavyweight part.  Perform
      no prefix-replacement yet. */
-  jitterc_emit_vm_name (vm);
   jitterc_emit_early_header_c (vm);
-  jitterc_emit_configuration (vm);
+  jitterc_emit_configuration_macros (vm);
   jitterc_emit_register_classes_h (vm);
   jitterc_emit_state_h (vm);
   jitterc_emit_meta_instructions_h (vm);

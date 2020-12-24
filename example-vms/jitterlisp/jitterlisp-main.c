@@ -183,14 +183,29 @@ static struct argp_option jitterlisp_option_specification[] =
    /* Option terminator. */
    { 0 }};
 
-const char *argp_program_version
-  = "JitterLisp (" PACKAGE_NAME ") " PACKAGE_VERSION "\n"
-    "Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu.\n"
-    "JitterLisp comes with ABSOLUTELY NO WARRANTY.\n"
-    "You may redistribute copies of JitterLisp under the terms of the GNU General Public\n"
-    "License, version 3 or any later version published by the Free Software Foundation.\n"
-    "For more information see the file named COPYING in the source distribution.\n\n"
-    "Written by Luca Saiu <http://ageinghacker.net>.";
+/* Customised text text to print on --help and --version . */
+static void
+the_argp_program_version_hook (FILE * restrict stream, struct argp_state *s)
+{
+  const struct jitter_vm_configuration *c = jitterlispvm_vm_configuration;
+
+  fprintf (stream,
+           "JitterLisp (%s%s dispatch) "
+           "(" JITTER_PACKAGE_NAME " " JITTER_PACKAGE_VERSION ")\n",
+           (c->profile_instrumented ? "profile-instrumented, " : ""),
+           c->dispatch_human_readable);
+  fprintf
+     (stream,
+      "Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu.\n"
+      "JitterLisp comes with ABSOLUTELY NO WARRANTY.\n"
+      "You may redistribute copies of JitterLisp under the terms of the GNU General Public\n"
+      "License, version 3 or any later version published by the Free Software Foundation.\n"
+      "For more information see the file named COPYING in the source distribution.\n"
+      "\n"
+      "Written by Luca Saiu <http://ageinghacker.net>.");
+}
+void (*argp_program_version_hook) (FILE * restrict stream, struct argp_state *s)
+  = the_argp_program_version_hook;
 const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 
 /* Forward-declaration.  I like having argp defined here, before parse_opt which

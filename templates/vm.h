@@ -887,7 +887,14 @@ vmprefix_profile_make (void)
   __attribute__ ((returns_nonnull));
 #define vmprefix_profile_destroy jitter_profile_destroy
 void
+vmprefix_profile_reset (vmprefix_profile p)
+  __attribute__ ((nonnull (1)));
+void
 vmprefix_profile_merge_from (vmprefix_profile to, const vmprefix_profile from)
+  __attribute__ ((nonnull (1, 2)));
+void
+vmprefix_profile_merge_from_state (vmprefix_profile to,
+                                   const struct vmprefix_state *from_state)
   __attribute__ ((nonnull (1, 2)));
 void
 vmprefix_profile_print_specialized (jitter_print_context ct,

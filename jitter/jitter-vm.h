@@ -35,7 +35,10 @@
 /* VM-specific attributes.
  * ************************************************************************** */
 
-/* A struct containing the configuration-specific parameters of a VM. */
+/* A struct containing the configuration-specific parameters of a VM.  This
+   struct exists in only one constant instance per VM, and does not depend on
+   initialisation functions.  It is convenient to be used, for example, in
+   handling the command-line option --version . */
 struct jitter_vm_configuration
 {
   /* Identifier prefixes for the generated C code. */
@@ -50,7 +53,12 @@ struct jitter_vm_configuration
   int max_nonresidual_literal_no;
 
   /* A textual description of the dispatching technique. */
-  char *dispatch;
+  char *dispatch_human_readable;
+
+  /* Non-false iff the VM was compiling with profiling instrumentation enabled.
+     Instrumentation considerably reduces performance, so the user should be
+     informed about it being enabled. */
+  bool profile_instrumented;
 };
 
 /* Print the current VM configuration, as set by jitterc and CPP macros, to the
@@ -75,7 +83,7 @@ jitter_print_vm_configuration (FILE *f,
 struct jitter_vm
 {
   /* Configuration-specific data for this VM. */
-  struct jitter_vm_configuration configuration;
+  const struct jitter_vm_configuration *configuration;
 
 /* Threads or pointers to native code blocks of course don't exist with
    switch-dispatching. */

@@ -3076,7 +3076,7 @@ macro calls are always replaced with AST combinations before evaluation}
 * Code execution::                    @code{eval}, @code{apply} and friends.
 * Compilation::                       Turning interpreted closures into code.
 * Input and output::                  How to read and write.
-* Debugging information::             Convenient functionality for developers.
+* Debugging and profiling::           Convenient functionality for developers.
 * Legal notices::                     Printing legal notices.
 * Unclassified::                      stuff to move.
 @end menu
@@ -4100,8 +4100,8 @@ No newline character or other terminator is added.
 @end deffn
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@
-@node Debugging information
-@subsection Debugging information
+@node Debugging and profiling
+@subsection Debugging and profiling
 
 @cindex location, print
 @cindex data location, print
@@ -4111,6 +4111,26 @@ No newline character or other terminator is added.
 Print data location information, mapping runtime VM data structures
 into hardware machine resources.  This is convenient for reading
 disassemblies.
+@end deffn
+
+@cindex profile, print
+@cindex print, profile
+@syindex print-profile-specialized
+@deffn {primitive wrapper} print-profile-specialized
+Print cumulative profile information about the specialised
+VM instructions run up to this point.  This just prints a warning if
+JitterLisp was not compiled with profiling instrumentation enabled,
+defining the CPP macro @code{JITTER_INSTRUMENT_FOR_PROFILING}; since
+profiling instrumentation has a performance cost it is disabled by
+default.
+@end deffn
+
+@cindex profile, reset
+@cindex reset, profile
+@syindex reset-profile!
+@deffn {primitive wrapper} reset-profile!
+Reset profile information, changing the execution count for every
+instruction back to zero.
 @end deffn
 
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@

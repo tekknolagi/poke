@@ -95,17 +95,24 @@ structured_help_section (const char *title)
 static void
 structured_help (void)
 {
+  const struct jitter_vm_configuration *c = structuredvm_vm_configuration;
+  bool profile = c->profile_instrumented;
+
   printf ("Usage: %s [OPTION...] FILE.structured\n", structured_program_name);
   printf ("   or: %s [OPTION...] -\n", structured_program_name);
   printf ("Run a structured-language program on a Jittery VM, using the\n");
-  printf (JITTER_DISPATCH_NAME_STRING " dispatch.\n");
+  printf ("%s dispatch%s.\n", c->dispatch_human_readable,
+          (profile ? " (profile-instrumented)" : ""));
 
   structured_help_section ("Debugging options");
   printf ("      --disassemble                print hardware machine instructions\n");
   printf ("      --cross-disassemble          use the cross-disassembler rather than\n");
   printf ("                                   the native disassembler; also enable\n");
   printf ("                                   disassembly as per --disassemble\n");
-  printf ("      --profile                    print profiling information (if configured)\n");
+  printf ("      --profile                    print profiling information%s\n",
+          (profile
+           ? ""
+           : " if available (disabled: recompile with -DJITTER_INSTRUMENT_FOR_PROFILING=1)"));
   printf ("      --print-locations            print the mapping between VM structures\n");
   printf ("                                   and hardware structures, to help humans\n");
   printf ("                                   read the disassembly\n");
@@ -152,8 +159,12 @@ structured_help (void)
 static void
 structured_version (void)
 {
-  printf ("structured (" JITTER_DISPATCH_NAME_STRING " dispatch) ("
-          JITTER_PACKAGE_NAME " " JITTER_PACKAGE_VERSION ")\n");
+  const struct jitter_vm_configuration *c = structuredvm_vm_configuration;
+
+  printf ("structured (%s%s dispatch) ("
+          JITTER_PACKAGE_NAME " " JITTER_PACKAGE_VERSION ")\n",
+          (c->profile_instrumented ? "profile-instrumented, " : ""),
+          c->dispatch_human_readable);
   printf ("Copyright (C) 2017-2020 Luca Saiu.\n");
   printf ("Jitter comes with ABSOLUTELY NO WARRANTY.\n");
   printf ("You may redistribute copies of Jitter under the terms of the GNU\n"
