@@ -64,13 +64,10 @@
 
 
 
-/*
-.template
-{
-    background-color: red;
-    color: white;
-    font-style: italic;
-    text-decoration: underline;
-    font-weight: bold;
-}
-*/
+/* Interaction and messages.
+ * ************************************************************************** */
+
+.structuredvm-warning  { background-color: red;
+                         color: black;
+                         font-style: italic;
+                         text-decoration: underline; }
