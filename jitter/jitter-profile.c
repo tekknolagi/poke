@@ -241,12 +241,18 @@ jitter_profile_print_specialized (jitter_print_context ct,
 
   jitter_profile_items_sort (items, element_no);
 
+  double count_sum = 0;
+  int i;
+  for (i = 0; i < element_no; i ++)
+    count_sum += items [i].count;
+
   size_t maximal_name_length = jitter_maximal_name_length_in (items, element_no);
   size_t maximal_count_width = jitter_maximal_count_width_in (items, element_no);
-  int i;
   for (i = 0; i < element_no; i ++)
     {
       struct jitter_profile_item *item = items + i;
+      double ratio = item->count / count_sum;
+
       jitter_profile_begin_class (ct, vm, "instruction");
       jitter_print_char_star (ct, item->name);
       jitter_print_end_class (ct);
@@ -262,10 +268,17 @@ jitter_profile_print_specialized (jitter_print_context ct,
            j ++)
         jitter_print_char (ct, ' ');
 
-      /* Print the number, aligned to the right.  This requires printing as many*/
+      /* Print the number, aligned to the right. */
       jitter_profile_begin_class (ct, vm, "number");
       jitter_print_char_star (ct, item->count_as_text);
       jitter_print_end_class (ct);
+
+      /* Print the count ratio as a percentage, aligned to the right. */
+      jitter_print_char (ct, ' ');
+      char percentage [10];
+      sprintf (percentage, "%5.1f%%", ratio * 100);
+      jitter_print_char_star (ct, percentage);
+
       jitter_print_char (ct, '\n');
     }
   free (items);
