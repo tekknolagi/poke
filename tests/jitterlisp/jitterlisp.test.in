@@ -1,6 +1,7 @@
 #!@SHELL@
 # Jitter testsuite: VM programs.  This is -*- sh -*-, to be preprocessed.
 # Copyright (C) 2017, 2018 Luca Saiu
+# Updated in 2020 by Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -47,7 +48,7 @@ jitterlisp_case_all_confs ()
   expected_output="$3"
   skip="$4"
 
-  options="--no-repl"
+  options="--no-repl --no-verbose-litter"
   for dispatch in "switch" "direct-threading" "minimal-threading" \
                   "no-threading"; do
       for gc in "litter" "boehm"; do
