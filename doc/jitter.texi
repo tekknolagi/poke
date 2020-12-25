@@ -1,8 +1,7 @@
 \input texinfo.tex @c This is -*- Texinfo -*-.
 
 @c This file is part of the Jitter manual.
-@c Copyright (C) 2017, 2019  Luca Saiu
-@c Updated in 2020 by Luca Saiu
+@c Copyright (C) 2017, 2019, 2020  Luca Saiu
 @c Written by Luca Saiu
 
 @c Permission is granted to copy, distribute and/or modify this
@@ -53,6 +52,13 @@
 @c This come in handy for private testing printouts.
 @c @setchapternewpage off
 
+@c I would be tempted to use
+@c   @xrefautomaticsectiontitle on
+@c to make cross-references appear in the printed manual naming the
+@c linked section rather than the anchor.  Still, the bibliography
+@c is much more intuitive to link with displayed anchor names.
+@c I might change my mind in the future.
+@xrefautomaticsectiontitle on
 
 @c Information for the Info directory
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -103,6 +109,74 @@ epsilon\subscript\
 @strong{[@emph{REPHRASE}: \text\]}
 @end rmacro
 
+@c Bibliography macros
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@ignore
+I am not really satisfied with this.  There should
+be a nice way to insert a link to the bibliography,
+usable in the PDF version, without having a page
+number in the printed document.
+@end ignore
+@iftex
+@rmacro bibanchor{bibliographyanchor}
+[\bibliographyanchor\]
+@end rmacro
+@rmacro bibref{bibliographyanchor}
+@cite{[\bibliographyanchor\]}
+@end rmacro
+@end iftex
+@ifnottex
+@rmacro bibanchor{bibliographyanchor}
+@anchor{[\bibliographyanchor\]}
+[\bibliographyanchor\]:
+@end rmacro
+@rmacro bibref{bibliographyanchor}
+@ref{[\bibliographyanchor\]}
+@end rmacro
+@end ifnottex
+
+@ifnothtml
+@macro bibbegin{bibliographyanchor}
+@multitable @columnfractions .17 .83
+@item @bibanchor{\bibliographyanchor\}
+@tab
+@indentedblock
+@end macro
+@end ifnothtml
+
+@ifhtml
+@macro bibbegin{bibliographyanchor}
+@multitable @columnfractions .15 .85
+@item @bibanchor{\bibliographyanchor\}
+@tab
+@end macro
+@end ifhtml
+
+@ifnothtml
+@macro bibend
+@end indentedblock
+@end multitable
+@end macro
+@end ifnothtml
+
+@ifhtml
+@macro bibend
+@end multitable
+@end macro
+@end ifhtml
+
+@rmacro bibentry{bibliographyanchor,body}
+@multitable @columnfractions .15 .85
+@item @bibanchor{\bibliographyanchor\}
+@tab
+\body\
+@end multitable
+@end rmacro
+
+@macro doi{doi}
+Available at @url{http://citeseerx.ist.psu.edu/viewdoc/summary?doi=\doi\}.
+@end macro
+
 
 @c Copying conditions
 @c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -113,7 +187,7 @@ This is the manual for Jitter
 (version @value{VERSION},
 last updated on @value{UPDATED}), an efficient virtual machine generator.
 
-Copyright @copyright{} 2017, 2019  Luca Saiu.  Written by Luca Saiu.
+Copyright @copyright{} 2017, 2019, 2020  Luca Saiu.  Written by Luca Saiu.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -190,6 +264,8 @@ software source code as @file{doc/COPYING.DOC}, and also on the web at
 * Compiling Jittery programs:: How to build executable from VMs and your code.
 * Writing VM specifications::  How to describe your virtual machine's behavior.
 * C API::                      Calling C code from your VM and your VM from C.
+* Data representation and tagging:: It is reasonable to encode VM data differently from C data.
+* Garbage collection::         Jitter includes a garbage collector usable from VMs.
 @c Part III@* Performance
 * Writing code generators::    Tips about implementing compilers for your VM.
 * Internals::                  How the generated virtual machines work.
@@ -344,7 +420,7 @@ intricacy of the implementation.
 @cindex epsilon
 @cindex GNU epsilon
 @cindex @epsilonzero{}
-GNU epsilon (see @ref{Top,,, epsilon, The GNU epsilon Manual}) is a
+GNU epsilon (@pxref{Top,,, epsilon, The GNU epsilon Manual}) is a
 programming language and my own main project, still to be officially
 released as ``stable'', built on an extremely simple core language
 called @epsilonzero{} and augmented with powerful syntactic
@@ -436,7 +512,7 @@ generator.
 Some ideas definitely belong more in JITs than in threaded
 interpreters, and in fact the most advanced dispatching model
 supported by Jitter requires no threaded code to be processed at run time,
-nor indeed any data structure representing a routine other than an array
+nor indeed any data structure representing routine code other than an array
 of native machine instructions in executable memory---``interpreting''
 a routine means jumping to its first native instruction, from where
 execution continues.
@@ -974,10 +1050,10 @@ Of course a user will still be free to do it in her own different way.}
 @fixme{exceptions: no, not a fundamental mechanism and way too dependent
 on the execution model (but I'm not against them).  They can be implemented.}
 
-@fixme{garbage collection: no, for the same reason.  But a GC must be easy to
-interface to the system.  Even one with precise pointer finding.  In a future
-version of Jitter I plan to provide an optional precise GC, relying on data
-specification as provided by the user.}
+@fixme{garbage collection: strictly optional
+(@pxref{Garbage collection}), and a GC different from
+the one included in Jitter must be easy to interface to the system.
+Even one with precise pointer finding.}
 
 @fixme{safety features: static code verification, sandboxing: no,
 these kill expressivity, performance, or both.  Static checks can be
@@ -1075,7 +1151,7 @@ a conjecture to be validated experimentally.}
 @c @@@@@@@@@@@
 @node C is only an implementation tool
 @subsubsection C is only an implementation tool
-@cindex garbage collection
+@cindex garbage collector
 @cindex coroutine
 @cindex thread, cooperative
 @cindex tagging, of objects
@@ -1088,9 +1164,9 @@ the current call stack (when any exists) can be done from a VM
 instruction, with or without copying, to implement the equivalent of
 continuations or just cooperative threads or coroutines.  A Jittery
 system can support a garbage collector with exact pointer finding and
-a custom memory allocator, if so desired; runtime information about
-the type of each object can be made available at runtime if so
-desired---or not, when not needed.
+a custom memory allocator (@pxref{Garbage collection}), if so desired;
+runtime information about the type of each object can be made available
+at runtime if so desired---or not, when not needed.
 @cindex Andrew Appel
 @cindex Compiling with Continuations
 @cindex Forth
@@ -1105,7 +1181,7 @@ desired---or not, when not needed.
 @cindex procedure activation record
 @cindex procedure frame
 @cindex heap
-@cindex garbage collection
+@cindex garbage collector
 Jitter
 makes it easy to experiment with unusual runtime data structures,
 for example a Forth-style dual-stack architecture, the
@@ -1727,7 +1803,7 @@ for correctness.  The rest is actually not fragile, but
 you still need to pre-process every file using any Jitter header with
 @var{JITTER_CPPFLAGS}; this restriction helps preventing conflicts between
 a sub-package Jitter and a different installed version, and makes Jittery VMs
-behave consistency with Jitter as a dependency or a sub-package.}
+behave consistently with Jitter as a dependency or as a sub-package.}
 
 @cindex @var{JITTER_CPPFLAGS}
 @cindex @var{JITTER_CFLAGS}
@@ -2037,8 +2113,8 @@ Forth, and to a slightly lesser extent, Lisp.}
 }}
 
 @fixme{CISC vs RISC, flags: orthogonality is not mandatory.  Having
-multiple flags registers like on the PowerPC, or using ordinary
-registers to store boolean conditions like on MIPS and Alpha looks
+multiple flag registers like on the PowerPC, or using ordinary
+registers to store boolean conditions like on RISC-V, MIPS and Alpha looks
 neat, but VM flags registers will not be mapped to hardware flag
 registers: the ``pretty'' solution on the VM would force
 three-argument comparison instructions, bloating the instruction
@@ -2047,7 +2123,7 @@ per jump at run time.  The efficient solution for a VM in this case is
 a MIPS-style conditional branch instruction taking two arguments (but
 on a VM they can be immediate), and a fast label.  Flags should be
 considered inherently transient, and keeping their state in a register
-across VM instruction will cost machine instructions.
+across VM instruction will cost hardware instructions.
 You should resist the temptation of having both quotient and reminder
 computed by one VM instruction, unless the instruction is non-relocatable.}
 
@@ -2060,8 +2136,8 @@ your mind later, you can change the VM easily: it's not silicon.}
 
 @fixme{constants, particularly if big: specialize if known in advance.}
 
-@fixme{small but performance-performance constants, such as type or
-garbage-collection tags: specialize, and define a checking instruction
+@fixme{small but performance-critical constants, such as type or
+garbage-collection tags, or unique objects (@code{nil} in Lisp): specialize, and define a checking instruction
 doing only that, so as to keep the other instructions smaller.  It is
 probably better to keep the non-critical path used to handle errors
 slow, for example keeping the error handler address on a stack, rather
@@ -2137,6 +2213,9 @@ experiments to confirm this.}
 @node Finalization
 @section Finalization
 @cindex finalization
+
+@fixme{This has nothing to do with @emph{garbage collection} finalisation:
+@pxref{gc-object-finalisation}}
 
 @c @@@@@@@
 @node VM state
@@ -2225,6 +2304,756 @@ There is no global interpreter lock.}
 @fixme{The user needs to take care of synchronization herself, when
 needed.  Of course it is possible to break reentrancy from
 user code, but it should be easy to avoid that.}
+
+
+@c Data representation and tagging
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Data representation and tagging
+@chapter Data representation and tagging
+
+@quotation
+Is it not entirely clear which of the techniques were already known to one of us and which ones we reinvented
+@end quotation
+From the acknowledgments in @bibref{Gudeman 1993}.
+
+I share that sentiment.
+
+
+
+@menu
+* Design issues::           Choosing your tagging scheme.
+* Tag API::                 Working with tags in a Jittery VM.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Design issues
+@section Design issues
+
+@menu
+* Boxed and unboxed data::  Not every object fits in a register.
+* Bit twiddling and tags::  Low-order bits of pointers can be used for tags.
+* Object headers::          When tag bits are not enough.
+* Shapes are not types::    Language-level types are not usually relevant.
+* Parsable heaps::          Parsability is not mandatory but desirable.
+* Checking and dispatching::Sometimes efficient dispatch is important.
+* Tagging recommendations:: What I believe to be the best solution.
+* Custom tagging::          If you want to do things differently you can.
+* No tagging::              Some systems work with non-tagged data.
+@end menu
+
+@c @@@@@@@@@@@@
+@node Boxed and unboxed data
+@subsection Boxed and unboxed data
+
+@c @@@@@@@@@@@@
+@node Bit twiddling and tags
+@subsection Bit twiddling and tags
+
+@fixme{heap pointers are aligned: low bits are zero}
+
+@fixme{some high bits are also often zero, particularly on 64-bit
+machines}
+
+@fixme{low bits are better than high bits: immediate representation,
+compatibility with conservative pointer finding, efficiency in memory
+access}
+
+@fixme{shifting: you want it for fixnums, not for pointers}
+
+@fixme{sign extension and right-shifting in C: there is a Jitter macro}
+
+@fixme{untagging: and versus subtraction}
+
+@fixme{should the tagged pointer point to a header rather than to the
+beginning of user data?  On almost all machines in makes no
+difference; SH the one exception I know.}
+
+@c @@@@@@@@@@@@
+@node Object headers
+@subsection Object headers
+
+@fixme{It is also possible to have a header which is only useful at
+collection time, in order to distinguish the object shape and know
+which fields need to be updated and which must not be touched; still
+the shape may be distinguishable from its unique pointer tag alone,
+for efficiency's sake.  I plan to do this for JitterLisp closures,
+where performance is critical: closures are used all the time and
+the type check at the beginning of a call must be fast.}
+
+@fixme{@dfn{type code} (the first header word), name from Gudeman.
+The type code must suffice to recognize the shape of an object, but
+it does not need to be limited to one constant word per shape: it
+can contain other information as well.}
+
+@fixme{rename ``type code'' to ``shape code''?  If I do I have to do
+it in the sources as well.}
+
+@fixme{The remark at
+@ref{tagged-objects-must-not-look-like-type-codes} is important: it is
+the user's responsibility to ensure that no tagged object is ever
+created which is also valid as a type code}
+
+@anchor{padding-datum}
+@fixme{Another possible application of unique objects is for inserting
+as padding in headerless objects where not every word is used.
+@fixme{add a macro to make this easy}.  It would make perfect sense
+to have a one-word @code{#<padding>} object, to be found when scanning
+the heap.
+@fixme{Document @code{JITTER_GC_PAD_HEADERLESS_OBJECT}.
+I could even provide a helper macro
+@code{JITTER_GC_ALLOCATE_AND_PAD_HEADERLESS}, but having a very friendly
+C API might not be that useful: such a macro would not be usable from
+VM code where heap allocation follows a different pattern.
+}}
+
+
+@c @@@@@@@@@@@@
+@node Shapes are not types
+@subsection Shapes are not types
+
+@c @@@@@@@@@@@@
+@node Parsable heaps
+@subsection Parsable heaps
+
+@fixme{Give the definition.  We do not require parsable heaps, but
+a weaker condition which allows for headerless boxed objects.
+Headerless boxed objects must be made of individually valid tagged
+objects only.}
+
+@c @@@@@@@@@@@@
+@node Checking and dispatching
+@subsection Checking and dispatching
+
+@fixme{a @code{type} procedure}
+
+@c @@@@@@@@@@@@
+@node Tagging recommendations
+@subsection Tagging recommendations
+
+@menu
+* Unique data::  Some objects exist in only one instance.
+* Characters or code points::  Many possible values, each unique.
+* Fixnums::      Small integers are common and must be efficient.
+* Flonums::      Keeping floating-point numbers unboxed.
+* Conses::       Keep conses compact in memory, with no headers.
+* Closures_::    Closures should be fast to shape-check.
+* Primitives::   These are heavily used, but maybe not heavily shape-checked.
+* Arrays::       Arrays are easy enough to manage.
+* Symbols::      The representation of symbols can be inefficient.
+* Bignums::      You can afford headers when operations are slow anyway.
+* Possibly large objects::Objects not fitting in the heap need special treatment.
+* Finalisable objects::Finalisation requires care with some collectors.
+* Code objects:: VM routines as objects require care at destruction.
+* Other data types::  Other miscellaneous shapes.
+* Broken hearts::Broken hearts need a header with a type tag, not a pointer tag.
+@end menu
+
+@c @@@@@
+@node Unique data
+@subsubsection Unique data
+
+@fixme{Booleans, empty list, EOF, ``nothing'', ``undefined'' values
+reserved for errors.  A ``padding'' value (@pxref{padding-datum})}
+
+@fixme{If variable state needs to be associated to some unique objects
+the state can be kept in a global table out of the heap, without
+representing unique objects as pointers; they could be rather
+tagged array indices.  This strategy not involving pointers makes
+adding new unique values easy.}
+
+@anchor{tagged-objects-must-not-look-like-type-codes}
+@fixme{A trick to keep the heap parsable: representing type codes
+as unique data.  Only a finite number is needed, and when they do not
+contain other fields they are all known in advance.  In this case it
+becomes invalid to make unboxed values with the value of a type code as
+user objects, in the presence of headerless boxed objects: it would
+confuse the collector, which
+would become unable to distinguish an unboxed object from the
+beginning of a boxed object.  Such an error is detected at run time
+in some cases, only when @code{JITTER_GC_DEBUG} defined.}
+
+@fixme{unique values are usually unboxed, but they can also encode
+pointers to out-of-heap data --- in which case they can be treated as
+unboxed by the garbage collector.}
+
+@fixme{enumerates}
+
+@c @@@@@
+@node Characters or code points
+@subsubsection Characters or code points
+
+@fixme{explain the trick I use in JitterLisp}
+
+@c @@@@@
+@node Fixnums
+@subsubsection Fixnums
+
+@fixme{a tag of all @code{0}s is best for fast arithmetic.}
+
+@c @@@@@
+@node Flonums
+@subsubsection Flonums
+
+@fixme{a tag of all @code{1}s is best, when a tag of all @code{0}s
+is used for fixnums.}
+
+@fixme{@code{jitter_float} may be acceptable.
+If not, things are more complicated.
+Some platforms require double values to be aligned to 64 bits, and
+others, while not having a strict requirement, suffer from a
+performance hit from misaligned accesses.
+@code{double} values on 32-bit platforms requiring 64-bit alignment
+will be messy @fixme{@fixme{Now I have an excellent solution}I have no good solution for this yet.  Even adding
+a padding field to every object would not work for data different
+from @code{double} requiring wider alignment (for example vector data).
+Maybe creating a padding object.
+I have some experimental code in
+@file{~/repos/jitter/my-tests/alignment-and-object-headers/alignment-and-object-headers.c},
+not in the git repository, containing the right formulas which are
+not completely trivial.
+The best solution is almost certainly raising the minimum heap object
+size to the maximum alignment, and then pad in a fixed way.  Of course
+heap pages must also be aligned.
+}}
+
+@cindex 0
+@cindex zero
+@cindex cancellation law
+@cindex integer (as a floating-point datum)
+@cindex optimisation, misguided
+@cindex misguided optimisation
+@cindex untag
+Some users might be tempted to save one instruction when untagging by
+not clearing a non-zero tag after converting a tagged object to
+floating point, and keep the tag bits as they are as part of the
+floating-point value; after all a bit pattern of all zeros in untagged
+floating-point data appears just as arbitrary as the original tag.
+This intuition has the unfortunate flaw of not allowing for an exact
+representation of most integers as floating-point data, including
+zero.  Floating-point calculations such as @samp{2.0 * 3.0},
+@samp{2.0 * 1.0}
+or
+@samp{10.0 * 0.0}
+yielding inexact results and violating
+algebraic cancellation laws feel hardly suitable to any application.
+
+However the optimization attempt described above succeeds in a
+different setting, on systems lacking fixnums and where the only
+available numbers are floating-point.  In such a scenario the
+floating-point tag should in fact be chosen as zero, which eliminates
+any untagging overhead while keeping small integers representable
+in floating point with no error.
+
+@fixme{how inefficient would it be to @emph{round} a fixed-point
+number at the time of untagging, keeping into account the smaller
+mantissa?  What I am currently doing is efficient but in practice
+amounts to truncation.
+@url{https://en.wikipedia.org/wiki/Floating-point_arithmetic#Rounding_modes}}
+
+@c @@@@@
+@node Conses
+@subsubsection Conses
+
+@c @@@@@
+@node Closures_
+@subsubsection Closures_
+
+@fixme{fast shape-checking is usually important.  An additional header
+with a type code just to keep the heap parsable, however, should not
+be a problem.}
+
+@c @@@@@
+@node Primitives
+@subsubsection Primitives
+
+@fixme{These are heavily used, but we can make them not heavily
+shape-checked.}
+
+@fixme{I recommend the JitterLisp solution: hide primitives from users
+by providing predefined closure wrappers for them: closure wrappers,
+while safe when called, internally use primitives in an unsafe way.
+Compiled VM code or even correctly formed interpreted code based on
+ASTs does not pay for the indirection, thanks to a simple
+optimization.  This way there will be no need to check for primitive
+shape at call time}
+
+@fixme{Primitives may be tagged indices into a global read-only table,
+or tagged pointers to non-heap data, or directly to a function.  The
+programmer must guarantee that such out-of-heap data remain aligned
+somehow, for example with the functionality form @code{stdalign.h} or
+the GNU C attribute @code{aligned}.}
+
+@c @@@@@
+@node Arrays
+@subsubsection Arrays
+
+@fixme{they are allocated frequently on a large scale: keep them
+compact in memory}
+
+@fixme{large objects and indirection}
+
+@c @@@@@
+@node Symbols
+@subsubsection Symbols
+
+@fixme{since symbols are always boxed and they can be compared by
+pointer equality, their memory representation does not really matter:
+in this case headers cost nothing}
+
+@fixme{Checking at runtime whether a given object is a symbol
+(@code{symbolp} in Common Lisp, @code{symbol?} in Scheme) is not a
+common operation in compiled code, which should make a check on the
+type code acceptable in most circumstances.}
+
+@c @@@@@
+@node Bignums
+@subsubsection Bignums
+
+@c @@@@@
+@node Possibly large objects
+@subsubsection Possibly large objects
+
+@fixme{Boxed with a header including one of two possible values: large
+or non-large, followed by an untagged pointer to the actual data.  For
+non-large data the pointer points inside the same object payload, and
+it is easily handled by the garbage collector.  For large data the
+pointer points out of the heap.  Decoding is straight-line code.
+Whenever the object is copied the untagged pointer must be updated,
+which is easy.}.
+
+@c @@@@@
+@node Finalisable objects
+@subsubsection Finalisable objects
+
+@c @@@@@
+@node Code objects
+@subsubsection Code objects
+
+@fixme{finalization of some resources different from the garbage-collected
+heap memory may require reference counting.  The C API makes it easy to
+handle VM routines in this way, with pin and unpin functions already
+provided.}
+
+@c @@@@@
+@node Other data types
+@subsubsection Other data types
+
+@c @@@@@
+@node Broken hearts
+@subsubsection Broken hearts
+
+@fixme{broken hearts need a type code, not a specific pointer tag: in
+fact a broken heart will be pointed by a tagged pointer, whose tag
+will be meaningful; the fact that the object has been forwarded is
+recorded in memory within the object itself.}
+
+
+@c @@@@@@@@@@@@
+@node Custom tagging
+@subsection Custom tagging
+
+@fixme{Different designs are not as easy to implement as what is
+recommended here, but at least Jitter should not prevent them.  If you
+find that I am wrong please contact me.}
+
+@fixme{BiBOP}
+
+
+@c @@@@@@@@@@@@
+@node No tagging
+@subsection No tagging
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Tag API
+@section Tag API
+
+@menu
+* Tag checking in VM code::  You can make the common case very fast.
+@end menu
+
+@c @@@@@@@@@@@@
+@node Tag checking in VM code
+@subsection Tag checking in VM code
+
+
+@c Garbage collection
+@c @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@node Garbage collection
+@chapter Garbage collection
+
+Jitter includes a garbage collector designed to be compatible with
+Jittery VMs and suitable to many user systems.
+
+@cindex Bohem, Hans
+@cindex Boehm-Demers-Weiser garbage collector
+@cindex garbage collector
+@cindex conservative pointer finding
+@cindex optional, Jitter garbage collector
+The Jitter garbage collector is optional: according to the application
+requirements a VM can even operate without any garbage collector at
+all, or use some other custom memory subsystem.  Jittery VMs are also
+compatible with the Boehm-Demers-Weiser conservative-pointer-finding
+collector available at @url{https://www.hboehm.info/gc/}.
+
+@cindex garbage collector
+@cindex collector, garbage
+
+@code{struct jitter_gc_heaplet}
+
+@menu
+* Garbage collector design::        How this garbage collector works and why.
+* Garbage collector API::           How to use the collector from C.
+* Heap allocation from VMs::        Some VM instructions make new heap objects.
+* GC and threads::                  Allocating concurrently requires care.
+* Not yet implemented features::    The Jitter collector will become more powerful.
+@end menu
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Garbage collector design
+@section Garbage collector design
+
+@fixme{fast allocation, allocating from several threads with no locks,
+high allocation and low survival rate.  Reentrant: no global variables
+in C exposed to the user.  Multiple heaps containing objects of
+different shapes are possible in the same application at the same
+time.  Portable, no reliance on hardware page faults.  Optimised for
+bandwidth, but usually low lantency as well.  No real-time
+guarantees.}
+
+@fixme{portable in practice.  Is is difficult not to rely on undefined
+behaviour when comparing pointers one of which may fall out of
+allocated space by more than one element (of course I am not speaking
+of ever dereferencing them, but even computing their value is
+undefined behaviour in C): since any reasonable implementation in a
+flat addressing space will allow this and GCC in fact guarantees it
+@fixme{find exact citation} I will not be pedantic.  I am fine with
+not supporting 16-bit segmented addressed on i386: in protected mode
+everything will work as it should.}
+
+@menu
+* Exact pointer finding and moving::This kind of garbage collector requires discipline.
+@end menu
+
+@c @@@@@@@@@@@
+@node Exact pointer finding and moving
+@subsection Exact pointer finding and moving
+
+@fixme{Comparison with Boehm's collector, which is widely used.}
+
+@fixme{Some deserved praise for Boehm's work, which is very impressive
+given the problem he solves.  A collector like ours plays the game
+with different rules.}
+
+@menu
+* API comparison::           How this collector is used, compared to Boehm's.
+* Performance comparison::   How this collector performs compared to Boehm's.
+@end menu
+
+@c @@@@@
+@node API comparison
+@subsubsection API comparison
+
+Let @code{o1}, @code{o2} and @code{o3} be registered roots,
+and @code{N} some positive integer.
+@fixme{@code{range} @code{append}}
+
+@fixme{Wrong (unregistered roots)}
+@smallexample
+  o1 = append (range (0, N), range (0, N));
+  print (o1);
+@end smallexample
+
+@fixme{Correct}
+@smallexample
+  o2 = range (0, N);
+  o3 = range (0, N);
+  o1 = append (o2, o3);
+  print (o1);
+@end smallexample
+
+@fixme{Also correct, but slightly more subtle}
+@smallexample
+  o2 = range (0, N);
+  o1 = append (o2, range (0, N));
+  print (o1);
+@end smallexample
+
+@fixme{Equally correct}
+@smallexample
+  o2 = range (0, N);
+  o1 = append (range (0, N), o2);
+  print (o1);
+@end smallexample
+
+@fixme{Another subtly incorrect example.  The variable @code{v}
+holds a vector boxed object as a tagged value, and is a root.}
+@smallexample
+  vector_set (v, i, cons_make (EOL, vector_ref (v, i)));
+@end smallexample
+@fixme{The apparently harmless call @code{vector_ref (v, i)} accesses
+the vector @code{v} and returns its @code{i}-th element, without
+performing any heap allocation; the problem is that the @emph{result}
+of the function call is a heap object, which may be moved if
+@code{cons_make} performs a collection; if the vector element
+contained some pointer to an alive object, such as @code{v} itself,
+that pointer would become invalid, and a root would be lost.  The
+following variant is correct, with @code{tmp} being a root:}
+@smallexample
+  tmp = cons_make (EOL, vector_ref (v, i));
+  vector_set (v, i, tmp);
+@end smallexample
+@fixme{As long as @code{cons} is defined correctly, which implies
+temporarily registering both of its arguments as roots, there is no
+need to use another variable for @code{vector_ref (v, i)}.}
+
+
+@c @@@@@
+@node Performance comparison
+@subsubsection Performance comparison
+
+@fixme{A collector performance is only important when the allocation
+rate is high.  An application rarely allocating on the garbage
+collected heap will only see negligible differences in performance
+from one garbage collector to another.}
+
+@fixme{allocating from VM code can be made extremely fast by inlining
+fast-path code (@pxref{Heap allocation from VMs}): here this collector
+should win by a wide margin.}
+
+@fixme{It is possible to design some important boxed shapes to require
+no headers.  This tight representation of objects will improve
+locality and, along with compaction, possibly mitigate the cache
+disruption caused by copying.}
+
+@fixme{Temporary root registration, while well optimised, still has an
+impact on performance in @emph{deeply recursive} C code where each
+function needs to register a few roots, call itself, and deregister at
+the end.  Bohem's collector has no similar work to do for registering
+and deregistering a temporary root, as it just scans the entire C stack
+at collection time.  This problem does not exist in recursive VM code
+where the stack is scanned via a hook @pxref{garbage-collector-hooks}.}
+
+@fixme{A moving collector performs well when the survival ratio is
+low.  Mark-sweep is less sensitive to this issue and its performance
+degrades less drastically as the heap becomes almost full.
+Generational collection, as implemented in this collector, may
+attenuate or possibly even reverse this disadvantage --- I have not
+taken measurements yet.}
+
+@fixme{From preliminary tests object finalisation
+(@pxref{Defining finalisable shapes})
+in Jitter's garbage
+collector appears to be extremely fast, much better than in Boehm's
+collector; this will be relevant with some applications but not with
+others.}
+
+@fixme{``Sharing'' is slow in Jitter's collector in some circumstances:
+explain shy}
+
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Garbage collector API
+@section Garbage collector API
+
+@menu
+* Debugging garbage collection::    The API can help you to catch mistakes.
+* Defining shapes::                 Telling the garbage collector what your objects look like.
+* Garbage collector initialisation and finalisation::  You need to call functions at the beginning and at the end.
+* Root registration::               You need to tell the collector where to find objects.
+* Heap allocation from C::          You can make new heap objects from C functions.
+* Write barriers::                  Updating existing heap objects require a special primitive.
+* Promotion and sharing::           An object used by multiple threads must be in the old generation.
+* Garbage collector tuning::        You can set parameters to improve collection performance.
+* Other garbage collection operations::  Explicit garbage collection and the like.
+@end menu
+
+@c @@@@@@@@@@@
+@node Debugging garbage collection
+@subsection Debugging garbage collection
+
+@cindex @code{JITTER_GC_DEBUG}
+@cindex @code{JITTER_GC_LOG}
+@cindex logging, garbage collector
+@cindex garbage collector logging
+@cindex logging, garbage collector
+@cindex garbage collector debugging
+@fixme{@code{JITTER_GC_DEBUG} @code{JITTER_GC_LOG}}
+@fixme{@code{JITTER_GC_DEBUG} checks for problems in user code, as well as for internal
+collector bugs and problems that may mimic internal collector bugs, by violating
+invariants.  We believe that the very defensive checks enabled in this mode will
+help when debugging garbage collector problems, notoriously difficult to track.
+In debugging mode the garbage collector performance will suffer a hit, but
+not to the point of making the system unusable; in typical cases the speedup should
+range around @math{0.3} to @math{0.7}.}
+@c @@@@@@@@@@@
+@node Defining shapes
+@subsection Defining shapes
+
+A user needs to define the shape of heap objects before being
+able to initialise a garbage-collected heap.
+@xref{Data representation and tagging} for a description of the
+design of shapes and practical suggestions.
+
+@fixme{alignment, headers, type codes and @code{struct}s.  Beware of
+the size of every allocated object, which must be a multiple of
+@code{JITTER_GC_MINIMUM_OBJECT_SIZE_IN_BYTES} in bytes also counting
+the header and any internal or final padding.  There are macros
+helping @fixme{Follow the definitions for cons and vector in
+@file{jitter-gc-test.c}, which do the right thing.}}
+
+@menu
+* Defining headerless shapes::  Some objects can be tightly packed.
+* Defining headered shapes::    Some objects require a header.
+* Defining finalisable shapes:: You can have a C function called when one of these dies.
+@end menu
+
+@c @@@@@
+@node Defining headerless shapes
+@subsubsection Defining headerless shapes
+
+@c @@@@@
+@node Defining headered shapes
+@subsubsection Defining headered shapes
+
+@c @@@@@
+@node Defining finalisable shapes
+@subsubsection Defining finalisable shapes
+
+@anchor{gc-object-finalisation}
+@fixme{gc object finsalisation}
+
+@c @@@@@@@@@@@
+@node Garbage collector initialisation and finalisation
+@subsection Garbage collector initialisation and finalisation
+
+@fixme{This has nothing to do with object finalisation for
+finalisable shapes: @pxref{gc-object-finalisation}}
+
+@c @@@@@@@@@@@
+@node Root registration
+@subsection Root registration
+
+@anchor{registering-roots-more-than-once}
+@fixme{Do not register roots more than once.  It leads to disasters,
+only reliably detected with @code{JITTER_GC_DEBUG}.
+It is of course possible to register multiple roots, each residing
+at a different memory address, pointing to the same heap object.
+Each root must be unique in the sense of @emph{not residing at the
+same address} as any other root.}
+
+@menu
+* Global roots::             Some roots remain valid until you explicitly remove them.
+* Temporary roots::          You can quickly add and remove roots in LIFO order.
+* Garbage collection hooks:: You can register roots on the fly in pre-collection hooks.
+@end menu
+
+@c @@@@@
+@node Global roots
+@subsubsection Global roots
+
+@fixme{I should rename these: ``global'' roots are in fact per-heaplet, even if
+they have an undetermined life time.}
+
+@c @@@@@
+@node Temporary roots
+@subsubsection Temporary roots
+
+@c @@@@@
+@node Garbage collection hooks
+@subsubsection Garbage collection hooks
+
+@anchor{garbage-collector-hooks}
+@fixme{pre- and post-collection hooks}
+
+@c @@@@@@@@@@@@
+@node Heap allocation from C
+@subsection Heap allocation from C
+
+@fixme{These should be used when allocating:
+@code{JITTER_GC_HEADERLESS_SIZE_IN_BYTES}
+@code{JITTER_GC_HEADERED_SIZE_IN_BYTES}
+@code{JITTER_GC_PAD_HEADERLESS_OBJECT}
+@fixme{If I end up actually defining this: @code{JITTER_GC_ALLOCATE_AND_PAD_HEADERLESS}}
+}
+
+@c @@@@@@@@@@@@
+@node Write barriers
+@subsection Write barriers
+
+@fixme{The write barrier registers the stored addresses in the old
+generation which may point to young boxed objects.}
+
+@fixme{It is possible to avoid the overhead of the write barrier when
+writing to a boxed object field in two situations:}
+@itemize @bullet
+@item
+the object being written into is definitely young
+@item
+the object being written is definitely unboxed
+@end itemize
+@fixme{In practice the first case only applies at object initialisation time:
+still, this is an important optimisation: @emph{initialising writes}
+do not need the write barrier, since they are guaranteed to happen
+between object allocation and the next collection --- collecting when
+some object is still not completely initialised is invalid and leads
+to disasters.}
+
+@fixme{The write barrier @emph{must not} be used for updating roots:
+it is only for updating fields of heap objects.  Applying the write
+barrier to a non-heap objects such as a root is equivalent to
+registering roots more than once
+(@pxref{registering-roots-more-than-once}).}
+
+@smallexample
+/* FIXME: comment well. ///////////////////////////////////////////////////////////////////
+   The result is the new allocation limit.  
+
+   Notice that, differently from garbage collecting functions, this function
+   gives no guarantee about how much space is freed in the queue; there might
+   simply be no place left.  This function will flush the queue and register
+   the given pointer, but the next enqueue attempt might fail again.
+
+   Still it should be noticed that, differently from the case of
+   jitter_gc_collect_0, this function does in fact guarantee that the requested
+   operation succeeds: only *the next* attempt may fail.  This has implications
+   over VM code: after jumping to the slow path of the write barrier, control
+   should return *past* the attempt: that one write barrier succeeded.
+   Compare with allocation from VM code, where the slow path has to jump back
+   to the fast path to try again after an allocation failed  [FIXME: is that true for allocation?]. */
+jitter_gc_heap_pointer
+jitter_gc_write_barrier_queue_flush_1 (struct jitter_gc_heaplet *a,
+                                      jitter_gc_heap_pointer allocation_limit,
+                                      jitter_gc_tagged_object *pointer)
+  __attribute__ ((nonnull (1), nonnull (2), nonnull (3),
+                  returns_nonnull, warn_unused_result));
+@end smallexample
+
+@c @@@@@@@@@@@@
+@node Promotion and sharing
+@subsection Promotion and sharing
+
+@c @@@@@@@@@@@@
+@node Garbage collector tuning
+@subsection Garbage collector tuning
+
+@c @@@@@@@@@@@@
+@node Other garbage collection operations
+@subsection Other garbage collection operations
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Heap allocation from VMs
+@section Heap allocation from VMs
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node GC and threads
+@section GC and threads
+
+@c @@@@@@@@@@@@@@@@@@@@@@@@
+@node Not yet implemented features
+@section Not yet implemented features
 
 
 @c Performance part
@@ -2425,15 +3254,39 @@ To receive/handle: @code{JITTER_PENDING_SIGNAL_NOTIFICATION(signal_id)}
 @chapter Internals
 
 @menu
+* Status::                        What is mature and what will change.
 * Internals overview::            An quick look at the sources.
 * Specialization internals::      Making choices at compile time is better than at run time.
 * Patch-ins::                     Patching assembly into copies of compiled C code.
 * Rewriting internals::           How rewriting works.
 * Dispatch models::               How code jumps from one VM instruction to the next.
 * Defective VM instructions::     Automatically working around some unreplicatable code.
+* The Jitter build system::       The way Jitter is compiled.
 * Architecture-specific notes::   Details on how Jittery VMs work on each supported CPU.
 * Porting::                       Adding support for more CPU architectures.
 @end menu
+
+@c @@@@
+@node Status
+@section Status
+
+@fixme{Still in heavy development.  At some point Jitter will be
+feature-complete and I expect to maintain it by only fixing bugs
+and porting to new platforms.  Even before that point it will be
+reasonable to expect some degree of backward compatibility, and
+I may make vague promises.  Not yet: everything can still change
+radically at any time.}
+
+@fixme{A couple of things could be cleaner and would benefit from a
+rewrite.  Others are good.  A few are beautiful.  I should make a
+pass on every comment and update them: the vision of the project has
+widened since its inception, and the oldest comments certainly do not
+keep into account the current architecture.  A good portion of the
+runtime support for VMs was written when the C code generator was
+still a shell script using @command{csplit} to isolate instruction
+code from one another in the input file.}
+
+@fixme{Documentation will be added as features mature.}
 
 @c @@@@@@@
 @node Internals overview
@@ -2441,20 +3294,72 @@ To receive/handle: @code{JITTER_PENDING_SIGNAL_NOTIFICATION(signal_id)}
 @cindex internals overview
 @cindex overview, internals
 
+@fixme{Jitter provides a friendly API usable even by motivated
+beginners, but its internals are @emph{complex}.  Multiple layers of
+CPP macros, despite the limitations of the tool.  C and Gas macros
+used together in the same assembly source file.  Code generation.
+M4sh.  Build system hacks in order to support sub-package mode.  I
+hardly regret any of this complexity, which is necessary and not
+accidental.  Some factoring would be possible between library code
+in @code{jitterc} instruction representation and runtime
+@code{libjitter} instruction representation.}
+
+
 @menu
-* Naming conventions::       Finding your way among C identifiers and files.
+* Program naming conventions::    Finding your way among C files and programs.
+* Code conventions::              Understanding how the sources are written.
 @end menu
 
 @c @@@@
-@node Naming conventions
-@subsection Naming conventions
-@cindex naming conventions, internals
+@node Program naming conventions
+@subsection Program naming conventions
+@cindex naming conventions, internals, programs
 
 @fixme{The @command{jitter} C-code-generating program uses the
 namespace @code{jitterc} in its C source code and in the build system.
 This is to distinguish it from user code linked to a Jittery VM, which
 requires a @code{jitter} (no @code{c}) library, differently from the
 generator.  The distinction is immaterial to the user.}
+
+@c @@@@
+@node Code conventions
+@subsection Code conventions
+
+The sources follow the GNU Coding Standards
+(@pxref{Top,,, standards, GNU Coding Standards}).
+
+@fixme{Every identifier whose name begins with an underscore character
+@code{_} is reserved for internal use.  Macros with a name ending in
+@code{_} do not expand to a single C statement; the expansion may
+contain automatic variable declarations to be used in the following
+statements, or possibly as part of a @code{struct} definition.}
+
+@fixme{order of arguments: container before contained; in macros, struct names first}
+
+@fixme{initialize/finalize vs make/destroy}
+
+@fixme{long literal strings spanning multiple lines, where space permits, are
+separated at word boundaries, with a space at the @emph{end} of a line.}
+
+@fixme{abstract data type and information hiding; performance: the critical
+code must be fast}
+
+@fixme{[When this manual will be finished: I cannot declare this in
+good faith now:] Every identifier not explicitly documented in this
+book is not intended for the user, and is subject to change in an
+incompatible way}
+
+@fixme{Booleans and @code{bool} / @code{_Bool}.  Why I always write
+``non-false'' instead of ``true''.}
+
+@fixme{iff}
+
+@fixme{We say ``speedup'' even when a variant of the code, or some
+alternative, or some particular mode, makes the program run
+@emph{slower}: a speedup less than @math{1} is effectively a
+slowdown.}
+
+@fixme{whitespace before punctuation}
 
 @c @@@@@@@
 @node Specialization internals
@@ -2484,6 +3389,37 @@ generator.  The distinction is immaterial to the user.}
 @cindex defective, VM instruction
 @cindex VM instruction, defect
 @cindex instruction, VM, defect
+
+@c @@@@@@@
+@node The Jitter build system
+@section The Jitter build system
+@cindex build system, Jitter
+
+@fixme{@code{configure.ac} is complex but mostly standard.  The
+Autoconf macros intended for user configure scripts such as
+@code{AC_JITTER} and @code{AC_JITTER_SUBPACKAGE} are defined in
+@file{autoconf/jitter.m4}.}
+
+@fixme{The header file @file{jitter/jitter-config.h}, generated by at
+configure time, is installed.  @fixme{explain why.} It defines CPP macros with the prefix
+@code{JITTER_} intended not to conflict with user identifiers.  Such
+macros are used by generated VM code to be compiled without access to
+the Jitter source directory, and can be used in user code as well.
+The Autoconf macro @code{jitter_define_prefixed_feature_macro},
+defined in @file{configure.ac}, is useful to define new CPP macros with
+the @code{JITTER_} prefix from other existing macros.}
+
+@fixme{Single @file{Makefile.am}, in the style of @ref{An Alternative
+Approach to Subdirectories,,,automake,The Automake manual}.}
+
+@fixme{Most of the complexity in @file{Makefile.am} comes from the
+need of compiling the Jitter examples are compiled in non-standard
+way, relying on a non-installed non-subpackage Jitter.  In this sense
+Jitter's @file{Makefile.am} does not provide a particularly useful
+example for a user simply wishing to include a Jittery VM in her own
+project; for this use case we recommend looking at the build systems
+within @file{example-build-systems/}, which are also considerably
+simpler.}
 
 @c @@@
 @subsection @code{switch} dispatching
@@ -2588,6 +3524,9 @@ mistake would be easy to forgive; but is it ignorance, or x86
 rationalization?}
 
 @*
+@fixme{This is out of date.  So as not to scare people with this
+warning, let it be clear that @emph{more} systems are tested and
+supported now.}
 @fixme{explain how to read the table}
 @fixme{As of late 2021 very out of date: the situation is now much
 better than this!}
@@ -2957,11 +3896,11 @@ problems.
 @subsection SH
 @cindex SH (architecture)
 @cindex j-core
-Minimal-threading is currently broken on SH, because of the limitation
-on instruction immediate width.  GCC solves the problem by using
+Minimal-threading is currently broken on SH, because of the architectural
+limitation on instruction immediate width.  GCC solves the problem by using
 PC-relative loads of constants close to the code directly in the @code{text}
-section, a perfectly good strategy for ordinary C code but unfortunately
-incompatible with my relocated instruction intervals.  Sometimes GCC generates
+section, a perfectly sensible strategy for ordinary C code which is unfortunately
+incompatible with our relocated instruction intervals.  Sometimes GCC generates
 PC-relative loads even for accessing constant bitmasks or @emph{offsets}
 to be used for loading from the stack, when the constants are too wide to
 fit in instruction immediates; such cases are unfortunately common in C
@@ -2969,12 +3908,13 @@ functions containing many automatic variables, or function calls.
 @*
 I need a workaround.
 
-Of course direct threading relies on C only, and works reliably.
+Of course direct threading relies on GNU C only, and therefore works
+reliably on SH.
 
 As a CPU with free-hardware implementations this architecture should
 be high-priority.  Even if not the easiest ISA to support in Jitter I
-find the SH an exceptionally beautiful design, already worth supporting
-on esthetic merit alone.
+find the SH an exceptionally beautiful minimalistic design, already
+worth supporting on esthetic merit alone.
 
 @c @@@
 @node SPARC
@@ -3093,7 +4033,140 @@ easy to test each individual feature}
 @node Bibliography
 @unnumbered Bibliography
 
-I should thank the GForth people here.
+@ignore
+This is really quite crude, but I do not feel like writing a generator
+script for a small bibliography.
+
+  Order first by surname, then by year.  
+  Title in ``quotes''.
+  Publication venue in @emph.
+
+Insert citations like this: @bibref{Gudeman 1993}.
+
+I could systematically use doi, with a Texinfo macro.
+@end ignore
+
+@fixme{This should include comments for every entry.}
+
+@fixme{I should thank the GForth people here.}
+
+@c FIXME: uncomment as I cite this.
+@ignore
+@bibbegin{Cormen et al.@: 2009}
+Thomas H.@: Cormen,
+Charles E.@: Leiserson,
+Ronald L.@: Rivest,
+Clifford Stein.
+``Introduction to Algorithms'',
+3rd edition,
+The MIT Press, 2009.
+@bibend
+@end ignore
+
+@bibbegin{Ertl al.@: 2004}
+M.@: Anton Ertl, David Gregg.
+``Retargeting JIT compilers by using C-compiler generated executable code'',
+in @emph{Parallel Architecture and Compilation Techniques}, 2004.
+@doi{10.1.1.67.4231}
+@bibend
+
+@bibbegin{Gudeman 1993}
+David Gudeman.
+``Representing Type Information in Dynamically Typed Languages'',
+technical report,
+Department of Computer Science, The University of Arizona, 1993.
+@doi{10.1.1.39.4394}
+@bibend
+
+@bibbegin{Jones et al.@: 2012}
+Richard Jones, Antony Hosking, Eliot Moss.
+``The Garbage Collection Handbook --- The art of automatic memory management'',
+Chapman & Hall, 2012.
+@bibend
+
+@c FIXME: uncomment as I cite this.
+@c FIXME: shall I cite the combined set of volumes?  It may be less pompous.
+@ignore
+@bibbegin{Knuth, 2011}
+The Art of Computer Programming
+Donald E.@: Knuth.
+``The Art of Computer Programming, Volumes 1-4A'',
+Addison-Wesley, 2011.
+@bibend
+@end ignore
+
+@c FIXME: uncomment as I cite this.
+@ignore
+@bibbegin{Knuth, 1997}
+Donald E.@: Knuth.
+``The Art of Computer Programming, Volume 1: Fundamental Algorithms'',
+3rd edition,
+Addison-Wesley, 1997.
+@bibend
+@end ignore
+
+@c FIXME: uncomment as I cite this.
+@ignore
+@bibbegin{Knuth, 1998}
+Donald E.@: Knuth.
+``The Art of Computer Programming, Volume 2: Seminumerical Algorithms'',
+3rd edition,
+Addison-Wesley, 1998.
+@bibend
+@end ignore
+
+@c FIXME: uncomment as I cite this.
+@ignore
+@bibbegin{Knuth, 1998}
+Donald E.@: Knuth.
+``The Art of Computer Programming, Volume 3: Sorting and Searching'',
+2nd edition,
+Addison-Wesley, 1998.
+@bibend
+@end ignore
+
+@c FIXME: uncomment as I cite this.
+@ignore
+@bibbegin{Knuth, 2011}
+Donald E.@: Knuth.
+``The Art of Computer Programming, Volume 4a: Combinatorial Algorithms Part 1'',
+1st edition,
+Addison-Wesley, 2011.
+@bibend
+@end ignore
+
+@ignore
+FIXME: only add this mediocre attempt of mine after I introduce it in
+the text.
+@bibbegin{Saiu 2011}
+Luca Saiu, ``Scalable BIBOP garbage collection for parallel functional
+programs on multi-core machines'', draft,
+Laboratoire d’Informatique de l’Université Paris Nord, 2011.
+Available at @url{http://ageinghacker.net/publications/gc-draft.pdf}.
+@bibend
+@end ignore
+
+@bibbegin{Shi et al.@: 2005}
+Yunhe Shi, David Gregg, Andrew Beatty, M.@: Anton Ertl.
+``Virtual Machine Showdown: Stack Versus Registers'',
+in @emph{VEE ’05: Proceedings of the 1st ACM/USENIX international
+conference on Virtual execution environments}, 2005.
+Available at @url{https://www.usenix.org/legacy/events%2Fvee05%2Ffull_papers/p153-yunhe.pdf}.
+@bibend
+
+@bibbegin{Shi 2007}
+Yunhe Shi.
+``Virtual machine showdown stack vs.@: registers'',
+PhD thesis, University of Dublin, 2007.
+@doi{10.1.1.391.1562}
+@bibend
+
+@bibbegin{Wilson 1992}
+Paul R. Wilson.
+``Uniprocessor Garbage Collection Techniques'',
+submitted to @emph{ACM Computing Surveys}, 1992.
+@doi{10.1.1.39.7380}
+@bibend
 
 
 @c Indices
@@ -3499,8 +4572,9 @@ not slower to compile) entailing three sets of definitions:
 @item 64-bit word.
 @end itemize
 If I do this it is imperative to do it in a non-invasive way, possibly
-by having @command{jitter} call itself more than once, collecting and appending
-the generated files; this way the code change can be localized.
+by having @command{jitter} call itself more than once, collecting and
+appending the generated files; this way the code change can be
+localized.
 
 @section Non-relocatable instructions
 Locally @emph{un}wrap globals and functions.  This is easy and
