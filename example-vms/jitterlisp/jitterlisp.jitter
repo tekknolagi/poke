@@ -1890,7 +1890,9 @@ end
 
 instruction branch-if-register-non-zero (?R, ?f, ?f)
   code
-    JITTERLISPVM_CHECK_TYPES_1(FIXNUM, JITTER_ARGF2);
+#if ! defined (JITTERLISP_UNSAFE)
+    JITTERLISP_BRANCH_FAST_UNLESS_FIXNUM (JITTER_ARG0, JITTER_ARGF2);
+#endif
     JITTER_BRANCH_FAST_IF_NOTEQUAL(JITTER_ARG0, JITTERLISP_FIXNUM_ENCODE(0),
                                    JITTER_ARGF1);
   end
