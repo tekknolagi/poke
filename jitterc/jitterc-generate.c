@@ -3515,8 +3515,9 @@ jitterc_emit_executor_wrappers
    JITTER_VM_PREFIX_UPPER_CASE .  These should not go to public headers, but
    they are convenient to have in more than one generated C file. */
 static void
-jitterc_emit_vm_name_macros (FILE *f, const struct jitterc_vm *vm)
+jitterc_emit_vm_name_macros (const struct jitterc_vm *vm, const char *basename)
 {
+  FILE *f = jitterc_fopen_a_basename (vm, basename);
   /* Generate private macro definitions in the JITTER_ namespace, not exported
      to the user via headers.  These are useful to compose VM-specific
      identifiers via CPP token concatenation, in a way which is unobstrusive to
@@ -3527,16 +3528,19 @@ jitterc_emit_vm_name_macros (FILE *f, const struct jitterc_vm *vm)
   EMIT("#define JITTER_VM_PREFIX_LOWER_CASE %s\n", vm->lower_case_prefix);
   EMIT("#define JITTER_VM_PREFIX_UPPER_CASE %s\n", vm->upper_case_prefix);
   EMIT("\n");
+  jitterc_fclose (f);
 }
 
-/* Do the job of jitterc_emit_vm_name_macros for the generated .c file
-   containing everything excpept the executor. */
+/* Do the job of jitterc_emit_vm_name_macros for the two generated .c files */
 static void
 jitterc_emit_vm_name_macros_vm1 (const struct jitterc_vm *vm)
 {
-  FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
-  jitterc_emit_vm_name_macros (f, vm);
-  jitterc_fclose (f);
+  jitterc_emit_vm_name_macros (vm, "vm1.c");
+}
+static void
+jitterc_emit_vm_name_macros_vm2 (const struct jitterc_vm *vm)
+{
+  jitterc_emit_vm_name_macros (vm, "vm2.c");
 }
 
 static void
@@ -3951,6 +3955,7 @@ jitterc_generate (struct jitterc_vm *vm,
   jitterc_emit_state (vm);
 
   /* From this point on the generated code goes to vm2.c . */
+  jitterc_emit_vm_name_macros_vm2 (vm);
   jitterc_emit_executor (vm);
 
   /* Move files from the temporary directory to their actual destination,
