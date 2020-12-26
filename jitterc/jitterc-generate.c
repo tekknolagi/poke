@@ -713,6 +713,38 @@ jitterc_emit_specialized_instruction_callees
   jitterc_emit_specialized_instruction_callers_or_callees (vm, false);
 }
 
+/* Emit the definition of an array whose indices are specialised instruction
+   opcode, and whose elements are the corresponding unspecialised instructions
+   opcodes -- or -1 when there is no mapping. */
+static void
+jitterc_emit_specialized_instruction_to_unspecialized_instruction
+   (const struct jitterc_vm *vm)
+{
+  FILE *f = jitterc_fopen_a_basename (vm, "vm1.c");
+
+  EMIT("/* An array whose indices are specialised instruction opcodes, and\n");
+  EMIT("   whose elements are the corresponding unspecialised instructions\n");
+  EMIT("   opcodes -- or -1 when there is no mapping mapping having */\n");
+  EMIT("const int\n");
+  EMIT("vmprefix_specialized_instruction_to_unspecialized_instruction\n");
+  EMIT("   [VMPREFIX_SPECIALIZED_INSTRUCTION_NO]\n");
+  EMIT("  = {\n");
+  int i; char *comma;
+  FOR_LIST(i, comma, vm->specialized_instructions)
+    {
+      const struct jitterc_specialized_instruction* sins
+        = ((const struct jitterc_specialized_instruction*)
+           gl_list_get_at (vm->specialized_instructions, i));
+      if (sins->instruction == NULL)
+        EMIT("    -1%s /* %s */\n", comma, sins->name);
+      else
+        EMIT("    vmprefix_meta_instruction_id_%s%s /* %s */\n",
+             sins->instruction->mangled_name, comma, sins->name);
+    }
+  EMIT("    };\n\n");
+  jitterc_fclose (f);
+}
+
 /* Emit the worst-case defect table for the pointed VM. */
 static void
 jitterc_emit_worst_case_defect_table (const struct jitterc_vm *vm)
@@ -2687,12 +2719,18 @@ jitterc_emit_executor_ordinary_specialized_instructions
           EMIT("#endif\n\n");
         }
 
-      /* Emit profiling code for the instruction. */
-      EMIT ("#if defined (JITTER_INSTRUMENT_FOR_PROFILING)\n");
-      EMIT ("  JITTER_PROFILE_ADD_SPECIALIZED_INSTRUCTION\n");
-      EMIT ("     (VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA->profile,\n");
-      EMIT ("      JITTER_SPECIALIZED_INSTRUCTION_OPCODE);\n");
-      EMIT ("#endif // #if defined (JITTER_INSTRUMENT_FOR_PROFILING)\n");
+      /* Emit profiling instrumentation code for the instruction. */
+      EMIT("#if defined (JITTER_PROFILE_COUNT)\n");
+      EMIT("  JITTER_PROFILE_COUNT_UPDATE\n");
+      EMIT("     (VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA,\n");
+      EMIT("      JITTER_SPECIALIZED_INSTRUCTION_OPCODE);\n");
+      EMIT("#endif\n");
+      EMIT("#if defined (JITTER_PROFILE_SAMPLE)\n");
+      EMIT("  JITTER_PROFILE_SAMPLE_UPDATE\n");
+      EMIT("     (VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA,\n");
+      EMIT("      JITTER_SPECIALIZED_INSTRUCTION_OPCODE);\n");
+      EMIT("#endif\n");
+      EMIT("\n");
       
       /* Emit the user C code for the beginning of every instruction, if any. */
       jitterc_emit_user_c_code_to_stream
@@ -3026,16 +3064,29 @@ jitterc_emit_executor_main_function
   EMIT("  if (__builtin_expect (jitter_initialize, false))\n");
   EMIT("    {\n");
   EMIT("      /* Make sure that vm1 and vm2 were macroexpanded consistently\n");
-  EMIT("         with respect to profiling support. */\n");
-  EMIT("#if defined (JITTER_INSTRUMENT_FOR_PROFILING)\n");
-  EMIT("      if (! vmprefix_vm_configuration->profile_instrumented)\n");
-  EMIT("        jitter_fatal (\"vm1 has profiling disabled, vm2 enabled: \"\n");
-  EMIT("#else // ! defined (JITTER_INSTRUMENT_FOR_PROFILING)\n");
-  EMIT("      if (vmprefix_vm_configuration->profile_instrumented)\n");
-  EMIT("        jitter_fatal (\"vm1 has profiling enabled, vm2 disabled: \"\n");
-  EMIT("#endif /* #if defined (JITTER_INSTRUMENT_FOR_PROFILING) */\n");
-  EMIT("                      \"recompile with consistent CPPFLAGS\");\n");
+  EMIT("         with respect to instrumentation macros.  This relies on the\n");
+  EMIT("         enum values for each feature working as individual bits in a\n");
+  EMIT("         bitmask: see the comment in jitter/jitter-vm.h . */\n");
+  EMIT("      enum jitter_vm_instrumentation correct_instrumentation\n");
+  EMIT("        = jitter_vm_instrumentation_none;\n");
+  EMIT("#if defined (JITTER_PROFILE_COUNT)\n");
+  EMIT("      correct_instrumentation |= jitter_vm_instrumentation_count;\n");
+  EMIT("#endif\n");
+  EMIT("#if defined (JITTER_PROFILE_SAMPLE)\n");
+  EMIT("      correct_instrumentation |= jitter_vm_instrumentation_sample;\n");
+  EMIT("#endif\n");
+  EMIT("      if (vmprefix_vm_configuration->instrumentation != correct_instrumentation)\n");
+  EMIT("        jitter_fatal (\"vm1 and vm2 were compiled with different profiling \"\n");
+  EMIT("                      \"instrumentation macros.  Please recompile with coherent \"\n");
+  EMIT("                      \"CPPFLAGS\");\n");
   EMIT("\n");
+
+  EMIT("#if defined (JITTER_PROFILE_SAMPLE)\n");
+  EMIT("    /* Initialise the sample-profile subsystem, once and for all. */\n");
+  EMIT("    vmprefix_profile_sample_initialize ();\n");
+  EMIT("#endif // #if defined (JITTER_PROFILE_SAMPLE)\n");
+  EMIT("\n");
+
   EMIT("#ifndef JITTER_DISPATCH_SWITCH\n");
   EMIT("      /* FIXME: I can do this with only one relocation, by keeping\n");
   EMIT("         a pointer to the first VM instruction beginning in a static\n");
@@ -3212,6 +3263,14 @@ jitterc_emit_executor_main_function
   EMIT("     Make sure it is safe to expand the macro without do..while\n");
   EMIT("     (false). */\n");
   EMIT("  {}; JITTER_EXECUTION_BEGINNING_; {};\n");
+  EMIT("\n");
+
+  EMIT("#if defined (JITTER_PROFILE_SAMPLE)\n");
+  EMIT("    /* Start sample-profiling: this starts the periodic timer signal,\n");
+  EMIT("       whose handler will look at the current instruction field within\n");
+  EMIT("       the special-purpose struct in the Array. */\n");
+  EMIT("    vmprefix_profile_sample_start (VMPREFIX_OWN_STATE);\n");
+  EMIT("#endif // #if defined (JITTER_PROFILE_SAMPLE)\n");
   EMIT("\n");
 
   EMIT("  /* Jump to the first instruction.  If replication is enabled this point\n");
@@ -3400,6 +3459,14 @@ jitterc_emit_executor_main_function
   EMIT("    jitter_original_state->vmprefix_state_runtime = jitter_state_runtime;\n");
   EMIT("\n");
   EMIT("    // fprintf (stderr, \"Exiting the VM...\\n\");\n\n");
+  EMIT("\n");
+  EMIT("#if defined (JITTER_PROFILE_SAMPLE)\n");
+  EMIT("    /* Stop sample-profiling: this stops the periodic timer signal, while\n");
+  EMIT("       we are no longer updating the current instruction field within the\n");
+  EMIT("       special-purpose struct in the Array. */\n");
+  EMIT("    vmprefix_profile_sample_stop ();\n");
+  EMIT("#endif // #if defined (JITTER_PROFILE_SAMPLE)\n");
+  EMIT("\n");
 
   /* Emit the patch-in footer.  This must come after every patch-in or defect
      use. */
@@ -3949,6 +4016,7 @@ jitterc_generate (struct jitterc_vm *vm,
   jitterc_emit_specialized_instruction_relocatables (vm);
   jitterc_emit_specialized_instruction_callers (vm);
   jitterc_emit_specialized_instruction_callees (vm);
+  jitterc_emit_specialized_instruction_to_unspecialized_instruction (vm);
   jitterc_emit_worst_case_defect_table (vm);
   jitterc_emit_rewriter (vm);
   jitterc_emit_specializer (vm);

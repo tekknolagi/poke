@@ -28,6 +28,25 @@
 #include <jitter/jitter-fatal.h>
 
 
+const char *
+jitter_vm_instrumentation_to_string (enum jitter_vm_instrumentation i)
+{
+  switch (i)
+    {
+    case jitter_vm_instrumentation_none:
+      return "";
+    case jitter_vm_instrumentation_count:
+      return "count-profiling";
+    case jitter_vm_instrumentation_sample:
+      return "sample-profiling";
+    case jitter_vm_instrumentation_count_and_sample:
+      return "count+sample-profiling";
+
+    default:
+      jitter_fatal ("unknown instrumentation %i", (int) i);
+    }
+}
+
 void
 jitter_print_vm_configuration (FILE *f,
                                const struct jitter_vm_configuration *c)
@@ -47,7 +66,7 @@ jitter_print_vm_configuration (FILE *f,
   PRINT("max_nonresidual_literal_no:     %i\n", (int) c->max_nonresidual_literal_no);
   PRINT("dispatch:                       %s\n", c->dispatch_human_readable);
   PRINT("profile instrumentation:        %s\n",
-        (c->profile_instrumented ? "enabled (low-performance !)" : "disabled"));
+        jitter_vm_instrumentation_to_string (c->instrumentation));
 
 #undef PRINT
 }

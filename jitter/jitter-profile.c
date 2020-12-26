@@ -24,103 +24,125 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <jitter/jitter-arithmetic.h>
+#include <jitter/jitter-human-prefix.h>
 #include <jitter/jitter-profile.h>
 #include <jitter/jitter-malloc.h>
 
 
 
 
-/* Data structures.
+/* Runtime data structures.
  * ************************************************************************** */
 
-jitter_profile
-jitter_profile_make (const struct jitter_vm *vm)
+void
+jitter_profile_runtime_initialize (const struct jitter_vm *vm,
+                                   struct jitter_profile_runtime *prd)
 {
-  if (! vm->configuration->profile_instrumented)
-    return NULL;
+  struct jitter_count_profile_runtime *count_rdp
+    = & prd->count_profile_runtime;
+  struct jitter_sample_profile_runtime *sample_rdp
+    = & prd->sample_profile_runtime;
+  if (vm->configuration->instrumentation & jitter_vm_instrumentation_count)
+    count_rdp->counts
+      = jitter_xmalloc (sizeof (uint64_t) * vm->specialized_instruction_no);
+  else
+    count_rdp->counts = NULL; /* Out of defensiveness. */
 
-  jitter_profile res = jitter_xmalloc (vm->specialized_instruction_no
-                                       * sizeof (jitter_ulong_long));
-  jitter_profile_reset (vm, res);
+  if (vm->configuration->instrumentation & jitter_vm_instrumentation_sample)
+    sample_rdp->counts
+      = jitter_xmalloc (sizeof (uint32_t) * vm->specialized_instruction_no);
+  else
+    sample_rdp->counts = NULL; /* Out of defensiveness. */
+
+  /* Set all the counts to zero. */
+  jitter_profile_runtime_clear (vm, prd);
+}
+
+void
+jitter_profile_runtime_finalize (const struct jitter_vm *vm,
+                                 struct jitter_profile_runtime *prd)
+{
+  struct jitter_count_profile_runtime *count_rdp
+    = & prd->count_profile_runtime;
+  struct jitter_sample_profile_runtime *sample_rdp
+    = & prd->sample_profile_runtime;
+  if (vm->configuration->instrumentation & jitter_vm_instrumentation_count)
+    free (count_rdp->counts);
+  if (vm->configuration->instrumentation & jitter_vm_instrumentation_sample)
+    free (sample_rdp->counts);
+}
+
+struct jitter_profile_runtime *
+jitter_profile_runtime_make (const struct jitter_vm *vm)
+{
+  struct jitter_profile_runtime *res
+    = jitter_xmalloc (sizeof (struct jitter_profile_runtime));
+  jitter_profile_runtime_initialize (vm, res);
   return res;
 }
 
 void
-jitter_profile_destroy (jitter_profile p)
+jitter_profile_runtime_destroy (const struct jitter_vm *vm,
+                                struct jitter_profile_runtime *pd)
 {
-  free (p);
+  jitter_profile_runtime_finalize (vm, pd);
+  free (pd);
 }
 
 void
-jitter_profile_reset (const struct jitter_vm *vm, jitter_profile p)
+jitter_profile_runtime_clear (const struct jitter_vm *vm,
+                              struct jitter_profile_runtime *prd)
 {
-  if (! vm->configuration->profile_instrumented)
-    return;
-
-  size_t element_no = vm->specialized_instruction_no;
+  struct jitter_count_profile_runtime *count_rdp
+    = & prd->count_profile_runtime;
+  struct jitter_sample_profile_runtime *sample_rdp
+    = & prd->sample_profile_runtime;
   int i;
-  for (i = 0; i < element_no; i ++)
-    p [i] = 0;
+  if (vm->configuration->instrumentation & jitter_vm_instrumentation_count)
+    for (i = 0; i < vm->specialized_instruction_no; i ++)
+      count_rdp->counts [i] = 0;
+  if (vm->configuration->instrumentation & jitter_vm_instrumentation_sample)
+    for (i = 0; i < vm->specialized_instruction_no; i ++)
+      sample_rdp->counts [i] = 0;
+  sample_rdp->current_specialized_instruction_opcode
+    = -1 /* Out of defensiveness. */;
+  sample_rdp->sample_no = 0;
 }
 
 void
-jitter_profile_merge_from (const struct jitter_vm *vm,
-                           jitter_profile to, const jitter_profile from)
+jitter_profile_runtime_merge_from (const struct jitter_vm *vm,
+                                   struct jitter_profile_runtime *to,
+                                   const struct jitter_profile_runtime *from)
 {
-  if (! vm->configuration->profile_instrumented)
-    return;
-
-  size_t element_no = vm->specialized_instruction_no;
+  struct jitter_count_profile_runtime *to_count_rdp
+    = & to->count_profile_runtime;
+  struct jitter_sample_profile_runtime *to_sample_rdp
+    = & to->sample_profile_runtime;
+  const struct jitter_count_profile_runtime *from_count_rdp
+    = & from->count_profile_runtime;
+  const struct jitter_sample_profile_runtime *from_sample_rdp
+    = & from->sample_profile_runtime;
   int i;
-  for (i = 0; i < element_no; i ++)
-    to [i] += from [i];
+  if (vm->configuration->instrumentation & jitter_vm_instrumentation_count)
+    for (i = 0; i < vm->specialized_instruction_no; i ++)
+      to_count_rdp->counts [i]
+        += from_count_rdp->counts [i];
+  if (vm->configuration->instrumentation & jitter_vm_instrumentation_sample)
+    for (i = 0; i < vm->specialized_instruction_no; i ++)
+      to_sample_rdp->counts [i]
+        += from_sample_rdp->counts [i];
+  to_sample_rdp->current_specialized_instruction_opcode
+    = -1 /* Out of defensiveness. */;
+  to_sample_rdp->sample_no
+    += from_sample_rdp->sample_no;
 }
 
 
 
 
-/* Internal definitions: <name, count> pairs.
+/* Processed data structures.
  * ************************************************************************** */
-
-/* One entry in the profile. */
-struct jitter_profile_item
-{
-  /* The name of the instruction, specialised or not.  The pointed memory
-     belongs to the VM structure and is not copied here. */
-  const char *name;
-
-  /* The number of executions. */
-  jitter_ulong_long count;
-
-  /* The same number printed as text, not left-aligned. */
-  char count_as_text [100];
-};
-
-/* Return a malloc-allocated array of profile items, not sorted, containing
-   specialised instructions for the pointed VM and data from the given
-   profile.  Ignore instructions having a zero count.
-   Set the pointed size_t value to the number of elements. */
-static struct jitter_profile_item *
-jitter_specialized_instruction_profile_items (const struct jitter_vm *vm,
-                                              const jitter_profile p,
-                                              size_t *element_no_p)
-{
-  const char * const * const names = vm->specialized_instruction_names;
-  size_t element_no = vm->specialized_instruction_no;
-  struct jitter_profile_item *items
-    = jitter_xmalloc (element_no * sizeof (struct jitter_profile_item));
-  int ini, outi = 0;
-  for (ini = 0; ini < element_no; ini ++)
-    if (p [ini] > 0)
-      {
-        items [outi].name = names [ini];
-        items [outi].count = p [ini];
-        sprintf (items [outi].count_as_text, "%" JITTER_PRIull, p [ini]);
-        outi ++;
-      }
-  * element_no_p = outi;
-  return items;
-}
 
 /* A comparison function between struct jitter_profile_item objects, for
    qsort. */
@@ -134,60 +156,160 @@ jitter_profile_item_compare (const void *pa, const void *pb)
      It would be nice to be able to just return the result of a subtraction, but
      here there is concrete danger of affecting the sign bit by truncating a
      wider number into an int. */
-  if (ia->count > ib->count)
+  if (ia->total_run_time_in_seconds > ib->total_run_time_in_seconds)
     return -1;
-  else if (ia->count == ib->count)
-    /* Secondary sort criterion: probably unimportant in practice. */
-    return strcmp (ia->name, ib->name);
-  else
+  else if (ia->total_run_time_in_seconds < ib->total_run_time_in_seconds)
     return 1;
+  else
+    {
+      /* Secondary sort criterion */
+      if (ia->execution_count > ib->execution_count)
+        return -1;
+      else if (ia->execution_count < ib->execution_count)
+        return 1;
+      else
+        /* Tertiary sort criterion */
+        return strcmp (ia->name, ib->name);
+    }
 }
 
-/* Destructively sort the pointed array of items by execution count, in
-   descending order. */
+/* Sort the item of the given profile as per the comment before the data
+   structure. */
 static void
-jitter_profile_items_sort (struct jitter_profile_item *is, size_t element_no)
+jitter_profile_sort (const struct jitter_vm *vm, struct jitter_profile *p)
 {
-  qsort (is, element_no, sizeof (struct jitter_profile_item),
+  qsort (p->items, p->item_no, sizeof (struct jitter_profile_item),
          jitter_profile_item_compare);
 }
 
-/* The common logic factoring jitter_maximal_name_length_in and
-   jitter_maximal_count_width_in . */
-#define JITTER_MAXIMUM_IN_ITEMS(the_items, field_name, the_element_no)   \
-  do                                                                     \
-    {                                                                    \
-      const struct jitter_profile_item *_jitter_items = (the_items);     \
-      size_t _jitter_element_no = (the_element_no);                      \
-      size_t _jitter_candidate_maximal_length = 0;                       \
-      int _jitter_i;                                                     \
-      for (_jitter_i = 0; _jitter_i < _jitter_element_no; _jitter_i ++)  \
-        {                                                                \
-          size_t _jitter_length                                          \
-            = strlen (_jitter_items [_jitter_i].field_name);             \
-          if (_jitter_length > _jitter_candidate_maximal_length)         \
-            _jitter_candidate_maximal_length = _jitter_length;           \
-        }                                                                \
-      return _jitter_candidate_maximal_length;                           \
-    }                                                                    \
-  while (false)
-
-/* Return the maximum name length in the pointed array of struct
-   jitter_profile_item values. */
-static
-size_t jitter_maximal_name_length_in (const struct jitter_profile_item *items,
-                                      size_t element_no)
+/* Common code factoring jitter_profile_specialized_from_runtime and
+   jitter_profile_unspecialized_from_runtime . */
+static struct jitter_profile *
+jitter_profile_from_runtime (const struct jitter_vm *vm,
+                             const struct jitter_profile_runtime *rp,
+                             bool specialized)
 {
-  JITTER_MAXIMUM_IN_ITEMS (items, name, element_no);
+  /* The structure in struct jitter_profile_runtime is not really appropriate
+     for unspecialised instructions.  In the case of unspecialised instructions
+     we will build a structure of the same shape, but with information about
+     each specialisation of each unspecialised instruction joined together. */
+  struct jitter_profile_runtime *origin;
+  size_t in_element_no;
+  if (specialized)
+    {
+      in_element_no = vm->specialized_instruction_no;
+      origin = (struct jitter_profile_runtime *) rp;
+    }
+  else
+    {
+      in_element_no
+        = vm->meta_instruction_no + 1 /* One more element for the case of
+                                         specialised instructions with no
+                                         matching unspecialised version. */;
+      /* Make a new profile runtime.  Its content will be blank, and we will
+         rely on that by *adding* to the current value of each element, rather
+         than simply setting.  Its indices will be unspecialised instruction
+         opcodes *plus one*; the index 0 is for specialised instructions with
+         no unspecialised counterpart, which are recorded as having opcode -1
+         in vm->specialized_instruction_to_unspecialized_instruction . */
+      origin = jitter_profile_runtime_make (vm);
+      int specialized_i;
+      for (specialized_i = 0;
+           specialized_i < vm->specialized_instruction_no;
+           specialized_i ++)
+        {
+          int unspecidalized_opcode
+            = vm->specialized_instruction_to_unspecialized_instruction
+                 [specialized_i];
+          int index = unspecidalized_opcode + 1 /* See the comment above. */;
+          if (vm->configuration->instrumentation
+              & jitter_vm_instrumentation_count)
+            origin->count_profile_runtime.counts [index]
+              += rp->count_profile_runtime.counts [specialized_i];
+          if (vm->configuration->instrumentation
+              & jitter_vm_instrumentation_sample)
+          origin->sample_profile_runtime.counts [index]
+            += rp->sample_profile_runtime.counts [specialized_i];
+        }
+    }
+  struct jitter_count_profile_runtime *count_rdp
+    = & origin->count_profile_runtime;
+  struct jitter_sample_profile_runtime *sample_rdp
+    = & origin->sample_profile_runtime;
+
+  struct jitter_profile *res = jitter_xmalloc (sizeof (struct jitter_profile));
+  res->items
+    = jitter_xmalloc (/* It is harmless to allocate more space than we need. */
+                      vm->specialized_instruction_no
+                      * sizeof (struct jitter_profile_item));
+
+  int ini, outi = 0;
+  for (ini = 0; ini < in_element_no; ini ++)
+    {
+      bool interesting = false;
+      if (vm->configuration->instrumentation & jitter_vm_instrumentation_count
+          && count_rdp->counts [ini] > 0)
+        interesting = true;
+      if (vm->configuration->instrumentation & jitter_vm_instrumentation_sample
+          && sample_rdp->counts [ini] > 0)
+        interesting = true;
+      if (interesting)
+        {
+          const char *name;
+          if (specialized)
+            name = vm->specialized_instruction_names [ini];
+          else if (ini == 0)
+            name = "<specialized only>";
+          else
+            name = vm->meta_instructions [ini - 1].name;
+          res->items [outi].name = name;
+          if (vm->configuration->instrumentation
+              & jitter_vm_instrumentation_count)
+            res->items [outi].execution_count = count_rdp->counts [ini];
+          else
+            res->items [outi].execution_count = 0;
+          if (vm->configuration->instrumentation
+              & jitter_vm_instrumentation_sample)
+            res->items [outi].total_run_time_in_seconds
+              = (sample_rdp->counts [ini]
+                 * (JITTER_PROFILE_SAMPLE_PERIOD_IN_MILLISECONDS / 1000.0));
+          else
+            res->items [outi].total_run_time_in_seconds = 0;
+          outi ++;
+        }
+    }
+  res->item_no = outi;
+
+  /* If we used a temporary structure for unspecialised instructions we can
+     dispose of it now. */
+  if (! specialized)
+    jitter_profile_runtime_destroy (vm, origin);
+
+  /* Sort the output structure as per the specification in the header. */
+  jitter_profile_sort (vm, res);
+  return res;
 }
 
-/* Return the maximum count width in the pointed array of struct
-   jitter_profile_item values. */
-static
-size_t jitter_maximal_count_width_in (const struct jitter_profile_item *items,
-                                      size_t element_no)
+struct jitter_profile *
+jitter_profile_specialized_from_runtime (const struct jitter_vm *vm,
+                                         const struct jitter_profile_runtime *rp)
 {
-  JITTER_MAXIMUM_IN_ITEMS (items, count_as_text, element_no);
+  return jitter_profile_from_runtime (vm, rp, true);
+}
+
+struct jitter_profile *
+jitter_profile_unspecialized_from_runtime (const struct jitter_vm *vm,
+                                           const struct jitter_profile_runtime
+                                           *rp)
+{
+  return jitter_profile_from_runtime (vm, rp, false);
+}
+
+void
+jitter_profile_destroy (struct jitter_profile *p)
+{
+  free (p->items);
+  free (p);
 }
 
 
@@ -218,68 +340,164 @@ jitter_profile_print_uninstrumented (jitter_print_context ct,
   jitter_profile_begin_class (ct, vm, "warning");
   jitter_print_char_star (ct, "[Profiling instrumentation not enabled for ");
   jitter_print_char_star (ct, vm->configuration->lower_case_prefix);
-  jitter_print_char_star (ct, "; you may want to recompile with the macro ");
-  jitter_print_char_star (ct, "JITTER_INSTRUMENT_FOR_PROFILING defined.]\n");
+  jitter_print_char_star (ct, "; you may want to recompile with one of the ");
+  jitter_print_char_star (ct, "macros JITTER_PROFILE_COUNT or ");
+  jitter_print_char_star (ct, "JITTER_PROFILE_SAMPLE defined.]\n");
   jitter_print_end_class (ct);
 }
 
+/* The common logic factoring jitter_maximal_name_length_in and
+   jitter_maximal_count_width_in . */
+#define JITTER_MAXIMUM_IN_ITEMS(the_items, expression, the_element_no)   \
+  do                                                                     \
+    {                                                                    \
+      const struct jitter_profile_item *_jitter_items = (the_items);     \
+      size_t _jitter_element_no = (the_element_no);                      \
+      size_t _jitter_candidate_maximal_length = 0;                       \
+      int _jitter_i;                                                     \
+      for (_jitter_i = 0; _jitter_i < _jitter_element_no; _jitter_i ++)  \
+        {                                                                \
+          size_t _jitter_length = (expression);                          \
+          if (_jitter_length > _jitter_candidate_maximal_length)         \
+            _jitter_candidate_maximal_length = _jitter_length;           \
+        }                                                                \
+      return _jitter_candidate_maximal_length;                           \
+    }                                                                    \
+  while (false)
+
+/* Return the maximum name length in the pointed array of struct
+   jitter_profile_item values. */
+static
+size_t jitter_maximal_name_length_in (const struct jitter_profile_item *items,
+                                      size_t element_no)
+{
+  JITTER_MAXIMUM_IN_ITEMS (items,
+                           strlen (_jitter_items [_jitter_i].name),
+                           element_no);
+}
+
+/* Return the maximum count width in the pointed array of struct
+   jitter_profile_item values. */
+static
+size_t jitter_maximal_count_width_in (const struct jitter_profile_item *items,
+                                      size_t element_no)
+{
+  JITTER_MAXIMUM_IN_ITEMS (items,
+                           jitter_digit_no_unsigned_radix_10
+                              (_jitter_items [_jitter_i].execution_count),
+                           element_no);
+}
+
 void
-jitter_profile_print_specialized (jitter_print_context ct,
-                                  const struct jitter_vm *vm,
-                                  const jitter_profile p)
+jitter_profile_runtime_print_specialized (jitter_print_context ct,
+                                          const struct jitter_vm *vm,
+                                          const struct jitter_profile_runtime
+                                          *prd)
+{
+  struct jitter_profile *p = jitter_profile_specialized_from_runtime (vm, prd);
+  jitter_profile_print (ct, vm, p);
+  jitter_profile_destroy (p);
+}
+
+void
+jitter_profile_runtime_print_unspecialized (jitter_print_context ct,
+                                            const struct jitter_vm *vm,
+                                            const struct jitter_profile_runtime
+                                            *prd)
+{
+  struct jitter_profile *p = jitter_profile_unspecialized_from_runtime (vm, prd);
+  jitter_profile_print (ct, vm, p);
+  jitter_profile_destroy (p);
+}
+
+void
+jitter_profile_print (jitter_print_context ct,
+                      const struct jitter_vm *vm,
+                      const struct jitter_profile *p)
 {
   /* If the code was not instrumented print a warning and do nothing else. */
-  if (! vm->configuration->profile_instrumented)
+  if (vm->configuration->instrumentation == jitter_vm_instrumentation_none)
     {
       jitter_profile_print_uninstrumented (ct, vm);
       return;
     }
 
-  size_t element_no;
-  struct jitter_profile_item *items
-    = jitter_specialized_instruction_profile_items (vm, p, & element_no);
+  size_t element_no = p->item_no;
+  struct jitter_profile_item *items = p->items;
 
-  jitter_profile_items_sort (items, element_no);
-
-  double count_sum = 0;
+  uint64_t count_sum = 0;
+  double time_sum = 0;
   int i;
   for (i = 0; i < element_no; i ++)
-    count_sum += items [i].count;
-
+    {
+      count_sum += items [i].execution_count;
+      time_sum += items [i].total_run_time_in_seconds;
+    }
   size_t maximal_name_length = jitter_maximal_name_length_in (items, element_no);
   size_t maximal_count_width = jitter_maximal_count_width_in (items, element_no);
   for (i = 0; i < element_no; i ++)
     {
       struct jitter_profile_item *item = items + i;
-      double ratio = item->count / count_sum;
 
       jitter_profile_begin_class (ct, vm, "instruction");
       jitter_print_char_star (ct, item->name);
       jitter_print_end_class (ct);
 
+      /* The printed ratio may be a run time ratio, available if sampling, of
+         otherwise an execution count ratio. */
+      double ratio;
+      if (vm->configuration->instrumentation & jitter_vm_instrumentation_sample)
+        ratio = item->total_run_time_in_seconds / time_sum;
+      else
+        ratio = item->execution_count / count_sum;
+
       /* Print enough additional spaces to get to the width of the longest
          instruction name, plus one space for separation, plus enough additional
          spaces so that, adding the count width, we get to the maximum width. */
       size_t name_length = strlen (item->name);
-      size_t count_width = strlen (item->count_as_text);
+      size_t count_width = jitter_digit_no_radix_10 (item->execution_count);
       int j;
       for (j = name_length;
            j < maximal_name_length + 1 + maximal_count_width - count_width;
            j ++)
         jitter_print_char (ct, ' ');
-
-      /* Print the number, aligned to the right. */
-      jitter_profile_begin_class (ct, vm, "number");
-      jitter_print_char_star (ct, item->count_as_text);
-      jitter_print_end_class (ct);
-
-      /* Print the count ratio as a percentage, aligned to the right. */
       jitter_print_char (ct, ' ');
-      char percentage [10];
-      sprintf (percentage, "%5.1f%%", ratio * 100);
-      jitter_print_char_star (ct, percentage);
 
+      /* Print the execution count, if available. */
+      if (vm->configuration->instrumentation & jitter_vm_instrumentation_count)
+        {
+          jitter_profile_begin_class (ct, vm, "number");
+          jitter_print_ulong_long (ct, 10, item->execution_count);
+          jitter_print_end_class (ct);
+          jitter_print_char (ct, ' ');
+        }
+
+      /* Print the run time if available and greater than zero; if the execution
+         count is also available print the average execution time, otherwise the
+         total. */
+      if (item->total_run_time_in_seconds > 0)
+        {
+          /* Print the number, aligned to the right. */
+          double run_time_ = item->total_run_time_in_seconds;
+          if (vm->configuration->instrumentation
+              & jitter_vm_instrumentation_count)
+            /* This is safe: it is impossible, if an instruction was executed at
+               least once (its run time is positive) and we have execution
+               counters available, which are exact, for the count to be zero. */
+            run_time_ /= item->execution_count;
+          JITTER_HUMAN_READABLE_ (run_time, run_time_, false);
+          char run_time_text [100];
+          sprintf (run_time_text, "%8.3f%1ss", run_time, run_time_prefix);
+          jitter_profile_begin_class (ct, vm, "comment");
+          jitter_print_char_star (ct, run_time_text);
+          jitter_print_end_class (ct);
+          jitter_print_char (ct, ' ');
+
+          /* Print the ratio as a percentage, aligned to the right. */
+          char percentage [10];
+          sprintf (percentage, "%5.1f%%", ratio * 100);
+          jitter_print_char_star (ct, percentage);
+        }
       jitter_print_char (ct, '\n');
     }
-  free (items);
 }

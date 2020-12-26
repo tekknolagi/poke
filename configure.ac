@@ -1009,6 +1009,9 @@ AC_CHECK_FUNCS([sigaction])
 # Check for optional high-resolution timing functions.
 AC_CHECK_FUNCS([clock_gettime])
 
+# Check for timer functions needed for profiling.
+AC_CHECK_FUNCS([setitimer])
+
 
 # System-dependent configuration.
 ################################################################
@@ -2569,6 +2572,8 @@ jitter_define_prefixed_feature_macro([ac_cv_func_getpagesize], [yes],
                                      [HAVE_GETPAGESIZE])
 jitter_define_prefixed_feature_macro([ac_cv_func_clock_gettime], [yes],
                                      [HAVE_CLOCK_GETTIME])
+jitter_define_prefixed_feature_macro([ac_cv_func_setitimer], [yes],
+                                     [HAVE_SETITIMER])
 jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_PAGESIZE], [yes],
                                      [HAVE__SC_PAGESIZE])
 jitter_define_prefixed_feature_macro([ac_cv_have_decl__SC_PHYS_PAGES], [yes],

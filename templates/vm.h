@@ -263,7 +263,6 @@ vmprefix_make_mutable_routine (void)
 
 
 
-
 /* Array: special-purpose data.
  * ************************************************************************** */
 
@@ -285,6 +284,9 @@ vmprefix_make_mutable_routine (void)
    and the macros defined from it. */
 struct jitter_special_purpose_state_data
 {
+  /* Notification fields.
+   * ***************************************************************** */
+
   /* This is a Boolean flag, held as a word-sized datum so as to ensure
      atomicity in access.  It is also aligned to at least sizeof (jitter_int)
      bytes.
@@ -317,9 +319,10 @@ struct jitter_special_purpose_state_data
      of pending_notifications being true. */
   struct jitter_signal_notification *pending_signal_notifications;
 
-  /* A pointer to a profiling array holding an execution count for each
-     specialised instruction. */
-  jitter_profile profile;
+
+  /* Profiling instrumentation fields.
+   * ***************************************************************** */
+  struct jitter_profile_runtime profile_runtime;
 };
 
 
@@ -665,6 +668,12 @@ vmprefix_meta_instruction_hash;
 extern const struct jitter_meta_instruction
 vmprefix_meta_instructions [];
 
+/* An array whose indices are specialised instruction opcodes, and
+   whose elements are the corresponding unspecialised instructions
+   opcodes -- or -1 when there is no mapping mapping having */
+extern const int
+vmprefix_specialized_instruction_to_unspecialized_instruction [];
+
 /* How many residual parameters each specialized instruction has.  The
    actual array definition is machine-generated. */
 extern const size_t
@@ -875,30 +884,48 @@ vmprefix_vm_configuration;
    the profile within a pointed state structure, everything else here has the
    same API as the functionality in jitter/jitter-profile.h , without the VM
    pointer.
-   Notice that this API does nothing useful if JITTER_INSTRUMENT_FOR_PROFILING
-   is not defined. */
+   Notice that this API does nothing useful onless one of the CPP macros
+   JITTER_PROFILE_COUNT or JITTER_PROFILE_SAMPLE is defined. */
+#define vmprefix_profile_runtime  \
+  jitter_profile_runtime /* the struct name */
 #define vmprefix_profile  \
-  jitter_profile
-vmprefix_profile
-vmprefix_state_profile (struct vmprefix_state *s)
+  jitter_profile /* the struct name */
+// FIXME: no: distinguish between struct jitter_profile_runtime and its user-friendly variant
+struct jitter_profile_runtime *
+vmprefix_state_profile_runtime (struct vmprefix_state *s)
   __attribute__ ((returns_nonnull, nonnull (1)));
-vmprefix_profile
-vmprefix_profile_make (void)
+struct vmprefix_profile_runtime*
+vmprefix_profile_runtime_make (void)
   __attribute__ ((returns_nonnull));
 #define vmprefix_profile_destroy jitter_profile_destroy
 void
-vmprefix_profile_reset (vmprefix_profile p)
+vmprefix_profile_runtime_clear (struct vmprefix_profile_runtime *p)
   __attribute__ ((nonnull (1)));
 void
-vmprefix_profile_merge_from (vmprefix_profile to, const vmprefix_profile from)
+vmprefix_profile_runtime_merge_from (struct vmprefix_profile_runtime *to,
+                                     const struct vmprefix_profile_runtime *from)
   __attribute__ ((nonnull (1, 2)));
 void
-vmprefix_profile_merge_from_state (vmprefix_profile to,
+vmprefix_profile_runtime_merge_from_state (struct vmprefix_profile_runtime *to,
                                    const struct vmprefix_state *from_state)
   __attribute__ ((nonnull (1, 2)));
+struct vmprefix_profile *
+vmprefix_profile_unspecialized_from_runtime
+   (const struct vmprefix_profile_runtime *p)
+  __attribute__ ((returns_nonnull, nonnull (1)));
+struct vmprefix_profile *
+vmprefix_profile_specialized_from_runtime (const struct vmprefix_profile_runtime
+                                           *p)
+  __attribute__ ((returns_nonnull, nonnull (1)));
 void
-vmprefix_profile_print_specialized (jitter_print_context ct,
-                                    const vmprefix_profile p)
+vmprefix_profile_runtime_print_unspecialized
+   (jitter_print_context ct,
+    const struct vmprefix_profile_runtime *p)
+  __attribute__ ((nonnull (1, 2)));
+void
+vmprefix_profile_runtime_print_specialized (jitter_print_context ct,
+                                            const struct vmprefix_profile_runtime
+                                            *p)
   __attribute__ ((nonnull (1, 2)));
 
 
@@ -1104,6 +1131,30 @@ vmprefix_execute_routine (jitter_routine r,
 void
 vmprefix_dump_data_locations (jitter_print_context output)
   __attribute__ ((nonnull (1)));
+
+
+
+
+/* Sample profiling: internal API.
+ * ************************************************************************** */
+
+/* The functions in this sections are used internally by vm2.c, only when
+   sample-profiling is enabled.  In fact these functions are not defined at all
+   otherwise. */
+
+/* Initialise global sampling-related structures. */
+// FIXME: no: distinguish struct jitter_profile_runtime and struct jitter_profile
+void
+vmprefix_profile_sample_initialize (void);
+
+/* Begin sampling. */
+void
+vmprefix_profile_sample_start (struct vmprefix_state *state)
+  __attribute__ ((nonnull (1)));
+
+/* Stop sampling. */
+void
+vmprefix_profile_sample_stop (void);
 
 
 

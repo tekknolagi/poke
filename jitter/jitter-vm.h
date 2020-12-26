@@ -35,6 +35,58 @@
 /* VM-specific attributes.
  * ************************************************************************** */
 
+/* The kind of profiling instrumentation enabled in a VM.  This is selected with
+   CPP macros when compiling vm1 and vm2.
+
+   Notice that the enum value can be used as a bit mask, with
+   jitter_vm_instrumentation_count and jitter_vm_instrumentation_sample being
+   two independent features that can be enabled or disabled, each contributing
+   to the enum jitter_vm_instrumentation value as operands of a bitwise or
+   operation. */
+enum jitter_vm_instrumentation
+  {
+    /* No instrumentation, as suitable for production. */
+    jitter_vm_instrumentation_none
+      = 0,
+
+    /* Counting instrumentation.  This permits to count how many time each
+       specialised instruction is executed, exactly.  
+       This mode is unsuitable for production as the instrumentation overhead
+       is severe.  For every VM instruction:
+       - load;
+       - 64-bit load (often with an offset larger than 16 bits);
+       - 64-bit increment;
+       - 64-bit store (often with an offset larger than 16 bits).
+       This is also heavy on l1d, since the 64-bit memory location accessed
+       depends on the specialised opcode, and many different location can be
+       touched. */
+    jitter_vm_instrumentation_count
+      = 1,
+
+    /* Sampling instrumentation.  This permits to count how much time is spent
+       executing each specialised instruction, subject to sampling errors.
+       The instrumentation overhead is less extreme in this case.  For every
+       VM instruction:
+       - store of a 16-bit constant (zero-extended or sign-extended to word
+         size) depending on the instruction;
+       and then the overhead of handling a periodic signal.
+       The address being written to is always the same. */
+    jitter_vm_instrumentation_sample
+      = 2,
+
+    /* Enable both counting and sampling.  The overhead will be equal to the sum
+       of the two overheads above, again making this mode is again unsuitable
+       for production VMs. */
+    jitter_vm_instrumentation_count_and_sample
+      = jitter_vm_instrumentation_count | jitter_vm_instrumentation_sample
+  };
+
+/* Return a human-readable description of the given instrumentation.  The
+   returned string points to global constant memory, and the user does not
+   need to free it. */
+const char *
+jitter_vm_instrumentation_to_string (enum jitter_vm_instrumentation i);
+
 /* A struct containing the configuration-specific parameters of a VM.  This
    struct exists in only one constant instance per VM, and does not depend on
    initialisation functions.  It is convenient to be used, for example, in
@@ -55,10 +107,8 @@ struct jitter_vm_configuration
   /* A textual description of the dispatching technique. */
   char *dispatch_human_readable;
 
-  /* Non-false iff the VM was compiling with profiling instrumentation enabled.
-     Instrumentation considerably reduces performance, so the user should be
-     informed about it being enabled. */
-  bool profile_instrumented;
+  /* The kind of profiling instrumentation for this VM. */
+  enum jitter_vm_instrumentation instrumentation;
 };
 
 /* Print the current VM configuration, as set by jitterc and CPP macros, to the
@@ -124,6 +174,11 @@ struct jitter_vm
 
   struct jitter_meta_instruction *meta_instructions;
   size_t meta_instruction_no;
+
+  /* An array whose indices are specialised instruction opcodes, and whose
+     elements are the corresponding unspecialised instructions opcodes -- or -1
+     when there is no mapping mapping having */
+  const int *specialized_instruction_to_unspecialized_instruction;
 
   /* Specific meta-instruction pointers for implicit instructions.
      VM-independent routine specialization relies on those, so they have to be

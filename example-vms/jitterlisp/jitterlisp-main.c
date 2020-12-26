@@ -190,9 +190,9 @@ the_argp_program_version_hook (FILE * restrict stream, struct argp_state *s)
   const struct jitter_vm_configuration *c = jitterlispvm_vm_configuration;
 
   fprintf (stream,
-           "JitterLisp (%s%s dispatch) "
+           "JitterLisp (%s %s dispatch) "
            "(" JITTER_PACKAGE_NAME " " JITTER_PACKAGE_VERSION ")\n",
-           (c->profile_instrumented ? "profile-instrumented, " : ""),
+           (jitter_vm_instrumentation_to_string (c->instrumentation)),
            c->dispatch_human_readable);
   fprintf
      (stream,

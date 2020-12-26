@@ -96,30 +96,36 @@ static void
 structured_help (void)
 {
   const struct jitter_vm_configuration *c = structuredvm_vm_configuration;
-  bool profile = c->profile_instrumented;
+  enum jitter_vm_instrumentation instrumentation = c->instrumentation;
 
   printf ("Usage: %s [OPTION...] FILE.structured\n", structured_program_name);
   printf ("   or: %s [OPTION...] -\n", structured_program_name);
   printf ("Run a structured-language program on a Jittery VM, using the\n");
-  printf ("%s dispatch%s.\n", c->dispatch_human_readable,
-          (profile ? " (profile-instrumented)" : ""));
+  printf ("%s dispatch %s.\n", c->dispatch_human_readable,
+          jitter_vm_instrumentation_to_string (instrumentation));
 
   structured_help_section ("Debugging options");
   printf ("      --disassemble                print hardware machine instructions\n");
   printf ("      --cross-disassemble          use the cross-disassembler rather than\n");
   printf ("                                   the native disassembler; also enable\n");
   printf ("                                   disassembly as per --disassemble\n");
-  printf ("      --profile                    print profiling information%s\n",
-          (profile
+  printf ("      --profile-specialized        print profiling information for\n");
+  printf ("                                   specialized instructions %s\n",
+          (instrumentation != jitter_vm_instrumentation_none
            ? ""
-           : " if available (disabled: recompile with -DJITTER_INSTRUMENT_FOR_PROFILING=1)"));
+           : " if available (disabled: recompile with -DPROFILE_COUNT=1 or -DPROFILE_SAMPLE=1)"));
+  printf ("      --profile-unspecialized      like --profile-specialized, for\n");
+  printf ("                                   unspecialized instructions\n");
   printf ("      --print-locations            print the mapping between VM structures\n");
   printf ("                                   and hardware structures, to help humans\n");
   printf ("                                   read the disassembly\n");
   printf ("      --dry-run                    do not actually run the program\n");
   printf ("      --print-routine, --print     print VM instructions\n");
   printf ("      --no-dry-run                 run the program (default)\n");
-  printf ("      --no-profile                 omit profiling information (default)\n");
+  printf ("      --no-profile-specialized     omit profiling information for specialized\n");
+  printf ("                                   instructions (default)\n");
+  printf ("      --no-profile-unspecialized   omit profiling information for unspecialized\n");
+  printf ("                                   instructions (default)\n");
   printf ("      --no-print-locations         do not print locations (default)\n");
   printf ("      --no-print-routine,\n");
   printf ("      --no-print                   do not print VM instructions (default)\n");
@@ -161,9 +167,9 @@ structured_version (void)
 {
   const struct jitter_vm_configuration *c = structuredvm_vm_configuration;
 
-  printf ("structured (%s%s dispatch) ("
+  printf ("structured (%s %s dispatch) ("
           JITTER_PACKAGE_NAME " " JITTER_PACKAGE_VERSION ")\n",
-          (c->profile_instrumented ? "profile-instrumented, " : ""),
+          jitter_vm_instrumentation_to_string (c->instrumentation),
           c->dispatch_human_readable);
   printf ("Copyright (C) 2017-2020 Luca Saiu.\n");
   printf ("Jitter comes with ABSOLUTELY NO WARRANTY.\n");
@@ -207,8 +213,10 @@ struct structured_command_line
   /* True iff we should disassemble the VM routine. */
   bool disassemble;
 
-  /* True iff we should print profiling information. */
-  bool profile;
+  /* True iff we should print profiling information, respectively for
+     specialised and unspecialised instructions. */
+  bool profile_specialized;
+  bool profile_unspecialized;
 
   /* True iff we should print data locations. */
   bool print_locations;
@@ -241,7 +249,8 @@ structured_initialize_command_line (struct structured_command_line *cl)
   cl->print = false;
   cl->cross_disassemble = false;
   cl->disassemble = false;
-  cl->profile = false;
+  cl->profile_specialized = false;
+  cl->profile_unspecialized = false;
   cl->print_locations = false;
   cl->dry_run = false;
   cl->optimization_rewriting = true;
@@ -298,10 +307,14 @@ structured_parse_command_line (struct structured_command_line *cl,
           cl->cross_disassemble = true;
           cl->disassemble = true;
         }
-      else if (handle_options && ! strcmp (arg, "--profile"))
-        cl->profile = true;
-      else if (handle_options && ! strcmp (arg, "--no-profile"))
-        cl->profile = false;
+      else if (handle_options && ! strcmp (arg, "--profile-specialized"))
+        cl->profile_specialized = true;
+      else if (handle_options && ! strcmp (arg, "--profile-unspecialized"))
+        cl->profile_unspecialized = true;
+      else if (handle_options && ! strcmp (arg, "--no-profile-unspecialized"))
+        cl->profile_unspecialized = false;
+      else if (handle_options && ! strcmp (arg, "--no-profile-specialized"))
+        cl->profile_specialized = false;
       else if (handle_options && ! strcmp (arg, "--print-locations"))
         cl->print_locations = true;
       else if (handle_options && ! strcmp (arg, "--no-print-locations"))
@@ -444,10 +457,17 @@ structured_work (struct structured_command_line *cl)
       struct structuredvm_state s;
       structuredvm_state_initialize (& s);
       structuredvm_execute_routine (vmr, & s);
-      if (cl->profile)
+      if (cl->profile_specialized)
         {
-          structuredvm_profile p = structuredvm_state_profile (& s);
-          structuredvm_profile_print_specialized (ctx, p);
+          struct structuredvm_profile_runtime *p
+            = structuredvm_state_profile_runtime (& s);
+          structuredvm_profile_runtime_print_specialized (ctx, p);
+        }
+      if (cl->profile_unspecialized)
+        {
+          struct structuredvm_profile_runtime *p
+            = structuredvm_state_profile_runtime (& s);
+          structuredvm_profile_runtime_print_unspecialized (ctx, p);
         }
       structuredvm_state_finalize (& s);
 

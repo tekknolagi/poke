@@ -33,6 +33,11 @@
 #include <string.h>
 
 #include <jitter/jitter.h>
+
+#if defined (JITTER_PROFILE_SAMPLE)
+#include <sys/time.h>
+#endif // #if defined (JITTER_PROFILE_SAMPLE)
+
 #include <jitter/jitter-hash.h>
 #include <jitter/jitter-instruction.h>
 #include <jitter/jitter-mmap.h>
@@ -57,6 +62,8 @@
 //#include "vmprefix-meta-instructions.h"
 #include <jitter/jitter-fatal.h>
 
+
+
 
 /* Machine-generated data structures.
  * ************************************************************************** */
@@ -86,11 +93,16 @@ vmprefix_vm_the_configuration
         /* max_fast_register_no_per_class */,
       VMPREFIX_MAX_NONRESIDUAL_LITERAL_NO /* max_nonresidual_literal_no */,
       VMPREFIX_DISPATCH_HUMAN_READABLE /* dispatch_human_readable */,
-#if defined (JITTER_INSTRUMENT_FOR_PROFILING)
-      true /* profile_instrumented */
-#else
-      false /* profile_instrumented */
+      /* The instrumentation field can be seen as a bit map.  See the comment
+         in jitter/jitter-vm.h . */
+      (jitter_vm_instrumentation_none
+#if defined (JITTER_PROFILE_COUNT)
+       | jitter_vm_instrumentation_count
 #endif
+#if defined (JITTER_PROFILE_SAMPLE)
+       | jitter_vm_instrumentation_sample
+#endif
+       ) /* instrumentation */
     };
 
 const struct jitter_vm_configuration * const
@@ -161,7 +173,10 @@ vmprefix_initialize_special_purpose_data
   jitter_initialize_pending_signal_notifications
      (& d->pending_signal_notifications);
 
-  d->profile = jitter_profile_make (vmprefix_vm);
+  /* Initialise profiling fields. */
+  jitter_profile_runtime_initialize (vmprefix_vm,
+                                     (struct jitter_profile_runtime *)
+                                     & d->profile_runtime);
 }
 
 /* Finalize the pointed special-purpose data structure. */
@@ -171,7 +186,10 @@ vmprefix_finalize_special_purpose_data
 {
   jitter_finalize_pending_signal_notifications
      (d->pending_signal_notifications);
-  jitter_profile_destroy (d->profile);
+
+  jitter_profile_runtime_finalize (vmprefix_vm,
+                                   (struct jitter_profile_runtime *)
+                                   & d->profile_runtime);
 }
 
 
@@ -445,6 +463,8 @@ vmprefix_initialize (void)
       the_vmprefix_vm.meta_instruction_no = VMPREFIX_META_INSTRUCTION_NO;
       the_vmprefix_vm.max_meta_instruction_name_length
         = VMPREFIX_MAX_META_INSTRUCTION_NAME_LENGTH;
+      the_vmprefix_vm.specialized_instruction_to_unspecialized_instruction
+        = vmprefix_specialized_instruction_to_unspecialized_instruction;
       the_vmprefix_vm.register_class_character_to_register_class
         = vmprefix_register_class_character_to_register_class;
       the_vmprefix_vm.specialize_instruction = vmprefix_specialize_instruction;
@@ -519,6 +539,151 @@ vmprefix_make_mutable_routine (void)
 
 
 
+/* Sample profiling: internal API.
+ * ************************************************************************** */
+
+#if defined (JITTER_PROFILE_SAMPLE)
+
+/* Sample profiling depends on some system features: fail immediately if they
+   are not available */
+#if ! defined (JITTER_HAVE_SIGACTION) || ! defined (JITTER_HAVE_SETITIMER)
+# jitter_fatal "sample-profiling depends on sigaction and setitimer"
+#endif
+
+static struct itimerval
+vmprefix_timer_interval;
+
+static struct itimerval
+vmprefix_timer_disabled_interval;
+
+/* The sampling data, currently global.  The current implementation does not
+   play well with threads, but it can be changed later keeping the same user
+   API. */
+struct vmprefix_sample_profile_state
+{
+  /* The state currently sample-profiling.  Since such a state can be only one
+     right now this field is useful for printing error messages in case the user
+     sets up sample-profiling from two states at the same time by mistake.
+     This field is also useful for temporarily suspending and then reenabling
+     sampling, when The Array is being resized: if the signal handler sees that
+     this field is NULL it will not touch the fields. */
+  struct vmprefix_state *state_p;
+
+  /* A pointer to the counts field within the sample_profile_runtime struct. */
+  uint32_t *counts;
+
+  /* A pointer to the current specialised instruction opcode within the
+     sample_profile_runtime struct. */
+  volatile jitter_int * specialized_opcode_p;
+
+  /* A pointer to the field counting the number of samples, again within the
+     sample_profile_runtime struct. */
+  unsigned int *sample_no_p;
+};
+
+/* The (currently) one and only global state for sample-profiling. */
+static struct vmprefix_sample_profile_state
+vmprefix_sample_profile_state;
+
+static void
+vmprefix_sigprof_handler (int signal)
+{
+#if 0
+  assert (vmprefix_sample_profile_state.state_p != NULL);
+#endif
+
+  jitter_int specialized_opcode
+    = * vmprefix_sample_profile_state.specialized_opcode_p;
+  if (__builtin_expect ((specialized_opcode >= 0
+                         && (specialized_opcode
+                             < VMPREFIX_SPECIALIZED_INSTRUCTION_NO)),
+                        true))
+    vmprefix_sample_profile_state.counts [specialized_opcode] ++;
+
+  (* vmprefix_sample_profile_state.sample_no_p) ++;
+}
+
+void
+vmprefix_profile_sample_initialize (void)
+{
+  /* Perform a sanity check over the sampling period. */
+  if (JITTER_PROFILE_SAMPLE_PERIOD_IN_MILLISECONDS <= 0 ||
+      JITTER_PROFILE_SAMPLE_PERIOD_IN_MILLISECONDS >= 1000)
+    jitter_fatal ("invalid JITTER_PROFILE_SAMPLE_PERIOD_IN_MILLISECONDS: %f",
+                  (double) JITTER_PROFILE_SAMPLE_PERIOD_IN_MILLISECONDS);
+  struct sigaction action;
+  sigaction (SIGPROF, NULL, & action);
+  action.sa_handler = vmprefix_sigprof_handler;
+  sigaction (SIGPROF, & action, NULL);
+
+  long microseconds
+    = (long) (JITTER_PROFILE_SAMPLE_PERIOD_IN_MILLISECONDS * 1000);
+  vmprefix_timer_interval.it_interval.tv_sec = 0;
+  vmprefix_timer_interval.it_interval.tv_usec = microseconds;
+  vmprefix_timer_interval.it_value = vmprefix_timer_interval.it_interval;
+
+  vmprefix_sample_profile_state.state_p = NULL;
+  vmprefix_timer_disabled_interval.it_interval.tv_sec = 0;
+  vmprefix_timer_disabled_interval.it_interval.tv_usec = 0;
+  vmprefix_timer_disabled_interval.it_value
+    = vmprefix_timer_disabled_interval.it_interval;
+}
+
+void
+vmprefix_profile_sample_start (struct vmprefix_state *state_p)
+{
+  struct jitter_sample_profile_runtime *spr
+    = ((struct jitter_sample_profile_runtime *)
+       & VMPREFIX_STATE_TO_SPECIAL_PURPOSE_STATE_DATA (state_p)
+           ->profile_runtime.sample_profile_runtime);
+
+  if (vmprefix_sample_profile_state.state_p != NULL)
+    {
+      if (state_p != vmprefix_sample_profile_state.state_p)
+        jitter_fatal ("currently it is only possible to sample-profile from "
+                      "one state at the time: trying to sample-profile from "
+                      "the state %p when already sample-profiling from the "
+                      "state %p",
+                      state_p, vmprefix_sample_profile_state.state_p);
+      else
+        {
+          /* This situation is a symptom of a bug, but does not need to lead
+             to a fatal error. */
+          printf ("WARNING: starting profile on the state %p when profiling "
+                  "was already active in the same state.\n"
+                  "Did you call longjmp from VM code?", state_p);
+          fflush (stdout);
+        }
+    }
+  vmprefix_sample_profile_state.state_p = state_p;
+  vmprefix_sample_profile_state.sample_no_p = & spr->sample_no;
+  vmprefix_sample_profile_state.counts = spr->counts;
+  vmprefix_sample_profile_state.specialized_opcode_p
+    = & spr->current_specialized_instruction_opcode;
+  //fprintf (stderr, "SAMPLE START\n"); fflush (NULL);
+  if (setitimer (ITIMER_PROF, & vmprefix_timer_interval, NULL) != 0)
+    jitter_fatal ("setitimer failed when establishing a timer");
+}
+
+void
+vmprefix_profile_sample_stop (void)
+{
+  if (setitimer (ITIMER_PROF, & vmprefix_timer_disabled_interval, NULL) != 0)
+    jitter_fatal ("setitimer failed when disabling a timer");
+
+  vmprefix_sample_profile_state.state_p = NULL;
+
+  /* The rest is just for defenisveness' sake. */
+  * vmprefix_sample_profile_state.specialized_opcode_p = -1;
+  vmprefix_sample_profile_state.sample_no_p = NULL;
+  vmprefix_sample_profile_state.counts = NULL;
+  vmprefix_sample_profile_state.specialized_opcode_p = NULL;
+}
+#endif // #if defined (JITTER_PROFILE_SAMPLE)
+
+
+
+
 /* Array re-allocation.
  * ************************************************************************** */
 
@@ -538,6 +703,15 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
                         > old_slow_register_no_per_class,
                         false))
     {
+#if defined (JITTER_PROFILE_SAMPLE)
+      /* If sample-profiling is currently in progress on this state suspend it
+         temporarily. */
+      bool suspending_sample_profiling
+        = (vmprefix_sample_profile_state.state_p == s);
+      if (suspending_sample_profiling)
+        vmprefix_profile_sample_stop ();
+#endif // #if defined (JITTER_PROFILE_SAMPLE)
+
 #if 0
       printf ("Increasing slow register-no (per class) from %li to %li\n", (long) old_slow_register_no_per_class, (long)new_slow_register_no_per_class);
       printf ("Array size %li -> %li\n", (long) VMPREFIX_ARRAY_SIZE(old_slow_register_no_per_class), (long) VMPREFIX_ARRAY_SIZE(new_slow_register_no_per_class));
@@ -567,6 +741,11 @@ vmprefix_make_place_for_slow_registers (struct vmprefix_state *s,
             = first_slow_register + (i * VMPREFIX_REGISTER_CLASS_NO);
           VMPREFIX_INITIALIZE_SLOW_REGISTER_RANK (rank);
         }
+#if defined (JITTER_PROFILE_SAMPLE)
+      /* Now we can resume sample-profiling on this state if we suspended it. */
+      if (suspending_sample_profiling)
+        vmprefix_profile_sample_start (s);
+#endif // #if defined (JITTER_PROFILE_SAMPLE)
 #if 0
       printf ("Done resizing The Array\n");
 #endif
@@ -638,53 +817,77 @@ vmprefix_execute_routine (jitter_routine r,
 
 
 
-/* Profiling.
+/* Profiling: user API.
  * ************************************************************************** */
 
 /* These functions are all trivial wrappers around the functionality declared
    in jitter/jitter-profile.h, hiding the VM pointer. */
 
-vmprefix_profile
-vmprefix_state_profile (struct vmprefix_state *s)
+struct vmprefix_profile_runtime *
+vmprefix_state_profile_runtime (struct vmprefix_state *s)
 {
   volatile struct jitter_special_purpose_state_data *spd
     = VMPREFIX_ARRAY_TO_SPECIAL_PURPOSE_STATE_DATA
         (s->vmprefix_state_backing.jitter_array);
-  return spd->profile;
+  return (struct vmprefix_profile_runtime *) & spd->profile_runtime;
 }
 
-vmprefix_profile
-vmprefix_profile_make (void)
+struct vmprefix_profile_runtime *
+vmprefix_profile_runtime_make (void)
 {
-  return jitter_profile_make (vmprefix_vm);
-}
-
-void
-vmprefix_profile_reset (vmprefix_profile p)
-{
-  jitter_profile_reset (vmprefix_vm, p);
+  return jitter_profile_runtime_make (vmprefix_vm);
 }
 
 void
-vmprefix_profile_merge_from (vmprefix_profile to, const vmprefix_profile from)
+vmprefix_profile_runtime_clear (struct vmprefix_profile_runtime * p)
 {
-  jitter_profile_merge_from (vmprefix_vm, to, from);
+  jitter_profile_runtime_clear (vmprefix_vm, p);
 }
 
 void
-vmprefix_profile_merge_from_state (vmprefix_profile to,
-                                   const struct vmprefix_state *from_state)
+vmprefix_profile_runtime_merge_from (struct vmprefix_profile_runtime *to,
+                                     const struct vmprefix_profile_runtime *from)
 {
-  const vmprefix_profile from
-    = vmprefix_state_profile ((struct vmprefix_state *) from_state);
-  jitter_profile_merge_from (vmprefix_vm, to, from);
+  jitter_profile_runtime_merge_from (vmprefix_vm, to, from);
 }
 
 void
-vmprefix_profile_print_specialized (jitter_print_context ct,
-                                    const vmprefix_profile p)
+vmprefix_profile_runtime_merge_from_state (struct vmprefix_profile_runtime *to,
+                                           const struct vmprefix_state *from_state)
 {
-  jitter_profile_print_specialized (ct, vmprefix_vm, p);
+  const struct vmprefix_profile_runtime* from
+    = vmprefix_state_profile_runtime ((struct vmprefix_state *) from_state);
+  jitter_profile_runtime_merge_from (vmprefix_vm, to, from);
+}
+
+void
+vmprefix_profile_runtime_print_unspecialized
+   (jitter_print_context ct,
+    const struct vmprefix_profile_runtime *p)
+{
+  jitter_profile_runtime_print_unspecialized (ct, vmprefix_vm, p);
+}
+
+void
+vmprefix_profile_runtime_print_specialized (jitter_print_context ct,
+                                            const struct vmprefix_profile_runtime
+                                            *p)
+{
+  jitter_profile_runtime_print_specialized (ct, vmprefix_vm, p);
+}
+
+struct vmprefix_profile *
+vmprefix_profile_unspecialized_from_runtime
+   (const struct vmprefix_profile_runtime *p)
+{
+  return jitter_profile_unspecialized_from_runtime (vmprefix_vm, p);
+}
+
+struct vmprefix_profile *
+vmprefix_profile_specialized_from_runtime (const struct vmprefix_profile_runtime
+                                           *p)
+{
+  return jitter_profile_specialized_from_runtime (vmprefix_vm, p);
 }
 
 

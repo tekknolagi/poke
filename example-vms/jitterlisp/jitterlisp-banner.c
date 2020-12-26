@@ -23,6 +23,7 @@
 #include "jitterlisp.h"
 #include "jitterlisp-banner.h"
 #include <jitter/jitter.h>
+#include <jitter/jitter-fatal.h>
 
 
 /* Banner definitions.
@@ -88,12 +89,31 @@ jitterlisp_interactive_banner (void)
   const struct jitter_vm_configuration *c = jitterlispvm_vm_configuration;
   jitterlisp_interactive_banner_feature ("VM dispatch",
                                          c->dispatch_human_readable);
-  /* Do not waste a line in the banner for every run when profiling is disabled,
-     which will be almost all the time: only print when profiling is on. */
-  if (c->profile_instrumented)
-    jitterlisp_interactive_banner_feature
-       ("VM profiling",
-        "instrumentation enabled (slow!)");
+  switch (c->instrumentation)
+    {
+    case jitter_vm_instrumentation_none:
+      /* Do not waste a line in the banner for every run when profiling is
+         disabled, which will be almost all the time: only print when profiling
+         is on. */
+      break;
+    case jitter_vm_instrumentation_count:
+      jitterlisp_interactive_banner_feature
+        ("VM profiling",
+         "count instrumentation (slow!)");
+      break;
+    case jitter_vm_instrumentation_sample:
+      jitterlisp_interactive_banner_feature
+        ("VM profiling",
+         "sample instrumentation (slow!)");
+      break;
+    case jitter_vm_instrumentation_count_and_sample:
+      jitterlisp_interactive_banner_feature
+        ("VM profiling",
+         "count+sample instrumentation(slow!)");
+      break;
+    default:
+      jitter_fatal ("unknown instrumentation (this should not happen)");
+    }
   jitterlisp_interactive_banner_feature ("Compiled primitive safety",
 #if defined (JITTERLISP_UNSAFE)
                                          "no type or overflow checking (unsafe!)"

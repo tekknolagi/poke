@@ -4113,16 +4113,27 @@ into hardware machine resources.  This is convenient for reading
 disassemblies.
 @end deffn
 
-@cindex profile, print
-@cindex print, profile
+@cindex profile, specialised, print
+@cindex print, profile, specialised
+@cindex specialised, profile, print
 @syindex print-profile-specialized
 @deffn {primitive wrapper} print-profile-specialized
 Print cumulative profile information about the specialised
 VM instructions run up to this point.  This just prints a warning if
 JitterLisp was not compiled with profiling instrumentation enabled,
-defining the CPP macro @code{JITTER_INSTRUMENT_FOR_PROFILING}; since
-profiling instrumentation has a performance cost it is disabled by
-default.
+defining at least one of the CPP macros @code{JITTER_PROFILE_COUNT}
+and @code{JITTER_PROFILE_SAMPLE}; since profiling instrumentation
+incurs a performance penalty it is disabled by default.
+@end deffn
+
+@cindex profile, unspecialised, print
+@cindex print, profile, unspecialised
+@cindex unspecialised, profile, print
+@syindex print-profile-unspecialized
+@deffn {primitive wrapper} print-profile-unspecialized
+This primitive wrapper behaves exactly like
+@code{print-profile-specialized}, except that it prints information
+about @emph{unspecialised} VM instructions.
 @end deffn
 
 @cindex profile, reset
