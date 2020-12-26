@@ -557,4 +557,30 @@
   (! (a) == ! (b))
 
 
+
+
+/* Number of digits of an integer.
+ * ************************************************************************** */
+
+/* The functionality in this section could be implemented with macros, at the
+   cost of only a little pain.  Right now this API is not used in
+   performance-critical code or from VM instructions, and therefore relies on
+   functions. */
+
+/* Return the number of characters required to represent the given signed
+   integer number, including the minus sign only if the argument is negative, in
+   the given radix. */
+int
+jitter_digit_no (jitter_int number, unsigned radix);
+
+/* Same as jitter_digit_no, for an unsigned integer. */
+int
+jitter_digit_no_unsigned (jitter_uint number, unsigned radix);
+
+/* Same as jitter_digit_no and jitter_digit_no_unsigned, for radix 10. */
+int
+jitter_digit_no_radix_10 (jitter_int number);
+int
+jitter_digit_no_unsigned_radix_10 (jitter_uint number);
+
 #endif // #ifndef JITTER_ARITHMETIC_H_

@@ -301,7 +301,7 @@ CPPFLAGS_FOR_INTERNAL_USE = \
 EXTRA_LTLIBRARIES += lib/libjitterutility--partial.la
 lib_libjitterutility__partial_la_SOURCES = \
   jitter/jitter-aligned-block.h jitter/jitter-aligned-block.c \
-  jitter/jitter-arithmetic.h \
+  jitter/jitter-arithmetic.h jitter/jitter-arithmetic.c \
   jitter/jitter-bitwise.h \
   jitter/jitter-cpp.h \
   jitter/jitter-fatal.h jitter/jitter-fatal.c \
