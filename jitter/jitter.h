@@ -42,11 +42,6 @@
    concatenation. */
 #include <jitter/jitter-cpp.h>
 
-/* Include the machine-specific header, if we are actually using assembly. */
-#ifdef JITTER_ENABLE_ASSEMBLY
-# include <jitter/machine/jitter-machine.h>
-#endif // #ifdef JITTER_ENABLE_ASSEMBLY
-
 
 
 
@@ -366,5 +361,13 @@ problems.  See the source code for more information."
   false
 #endif // #ifdef JITTER_ASSEMBLY_SUBDIRECTORY
 
+/* Some machine-specific headers, included below, use jitter/jitter-arithmetic.h
+   .  Include it now, afte we have defined our integer types. */
+#include <jitter/jitter-arithmetic.h>
+
+/* Include the machine-specific header, if we are actually using assembly. */
+#ifdef JITTER_ENABLE_ASSEMBLY
+# include <jitter/machine/jitter-machine.h>
+#endif // #ifdef JITTER_ENABLE_ASSEMBLY
 
 #endif // #ifndef JITTER_CONFIG_H_
