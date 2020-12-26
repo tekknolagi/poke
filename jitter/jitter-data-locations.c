@@ -178,8 +178,6 @@ jitter_dump_data_locations (jitter_print_context out,
           jitter_print_char_star (out, "This might happen, on SH, because of the\n");
           jitter_print_char_star (out, "restricted load offset ranges.\n");
         }
-      else
-        jitter_print_char_star (out, "This should never happen.\n");
     }
   int i;
   size_t register_no = 0;
