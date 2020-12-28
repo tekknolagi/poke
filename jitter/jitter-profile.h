@@ -228,8 +228,7 @@ jitter_profile_unspecialized_from_runtime (const struct jitter_vm *vm,
   __attribute__ ((returns_nonnull, nonnull (1, 2)));
 
 /* Destroy the pointed struct jitter_profile structure, which must have been
-   allocated by jitter_profile_from_runtime ,
-   jitter_profile_unspecialized_from_runtime or
+   allocated by jitter_profile_unspecialized_from_runtime or by
    jitter_profile_specialized_from_runtime . */
 void
 jitter_profile_destroy (struct jitter_profile *p)
