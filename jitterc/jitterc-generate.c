@@ -3312,15 +3312,25 @@ jitterc_emit_executor_main_function
   EMIT("#   error \"unknown dispatch\"\n");
   EMIT("# endif // if ... dispatch\n");
 
-  EMIT("#ifdef JITTER_REPLICATE\n");
   EMIT("  /* FIXME: comment: this is the fake dispatch routine. */\n");
   // FIXME: Is clobbering memory really needed?  It would be better if I didn't do this.
   //        I should explicitly mark as set the base and possibly the instruction pointer,
   //        but nothing more.
   //EMIT("  asm volatile (\"\" : : : \"memory\");\n");
-  EMIT(" jitter_dispatch_label: __attribute__ ((hot))\n");
+  EMIT(" /* The label is unused (from the compiler's point of view) for simple\n");
+  EMIT("    dispatches when not profiling.  (In reality it is always unused.)\n");
+  EMIT("    FIXME: comment. */\n");
+  EMIT(" jitter_dispatch_label: __attribute__ ((hot, unused))\n");
   // FIXME: same.
   //EMIT("  asm volatile (\"\\njitter_dispatch_label_asm:\\n\" : : : \"memory\");\n");
+  EMIT("#if   defined(JITTER_DISPATCH_SWITCH)\n");
+  EMIT("  /* This code is unreachable, but the compiler does not know it.  FIXME: comment. */\n");
+  EMIT("  goto jitter_dispatching_switch_label;\n");
+  EMIT("#elif defined(JITTER_DISPATCH_DIRECT_THREADING)\n");
+  EMIT("  /* Again this code is unreachable, but the compiler does not know it.  FIXME: comment. */\n");
+  EMIT("  goto * jitter_ip;\n");
+  EMIT("#endif\n");
+  EMIT("#ifdef JITTER_REPLICATE\n");
   EMIT("  asm volatile (\"\\njitter_dispatch_label_asm:\\n\" :);\n");
   EMIT("  JITTER_PRETEND_TO_UPDATE_IP_;\n");
   FOR_LIST(i, comma, vm->specialized_instructions)
