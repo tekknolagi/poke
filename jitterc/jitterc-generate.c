@@ -2720,23 +2720,27 @@ jitterc_emit_executor_ordinary_specialized_instructions
         }
 
       /* Emit profiling instrumentation code for the instruction. */
-      EMIT("#if defined (JITTER_PROFILE_COUNT)\n");
-      EMIT("  JITTER_PROFILE_COUNT_UPDATE\n");
-      EMIT("     (VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA,\n");
-      EMIT("      JITTER_SPECIALIZED_INSTRUCTION_OPCODE);\n");
-      EMIT("#endif\n");
       EMIT("#if defined (JITTER_PROFILE_SAMPLE)\n");
       EMIT("  JITTER_PROFILE_SAMPLE_UPDATE\n");
       EMIT("     (VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA,\n");
       EMIT("      JITTER_SPECIALIZED_INSTRUCTION_OPCODE);\n");
-      EMIT("#endif\n");
-      EMIT("#if defined (JITTER_PROFILE_COUNT) || defined (JITTER_PROFILE_SAMPLE)\n");
-      EMIT("  /* Force the compiler not move profiling instrumentation code\n");
+      EMIT("  /* Force the compiler not move sample-profiling instrumentation\n");
       EMIT("     beyond this point; this way the actual user code is timed.\n");
       EMIT("     This is still not perfect, as residuals are materialised before\n");
       EMIT("     we arrive here, but should be adequate at least for slow VM\n");
       EMIT("     instructions. */\n");
       EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_ANYWHERE ();\n");
+      EMIT("#endif\n");
+      EMIT("#if defined (JITTER_PROFILE_COUNT)\n");
+      EMIT("  /* Notice that, differently from the code above, this\n");
+      EMIT("     instrumentation code *can* be reordered freely: as long as a\n");
+      EMIT("     VM instruction is counted, the count increment can be placed\n");
+      EMIT("     anyehere.  Let GCC move this code and possibly achieve better\n");
+      EMIT("     throughput by exploiting instruction-level parallelism and\n");
+      EMIT("     therefore approximate more closely a non-profiled build. */\n");
+      EMIT("  JITTER_PROFILE_COUNT_UPDATE\n");
+      EMIT("     (VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA,\n");
+      EMIT("      JITTER_SPECIALIZED_INSTRUCTION_OPCODE);\n");
       EMIT("#endif\n");
       EMIT("\n");
       
