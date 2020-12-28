@@ -356,6 +356,12 @@
   JITTER_PRETEND_TO_POSSIBLY_JUMP_TO_(_jitter_label);  \
   __builtin_unreachable ()
 
+#if defined (JITTER_DISPATCH_SWITCH)
+  /* This label is used in JITTER_PRETEND_TO_POSSIBLY_JUMP_ANYWHERE , below. */
+# define jitter_dispatch_label     \
+  jitter_dispatching_switch_label
+#endif // #if defined (JITTER_DISPATCH_SWITCH)
+
 /* Expand to zero assembly instructions, but with inline asm constraints
    affecting GCC's program representation as if the generated code could either
    jump to the content of jitter_anywhere_variable or fall thru.
@@ -367,9 +373,9 @@
       asm goto (JITTER_ASM_DEFECT_DESCRIPTOR                \
                 JITTER_ASM_COMMENT_UNIQUE( \
                    "# Pretending to possibly jump to " \
-                   "%l[jitter_dispatch_label] thru %[jitter_ip]") \
+                   "%l[jitter_dispatch_label] thru %[_jitter_ip]") \
                 : \
-                : [jitter_ip] JITTER_IP_INPUT_CONSTRAINT (jitter_ip) \
+                : [_jitter_ip] JITTER_IP_INPUT_CONSTRAINT (jitter_ip) \
                 : \
                 : jitter_dispatch_label); \
     }                                                                  \
