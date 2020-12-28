@@ -2730,6 +2730,14 @@ jitterc_emit_executor_ordinary_specialized_instructions
       EMIT("     (VMPREFIX_OWN_SPECIAL_PURPOSE_STATE_DATA,\n");
       EMIT("      JITTER_SPECIALIZED_INSTRUCTION_OPCODE);\n");
       EMIT("#endif\n");
+      EMIT("#if defined (JITTER_PROFILE_SAMPLE) || defined (JITTER_PROFILE_SAMPLE)\n");
+      EMIT("  /* Force the compiler not move profiling instrumentation code\n");
+      EMIT("     beyond this point; this way the actual user code is timed.\n");
+      EMIT("     This is still not perfect, as residuals are materialised before\n");
+      EMIT("     we arrive here, but should be adequate at least for slow VM\n");
+      EMIT("     instructions. */\n");
+      EMIT("  JITTER_PRETEND_TO_POSSIBLY_JUMP_ANYWHERE ();\n");
+      EMIT("#endif\n");
       EMIT("\n");
       
       /* Emit the user C code for the beginning of every instruction, if any. */

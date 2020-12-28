@@ -65,6 +65,22 @@
 
 
 
+/* Check requirements for particular features.
+ * ************************************************************************** */
+
+/* VM profiling is only supported with GCC.  Do not bother activating it with
+   other compilers, if the numbers are unreliable in the end. */
+#if ((defined (JITTER_PROFILE_COUNT)         \
+      || defined (JITTER_PROFILE_SAMPLE))    \
+     && ! defined (JITTER_HAVE_ACTUAL_GCC))
+# error "Profiling is only reliable with GCC: it requires (machine-independent)"
+# error "GNU C extended asm, and it is not worth supporting other compilers if"
+# error "the numbers turn out to be unreliable in the end."
+#endif
+
+
+
+
 /* Machine-generated data structures.
  * ************************************************************************** */
 
