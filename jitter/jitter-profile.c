@@ -182,6 +182,16 @@ jitter_profile_sort (const struct jitter_vm *vm, struct jitter_profile *p)
          jitter_profile_item_compare);
 }
 
+/* Return a fresh well-initialised but empty profile. */
+static struct jitter_profile *
+jitter_profile_make_empty (void)
+{
+  struct jitter_profile *res = jitter_xmalloc (sizeof (struct jitter_profile));
+  res->items = NULL;
+  res->item_no = 0;
+  return res;
+}
+
 /* Common code factoring jitter_profile_specialized_from_runtime and
    jitter_profile_unspecialized_from_runtime . */
 static struct jitter_profile *
@@ -189,6 +199,11 @@ jitter_profile_from_runtime (const struct jitter_vm *vm,
                              const struct jitter_profile_runtime *rp,
                              bool specialized)
 {
+  /* If the runtime profile was NULL, which means that the VM was not configured
+     for profiling, return an empty profile as the result. */
+  if (rp == NULL)
+    return jitter_profile_make_empty ();
+
   /* The structure in struct jitter_profile_runtime is not really appropriate
      for unspecialised instructions.  In the case of unspecialised instructions
      we will build a structure of the same shape, but with information about
