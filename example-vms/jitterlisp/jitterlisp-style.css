@@ -135,3 +135,17 @@
 .jitterlisp-circular             { color: white;
                                    font-weight: bold;
                                    background-color: red; }
+
+
+
+
+/* Profiling.
+ * ************************************************************************** */
+
+.jitterlispvm-profile-instruction      { color: cyan;
+                                         font-weight: bold; }
+.jitterlispvm-profile-execution-count  { color: brown; }
+.jitterlispvm-profile-run-time         { color: lightgreen;
+                                         font-style: italic; }
+.jitterlispvm-profile-time-ratio       { color: gray;
+                                         font-weight: bold; }

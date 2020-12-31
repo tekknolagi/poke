@@ -71,3 +71,17 @@
                        color: black;
                        font-style: italic;
                        text-decoration: underline; }
+
+
+
+
+/* Profiling.
+ * ************************************************************************** */
+
+.uninspired-profile-instruction      { color: cyan;
+                                       font-weight: bold; }
+.uninspired-profile-execution-count  { color: brown; }
+.uninspired-profile-run-time         { color: lightgreen;
+                                       font-style: italic; }
+.uninspired-profile-time-ratio       { color: gray;
+                                       font-weight: bold; }

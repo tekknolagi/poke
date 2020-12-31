@@ -454,7 +454,7 @@ jitter_profile_print (jitter_print_context ct,
     {
       struct jitter_profile_item *item = items + i;
 
-      jitter_profile_begin_class (ct, vm, "instruction");
+      jitter_profile_begin_class (ct, vm, "profile-instruction");
       jitter_print_char_star (ct, item->name);
       jitter_print_end_class (ct);
 
@@ -481,7 +481,7 @@ jitter_profile_print (jitter_print_context ct,
       /* Print the execution count, if available. */
       if (vm->configuration->instrumentation & jitter_vm_instrumentation_count)
         {
-          jitter_profile_begin_class (ct, vm, "number");
+          jitter_profile_begin_class (ct, vm, "profile-execution-count");
           jitter_print_ulong_long (ct, 10, item->execution_count);
           jitter_print_end_class (ct);
           jitter_print_char (ct, ' ');
@@ -503,7 +503,7 @@ jitter_profile_print (jitter_print_context ct,
           JITTER_HUMAN_READABLE_ (run_time, run_time_, false);
           char run_time_text [100];
           sprintf (run_time_text, "%8.3f%1ss", run_time, run_time_prefix);
-          jitter_profile_begin_class (ct, vm, "comment");
+          jitter_profile_begin_class (ct, vm, "profile-run-time");
           jitter_print_char_star (ct, run_time_text);
           jitter_print_end_class (ct);
           jitter_print_char (ct, ' ');
@@ -511,6 +511,8 @@ jitter_profile_print (jitter_print_context ct,
           /* Print the ratio as a percentage, aligned to the right. */
           char percentage [10];
           sprintf (percentage, "%5.1f%%", ratio * 100);
+          jitter_profile_begin_class (ct, vm, "profile-time-ratio");
+          jitter_print_end_class (ct);
           jitter_print_char_star (ct, percentage);
         }
       jitter_print_char (ct, '\n');

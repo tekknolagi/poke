@@ -281,8 +281,10 @@ jitter_profile_destroy (struct jitter_profile *p)
    the pointed VM, using the given print context.
    The output uses the classes:
    - "vmprefix-warning";
-   - "vmprefix-instruction";
-   - "vmprefix-number",
+   - "vmprefix-profile-instruction";
+   - "vmprefix-profile-execution-count";
+   - "vmprefix-profile-run-time";
+   - "vmprefix-profile-time-ratio";
    with "vmprefix" replaced by the lower-case name for the VM. */
 void
 jitter_profile_print (jitter_print_context ct,
