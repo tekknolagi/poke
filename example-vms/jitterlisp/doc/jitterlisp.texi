@@ -3279,6 +3279,14 @@ case, differently from the traditional Lisp implementation of
 @deffn {procedure} square x
 @end deffn
 
+@syindex even?
+@deffn {procedure} even? x
+@syindex odd?
+@deffnx {procedure} odd? x
+@end deffn
+
+
+
 @syindex fixnum-bit-no
 @deffn {fixnum} fixnum-bit-no
 @end deffn
