@@ -58,61 +58,62 @@ jitter_arrays
    assembles to something like
      34 02 ff ff   # ori $2, $0, 0xffff
    where the rightmost 16 bits, here all ones, are the literal. */
-jitter_snippet load_zero_extended_16bit_to_register_0, \
-           <ori JITTER_RESIDUAL_REGISTER_0, $0, 0>
-jitter_snippet load_zero_extended_16bit_to_register_1, \
-           <ori JITTER_RESIDUAL_REGISTER_1, $0, 0>
-jitter_snippet load_zero_extended_16bit_to_register_2, \
-           <ori JITTER_RESIDUAL_REGISTER_2, $0, 0>
-jitter_snippet load_zero_extended_16bit_to_register_3, \
-           <ori JITTER_RESIDUAL_REGISTER_3, $0, 0>
-jitter_snippet load_zero_extended_16bit_to_register_4, \
-           <ori JITTER_RESIDUAL_REGISTER_4, $0, 0>
-jitter_snippet load_zero_extended_16bit_to_register_5, \
-           <ori JITTER_RESIDUAL_REGISTER_5, $0, 0>
+#define LOAD_ZERO_EXTENDED_16BIT_TO_REGISTER(register)  \
+  <ori register, $0, 0>
+jitter_snippet load_zero_extended_16bit_to_register_0,               \
+  LOAD_ZERO_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_0)
+jitter_snippet load_zero_extended_16bit_to_register_1,               \
+  LOAD_ZERO_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_1)
+jitter_snippet load_zero_extended_16bit_to_register_2,               \
+  LOAD_ZERO_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_2)
+jitter_snippet load_zero_extended_16bit_to_register_3,               \
+  LOAD_ZERO_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_3)
+jitter_snippet load_zero_extended_16bit_to_register_4,               \
+  LOAD_ZERO_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_4)
+jitter_snippet load_zero_extended_16bit_to_register_5,               \
+  LOAD_ZERO_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_5)
 
 /* Load a sign-extended 16-bit literal into a 32-bit register.  This
    assembles to something like
      24 02 00 00   # addiu $2, $0, 0x0000
    where the rightmost 16 bits, here zero, are the literal. */
-jitter_snippet load_sign_extended_16bit_to_register_0, \
-           <addiu JITTER_RESIDUAL_REGISTER_0, $0, 0>
-jitter_snippet load_sign_extended_16bit_to_register_1, \
-           <addiu JITTER_RESIDUAL_REGISTER_1, $0, 0>
-jitter_snippet load_sign_extended_16bit_to_register_2, \
-           <addiu JITTER_RESIDUAL_REGISTER_2, $0, 0>
-jitter_snippet load_sign_extended_16bit_to_register_3, \
-           <addiu JITTER_RESIDUAL_REGISTER_3, $0, 0>
-jitter_snippet load_sign_extended_16bit_to_register_4, \
-           <addiu JITTER_RESIDUAL_REGISTER_4, $0, 0>
-jitter_snippet load_sign_extended_16bit_to_register_5, \
-           <addiu JITTER_RESIDUAL_REGISTER_5, $0, 0>
+#define LOAD_SIGN_EXTENDED_16BIT_TO_REGISTER(register)  \
+  <addiu register, $0, 0>
+jitter_snippet load_sign_extended_16bit_to_register_0,               \
+  LOAD_SIGN_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_0)
+jitter_snippet load_sign_extended_16bit_to_register_1,               \
+  LOAD_SIGN_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_1)
+jitter_snippet load_sign_extended_16bit_to_register_2,               \
+  LOAD_SIGN_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_2)
+jitter_snippet load_sign_extended_16bit_to_register_3,               \
+  LOAD_SIGN_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_3)
+jitter_snippet load_sign_extended_16bit_to_register_4,               \
+  LOAD_SIGN_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_4)
+jitter_snippet load_sign_extended_16bit_to_register_5,               \
+  LOAD_SIGN_EXTENDED_16BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_5)
 
 /* Load a 32-bit literal into a 32-bit register.  This assembles to
    something like
      3c 10 ab cd   # lui $16,      0xabcd
-     36 10 12 23   # ori $16, $16, 0x1234
+     36 10 12 34   # ori $16, $16, 0x1234
    where the first instruction loads the high half and the second the low
    half.  Both halves are encoded in the rightmost 16 bits of each
    instruction.  The 32-bit literal in this example is 0xabcd1234 . */
-jitter_snippet load_32bit_to_register_0,                               \
-           <lui JITTER_RESIDUAL_REGISTER_0, 0>,                        \
-           <ori JITTER_RESIDUAL_REGISTER_0, JITTER_RESIDUAL_REGISTER_0, 0>
-jitter_snippet load_32bit_to_register_1,                               \
-           <lui JITTER_RESIDUAL_REGISTER_1, 0>,                        \
-           <ori JITTER_RESIDUAL_REGISTER_1, JITTER_RESIDUAL_REGISTER_1, 0>
-jitter_snippet load_32bit_to_register_2,                               \
-           <lui JITTER_RESIDUAL_REGISTER_2, 0>,                        \
-           <ori JITTER_RESIDUAL_REGISTER_2, JITTER_RESIDUAL_REGISTER_2, 0>
-jitter_snippet load_32bit_to_register_3,                               \
-           <lui JITTER_RESIDUAL_REGISTER_3, 0>,                        \
-           <ori JITTER_RESIDUAL_REGISTER_3, JITTER_RESIDUAL_REGISTER_3, 0>
-jitter_snippet load_32bit_to_register_4,                               \
-           <lui JITTER_RESIDUAL_REGISTER_4, 0>,                        \
-           <ori JITTER_RESIDUAL_REGISTER_4, JITTER_RESIDUAL_REGISTER_4, 0>
-jitter_snippet load_32bit_to_register_5,                               \
-           <lui JITTER_RESIDUAL_REGISTER_5, 0>,                        \
-           <ori JITTER_RESIDUAL_REGISTER_5, JITTER_RESIDUAL_REGISTER_5, 0>
+#define LOAD_32BIT_TO_REGISTER(register)  \
+  <lui register, 0>,                      \
+  <ori register, register, 0>
+jitter_snippet load_32bit_to_register_0,               \
+  LOAD_32BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_0)
+jitter_snippet load_32bit_to_register_1,               \
+  LOAD_32BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_1)
+jitter_snippet load_32bit_to_register_2,               \
+  LOAD_32BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_2)
+jitter_snippet load_32bit_to_register_3,               \
+  LOAD_32BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_3)
+jitter_snippet load_32bit_to_register_4,               \
+  LOAD_32BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_4)
+jitter_snippet load_32bit_to_register_5,               \
+  LOAD_32BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_5)
 
 /* FIXME: these are not implemented yet. */
 jitter_snippet load_zero_extended_16bit_to_memory,  \
