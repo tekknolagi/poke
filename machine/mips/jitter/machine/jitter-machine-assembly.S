@@ -1,6 +1,6 @@
 /* VM library: assembly support for MIPS .
 
-   Copyright (C) 2017, 2019 Luca Saiu
+   Copyright (C) 2017, 2019, 2020, 2021 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -114,6 +114,27 @@ jitter_snippet load_32bit_to_register_4,               \
   LOAD_32BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_4)
 jitter_snippet load_32bit_to_register_5,               \
   LOAD_32BIT_TO_REGISTER (JITTER_RESIDUAL_REGISTER_5)
+
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+/* Load a 21-bit PC-relative aligned address into a 32-bit register.  Only the
+   19 most significant bits of the immediate are represented.
+   This assembles to something like
+     ee200003   # addiupc $17, 12  */
+#define LOAD_PCREL_ADDRESS_TO_REGISTER(register)  \
+  <addiupc register, 0>
+jitter_snippet load_pcrel_address_to_register_0,               \
+  LOAD_PCREL_ADDRESS_TO_REGISTER (JITTER_RESIDUAL_REGISTER_0)
+jitter_snippet load_pcrel_address_to_register_1,               \
+  LOAD_PCREL_ADDRESS_TO_REGISTER (JITTER_RESIDUAL_REGISTER_1)
+jitter_snippet load_pcrel_address_to_register_2,               \
+  LOAD_PCREL_ADDRESS_TO_REGISTER (JITTER_RESIDUAL_REGISTER_2)
+jitter_snippet load_pcrel_address_to_register_3,               \
+  LOAD_PCREL_ADDRESS_TO_REGISTER (JITTER_RESIDUAL_REGISTER_3)
+jitter_snippet load_pcrel_address_to_register_4,               \
+  LOAD_PCREL_ADDRESS_TO_REGISTER (JITTER_RESIDUAL_REGISTER_4)
+jitter_snippet load_pcrel_address_to_register_5,               \
+  LOAD_PCREL_ADDRESS_TO_REGISTER (JITTER_RESIDUAL_REGISTER_5)
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
 
 /* FIXME: these are not implemented yet. */
 jitter_snippet load_zero_extended_16bit_to_memory,  \

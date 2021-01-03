@@ -1,6 +1,6 @@
 /* VM library: MIPS definitions, to be included from both C and assembly.
 
-   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020, 2021 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -908,6 +908,14 @@ enum jitter_snippet_to_patch
     jitter_snippet_load_32bit_to_register_3,
     jitter_snippet_load_32bit_to_register_4,
     jitter_snippet_load_32bit_to_register_5,
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+    jitter_snippet_load_pcrel_address_to_register_0,
+    jitter_snippet_load_pcrel_address_to_register_1,
+    jitter_snippet_load_pcrel_address_to_register_2,
+    jitter_snippet_load_pcrel_address_to_register_3,
+    jitter_snippet_load_pcrel_address_to_register_4,
+    jitter_snippet_load_pcrel_address_to_register_5,
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
     /* FIXME: the next three are not implemented yet. */
     jitter_snippet_load_zero_extended_16bit_to_memory,
     jitter_snippet_load_sign_extended_16bit_to_memory,

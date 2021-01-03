@@ -1,7 +1,6 @@
 /* VM library: native code patching for MIPS .
 
-   Copyright (C) 2017, 2019 Luca Saiu
-   Updated in 2020 by Luca Saiu
+   Copyright (C) 2017, 2019, 2020, 2021 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -71,6 +70,10 @@
 /* An or, xor or add instruction having a 16-bit immediate. */
 JITTER_MIPS_INSTRUCTION_STRUCT (jitter_mips_16_bit_immediate_instruction, 16);
 
+/* An addiupc instruction having a 21-bit immediate, of which the low 19 bits
+   are encoded. */
+JITTER_MIPS_INSTRUCTION_STRUCT (jitter_mips_21_bit_immediate_instruction, 19);
+
 /* A branch instruction having a 28-bit immediate displacement, of which the low
    26 bits are encoded. */
 JITTER_MIPS_INSTRUCTION_STRUCT (jitter_mips_28_bit_branch_instruction, 26);
@@ -130,6 +133,25 @@ jitter_snippet_for_loading_register (const char *immediate_pointer,
       case 5:  return jitter_snippet_load_sign_extended_16bit_to_register_5;
       default: jitter_fatal ("impossible");
       }
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+  else if (/* The immediate must be representable as the instruction address
+              plus a 21-bit signed constant having its two low bits set to zero;
+              on MIPS the instruction is also aligned to 4 bytes. */
+           JITTER_FITS_IN_BITS_ZERO_EXTENDED
+             ((jitter_int) immediate - (jitter_int) loading_code_to_write,
+              21)
+           && (immediate & 0x3) == 0)
+    switch (residual_register_index)
+      {
+      case 0:  return jitter_snippet_load_pcrel_address_to_register_0;
+      case 1:  return jitter_snippet_load_pcrel_address_to_register_1;
+      case 2:  return jitter_snippet_load_pcrel_address_to_register_2;
+      case 3:  return jitter_snippet_load_pcrel_address_to_register_3;
+      case 4:  return jitter_snippet_load_pcrel_address_to_register_4;
+      case 5:  return jitter_snippet_load_pcrel_address_to_register_5;
+      default: jitter_fatal ("impossible");
+      }
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
   else
     switch (residual_register_index)
       {
@@ -201,6 +223,31 @@ jitter_patch_load_immediate_to_register (char *native_code,
         second->immediate = low;
         break;
       }
+#if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
+    case jitter_snippet_load_pcrel_address_to_register_0:
+    case jitter_snippet_load_pcrel_address_to_register_1:
+    case jitter_snippet_load_pcrel_address_to_register_2:
+    case jitter_snippet_load_pcrel_address_to_register_3:
+    case jitter_snippet_load_pcrel_address_to_register_4:
+    case jitter_snippet_load_pcrel_address_to_register_5:
+      {
+        jitter_int immediate = * (jitter_int *) immediate_pointer;
+        jitter_int instruction_address_as_integer = (jitter_int) native_code;
+        jitter_int distance = immediate - instruction_address_as_integer;
+        if (! JITTER_FITS_IN_BITS_ZERO_EXTENDED (distance, 21))
+          jitter_fatal ("cannot use addiupc to load an address not at a "
+                        "distance fitting in 21 bits from the program counter: "
+                        "this should never happen");
+        if ((distance & 0x3) != 0)
+          jitter_fatal ("cannot use addiupc to load an odd number: this should "
+                        "never happen");
+        struct jitter_mips_21_bit_immediate_instruction *addiupc_instruction
+          = (struct jitter_mips_21_bit_immediate_instruction *) native_code;
+        addiupc_instruction->immediate = distance >> 2; /* With GCC this is an
+                                                           arithmetic shift. */
+        break;
+      }
+#endif // #if defined (JITTER_HOST_CPU_IS_MIPS_R6_OR_LATER)
     default:
       jitter_fatal ("impossible");
     }
