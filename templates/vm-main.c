@@ -48,12 +48,12 @@
 
 #include <argp.h>
 
+#include <jitter/jitter.h>
+
 /* Include optional headers. */
 #ifdef JITTER_HAVE_SETRLIMIT
 # include <sys/resource.h> /* For getrlimit and setrlimit . */
 #endif // #ifdef JITTER_HAVE_SETRLIMIT
-
-#include <jitter/jitter.h>
 
 #include <jitter/jitter-parse-int.h>
 #include <jitter/jitter-fatal.h>
