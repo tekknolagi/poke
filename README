@@ -1,4 +1,4 @@
-Copyright (C) 2016-2020 Luca Saiu
+Copyright (C) 2016-2021 Luca Saiu
 Written by Luca Saiu
 
 This file is part of Jitter.
@@ -17,18 +17,52 @@ You should have received a copy of the GNU General Public License
 along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Jitter
-======
+About Jitter
+============
+Jitter is a software automatically building a portable, very efficient language
+virtual machine with performance close to native code, starting from a
+relatively high-level specification provided by the user.
 
-FIXME: write a very short introduction.
+The VM state may include registers, stacks or a combination of both along with
+any runtime structure defined by user code; whenever possible the generator
+attempts to map such state data structures into hardware machine registers.
+
+The specification contains some C code associated to every VM instruction; the
+generator takes care of combining such small blocks of C into a whole body of
+code with low---usually zero---dispatching and branching overhead.
+The generated code includes a simple C API to dynamically emit and execute VM
+code, and a self-contained driver program for running VM routines from text
+files.
+
+The generated C code is heavily conditionalized and can be configured to run
+using different dispatching techniques, of varying sophistication; the most
+efficient dispatching techniques rely on some architecture-specific---but not
+VM-specific---assembly support already included in this software; every
+dispatching model but one also relies on GNU C extensions.
+
+As a fallback case, in the interest of portability, one dispatching technique is
+provided, switch dispatching, requiring nothing more than standard C.
+
+Configuration parameters are transparent with respect to the VM semantics and
+even the C API: a VM routine will always behave in the same way independently
+from the dispatching technique and other configuration parameters, the only
+observable difference being execution speed.
+
+[FIXME: talk about optional features for VMs such as overflow checking and
+garbage collection]
 
 
 Online resources
 ================
-
-The Jitter home page is http://ageinghacker.net/jitter .
+The Jitter home page is http://ageinghacker.net/projects/jitter .
 A public git repository is available at the URL http://git.ageinghacker.net/jitter .
 
 Discussions about Jitter, which spawned off as a sub-project of GNU epsilon, are
-definitely on topic on the epsilon mailing list.  See
+always considered on topic on the GNU epsilon mailing list.  See
 https://lists.gnu.org/mailman/listinfo/epsilon-devel .
+
+
+About the author
+================
+Jitter was written by Luca Saiu.  His personal web site, whcih includes contact
+information, is http://ageinghacker.net .

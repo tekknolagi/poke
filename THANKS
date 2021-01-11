@@ -1,4 +1,4 @@
-Copyright (C) 2016-2020 Luca Saiu
+Copyright (C) 2016-2021 Luca Saiu
 Written by Luca Saiu
 
 This file is part of Jitter.
@@ -24,12 +24,20 @@ important.
 
 * José Marchesi, the first serious user of Jitter in an external software, has
   always provided suggestions and useful, constructive feedback.
+  José also helped me to begin the SPARC port, teaching me about the
+  architecture as I was writing the first code in machine/sparc with him at my
+  side.
 
-* Bruno Haible intervened in an IRC conversation and discussed with me for a long
-  time about hashing and garbage collection.  I appreciate how he made a strong
-  effort to prevent me from making a wrong choice and proactively criticised my
-  design to warn me of possible problems, adopting my own obsession with
-  optimisation as a point of view for the scope of the exchange.
+* Bruno Haible intervened in an IRC conversation and discussed with me for a
+  long time about hashing and garbage collection.  I appreciate how he made a
+  strong effort to prevent me from making a wrong choice and proactively
+  criticised my design to warn me of possible problems, adopting my own
+  obsession with optimisation as a point of view for the scope of the exchange.
+  Bruno also sent fixes and patches, in his usual precise and helpful style.
+
+* Mohammad-Reza Nabipoor reported bugs, asked many questions about Jitter and
+  appreciated its complexity.  Interacting with him was particularly pleasant
+  and motivating.
 
 * Darshit Shah reported several bugs in a very precise way, more than once
   providing fixes.
@@ -37,14 +45,12 @@ important.
 * Alfred M. Szmidt made me notice a few bugs preventing portability to BSD
   systems, and contributed to my porting effort with long friendly discussions.
 
-* Bruno Haible sent fixes and patches, in his usual precise and helpful style.
-
 * Niobos helped by testing changes on her configuration.
 
 * xelxebar helped me to debug a problem with the shebang lines in scripts, testing
   in unusual configurations.
 
-* Dan Čermák sent useful bug report and automatic analysis results.
+* Dan Čermák sent a useful bug report and automatic analysis results.
 
 * Galex reported some typos.
 
