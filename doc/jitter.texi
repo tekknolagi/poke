@@ -2747,6 +2747,8 @@ everything will work as it should.}
 given the problem he solves.  A collector like ours plays the game
 with different rules.}
 
+@fixme{Cite my own attempt: @bibref{Saiu 2011}}
+
 @menu
 * API comparison::           How this collector is used, compared to Boehm's.
 * Performance comparison::   How this collector performs compared to Boehm's.
@@ -4135,16 +4137,20 @@ Addison-Wesley, 2011.
 @bibend
 @end ignore
 
-@ignore
-FIXME: only add this mediocre attempt of mine after I introduce it in
-the text.
 @bibbegin{Saiu 2011}
 Luca Saiu, ``Scalable BIBOP garbage collection for parallel functional
 programs on multi-core machines'', draft,
 Laboratoire d’Informatique de l’Université Paris Nord, 2011.
 Available at @url{http://ageinghacker.net/publications/gc-draft.pdf}.
+@*@*
+An ultimately unsuccessful attempt by the Author to compete with
+Bohem's garbage collector playing by the same rules: mark-sweep,
+conservative pointer finding, no safe points.
+@*
+The resulting code is not substantially faster than Bohem's and also
+very complex and fragile, requiring substantial computation in signal
+handlers where most of the libc runtime is unusable.
 @bibend
-@end ignore
 
 @bibbegin{Shi et al.@: 2005}
 Yunhe Shi, David Gregg, Andrew Beatty, M.@: Anton Ertl.
