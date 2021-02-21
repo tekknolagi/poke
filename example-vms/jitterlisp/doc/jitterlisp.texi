@@ -1,7 +1,7 @@
 \input texinfo.tex @c This is -*- Texinfo -*-.
 
 @c This file is part of the JitterLisp manual, which is part of Jitter.
-@c Copyright (C) 2017, 2018, 2019, 2020  Luca Saiu
+@c Copyright (C) 2017, 2018, 2019, 2020, 2021  Luca Saiu
 @c Written by Luca Saiu
 
 @c Permission is granted to copy, distribute and/or modify this
@@ -178,7 +178,7 @@ This is the manual for JitterLisp
 (for Jitter version @value{VERSION},
 last updated on @value{UPDATED}), an efficient Lisp system using a Jittery VM.
 
-Copyright @copyright{} 2018, 2019, 2020  Luca Saiu.  Written by Luca Saiu.
+Copyright @copyright{} 2018, 2019, 2020, 2021  Luca Saiu.  Written by Luca Saiu.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -202,7 +202,6 @@ distributed in electronic form along with the software in the file
 @url{https://www.gnu.org/licenses/fdl.html}.
 @end quotation
 
-@c @c FIXME[contactingme] Isn't this silly?  My contact information is on the cover.
 The author's personal web site @url{http://ageinghacker.net} contains
 his contact information.
 @end copying
@@ -218,7 +217,7 @@ his contact information.
 @c @author Luca Saiu (@email{positron@@gnu.org}, @url{http://ageinghacker.net})
 @c @author Luca Saiu (@url{http://ageinghacker.net})
 @c @author Luca Saiu (@email{positron@@gnu.org})
-@author Luca Saiu (@email{positron@@gnu.org})
+@author Luca Saiu
 @page
 @vskip 0pt plus 1filll
 @insertcopying
@@ -759,7 +758,7 @@ readable git repository, is on my web site at the URL
 @cindex branch, git
 @cindex git branch
 @cindex @code{master}, git branch
-As of 2020 JitterLisp's development takes place on the
+As of 2021 JitterLisp's development takes place on the
 main git branch named @code{master}.
 
 @cindex feedback
@@ -834,8 +833,10 @@ Boehm-Demers garbage collector, packaged by every modern GNU/Linux
 distributions and also easy to install from sources.
 @cindex Readline
 @cindex GNU Readline
-Another optional
-dependency is the GNU Readline library.
+@cindex Libtextstyle
+@cindex GNU Libtextstyle
+Other optional
+dependencies are the GNU Readline and GNU Libtextstyle libraries.
 @*
 @cindex @file{configure} script, Jitter
 Both dependencies are automatically checked by Jitter's @file{configure}

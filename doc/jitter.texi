@@ -1,7 +1,7 @@
 \input texinfo.tex @c This is -*- Texinfo -*-.
 
 @c This file is part of the Jitter manual.
-@c Copyright (C) 2017, 2019, 2020  Luca Saiu
+@c Copyright (C) 2017, 2019, 2020, 2021  Luca Saiu
 @c Written by Luca Saiu
 
 @c Permission is granted to copy, distribute and/or modify this
@@ -187,7 +187,7 @@ This is the manual for Jitter
 (version @value{VERSION},
 last updated on @value{UPDATED}), an efficient virtual machine generator.
 
-Copyright @copyright{} 2017, 2019, 2020  Luca Saiu.  Written by Luca Saiu.
+Copyright @copyright{} 2017, 2019, 2020, 2021  Luca Saiu.  Written by Luca Saiu.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -208,9 +208,8 @@ software source code as @file{doc/COPYING.DOC}, and also on the web at
 @url{https://www.gnu.org/licenses/fdl.html}.
 @end quotation
 
-@c @c FIXME[contactingme] Isn't this silly?  My contact information is on the cover.
-@c The author's personal web site at @url{http://ageinghacker.net} contains
-@c his contact information.
+The author's personal web site @url{http://ageinghacker.net} contains
+his contact information.
 @end copying
 
 
@@ -1341,8 +1340,8 @@ Happy hacking.
 This chapter explains how to build Jitter from its source code,
 recommending a specific directory organization which will also be
 adopted in the following.  It does not cover package systems such as
-the one from the Debian GNU/Linux distribution.  As a still young project
-as of Summer 2017 Jitter has not yet been packaged by any distribution;
+the one from the Debian GNU/Linux distribution.  As of early 2021
+Jitter has not yet been packaged by any distribution;
 anyway building it from the sources is trivial, and has the important
 advantage of providing access to the test suite.
 
