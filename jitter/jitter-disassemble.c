@@ -1,6 +1,7 @@
 /* VM library: native code disassembler.
 
    Copyright (C) 2017, 2019, 2020 Luca Saiu
+   Updated in 2021 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -516,7 +517,9 @@ jitter_executable_routine_disassemble (jitter_print_context f,
   /* Refuse to disassemble if threads are overlapping or of negative size. */
   if (! p->vm->threads_validated)
     {
+      jitter_disassemble_begin_class (f, er, "warning");
       jitter_print_char_star (f, "<threads not validated: refusing to disassemble>\n");
+      jitter_print_end_class (f);
       return;
     }
 
@@ -572,13 +575,15 @@ jitter_executable_routine_disassemble (jitter_print_context f,
               (long)next_native_code_block_size);
       */
 
-      /* Disassemble this VM instruction, and only this, to stdout. */
+      /* Disassemble this VM instruction, and only this. */
       jitter_disassemble_begin_class (f, er, "comment");
       jitter_print_char_star (f, "# ");
-#ifndef JITTER_REPLICATE
+      /* The thread address is irrelevant after specialisation for no-threading,
+         but useful with direct-threading and even with minimal threading. */
+#if ! defined (JITTER_DISPATCH_NO_THREADING)
       jitter_print_pointer (f, (void *) next_thread);
       jitter_print_char_star (f, ": ");
-#endif // #ifndef JITTER_REPLICATE
+#endif // #if ! defined (JITTER_DISPATCH_NO_THREADING)
       jitter_print_end_class (f);
       jitter_disassemble_show_specialized_instruction
          (f,
@@ -613,9 +618,11 @@ jitter_executable_routine_disassemble (jitter_print_context f,
         = p->vm->specialized_instruction_residual_arities [opcode];
 
       /* Disassemble this VM instruction, and only this, to stdout. */
+      jitter_disassemble_begin_class (f, er, "comment");
       jitter_print_char_star (f, "# ");
       jitter_print_pointer (f, (void*) next_thread);
       jitter_print_char_star (f, ": ");
+      jitter_print_end_class (f);
       jitter_disassemble_show_specialized_instruction
          (f, er, p,
           opcode,
