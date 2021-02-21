@@ -1,5 +1,6 @@
 # This is an -*- sh -*- script.  No shebang is necessary.
 # Copyright (C) 2020 Luca Saiu
+# Updated in 2021 by Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -67,14 +68,14 @@ Options:
   --help                       print this help
   --version                    show the version number
 
-Report bugs to <bug-epsilon@gnu.org>.
-Jitter home page: <http://ageinghacker.net/jitter>.
+Report bugs to <@JITTER_PACKAGE_BUGREPORT@>.
+Jitter home page: <@JITTER_PACKAGE_URL@>.
 EOF
     exit 0
   elif test "$1" = '--version'; then
     cat <<EOF
-$0 (Jitter) script not versioned
-Copyright (C) 2020 Luca Saiu.
+$0 script from @JITTER_PACKAGE_NAME@ @JITTER_PACKAGE_VERSION@
+Copyright (C) 2020-2021 Luca Saiu.
 Jitter comes with ABSOLUTELY NO WARRANTY.
 You may redistribute copies of Jitter under the terms of the GNU General Public
 License, version 3 or any later version published by the Free Software
