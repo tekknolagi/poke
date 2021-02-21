@@ -341,8 +341,8 @@ AM_PROG_AS
 
 # Can we actually run on something other than GCC?  Probably, as long as the
 # compiler supports a recent version of the C standard.
-if test "$GCC" = ""; then
-   AC_MSG_WARN([not using GCC.  Trying to go on anyway])
+if test "x$GCC" = 'x'; then
+   AC_MSG_WARN([not using GCC.  Going on anyway, but GCC is recommended])
 fi
 
 # Checks for C type support.
@@ -395,7 +395,7 @@ AC_SUBST([SIZEOF_VOID_P], [$ac_cv_sizeof_void_p])
 # Automake conditional, all named JITTER_HAVE_ACTUAL_GCC.
 AC_MSG_CHECKING([if the compiler is *really* GCC])
 JITTER_HAVE_CLANG=no
-if test "x$GCC" = ''; then
+if test "x$GCC" = 'x'; then
   JITTER_HAVE_ACTUAL_GCC=no
   AC_MSG_RESULT([no])
 elif ! ${CC} --version > /dev/null 2> /dev/null; then
