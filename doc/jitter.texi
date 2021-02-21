@@ -623,6 +623,7 @@ break.
 @cindex mismatch, performance profile
 @cindex fitness (non-), performance profile
 @cindex performance profile mismatch
+@fixme{weaken: the typical use case of java may have changed}
 Speaking of Java, the entire performance profile of the JVM stands out
 as a @emph{spectacularly} poor fit for server-side web programming, the most
 popular use case for the language: processes are spawned often, live
@@ -1915,6 +1916,7 @@ The recommended way of using Jitter right now is @emph{sub-package mode}:
 @item cold
 @item caller
 @item callee
+@item returning
 @end table
 
 @fixme{Talk about @code{JITTER_LINK} and branch-and-link branches.}
