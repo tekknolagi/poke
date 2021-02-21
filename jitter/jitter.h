@@ -1,6 +1,6 @@
 /* Jitter: VM-independent library.
 
-   Copyright (C) 2016, 2017, 2019, 2020 Luca Saiu
+   Copyright (C) 2016, 2017, 2019, 2020, 2021 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -53,11 +53,21 @@
 # warning "The char type of a size different from 8 bits: untested."
 #endif // #if CHAR_BIT != 8
 
+/* In Jitter a "word" has, by definition, the same size as a pointer.  The
+   following macros define, respectively, how many chars and bits fit in a
+   word. */
+#define JITTER_WORD_CHAR_NO         \
+  JITTER_SIZEOF_VOID_P
+#define JITTER_WORD_BIT_NO                                   \
+  /* FIXME: redefine as a literal if I need that somewhere,  \
+     for example in inline assembly.  */                     \
+  (JITTER_WORD_CHAR_NO * CHAR_BIT)
+
 /* Define jitter_int and jitter_uint as word-sized integer type, respectively
    signed and unsigned; also define the format strings, JITTER_PRIi ,
    JITTER_PRIu , JITTER_PRIo and JITTER_PRIx to be used with printf and scanf
    for those types, in the style of PRIi64 , PRIu64 , PRIo64 and PRIx64 . */
-#if    (JITTER_SIZEOF_VOID_P * CHAR_BIT == 16)
+#if JITTER_WORD_BIT_NO == 16
   /* This will not happen on GNU, but one check costs almost nothing. */
   typedef int16_t  jitter_int;
   typedef uint16_t jitter_uint;
@@ -65,14 +75,14 @@
 # define JITTER_PRIu PRIu16
 # define JITTER_PRIo PRIo16
 # define JITTER_PRIx PRIx16
-#elif  (JITTER_SIZEOF_VOID_P * CHAR_BIT == 32)
+#elif JITTER_WORD_BIT_NO == 32
   typedef int32_t  jitter_int;
   typedef uint32_t jitter_uint;
 # define JITTER_PRIi PRIi32
 # define JITTER_PRIu PRIu32
 # define JITTER_PRIo PRIo32
 # define JITTER_PRIx PRIx32
-#elif  (JITTER_SIZEOF_VOID_P * CHAR_BIT == 64)
+#elif JITTER_WORD_BIT_NO == 64
   typedef int64_t  jitter_int;
   typedef uint64_t jitter_uint;
 # define JITTER_PRIi PRIi64
