@@ -1,6 +1,7 @@
 /* Jitter: general-purpose integer arithmetic macro header.
 
    Copyright (C) 2019, 2020 Luca Saiu
+   Updated in 2021 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -323,18 +324,16 @@
      this macro may occur in inline asm operands. */           \
   ((__jitter_unsigned_type)                                    \
    ((b) == 0                                                   \
-    || ((a) == ((__jitter_signed_type)                         \
-                JITTER_MOST_NEGATIVE_SIGNED_IN_BITS (bit_no))  \
+    || ((__jitter_signed_type) (a)                             \
+        == ((__jitter_signed_type)                             \
+            JITTER_MOST_NEGATIVE_SIGNED_IN_BITS (bit_no))      \
         && (__jitter_signed_type) (b) == -1)))
 
 /* Like the previous operations, checking overflow for remainder. */
 #define JITTER_WOULD_REMAINDER_OVERFLOW(__jitter_unsigned_type,  \
                                         __jitter_signed_type,    \
                                         a, b, bit_no)            \
-  /* Remainder will overflow in the same cases as division. */   \
-  JITTER_WOULD_DIVIDED_OVERFLOW (__jitter_unsigned_type,  \
-                                 __jitter_signed_type,    \
-                                 (a), (b), (bit_no))
+  ((b) == 0)
 
 
 
