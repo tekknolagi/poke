@@ -166,19 +166,22 @@ static void
 structured_version (void)
 {
   const struct jitter_vm_configuration *c = structuredvm_vm_configuration;
+  const char *instrumentation
+    = jitter_vm_instrumentation_to_string (c->instrumentation);
 
-  printf ("structured (%s %s dispatch) ("
-          JITTER_PACKAGE_NAME " " JITTER_PACKAGE_VERSION ")\n",
-          jitter_vm_instrumentation_to_string (c->instrumentation),
+  printf ("structured, %s%s%s dispatch ("
+          JITTER_PACKAGE_NAME ") " JITTER_PACKAGE_VERSION "\n",
+          instrumentation,
+          (strlen (instrumentation) > 0 ? ", " : ""),
           c->dispatch_human_readable);
-  printf ("Copyright (C) 2017-2020 Luca Saiu.\n");
-  printf ("Jitter comes with ABSOLUTELY NO WARRANTY.\n");
-  printf ("You may redistribute copies of Jitter under the terms of the GNU\n"
+  printf ("Copyright (C) 2021 Luca Saiu.\n"
+          "Jitter comes with ABSOLUTELY NO WARRANTY.\n"
+          "You may redistribute copies of Jitter under the terms of the GNU\n"
           "General Public License, version 3 or any later version published\n"
-          "by the Free Software Foundation.  For more information see the file\n"
-          "named COPYING in the source distribution.\n");
-  printf ("\n");
-  printf ("Written by Luca Saiu  <http://ageinghacker.net>.\n");
+          "by the Free Software Foundation.  For more information see the\n"
+          "file named COPYING.\n"
+          "\n"
+          "Written by Luca Saiu  <http://ageinghacker.net>.\n");
 
   exit (EXIT_SUCCESS);
 }

@@ -454,20 +454,23 @@ the_argp_program_version_hook (FILE * restrict stream, struct argp_state *s)
 {
   const struct jitter_vm_configuration *c = vmprefix_vm_configuration;
 
+  const char *instrumentation
+    = jitter_vm_instrumentation_to_string (c->instrumentation);
   fprintf (stream,
-           "VM driver for %s: %s %s dispatch "
-           "(" JITTER_PACKAGE_NAME " " JITTER_PACKAGE_VERSION ")\n",
+           "VM driver for %s, %s%s%s dispatch "
+           "(" JITTER_PACKAGE_NAME ") " JITTER_PACKAGE_VERSION "\n",
            c->lower_case_prefix,
-           jitter_vm_instrumentation_to_string (c->instrumentation),
+           instrumentation,
+           (strlen (instrumentation) > 0 ? ", " : ""),
            c->dispatch_human_readable);
   fprintf
      (stream,
-      "Copyright (C) 2016-2020 Luca Saiu.\n"
+      "Copyright (C) 2021 Luca Saiu.\n"
       "Jitter comes with ABSOLUTELY NO WARRANTY.\n"
-      "You may redistribute copies of Jitter under the terms of the\n"
-      "GNU General Public License, version 3 or any later version published by\n"
-      "the Free Software Foundation.  For more information see the file named\n"
-      "COPYING in the source distribution or the git repository.\n"
+      "You may redistribute copies of Jitter under the terms of the GNU\n"
+      "General Public License, version 3 or any later version published\n"
+      "by the Free Software Foundation.  For more information see the\n"
+      "file named COPYING.\n"
       "\n"
       "Written by Luca Saiu <http://ageinghacker.net> (Jitter, its runtime,\n"
       "this driver program).\n");

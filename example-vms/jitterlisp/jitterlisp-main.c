@@ -1,6 +1,6 @@
 /* JitterLisp: driver.
 
-   Copyright (C) 2017, 2018, 2019 Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2021 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -189,20 +189,24 @@ the_argp_program_version_hook (FILE * restrict stream, struct argp_state *s)
 {
   const struct jitter_vm_configuration *c = jitterlispvm_vm_configuration;
 
+  const char *instrumentation
+    = jitter_vm_instrumentation_to_string (c->instrumentation);
   fprintf (stream,
-           "JitterLisp (%s %s dispatch) "
-           "(" JITTER_PACKAGE_NAME " " JITTER_PACKAGE_VERSION ")\n",
-           (jitter_vm_instrumentation_to_string (c->instrumentation)),
+           "JitterLisp, %s%s%s dispatch "
+           "(" JITTER_PACKAGE_NAME ") " JITTER_PACKAGE_VERSION "\n",
+           instrumentation,
+           (strlen (instrumentation) > 0 ? ", " : ""),
            c->dispatch_human_readable);
   fprintf
      (stream,
-      "Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu.\n"
+      "Copyright (C) 2021 Luca Saiu.\n"
       "JitterLisp comes with ABSOLUTELY NO WARRANTY.\n"
-      "You may redistribute copies of JitterLisp under the terms of the GNU General Public\n"
-      "License, version 3 or any later version published by the Free Software Foundation.\n"
-      "For more information see the file named COPYING in the source distribution.\n"
+      "You may redistribute copies of JitterLisp under the terms of the\n"
+      "GNU General Public License, version 3 or any later version\n"
+      "published by the Free Software Foundation.  For more information\n"
+      "see the file named COPYING.\n"
       "\n"
-      "Written by Luca Saiu <http://ageinghacker.net>.");
+      "Written by Luca Saiu <http://ageinghacker.net>.\n");
 }
 void (*argp_program_version_hook) (FILE * restrict stream, struct argp_state *s)
   = the_argp_program_version_hook;
