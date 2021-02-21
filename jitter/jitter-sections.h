@@ -1,6 +1,7 @@
 /* Jitter: section header.
 
    Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
+   Updated in 2021 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -149,9 +150,8 @@
      .text 0
    from returning to the previous subsection. */
 #define JITTER_ASM_ENTER_SUBSECTION_GAS(_jitter_section_name)       \
-  /* Temporarily switch to a .text subsection.  The generated data  \
-     will be executable, which is not needed, but will still be     \
-     read-only, which is good. */                                   \
+  /* Temporarily switch to a .data subsection.  The generated data  \
+     will be read-only. */                                          \
   "\n.data " _jitter_section_name "\n\t"
 #define JITTER_ASM_EXIT_SUBSECTION_GAS  \
   /* Go back to the subsection 0 . */   \
