@@ -171,7 +171,7 @@
 #undef JITTER_HOST_OS_IS_MACHO
 #undef JITTER_HAVE_SECTION_NOTE_GNU_STACK
 
-/* Assembler flavor. */
+/* Assembler flavour. */
 #undef JITTER_HOST_ASSEMBLER_IS_GNU
 
 
@@ -286,7 +286,7 @@
 
 /* Define if the compiler is clang.  Notice that we discourage the use of clang
    as a non-copylefted project with a copyleft alternative.  Jitter recommends
-   GCC, which will be the only compiler supporting advanced dispatches. */
+   GCC, and only supports high-performance advanced dispatches with GCC. */
 #undef JITTER_HAVE_CLANG
 
 /* Define to the clang version, when clang is being used. */
