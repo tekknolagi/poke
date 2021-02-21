@@ -1,6 +1,6 @@
 /* Jitter: defective VM instruction header.
 
-   Copyright (C) 2018 Luca Saiu
+   Copyright (C) 2018, 2021 Luca Saiu
    Updated in 2020 by Luca Saiu
    Written by Luca Saiu
 
@@ -104,19 +104,19 @@ struct jitter_defect_descriptor
 #define JITTER_ASM_DEFECT_SUBSECTION  \
   "11"
 
-/* Expand to a C top-level inline asm statement containing the patch-in
+/* Expand to a C top-level inline asm statement containing the defect
    header. */
-#define JITTER_DEFECT_HEADER(_jitter_vm_the_prefix)                \
-  asm (JITTER_ASM_OPEN_DEFINITION(JITTER_ASM_DEFECT_SUBSECTION,    \
-                                  JITTER_DEFECT_DESCRIPTORS_NAME(  \
-                                     _jitter_vm_the_prefix)))
+#define JITTER_DEFECT_HEADER(_jitter_vm_the_prefix)                  \
+  asm (JITTER_ASM_OPEN_DEFINITION                                    \
+          (JITTER_ASM_DEFECT_SUBSECTION,                             \
+           JITTER_DEFECT_DESCRIPTORS_NAME (_jitter_vm_the_prefix)))
 
-/* Expand to a C top-level inline asm statement containing the patch-in
+/* Expand to a C top-level inline asm statement containing the defect
    footer. */
-#define JITTER_DEFECT_FOOTER(_jitter_vm_the_prefix)                 \
-  asm (JITTER_ASM_CLOSE_DEFINITION(JITTER_ASM_DEFECT_SUBSECTION,    \
-                                   JITTER_DEFECT_DESCRIPTORS_NAME(  \
-                                      _jitter_vm_the_prefix)))
+#define JITTER_DEFECT_FOOTER(_jitter_vm_the_prefix)                  \
+  asm (JITTER_ASM_CLOSE_DEFINITION                                   \
+          (JITTER_ASM_DEFECT_SUBSECTION,                             \
+           JITTER_DEFECT_DESCRIPTORS_NAME (_jitter_vm_the_prefix)))
 
 
 

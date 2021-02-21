@@ -1,6 +1,6 @@
 /* Jitter: data locations: header.
 
-   Copyright (C) 2019, 2020 Luca Saiu
+   Copyright (C) 2019, 2020, 2021 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -123,24 +123,23 @@ jitter_dump_data_locations (jitter_print_context ctx, const struct jitter_vm *vm
      macro and a call to JITTER_DATA_LOCATION_FOOTER the user is supposed to emit
      location data for every datum, in some predictable order.  The defined global
      is only one. */
-# define JITTER_DATA_LOCATION_HEADER(_jitter_vm_the_prefix)              \
-    asm volatile (/* Generate the identifier definition in assembly. */  \
-                  JITTER_ASM_OPEN_DEFINITION(                            \
-                     JITTER_ASM_DATA_LOCATION_SUBSECTION,                \
-                     JITTER_DATA_LOCATION_NAME(_jitter_vm_the_prefix)))
+# define JITTER_DATA_LOCATION_HEADER(_jitter_vm_the_prefix)                \
+    asm (/* Generate the identifier definition in assembly. */             \
+         JITTER_ASM_OPEN_DEFINITION (JITTER_ASM_DATA_LOCATION_SUBSECTION,  \
+                                     JITTER_DATA_LOCATION_NAME             \
+                                        (_jitter_vm_the_prefix)))
 
   /* End the global definition for data locations, for the VM with the given
      vmprefix.  This enters, and then exits, the appropriate subsection. */
-# define JITTER_DATA_LOCATION_FOOTER(_jitter_vm_the_prefix)              \
-    asm volatile (/* Emit the final empty string as "\0". */             \
-                  JITTER_ASM_ENTER_SUBSECTION(                           \
-                     JITTER_ASM_DATA_LOCATION_SUBSECTION)                \
-                    ".byte 0\n\t"                                        \
-                  JITTER_ASM_EXIT_SUBSECTION                             \
-                  /* Close the identifier definition in assembly. */     \
-                  JITTER_ASM_CLOSE_DEFINITION(                           \
-                     JITTER_ASM_DATA_LOCATION_SUBSECTION,                \
-                     JITTER_DATA_LOCATION_NAME(_jitter_vm_the_prefix)))
+# define JITTER_DATA_LOCATION_FOOTER(_jitter_vm_the_prefix)                 \
+    asm (/* Emit the final empty string as "\0". */                         \
+         JITTER_ASM_ENTER_SUBSECTION( JITTER_ASM_DATA_LOCATION_SUBSECTION)  \
+         ".byte 0\n\t"                                                      \
+         JITTER_ASM_EXIT_SUBSECTION                                         \
+         /* Close the identifier definition in assembly. */                 \
+         JITTER_ASM_CLOSE_DEFINITION (JITTER_ASM_DATA_LOCATION_SUBSECTION,  \
+                                      JITTER_DATA_LOCATION_NAME             \
+                                         (_jitter_vm_the_prefix)))
 
   /* Emit the location for the given datum with the given name as two
      '\0'-terminated strings, in the data location subsection.
