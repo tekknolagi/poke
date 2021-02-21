@@ -1,7 +1,6 @@
 /* Jitter: general-purpose integer arithmetic macro header.
 
-   Copyright (C) 2019, 2020 Luca Saiu
-   Updated in 2021 by Luca Saiu
+   Copyright (C) 2019, 2020, 2021 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -334,6 +333,13 @@
                                         __jitter_signed_type,    \
                                         a, b, bit_no)            \
   ((b) == 0)
+
+/* The non-overflow remainder condition.  See the "negative condition" comments
+   in generate-fast-branches.in.m4sh for the rationale. */
+#define JITTER_WOULD_REMAINDER_NOT_OVERFLOW(__jitter_unsigned_type,  \
+                                            __jitter_signed_type,    \
+                                            a, b, bit_no)            \
+  (b)
 
 
 

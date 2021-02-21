@@ -4,8 +4,7 @@
 
 ## Generate the fast-branch header containing repetitive CPP macro definitions.
 
-## Copyright (C) 2019, 2020 Luca Saiu
-## Updated in 2021 by Luca Saiu
+## Copyright (C) 2019, 2020, 2021 Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -826,14 +825,41 @@ emit_overflowing_operations ()
    JITTER_WOULD_${macroized_operation}_OVERFLOW \\
       (jitter_uint, jitter_int, (x), (y), JITTER_BITS_PER_WORD))
 
+/* The negative overflow (which is to say non-overflow) condition, in C, only
+   defined if we have a macro available for it; it will be available for the
+   operations where computing the negative condition is more efficient.
+   Example: remainder.
+     BRANCH_FAST_IF_NONZERO (b == 0, label)
+   is slower than
+     BRANCH_FAST_IF_ZERO (b, label)
+   ; notice that the first macro argument is an assembly operand, which GCC has
+   to compile as is. */
+#if defined (JITTER_WOULD_${macroized_operation}_NOT_OVERFLOW)
+# define _JITTER_C_CONDITION_${macroized_operation}_DOES_NOT_OVERFLOW_(x, y) \\
+    ((jitter_uint) \\
+     JITTER_WOULD_${macroized_operation}_NOT_OVERFLOW \\
+        (jitter_uint, jitter_int, (x), (y), JITTER_BITS_PER_WORD))
+#endif
+
 /* If the branch-on-overflow and operate-and-branch-on-overflow low-level
    primitives are both missing for ${macroized_operation} , define one. */
 #if (! defined (_JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_)    \\
      && ! defined (_JITTER_LOW_LEVEL_${macroized_operation}_BRANCH_FAST_IF_OVERFLOW_))
-# define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_(opd0, opd1, tgt) \\
-    _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONZERO_ \\
-       (_JITTER_C_CONDITION_${macroized_operation}_OVERFLOWS_ (opd0, opd1), \\
-        (tgt))
+  /* Use the negative condition if available.  It is only available when it is
+     preferable; see the comment above. */
+# if defined (_JITTER_C_CONDITION_${macroized_operation}_DOES_NOT_OVERFLOW_)
+  /* Use the negative condition. */
+#   define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_(opd0, opd1, tgt) \\
+      _JITTER_LOW_LEVEL_BRANCH_FAST_IF_ZERO_ \\
+         (_JITTER_C_CONDITION_${macroized_operation}_DOES_NOT_OVERFLOW_ (opd0, opd1), \\
+          (tgt))
+# else
+  /* Use the positive condition. */
+#   define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_operation}_OVERFLOWS_(opd0, opd1, tgt) \\
+      _JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONZERO_ \\
+         (_JITTER_C_CONDITION_${macroized_operation}_OVERFLOWS_ (opd0, opd1), \\
+          (tgt))
+# endif /* positive or negative */
 #endif
 
 /* At this point we definitely have one of the branch-on-overflow and
