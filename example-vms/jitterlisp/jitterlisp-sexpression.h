@@ -187,12 +187,12 @@ typedef jitter_tagged_object jitterlisp_object;
 
 /* Expand to a constant expression evaluating to the most (respectively)
    negative or positive fixnum, tagged. */
-#define JITTERLISP_FIXNUM_MOST_NEGATIVE                                 \
-  JITTERLISP_FIXNUM_ENCODE ((jitter_uint) 1                             \
-                            << (JITTERLISP_FIXNUM_NON_TAG_BIT_NO - 1))
-#define JITTERLISP_FIXNUM_MOST_POSITIVE                                       \
-  JITTERLISP_FIXNUM_ENCODE (((jitter_uint) 1                                  \
-                             << (JITTERLISP_FIXNUM_NON_TAG_BIT_NO - 1)) - 1)
+#define JITTERLISP_FIXNUM_MOST_NEGATIVE                                        \
+  JITTERLISP_FIXNUM_ENCODE                                                     \
+     (JITTER_MOST_NEGATIVE_SIGNED_IN_BITS (JITTERLISP_FIXNUM_NON_TAG_BIT_NO))
+#define JITTERLISP_FIXNUM_MOST_POSITIVE                                        \
+  JITTERLISP_FIXNUM_ENCODE                                                     \
+     (JITTER_MOST_POSITIVE_SIGNED_IN_BITS (JITTERLISP_FIXNUM_NON_TAG_BIT_NO))
 
 /* Fast-branch to the given label if the given object is not a fixnum.  The
    arguments may be evaluated more than once. */
