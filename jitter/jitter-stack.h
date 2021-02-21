@@ -1,6 +1,7 @@
 /* Jitter: Forth-style stacks with optional TOS optimization: header.
 
    Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
+   Updated in 2021 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -139,6 +140,13 @@ jitter_stack_initialize_ntos_backing (struct jitter_stack_backing *backing,
                                       char *initial_element_p_or_NULL,
                                       bool guard_underflow,
                                       bool guard_overflow)
+  __attribute__ ((nonnull (1)));
+
+/* Reset an existing stack backing which has already been initialised and
+   possibly used, without re-allocating its resources.  This will re-initialise
+   stack elements where needed, and do nothign else. */
+void
+jitter_stack_reset_backing (struct jitter_stack_backing *backing)
   __attribute__ ((nonnull (1)));
 
 /* Finalize the pointed stack backing, releasing memory. */

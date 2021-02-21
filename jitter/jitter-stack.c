@@ -1,6 +1,6 @@
 /* Jitter: Forth-style stacks with optional TOS optimization: implementation.
 
-   Copyright (C) 2017, 2020 Luca Saiu
+   Copyright (C) 2017, 2020, 2021 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -197,8 +197,28 @@ jitter_stack_backing_destroy_content (struct jitter_stack_backing *backing)
 
 
 
-/* Stack backing initialization and finalization.
+/* Stack backing initialization, reset, finalization.
  * ************************************************************************** */
+
+void
+jitter_stack_reset_backing (struct jitter_stack_backing *backing)
+{
+  /* If the backing does not require initialisation do nothing. */
+  char *initial_element_p_or_NULL = backing->initial_element_copy;
+  if (initial_element_p_or_NULL == NULL)
+    return;
+
+  /* Fill every element.  Use the number of elements stored in the backing,
+     which has already been rounded up to a multiple of the page size where
+     needed. */
+  jitter_uint element_no = backing->element_no;
+  jitter_uint element_size_in_bytes = backing->element_size_in_bytes;
+  jitter_uint i;
+  for (i = 0; i < element_no; i ++)
+    memcpy ((char *) backing->memory + element_size_in_bytes * i,
+            initial_element_p_or_NULL,
+            element_size_in_bytes);
+}
 
 static void
 jitter_stack_initialize_backing (struct jitter_stack_backing *backing,
@@ -236,16 +256,9 @@ jitter_stack_initialize_backing (struct jitter_stack_backing *backing,
      need guards.  Allocate. */
   jitter_stack_backing_update_and_allocate (backing);
 
-  /* Initialise the content, if needed. */
-  if (initial_element_p_or_NULL != NULL)
-    {
-      element_no = backing->element_no; /* Keep rounding to page into account. */
-      int i;
-      for (i = 0; i < element_no; i ++)
-        memcpy ((char *) backing->memory + element_size_in_bytes * i,
-                initial_element_p_or_NULL,
-                element_size_in_bytes);
-    }
+  /* Fill the backing with copies of the initial element, if required. */
+  jitter_stack_reset_backing (backing);
+
 #if 0
   if (backing->guard_underflow)
     printf ("Guarded underflow addresses: [%p, %p]\n", backing->underflow_page_beginning, backing->underflow_page_beginning + backing->page_length_in_bytes - 1);
