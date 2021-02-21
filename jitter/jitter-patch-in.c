@@ -1,6 +1,7 @@
 /* Jitter: patch-in functionality.
 
    Copyright (C) 2017 Luca Saiu
+   Updated in 2021 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -53,7 +54,7 @@ jitter_make_patch_in_table (const struct jitter_patch_in_descriptor *descs,
                             size_t desc_no,
                             size_t specialized_instruction_no)
 {
-  /* Make an empty array of empty dynamic buffers. */
+  /* Make an array of empty dynamic buffers. */
   struct jitter_dynamic_buffer *dbs
     = jitter_xmalloc (sizeof (struct jitter_dynamic_buffer)
                       * specialized_instruction_no);
