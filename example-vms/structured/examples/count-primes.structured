@@ -1,0 +1,40 @@
+// Jittery structured language (-*- Pascal -*- -style) example: primes.
+
+// Copyright (C) 2019 Luca Saiu
+// Updated in 2021 by Luca Saiu
+// Written by Luca Saiu
+
+// This file is part of Jitter.
+
+// Jitter is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// Jitter is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with Jitter.  If not, see <http://www.gnu.org/licenses/>.
+
+var n = 2, prime_no = 0;
+while n < 2000000 do
+  var n_is_prime = true;
+  var candidate_divisor = 2;
+  // FIXME: parser bug: "candidate_divisor * candidate_divisor <= n"
+  // parses as "candidate_divisor * (candidate_divisor <= n)".
+  // The priority of and with respect to <= is also wrong.
+  while n_is_prime and ((candidate_divisor * candidate_divisor) <= n) do
+    if (n mod candidate_divisor) = 0 then
+      n_is_prime := false;
+    end;
+    candidate_divisor := candidate_divisor + 1;
+  end;
+  if n_is_prime then
+     prime_no := prime_no + 1;
+  end;
+  n := n + 1;
+end;
+print prime_no;

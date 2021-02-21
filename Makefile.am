@@ -1,5 +1,6 @@
 ## Process this file with automake to produce Makefile.in .
 # Copyright (C) 2016, 2017, 2018, 2019, 2020 Luca Saiu
+# Updated in 2021 by Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -901,10 +902,14 @@ EXTRA_DIST += \
 
 # Add examples conceived to compare performance of a Jittery VM against C.
 # About the conditional see the comment below related to the examples target.
-EXTRA_PROGRAMS += example-vms/structured/examples/primes-in-c
+EXTRA_PROGRAMS += \
+  example-vms/structured/examples/count-primes-in-c \
+  example-vms/structured/examples/primes-in-c
 if ! JITTER_SUBPACKAGE
 benchmarking-examples: example-vms/structured/examples/primes-in-c$(EXEEXT)
 endif # ! JITTER_SUBPACKAGE
+example_vms_structured_examples_count_primes_in_c_SOURCES = \
+  example-vms/structured/examples/count-primes.c
 example_vms_structured_examples_primes_in_c_SOURCES = \
   example-vms/structured/examples/primes.c
 
@@ -1321,9 +1326,11 @@ $(srcdir)/example-vms/structured/structuredvm-vm2.c: example-vms/structured/stru
 # Example high-level routines for the Structured example, to be distributed.
 EXTRA_DIST += \
   example-vms/structured/examples/count-down.structured \
+  example-vms/structured/examples/count-primes.structured \
   example-vms/structured/examples/count-up-down.structured \
   example-vms/structured/examples/euclid.structured \
   example-vms/structured/examples/primes.structured \
+  example-vms/structured/examples/count-primes.c \
   example-vms/structured/examples/primes.c
 
 # Example VM-assembly routines for the Structured (VM) example, to be
