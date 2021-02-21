@@ -28,8 +28,8 @@
 #include <inttypes.h> // format strings for standard integer types.
 #include <string.h> // JITTER_ARCHITECTURE_IS relies on strcmp .
 
-/* Include the host-dependent header , and make sure that it actually contains
-   some definitions. */
+/* Include the host-dependent header, and make sure that it actually contains
+   some definitions for defensiveness's sake. */
 #include <jitter/jitter-config.h>
 #ifndef JITTER_SIZEOF_VOID_P
 #  error "jitter/jitter-config.h is probably incorrect"
@@ -315,6 +315,16 @@ problems.  See the source code for more information."
 # error "Invalid configuration: you cannot use minimal-threading or"
 # error "no-threading when the binary format is unsupported."
 #endif // advanced dispatch && ! assembly
+
+
+
+
+/* Compiler version check.
+ * ************************************************************************** */
+
+/* Perform a compiler version check, to make sure the compiler being use is the
+   same as the one Jitter was configured for, when the issue matters. */
+#include <jitter/jitter-c-compiler-version.h>
 
 
 

@@ -541,6 +541,7 @@ EXTRA_DIST += $(JITTER_TEMPLATES)
 SOURCES_FOR_LIBJITTER = \
   jitter/jitter.c jitter/jitter.h \
   jitter/jitter-config.h \
+  jitter/jitter-c-compiler-version.h \
   jitter/jitter-instruction.c jitter/jitter-instruction.h \
   jitter/jitter-mutable-routine.c jitter/jitter-mutable-routine.h \
   jitter/jitter-profile.c jitter/jitter-profile.h \
@@ -574,6 +575,7 @@ SOURCES_FOR_LIBJITTER = \
 jitterinclude_HEADERS += \
   jitter/jitter.h \
   jitter/jitter-config.h \
+  jitter/jitter-c-compiler-version.h \
   jitter/jitter-data-locations.h \
   jitter/jitter-defect.h \
   jitter/jitter-fast-branch.h \
