@@ -126,12 +126,13 @@ jitter_check_cc_option ()
   if test "x$jitter_cached_value" = "x"; then
     AC_MSG_CHECKING([if $CC supports the option $jitter_compiler_option])
     if $CC \
-         -c -o test.o \
+         -c -o conftest.o \
          "$jitter_compiler_option" \
          "$srcdir/build-aux/trivial-source.c" \
            > /dev/null \
            2> /dev/null; then
       jitter_result=yes
+      rm conftest.o
     else
       jitter_result=no
     fi
