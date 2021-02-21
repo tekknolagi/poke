@@ -798,6 +798,24 @@ if test "x$ac_cv_have_gnu_c_inline_asm" = "xyes"; then
             [Define if the compiler supports GNU C's asm goto .])
 fi
 
+# Check for GNU C's "inline" qualifier for inline asm.
+AC_CACHE_CHECK([for GNU C "inline" qualifier for inline asm],
+  [ac_cv_have_gnu_c_asm_inline],
+  [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM(
+        [],
+        [[int to, from = 42;
+          asm inline ("/* Pretend to set %[the_to] reading from %[the_from] . */"
+                      : [the_to] "=r" (to)
+                      : [the_from] "r" (from));
+          return to;]])],
+     [ac_cv_have_gnu_c_asm_inline=yes],
+     [ac_cv_have_gnu_c_asm_inline=no])])
+if test "x$ac_cv_have_gnu_c_asm_inline" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_GNU_C_ASM_INLINE], [1],
+            [Define if the compiler supports GNU C's asm "inline" qualfiier.])
+fi
+
 # Check for GNU C's asm goto.
 AC_CACHE_CHECK([for GNU C asm goto], [ac_cv_have_gnu_c_asm_goto],
   [AC_COMPILE_IFELSE(

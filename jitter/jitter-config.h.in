@@ -314,6 +314,10 @@
 /* Define if the language supports asm goto in the style of GNU C. */
 #undef JITTER_HAVE_GNU_C_ASM_GOTO
 
+/* Define if the language supports asm inline in the style of modern GNU C.
+   This is still a recent feature, introduced around the time of GCC 9. */
+#undef JITTER_HAVE_GNU_C_ASM_INLINE
+
 /* Define if the compiler supports alignas. */
 #undef JITTER_HAVE_ALIGNAS
 
