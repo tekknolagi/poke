@@ -1,6 +1,8 @@
 /* Jitter: VM-independent mutable routine data structures.
 
    Copyright (C) 2016, 2017, 2018, 2019, 2020 Luca Saiu
+   Updated in 2021 by Luca Saiu
+   Written by Luca Saiu
 
    This file is part of Jitter.
 
@@ -823,10 +825,10 @@ jitter_mutable_routine_print (jitter_print_context ctx,
      a string. */
   size_t max_instruction_name_length
     = jitter_maximum_instruction_name_length (r);
-  char last_label_index_string [100]; // FIXME: write and use a function to compute the number of digits of a number instead of this barbaric thing.
-  sprintf (last_label_index_string, "%i", instruction_no - 1);
   size_t max_label_name_length
-    = /* "$L" */ 2 + strlen (last_label_index_string) + /* ":" */ 1;
+    = (/* "$L" */ 2
+       + jitter_digit_no_radix_10 (instruction_no - 1)
+       + /* ":" */ 1);
   int i;
   for (i = 0; i < instruction_no; i ++)
     {
