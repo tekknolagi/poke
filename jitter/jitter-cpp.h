@@ -1,6 +1,6 @@
 /* Jitter: general-purpose CPP macros for stringification and concatenation.
 
-   Copyright (C) 2017 Luca Saiu
+   Copyright (C) 2017, 2021 Luca Saiu
    Updated in 2019 by Luca Saiu
    Written by Luca Saiu
 
@@ -23,8 +23,8 @@
 #ifndef JITTER_CPP_H_
 #define JITTER_CPP_H_
 
-/* This header has no dependencies and expands to nothing, by design.  It is
-   safe to include from assembly sources. */
+/* This entire header has no dependencies and expands to nothing, by design.  It
+   is safe to include from assembly sources. */
 
 /* Remark on multiple-level expansion.
  * ************************************************************************** */
@@ -77,5 +77,90 @@
 #define JITTER_CONCATENATE_FIVE(a, b, c, d, e)  \
   JITTER_CONCATENATE_FIVE_UNEXPANDED(a, b, c, d, e)
 
+
+
+
+/* Local identifier poisoning.
+ * ************************************************************************** */
+
+/* This feature serves to provide helpful error messages in case a code block
+   contains a use of a locally forbidden identifier.  The identifier is poisoned
+   at the beginning of the block and unpoisoned at the end.
+   It is possible to poison functions, non-function globals, macros, and even C
+   keywords.
+
+   The implementation relies on non-standard GNU C features.  It is used
+   conditionally in generated code.  Where the feature is not supported the
+   system will fail in a less friendly way in case of incorrect code, but
+   correctness will not be compromised. */
+
+/* This is how to poison an indentifier foo, for example with the error message
+   about relocatable VM instructions::
+#    pragma push_macro ("foo")
+#    undef foo
+#    define foo JITTER_FORBIDDEN_EXPRESSION_IN_RELOCATABLE (foo)
+
+   And this is how to unpoison it:
+#    pragma pop_macro ("foo")
+
+   In order to avoid spurious warning messages at the beginning of a sequence
+   of poisonings, this should be generated (once):
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wpragmas"
+#    pragma GCC diagnostic ignored "-Wunknown-warning-option"
+#    pragma GCC diagnostic ignored "-Wbuiltin-macro-redefined"
+#    pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
+   At the end, after unpoisoning, this restores the previous diagnostics state:
+#    pragma GCC diagnostic pop  */
+
+/* The canonic use of _Pragma with a stringized argument. */
+#define JITTER_PRAGMA(x)  \
+  _Pragma (#x)
+
+/* Expand to a sequence of two _Pragma uses, the first one printing a nice error
+   message involving the given identifier and the given message (provided by the
+   caller as a string), the second one causing the compiler to fail. */
+#define JITTER_PRAGMA_WARN_WITH_REASON(identifier, reason_string_literal)      \
+  /* This is printed in a nicer way than #pragma GCC error. */                 \
+  JITTER_PRAGMA (message ("\nYou cannot use \"" # identifier "\" in "          \
+                          JITTER_SPECIALIZED_INSTRUCTION_NAME_AS_STRING ":\n"  \
+                          reason_string_literal                                \
+                          ".\nAny type error you may see after this "          \
+                          "message is probably an effect of this macro "       \
+                          "which serves to prevent the use of "                \
+                          "\"" #identifier "\"."                               \
+                          ));                                                  \
+  /* And now fail, as well.  This literal string is printed nicely. */         \
+  JITTER_PRAGMA (GCC error "Refusing to compile.");
+
+/* Expand to a use of JITTER_PRAGMA_WARN_WITH_REASON with the appropriate error
+   message. */
+#define JITTER_POISONED_IN_ANY_INSTRUCTION(identifier)      \
+  JITTER_PRAGMA_WARN_WITH_REASON                            \
+     (identifier, "it is forbidden in any VM instruction")
+#define JITTER_POISONED_IN_RELOCATABLE_INSTRUCTION(identifier)        \
+  JITTER_PRAGMA_WARN_WITH_REASON                                      \
+     (identifier,                                                     \
+      "it is forbidden in relocatable VM instructions (but you may "  \
+      "change the instruction to be non-relocatable)")
+#define JITTER_POISONED_IN_NON_BRANCHING_INSTRUCTION(identifier)        \
+  JITTER_PRAGMA_WARN_WITH_REASON                                      \
+     (identifier,                                                     \
+      "it is forbidden in non-branching VM instructions (but you may "  \
+      "change the instruction to be branching)")
+
+/* Expand to a GNU C statement-expresison evaluating to zero (which is
+   compatible with most types in C) and a use of JITTER_PRAGMA_WARN_WITH_REASON.
+   The fact that the identifier expands to an expression makes it likely that
+   the resulting expression remains well-formed syntactically, which avoids
+   distracting syntax errors in many cases.
+   The intended error message related to the use of the identifier is printend
+   in any case. */
+#define JITTER_FORBIDDEN_EXPRESSION(identifier)                      \
+  ({ JITTER_POISONED_IN_ANY_INSTRUCTION (identifier); 0; })
+#define JITTER_FORBIDDEN_EXPRESSION_IN_RELOCATABLE(identifier)       \
+  ({ JITTER_POISONED_IN_RELOCATABLE_INSTRUCTION (identifier); 0; })
+#define JITTER_FORBIDDEN_EXPRESSION_IN_NON_BRANCHING(identifier)       \
+  ({ JITTER_POISONED_IN_NON_BRANCHING_INSTRUCTION (identifier); 0; })
 
 #endif // #ifndef JITTER_CPP_H_
