@@ -1,6 +1,7 @@
 /* VM library: native code patching for x86_64 .
 
    Copyright (C) 2017, 2019, 2020 Luca Saiu
+   Updated in 2021 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -184,7 +185,7 @@ jitter_patch_load_immediate_to_register (char *native_code,
         int64_t distance = jitter_distance_from ((const char *) immediate,
                                                  native_code + native_code_size);
         if (! JITTER_FITS_IN_BITS_SIGN_EXTENDED (distance, 32))
-          jitter_fatal ("%%rip-relative lea: displacement too large");
+          jitter_fatal ("%%rip-relative lea: displacement too large: %li %p", (long) distance, (void *) (unsigned long) distance);
         int32_t distance_32 = distance;
         memcpy (native_code + native_code_size - 4, & distance_32, 4);
         break;
