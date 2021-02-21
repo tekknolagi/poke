@@ -1,5 +1,6 @@
 /* Jitter: header supplying functions and macros which some systems lack.
    Copyright (C) 2017, 2019, 2020 Luca Saiu
+   Updated in 2021 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -70,6 +71,13 @@
    useless, in the following, to conditionalize over the attribute syntax
    availability.  What remains to be solved is older GNU C compilers not knowing
    about more recently introduced attributes. */
+#if ! defined (JITTER_HAVE_ATTRIBUTE_NO_REORDER)
+# define no_reorder      /* Nothing. */
+# define __no_reorder__  /* Nothing. */
+  /* On configurations where no_reorder is not defined, which will be the case
+     for very old GCCs, configure tries to add -fno-toplevel-reorder to CFLAGS .
+     That is a more brutal, global way of enforcing ordering. */
+#endif /* #if ! defined (JITTER_HAVE_ATTRIBUTE_NO_REORDER) */
 #if ! defined (JITTER_HAVE_ATTRIBUTE_RETURNS_NONNULL)
 # define returns_nonnull      /* Nothing. */
 # define __returns_nonnull__  /* Nothing. */
