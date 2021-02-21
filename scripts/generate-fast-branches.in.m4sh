@@ -5,6 +5,7 @@
 ## Generate the fast-branch header containing repetitive CPP macro definitions.
 
 ## Copyright (C) 2019, 2020 Luca Saiu
+## Updated in 2021 by Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -621,6 +622,12 @@ emit_low_level ()
         body="_JITTER_LOW_LEVEL_BRANCH_FAST_IF_NONZERO_ ((jitter_uint) _JITTER_C_CONDITION_${macroized_r}_ (${formals_protected}), _jitter_tgt)"
     fi
         @SED@ "s/_jitter_type/$type/g" <<EOF
+#if ! defined (JITTER_DISPATCH_NO_THREADING)
+  /* Forget any machine-specific definition unless the dispatch is
+     no-threading; this makes each port simpler, since machine-specific
+     headers can define low-level fast branches unconditionally. */
+# undef _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_r}_
+#endif
 #ifndef _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_r}_
 # define _JITTER_LOW_LEVEL_BRANCH_FAST_IF_${macroized_r}_(${formals}, _jitter_tgt) \\
     ${body}
