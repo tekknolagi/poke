@@ -1,6 +1,6 @@
 /* JitterLisp: default -*- CSS -*- style for Libtextstyle.
 
-   Copyright (C) 2020 Luca Saiu
+   Copyright (C) 2020, 2021 Luca Saiu
    Written by Luca Saiu
 
    This file is part of the JitterLisp language implementation, distributed as
@@ -36,14 +36,20 @@
 /* Interaction and debugging.
  * ************************************************************************** */
 
-.jitterlisp-banner                { font-style: italic;
-                                    font-weight: bold; }
-.jitterlisp-banner-feature-name   { font-style: italic; }
-.jitterlisp-banner-feature-value  { font-style: italic;
-                                    text-decoration: underline; }
-.jitterlisp-log                   { background-color: gray;
-                                    color: black;
-                                    font-style: italic; }
+.jitterlisp-banner                  { color: lightgreen;
+                                      font-style: italic;
+                                      font-weight: bold; }
+.jitterlisp-banner-feature-name     { color: lightyellow;
+                                      font-style: italic; }
+.jitterlisp-banner-feature-value    { color: lightyellow;
+                                      font-style: italic;
+                                      /*text-decoration: underline;*/ }
+.jitterlisp-banner-feature-warning  { color: red;
+                                      font-style: italic;
+                                      /*text-decoration: underline;*/ }
+.jitterlisp-log                     { background-color: gray;
+                                      color: black;
+                                      font-style: italic; }
 
 
 
