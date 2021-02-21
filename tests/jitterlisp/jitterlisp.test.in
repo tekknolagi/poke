@@ -1,7 +1,7 @@
 #!@SHELL@
 # Jitter testsuite: VM programs.  This is -*- sh -*-, to be preprocessed.
 # Copyright (C) 2017, 2018 Luca Saiu
-# Updated in 2020 by Luca Saiu
+# Updated in 2020 and 2021 by Luca Saiu
 # Written by Luca Saiu
 
 # This file is part of Jitter.
@@ -72,7 +72,7 @@ jitterlisp_case_all_confs ()
 
         if   (test "x$skip" = "xskip") \
           || (! (echo " @JITTER_ENABLED_DISPATCHES@ " \
-                  | grep -q " $dispatch ")) \
+                  | grep " $dispatch " > /dev/null)) \
           || (test "x$gc" = "xboehm" \
               && test "x@JITTER_HAVE_BOEHM_GC_SUBST@" = "x"); then
           jitter_skip_case "$description"

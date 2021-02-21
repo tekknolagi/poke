@@ -2,7 +2,7 @@
 ## to obtain a configure script.
 
 ## Copyright (C) 2016, 2017 Luca Saiu
-## Updated in 2019 and 2020 by Luca Saiu
+## Updated in 2019, 2020 and 2021 by Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of the Jitter structured-language example,
@@ -83,7 +83,7 @@ fi
 
 # Check for Bison.
 AC_PROG_YACC
-if ! (echo "x$YACC" | grep -q bison); then
+if ! (echo "x$YACC" | grep bison > /dev/null); then
   if test -e "$srcdir/structured-parser.c"; then
     AC_MSG_WARN([you will need GNU Bison (instead of $YACC) if you modify
                  the distributed C parsers])
