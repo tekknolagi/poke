@@ -252,17 +252,14 @@ fi
 # Indeed, we rely on a C compiler.
 AC_PROG_CC
 
-# This package contains libraries.  When enabling LTO with static libraries (for
-# which setting CFLAGS/LDFLAGS is enough) we need to use the specialized library
-# tools which come with GCC.  Autoconf doesn't check for them by default, but
-# it's easy to do.  If the specialized tools aren't available we fall back on the
-# traditional ones.
-#
-# I noticed that moving the check for RANLIB to this early point prevents the
-# default (HOSTTRIPLET-ranlib) from being chosen despite the order of the tools
-# chosen here.  Some default might come from gl_EARLY.
-AC_CHECK_TOOLS([RANLIB], [gcc-ranlib ranlib])
-AC_CHECK_TOOLS([AR], [gcc-ar ar])
+# In order to benefit from LTO here we would need to define RANLIB and AR to the
+# host version of gcc-ranlib and gcc-ar -- and then assure that they actually
+# work (as Bruno Haible helfully reminded me, on some configurations gcc-ranlib
+# and gcc-ar may be non-functional and always respond with
+#   sorry - this program has been built without plugin support
+# ).
+# All this said LTO, impressive as it is, is a bad match for Jitter and
+# arranging for special provisions for its sake feels unwarranted.
 
 # Run the early part of the Gnulib initialization.  This is recommended
 # right after AC_PROG_CC .
