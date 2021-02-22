@@ -1,7 +1,7 @@
 /* Jitter: Flex scanner.
 
    Copyright (C) 2016, 2017, 2018, 2020 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Updated in 2019 and 2021 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -252,8 +252,8 @@ CODECONTENTLINEMIDDLE3 end{LINEWHITESPACE}?[^\ \t\n\r\f#][^\n\r\f]*
 "rule"                    { return RULE; }
 "when"                    { return WHEN; }
 "$"{IDENTIFIER}           { return RULE_PLACEHOLDER; }
-"true"                    { return TRUE; }
-"false"                   { return FALSE; }
+"true"                    { return TRUE_; }
+"false"                   { return FALSE_; }
 "rewrite"                 { return REWRITE; }
 "into"                    { return INTO; }
 

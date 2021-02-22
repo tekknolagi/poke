@@ -1,7 +1,7 @@
 /* Jitter: Bison parser.
 
    Copyright (C) 2016, 2017, 2018, 2020 Luca Saiu
-   Updated in 2019 by Luca Saiu
+   Updated in 2019 and 2021 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -264,7 +264,11 @@ jitterc_parse_file (const char *input_file_name, bool generate_line);
 %token INSTRUCTION_BEGINNING_C INSTRUCTION_END_C
 %token BARE_ARGUMENT IDENTIFIER WRAPPED_FUNCTIONS WRAPPED_GLOBALS
 %token INSTRUCTION OPEN_PAREN CLOSE_PAREN COMMA SEMICOLON IN OUT
-%token RULE WHEN REWRITE INTO TRUE FALSE RULE_PLACEHOLDER
+/* Some obscure configurations predefine TRUE and FALSE as CPP macros, which is
+   why I have to append an underscore here.  Yes, these also turn into CPP
+   macros, which is questionable but probably required for Yacc
+   compatibility. */
+%token RULE WHEN REWRITE INTO TRUE_ FALSE_ RULE_PLACEHOLDER
 %token HOT COLD RELOCATABLE NON_RELOCATABLE CALLER CALLEE
 %token COMMUTATIVE NON_COMMUTATIVE TWO_OPERANDS
 %token REGISTER_CLASS FAST_REGISTER_NO REGISTER_OR_STACK_LETTER
@@ -528,9 +532,9 @@ rule_expressions_one_or_more:
 ;
 
 rule_expression:
-  TRUE
+  TRUE_
   { $$ = jitterc_make_template_expression_boolean (true, JITTERC_LINENO); }
-| FALSE
+| FALSE_
   { $$ = jitterc_make_template_expression_boolean (false, JITTERC_LINENO); }
 | literal
   { union jitter_word w = { .fixnum = $1 };
