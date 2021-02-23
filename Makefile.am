@@ -70,6 +70,7 @@ dist_man1_MANS =
 dist_template_DATA =
 info_TEXINFOS =
 jitterinclude_HEADERS =
+nodist_jitterinclude_HEADERS =
 jittermachineinclude_HEADERS =
 noinst_PROGRAMS =
 
@@ -540,7 +541,6 @@ EXTRA_DIST += $(JITTER_TEMPLATES)
 # architectures" below.
 SOURCES_FOR_LIBJITTER = \
   jitter/jitter.c jitter/jitter.h \
-  jitter/jitter-config.h \
   jitter/jitter-c-compiler-version.h \
   jitter/jitter-instruction.c jitter/jitter-instruction.h \
   jitter/jitter-mutable-routine.c jitter/jitter-mutable-routine.h \
@@ -574,7 +574,6 @@ SOURCES_FOR_LIBJITTER = \
 # architectures" below.
 jitterinclude_HEADERS += \
   jitter/jitter.h \
-  jitter/jitter-config.h \
   jitter/jitter-c-compiler-version.h \
   jitter/jitter-data-locations.h \
   jitter/jitter-defect.h \
@@ -599,6 +598,19 @@ jitterinclude_HEADERS += \
   jitter/jitter-stack.h \
   jitter/jitter-vm.h
 
+# The file jitter/jitter-config.h , generated in the build directory, is
+# slightly special, as it needs to be installed but not distributed.
+# Conceptually it would belong with SOURCES_FOR_LIBJITTER_NODIST and
+# jitterinclude_HEADERS , where it not for the nodist property.
+SOURCES_FOR_LIBJITTER_NODIST = \
+  jitter/jitter-config.h
+nodist_jitterinclude_HEADERS += \
+  jitter/jitter-config.h
+# See dist-hook below.
+dist-hook-remove-nodist-sources:
+	chmod u+w $(distdir)/jitter
+	rm -f $(distdir)/jitter/jitter-config.h
+
 # Unconditionally define Jitter runtimes as one partial library per *possible*
 # dispatch, including the ones which are disabled and cannot even compile on the
 # current configuration.  In order for them not to be built automatically,
@@ -616,25 +628,29 @@ jitterinclude_HEADERS += \
 
 # Switch-dispatch libjitter partial library.
 EXTRA_LTLIBRARIES += lib/libjitter--switch--partial.la
-lib_libjitter__switch__partial_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__switch__partial_la_SOURCES = \
+  $(SOURCES_FOR_LIBJITTER) $(SOURCES_FOR_LIBJITTER_NODIST)
 lib_libjitter__switch__partial_la_CPPFLAGS = \
   $(AM_CPPFLAGS) -DJITTER_DISPATCH_SWITCH
 
 # Direct-threading-dispatch libjitter partial library.
 EXTRA_LTLIBRARIES += lib/libjitter--direct-threading--partial.la
-lib_libjitter__direct_threading__partial_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__direct_threading__partial_la_SOURCES = \
+  $(SOURCES_FOR_LIBJITTER) $(SOURCES_FOR_LIBJITTER_NODIST)
 lib_libjitter__direct_threading__partial_la_CPPFLAGS = \
   $(AM_CPPFLAGS) -DJITTER_DISPATCH_DIRECT_THREADING
 
 # Minimal-threading--partial-dispatch libjitter partial library.
 EXTRA_LTLIBRARIES += lib/libjitter--minimal-threading--partial.la
-lib_libjitter__minimal_threading__partial_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__minimal_threading__partial_la_SOURCES = \
+  $(SOURCES_FOR_LIBJITTER) $(SOURCES_FOR_LIBJITTER_NODIST)
 lib_libjitter__minimal_threading__partial_la_CPPFLAGS = \
   $(AM_CPPFLAGS) -DJITTER_DISPATCH_MINIMAL_THREADING
 
 # No-threading--partial-dispatch libjitter partial library.
 EXTRA_LTLIBRARIES += lib/libjitter--no-threading--partial.la
-lib_libjitter__no_threading__partial_la_SOURCES = $(SOURCES_FOR_LIBJITTER)
+lib_libjitter__no_threading__partial_la_SOURCES = \
+  $(SOURCES_FOR_LIBJITTER) $(SOURCES_FOR_LIBJITTER_NODIST)
 lib_libjitter__no_threading__partial_la_CPPFLAGS = \
   $(AM_CPPFLAGS) -DJITTER_DISPATCH_NO_THREADING
 
@@ -2090,6 +2106,7 @@ endif # JITTER_SUBPACKAGE
 # I like to keep different dist-hook s separate.
 dist-hook: dist-hook-git-versioning \
            dist-hook-changelog \
+           dist-hook-remove-nodist-sources \
            generated-c-files
 
 
