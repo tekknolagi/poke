@@ -2261,9 +2261,6 @@ check_SCRIPTS += \
 clean-local:
 	rm -r -f "$(builddir)/example-vms/*/*.$(OBJEXT)"
 	rm -r -f $(EXTRA_PROGRAMS) $(EXTRA_LTLIBRARIES) $(noinst_DATA)
-	rm -r -f $(GENERATED_C_FILES_FOR_UNINSPIRED)
-	rm -r -f $(GENERATED_C_FILES_FOR_STRUCTURED)
-	rm -r -f $(GENERATED_C_FILES_FOR_JITTERLISP)
 	rm -f uninspired--*.[si]
 	rm -f tests/*/*.log
 	rm -f tests/*/*.tmp
@@ -2279,14 +2276,17 @@ clean-local:
 # All the man pages in Jitter are machine-generated, and they should be removed
 # at distclean time.
 distclean-local:
-	rm -rf flags
 	rm -f $(dist_man1_MANS)
+	rm -rf flags
 	@echo 'the distclean rule failing in gnulib-local is benign'
 	$(MAKE) -C gnulib-local distclean || true
 
 # The maintainer-clean target should remove built sources, from both the build
 # and the source directories.
 maintainer-clean-local:
+	rm -f $(GENERATED_C_FILES_FOR_UNINSPIRED)
+	rm -f $(GENERATED_C_FILES_FOR_STRUCTURED)
+	rm -f $(GENERATED_C_FILES_FOR_JITTERLISP)
 	rm -f $(DEBUG_ASSEMBLY_FILES)
 	(cd "$(srcdir)"; rm -f $(BUILT_SOURCES) $(JITTER_GENERATED_FILES))
 	@echo 'the maintainer-clean rule failing in gnulib-local is benign'
