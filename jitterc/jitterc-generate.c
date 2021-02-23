@@ -1,6 +1,7 @@
 /* Jitter: generator implementation.
 
    Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
+   Updated in 2021 by Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -3222,6 +3223,7 @@ jitterc_emit_executor_main_function
   /* EMIT("     in memory rather than in a register, so as not to waste one register on this. *\/\n"); */
   /* EMIT("  volatile union jitter_word jitter_anywhere_variable __attribute__ ((unused));\n\n"); */
 
+  EMIT("#ifdef JITTER_REPLICATE\n");
   EMIT("  /* Save an instruction address within this function, to jump to at VM exit\n");
   EMIT("     time; that way we can be sure that at exit time we are back to\n");
   EMIT("     non-replicated code, and stuff like PC-relative addressing work again\n");
@@ -3234,6 +3236,7 @@ jitterc_emit_executor_main_function
   EMIT("  volatile typeof (&& jitter_exit_vm_label) restrict\n");
   EMIT("  jitter_saved_exit_non_replicated_code_pointer = &&jitter_exit_vm_label;\n");
   EMIT("  JITTER_MARK_MEMORY_AS_SET_BY_ASSEMBLY(jitter_saved_exit_non_replicated_code_pointer);\n");
+  EMIT("#endif // #ifdef JITTER_REPLICATE\n");
   EMIT("\n\n");
 
   // FIXME: move to a new function: BEGIN
