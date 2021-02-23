@@ -2051,10 +2051,12 @@ JITTER_GITLOG_TO_CHANGELOG_FLAGS = \
 # is.
 if JITTER_BUILDING_FROM_GIT
   dist-hook-changelog:
-	(cd "$(top_srcdir)" \
+	((cd "$(top_srcdir)" \
            && ./build-aux/gitlog-to-changelog \
                  $(JITTER_GITLOG_TO_CHANGELOG_FLAGS) \
-                 > ChangeLog)
+                 > ChangeLog) \
+         && chmod u+w "$(top_distdir)" \
+         && cp "$(top_srcdir)/ChangeLog" "$(top_distdir)/")
 else
   dist-hook-changelog:
 	@echo "Not rebuilding $(top_srcdir)/ChangeLog: no git log"
