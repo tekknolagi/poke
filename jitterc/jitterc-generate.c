@@ -1,7 +1,6 @@
 /* Jitter: generator implementation.
 
-   Copyright (C) 2017, 2018, 2019, 2020 Luca Saiu
-   Updated in 2021 by Luca Saiu
+   Copyright (C) 2017, 2018, 2019, 2020, 2021 Luca Saiu
    Written by Luca Saiu
 
    This file is part of Jitter.
@@ -621,11 +620,16 @@ jitterc_emit_specialized_instruction_fast_label_bitmasks (const struct jitterc_v
  * ************************************************************************** */
 
 /* Emit a #line directive referring the Jitter VM specification source file,
-   unless #line-generation was disabled. */
+   unless #line-generation was disabled and unless enable_hash_line is false.
+   Rationale: according to the C Standard # preprocessor directives must not
+   appear within macro arguments, and the enable_hash_line argument provides an
+   easy way of disabling #line directives in such contexts, without having
+   explicit conditionals in callers. */
 static void
-jitterc_emit_hash_line (FILE *f, const struct jitterc_vm *vm, int line_no)
+jitterc_emit_hash_line (FILE *f, const struct jitterc_vm *vm, int line_no,
+                        bool enable_hash_line)
 {
-  if (vm->generate_line)                                                   \
+  if (vm->generate_line && enable_hash_line)
     EMIT("#line %i \"%s\"\n", line_no, vm->source_file_name);
 }
 
@@ -786,17 +790,19 @@ jitterc_emit_worst_case_defect_table (const struct jitterc_vm *vm)
    evaluate_to_literal is true, otherwise it evaluates to an instruction
    argument.  This is to be used both in rules bodies for instantiating template
    expression and within a condition for evaluating a rule guard -- but the
-   output is not a condition. */
+   output is not a condition.
+   About enable_hash_line, see the comment before jitterc_emit_hash_line .  */
 static void
 jitterc_emit_rewrite_rule_template_expression
    (FILE *f,
     const struct jitterc_vm *vm,
     const struct jitterc_template_expression *te,
-    bool evaluate_to_literal)
+    bool evaluate_to_literal,
+    bool enable_hash_line)
 {
   /* Generate a #line directive for the template expression, indepdendently from
      its shape. */
-  jitterc_emit_hash_line(f, vm, te->line_no);
+  jitterc_emit_hash_line(f, vm, te->line_no, enable_hash_line);
 
   /* Generate different code according to the AST case. */
   switch (te->case_)
@@ -840,7 +846,8 @@ jitterc_emit_rewrite_rule_template_expression
               = gl_list_get_at (te->operand_expressions, i);
             bool literal_expected = true; // FIXME: compute it for real.
             jitterc_emit_rewrite_rule_template_expression (f, vm, oe,
-                                                           literal_expected);
+                                                           literal_expected,
+                                                           false);
             EMIT("                                %s\n", comma);
           }
         EMIT("                               )\n");
@@ -867,7 +874,7 @@ jitterc_emit_rewrite_rule_argument_condition
 {
   /* Generate a #line directive for the argument pattern, indepdendently from
      its shape. */
-  jitterc_emit_hash_line(f, vm, ap->line_no);
+  jitterc_emit_hash_line(f, vm, ap->line_no, true);
 
   /* If the argument pattern specifies a literal, check that it matches.  This
      is a good check to make first, as it will fail frequently.  This check also
@@ -924,7 +931,7 @@ jitterc_emit_rewrite_rule_condition (FILE *f, const struct jitterc_vm *vm,
         = gl_list_get_at (rule->in_instruction_patterns, i);
       char *opcode = ip->instruction_name;
       char *mangled_opcode = jitterc_mangle (opcode);
-      jitterc_emit_hash_line(f, vm, ip->line_no);
+      jitterc_emit_hash_line(f, vm, ip->line_no, true);
       EMIT("    JITTER_RULE_CONDITION_MATCH_OPCODE(%i, %s)\n",
            i, mangled_opcode);
       free (mangled_opcode);
@@ -950,7 +957,8 @@ jitterc_emit_rewrite_rule_condition (FILE *f, const struct jitterc_vm *vm,
      as well the condition is satisfied. */
   EMIT("    /* Rule guard. */\n");
   EMIT("    JITTER_RULE_CONDITION(\n");
-  jitterc_emit_rewrite_rule_template_expression (f, vm, rule->guard, true);
+  jitterc_emit_rewrite_rule_template_expression (f, vm, rule->guard, true,
+                                                 false);
   EMIT("                         )\n");
 }
 
@@ -963,7 +971,7 @@ jitterc_emit_rewrite_rule_instruction_template
     const struct jitterc_instruction_template *it)
 {
   /* Emit a #line directive for the instruction template. */
-  jitterc_emit_hash_line(f, vm, it->line_no);
+  jitterc_emit_hash_line(f, vm, it->line_no, true);
 
   /* Emit code to add the opcode. */
   EMIT("    //fprintf (stderr, \"    rewrite: adding instruction %s\\n\");\n",
@@ -984,7 +992,7 @@ jitterc_emit_rewrite_rule_instruction_template
       // FIXME: make a rewriting-specific macro instead of using
       // jitter_mutable_routine_append_parameter_copy ?
       EMIT("    jitter_mutable_routine_append_parameter_copy (jitter_mutable_routine_p,\n");
-      jitterc_emit_rewrite_rule_template_expression (f, vm, ae, false);
+      jitterc_emit_rewrite_rule_template_expression (f, vm, ae, false, true);
       EMIT("                                 );\n");
     }
 }
@@ -1001,7 +1009,7 @@ jitterc_emit_rewrite_rule (FILE *f, const struct jitterc_vm *vm,
   int head_size = gl_list_size (rule->in_instruction_patterns);
 
   /* Open the rule section. */
-  jitterc_emit_hash_line(f, vm, rule->line_no);
+  jitterc_emit_hash_line(f, vm, rule->line_no, true);
   EMIT("JITTER_RULE_BEGIN(%i)\n", head_size);
 
   /* Emit the placeholder declaration section. */
