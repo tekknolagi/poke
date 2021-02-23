@@ -750,6 +750,32 @@ if test "x$ac_cv_have_gnu_c_computed_goto" = "xyes"; then
             [Define if the compiler supports GNU C's computed goto .])
 fi
 
+# Check for (GNU C) label address difference constantness.
+AC_CACHE_CHECK([for GNU label address differences being constant],
+  [ac_cv_have_gnu_c_constant_label_difference],
+  [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM(
+        [],
+        [[  goto * && somewhere_else_again;
+            static int difference = && there - && somewhere_else_again;
+          there:
+            return 0;
+          elsewhere:
+            return 1;
+          somewhere_else_again:
+            return difference;
+            ]])],
+     [ac_cv_have_gnu_c_constant_label_difference=yes],
+     [ac_cv_have_gnu_c_constant_label_difference=no])])
+if test "x$ac_cv_have_gnu_c_constant_label_difference" = "xyes"; then
+  AC_DEFINE([JITTER_HAVE_GNU_C_CONSTANT_LABEL_DIFFERENCE], [1],
+            [Define if the compiler supports GNU C's computed goto and the
+             difference between two label addresses (in the same function) is
+             a constant expression; unfortunately some compilers support GNU
+             C's computed goto without label address differences being
+             constant.])
+fi
+
 # Check for alignas.
 AC_CACHE_CHECK([for alignas], [ac_cv_have_alignas],
   [AC_COMPILE_IFELSE(
@@ -1710,11 +1736,14 @@ AC_MSG_RESULT([$jitter_enable_dispatch_switch$jitter_subpackage_disclaimer])
 # Is the direct-threading dispatch enabled?  Check the default and the configure
 # command-line option.
 AC_MSG_CHECKING([if direct-threading dispatch is enabled])
-default=$(test "x$ac_cv_have_gnu_c_computed_goto" = "xyes" && echo yes || echo no)
+default=$(test "x$ac_cv_have_gnu_c_computed_goto" = 'xyes' \
+          && test "x$ac_cv_have_gnu_c_constant_label_difference" = 'xyes' \
+          && echo yes || echo no)
 AC_ARG_ENABLE([dispatch-direct-threading],
               AS_HELP_STRING([--enable-dispatch-direct-threading],
               [enable direct-threading dispatch: default yes if and
-only if the compiler supports computed goto]),
+only if the compiler supports GNU C computed goto and (same-function) label
+address differences are constant expressions]),
               jitter_enable_dispatch_direct_threading="$enableval",
               jitter_enable_dispatch_direct_threading="$default")
 if test "x$jitter_enable_dispatch_direct_threading" = "xyes"; then

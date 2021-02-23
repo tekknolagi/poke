@@ -307,6 +307,11 @@
 /* Define if the language supports computed goto in the style of GNU C. */
 #undef JITTER_HAVE_GNU_C_COMPUTED_GOTO
 
+/* Define if the language supports computed goto in the style of GNU C and the
+   difference between the addresses of two labels (in the same function) is a
+   constant expression. */
+#undef JITTER_HAVE_GNU_C_CONSTANT_LABEL_DIFFERENCE
+
 /* Define if the language supports GNU C's inline asm, including the modern
    syntax for named operands. */
 #undef JITTER_HAVE_GNU_C_INLINE_ASM
