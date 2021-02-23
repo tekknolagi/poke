@@ -1,7 +1,7 @@
 ## This is an -*- Autoconf -*- file to be processed with autoconf
 ## to obtain a configure script.
 
-## Copyright (C) 2016, 2017, 2018, 2019, 2020 Luca Saiu
+## Copyright (C) 2016, 2017, 2018, 2019, 2020, 2021 Luca Saiu
 ## Written by Luca Saiu
 
 ## This file is part of Jitter.
@@ -2504,8 +2504,11 @@ fi
 
 # Define an Automake conditional telling whether we're building from git.
 # This is useful to decide whether to rebuild the ChangeLog file on dist.
+# Notice that when a sub-package Jitter exists in a subdirectory of a
+# super-package as a git submodule the $srcdir/.git object exists but is a
+# *file* instead of a directory.
 AM_CONDITIONAL([JITTER_BUILDING_FROM_GIT],
-               [test -d "$srcdir/.git"])
+               [test -d "$srcdir/.git" || test -f "$srcdir/.git"])
 
 
 # Define non-colliding alternatives to Autoconf feature macros.
