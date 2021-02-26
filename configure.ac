@@ -233,6 +233,18 @@ if test "x$JITTER_SUBPACKAGE" != 'x'; then
     AC_ENABLE_SHARED
 fi
 
+# Define a substitution holding the relative path of the sub-package directory.
+# This is intended for Makefile.am .
+# The value of the substitution is a directory name, to be used as a relative
+# path from the top super-package source, build or dist directory.
+#
+# In non-sub-package mode this will be defined as an empty string.
+#
+# FIXME: sub-sub-packages, or sub-packages at any depth different from 1, are
+# not supported.  The desired semantics is not completely clear, particularly
+# for packages not using Jitter's autoconf machineary at every embedding level.
+AC_SUBST([JITTER_SUBPACKAGE_SUBDIRECTORY], [$JITTER_SUBPACKAGE])
+
 # Define an Automake conditional.
 AM_CONDITIONAL([JITTER_SUBPACKAGE],
                [test "x$JITTER_SUBPACKAGE" != 'x'])

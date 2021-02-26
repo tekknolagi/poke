@@ -608,8 +608,8 @@ nodist_jitterinclude_HEADERS += \
   jitter/jitter-config.h
 # See dist-hook below.
 dist-hook-remove-nodist-sources:
-	chmod u+w $(distdir)/jitter
-	rm -f $(distdir)/jitter/jitter-config.h
+	chmod u+w "$(distdir)"/jitter
+	rm -f "$(distdir)"/jitter/jitter-config.h
 
 # Unconditionally define Jitter runtimes as one partial library per *possible*
 # dispatch, including the ones which are disabled and cannot even compile on the
@@ -2036,7 +2036,8 @@ $(top_srcdir)/.version:
 # Write a .tarball-version file into the dist directory (to be run before making
 # a tarball).
 dist-hook-git-versioning:
-	echo $(VERSION) > $(distdir)/.tarball-version
+	chmod u+w "$(distdir)" \
+	  && echo $(VERSION) > "$(distdir)"/.tarball-version
 
 
 # ChangeLog generation.
@@ -2050,23 +2051,24 @@ JITTER_GITLOG_TO_CHANGELOG_FLAGS = \
 # but only if we are actually building from git.  If not keep ChangeLog as it
 # is.
 if JITTER_BUILDING_FROM_GIT
-  dist-hook-changelog:
-	((cd "$(top_srcdir)" \
-           && ./build-aux/gitlog-to-changelog \
-                 $(JITTER_GITLOG_TO_CHANGELOG_FLAGS) \
-                 > ChangeLog) \
-         && chmod u+w "$(top_distdir)" \
-         && cp "$(top_srcdir)/ChangeLog" "$(top_distdir)/")
+  regenerate-changelog:
+	(cd "$(top_srcdir)" \
+          && ./build-aux/gitlog-to-changelog \
+                $(JITTER_GITLOG_TO_CHANGELOG_FLAGS) > ChangeLog)
 else
-  dist-hook-changelog:
+  regenerate-changelog:
 	@echo "Not rebuilding $(top_srcdir)/ChangeLog: no git log"
 endif # if JITTER_BUILDING_FROM_GIT
 
-# These rules are convenient aliases for the user to call interactively, in
-# order to manually regenerate the ChangeLog file.  They never fire because of
-# build dependencies.
-ChangeLog: dist-hook-changelog
-changelog: ChangeLog
+# This rule is a convenient alias for the user to call interactively in order
+# to manually regenerate the ChangeLog file.
+changelog: regenerate-changelog
+
+# Replace the ChangeLog file in the distribution directory with a freshly
+# generated one.
+dist-hook-changelog: regenerate-changelog
+	chmod u+w "$(distdir)" "$(distdir)"/ChangeLog \
+          && cp "$(top_srcdir)/ChangeLog" "$(distdir)"
 
 
 # Installation.
