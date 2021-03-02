@@ -1,3 +1,7 @@
+2021-03-02  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* doc/poke.texi (Padding and Alignment): New section.
+
 2021-02-28  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* libpoke/pkl-typify.c (CASE_INTEGRAL): Emit a compilation error
