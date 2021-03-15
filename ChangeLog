@@ -1,3 +1,14 @@
+2021-03-15  Egeyar Bagcioglu  <egeyar@gmail.com>
+
+	* doc/poke.texi: Remove IOS_F_TRUNCATE.
+	* etc/poke-mode.el: Likewise.
+	* etc/poke.vim: Likewise.
+	* libpoke/ios-dev-file.c (ios_dev_file_open): Likewise.
+	* libpoke/ios-dev-nbd.c (ios_dev_nbd_open): Likewise.
+	* libpoke/libpoke.h: Likewise.
+	* libpoke/ios.h: Likewise.
+	* libpoke/pkl-rt.pk: Likewise.
+
 2021-03-13  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* libpoke/pkl-tab.y (struct_type_field): Adapt to

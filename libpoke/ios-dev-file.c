@@ -76,9 +76,7 @@ ios_dev_file_open (const char *handler, uint64_t flags, void **dev)
       else if (flags_mode == (IOS_F_READ | IOS_F_WRITE))
         mode = "r+b";
       else if (flags_mode == (IOS_F_READ | IOS_F_WRITE | IOS_F_CREATE)
-               || flags_mode == (IOS_F_READ | IOS_F_WRITE | IOS_F_TRUNCATE)
-               || flags_mode == (IOS_F_WRITE | IOS_F_CREATE)
-               || flags_mode == (IOS_F_WRITE | IOS_F_TRUNCATE))
+               || flags_mode == (IOS_F_WRITE | IOS_F_CREATE))
         mode = "w+b";
       else
           return IOD_EFLAGS;

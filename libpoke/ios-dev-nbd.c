@@ -71,13 +71,6 @@ ios_dev_nbd_open (const char *handler, uint64_t flags, void **dev)
   int err = IOD_ERROR;
   int64_t size;
 
-  /* We don't permit truncation.  */
-  if (flags_mode & IOS_F_TRUNCATE)
-    {
-      err = IOD_EFLAGS;
-      goto err;
-    }
-
   /* We have to connect before we know if server permits writes.  */
   nbd = nbd_create ();
   if (nbd == NULL)
