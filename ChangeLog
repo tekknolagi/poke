@@ -1,3 +1,8 @@
+2021-03-24  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* pickles/leb128.pk: Fix method `value' for both LEB128 and
+	ULEB128.
+
 2021-03-21  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* configure.ac: Update version to 1.1.
