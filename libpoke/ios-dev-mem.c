@@ -68,7 +68,7 @@ ios_dev_mem_open (const char *handler, uint64_t flags, void **dev)
     }
 
   mio->size = MEM_STEP;
-  mio->flags = flags;
+  mio->flags = IOS_F_READ | IOS_F_WRITE;
 
   *dev = mio;
   return IOD_OK;
