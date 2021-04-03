@@ -1,5 +1,7 @@
 2021-04-03  Jose E. Marchesi  <jemarch@gnu.org>
 
+2021-04-03  Jose E. Marchesi  <jemarch@gnu.org>
+
 	* libpoke/pkl-trans.h (struct pkl_trans_payload): Add endianness
 	stack.
 	(pkl_trans_init_payload): Initialize endian.
@@ -25,6 +27,7 @@
 	* testsuite/poke.map/maps-structs-endian-11.pk: Likewise.
 	* testsuite/poke.pkl/struct-types-endian-diag-1.pk: Remove test.
 	* testsuite/poke.pkl/struct-types-endian-diag-2.pk: Likewise.
+	* testsuite/Makefile.am (EXTRA_DIST): Update.
 
 2021-04-01  Jose E. Marchesi  <jemarch@gnu.org>
 
