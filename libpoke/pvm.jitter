@@ -2429,6 +2429,48 @@ instruction addlu ()
   end
 end
 
+# Instruction: addb
+#
+# Push the result of adding the two signed bigs at the top of
+# the stack.
+#
+# Stack: ( BIG BIG -- BIG BIG BIG )
+
+instruction addb ()
+  branching # because of PVM_RAISE_DIRECT
+  code
+    pvm_val op1 = JITTER_UNDER_TOP_STACK ();
+    pvm_val op2 = JITTER_TOP_STACK ();
+    mpz_t res;
+
+    /* XXX handle signed overflow.  */
+    mpz_add (res, PVM_VAL_BIG (op1), PVM_VAL_BIG (op2));
+    /* XXX truncate result to size.  */
+    JITTER_PUSH_STACK (PVM_MAKE_BIG (res, PVM_VAL_BIG_SIZE (op1)));
+  end
+end
+
+# Instruction: addbu
+#
+# Push the result of adding the two unsigned bigs at the top of
+# the stack.
+#
+# Stack: ( UBIG UBIG -- UBIG UBIG UBIG )
+
+instruction addbu ()
+  branching # because of PVM_RAISE_DIRECT
+  code
+    pvm_val op1 = JITTER_UNDER_TOP_STACK ();
+    pvm_val op2 = JITTER_TOP_STACK ();
+    mpz_t res;
+
+    /* XXX handle signed overflow.  */
+    mpz_add (res, PVM_VAL_UBIG (op1), PVM_VAL_UBIG (op2));
+    /* XXX truncate result to size.  */
+    JITTER_PUSH_STACK (PVM_MAKE_UBIG (res, PVM_VAL_UBIG_SIZE (op1)));
+  end
+end
+
 # Instruction: subi
 #
 # Push the result of subtracting the two integers at the top of

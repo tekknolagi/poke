@@ -1,4 +1,11 @@
-2021-04-05  Jose E. Marchesi  <jemarch@gnu.org>
+2021-04-05  Jose E. Marchesi  <jemarch@gnu.org>,
+
+	* libpoke/pkl-insn.def: new instructions PKL_INSN_ADDB and
+	PKL_INSN_ADDBU.
+	* libpoke/pvm.jitter (addb): New instruction.
+	(addbu): Likewise.
+
+2021-04-05  Jose E. Marchesi  <jemarch@gnu.org>,
 
 	* libpoke/pvm-val.h (PVM_MAKE_BIG): Fix definition.
 	(PVM_MAKE_UBIG): Likewise.
