@@ -1,5 +1,13 @@
 2021-04-05  Jose E. Marchesi  <jemarch@termi>
 
+	* libpoke/pvm-alloc.c (pvm_alloc_mpz): New function.
+	(pvm_gmp_alloc): Likewise.
+	(pvm_gmp_realloc): Likewise.
+	(pvm_gmp_free): Likewise.
+	* libpoke/pvm-val.h (PVM_MAKE_BIG_UBIG): Use pvm_alloc_mpz.
+
+2021-04-05  Jose E. Marchesi  <jemarch@termi>
+
 	* libpoke/pvm-val.h (PVM_MAKE_BIG_UBIG): Define.
 	(PVM_MAKE_BIG): Likewise.
 	(PVM_MAKE_UBIG): Likewise.

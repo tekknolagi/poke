@@ -21,6 +21,7 @@
 
 #include <config.h>
 #include <gc.h>
+#include <gmp.h>
 
 /* This file provides memory allocation services to the PVM code.  */
 
@@ -53,6 +54,10 @@ void *pvm_alloc (size_t size)
 void *pvm_realloc (void *ptr, size_t size)
   __attribute__ ((malloc))
   __attribute__ ((alloc_size (2)));
+
+/* Allocate and initialize a GMP mpz value.  */
+
+void pvm_alloc_mpz (mpz_t *mpz_ptr);
 
 /* Allocate a pvm_cls struct and return a pointer to the allocated
    memory.  This type-specific allocator is needed because the GC

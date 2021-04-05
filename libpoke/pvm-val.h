@@ -145,8 +145,8 @@ struct pvm_big
 #define PVM_MAKE_BIG_UBIG(V,S,T)                                 \
   ({ struct pvm_big *big = pvm_alloc (sizeof (struct pvm_big));  \
     big->size = (S);                                             \
-    /* XXX mpz_init_set should use PVM_ALLOC */                  \
-    mpz_init_set (big->mpz, (V));                                \
+    pvm_alloc_mpz (&big->mpz);                                   \
+    mpz_set (big->mpz, (V));                                     \
     ((uint64_t) (uintptr_t) big) | (T); })
 
 #define PVM_MAKE_BIG(V,S) \

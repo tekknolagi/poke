@@ -86,3 +86,42 @@ pvm_alloc_remove_gc_roots (void *pointer, size_t nelems)
   GC_remove_roots (pointer,
                    ((char*) pointer) + sizeof (void*) * nelems);
 }
+
+static void *
+pvm_gmp_alloc (size_t size)
+{
+  return GC_MALLOC (size);
+}
+
+void *
+pvm_gmp_realloc (void *ptr, size_t old_size, size_t new_size)
+{
+  return GC_REALLOC (ptr, new_size);
+}
+
+void
+pvm_gmp_free (void *ptr, size_t size)
+{
+  /* Do nothing here, as the memory is GCed.  */
+}
+
+void
+pvm_alloc_mpz (mpz_t *mpz_ptr)
+{
+  /* Note that the GMP manual says there is no way to handle an
+     out-of-memory condition, other than aborting the executing
+     program.  */
+
+  void *(*alloc_fn_back) (size_t);
+  void *(*realloc_fn_back) (void *, size_t, size_t);
+  void (*free_fn_back) (void *, size_t);
+
+  mp_get_memory_functions (&alloc_fn_back, &realloc_fn_back,
+                           &free_fn_back);
+  mp_set_memory_functions (pvm_gmp_alloc,
+                           pvm_gmp_realloc,
+                           pvm_gmp_free);
+  mpz_init (*mpz_ptr);
+  mp_set_memory_functions (alloc_fn_back, realloc_fn_back,
+                           free_fn_back);
+}
