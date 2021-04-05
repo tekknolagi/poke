@@ -150,9 +150,9 @@ struct pvm_big
     ((uint64_t) (uintptr_t) big) | (T); })
 
 #define PVM_MAKE_BIG(V,S) \
-  (PVM_MAKE_BIG_UBIG ((V), (S), PVM_VAL_TAG_BIG)
+  (PVM_MAKE_BIG_UBIG ((V), (S), PVM_VAL_TAG_BIG))
 #define PVM_MAKE_UBIG(V,S) \
-  (PVM_MAKE_BIG_UBIG ((V), (S), PVM_VAL_TAG_UBIG)
+  (PVM_MAKE_BIG_UBIG ((V), (S), PVM_VAL_TAG_UBIG))
 
 #define PVM_VAL_BIG(V)                                          \
   (((struct pvm_big *) ((((uintptr_t) V) & ~0x7)))->mpz)

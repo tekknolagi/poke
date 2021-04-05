@@ -1,3 +1,12 @@
+2021-04-05  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* libpoke/pvm-val.h (PVM_MAKE_BIG): Fix definition.
+	(PVM_MAKE_UBIG): Likewise.
+	* libpoke/pkl-insn.def: New instructions PKL_INSN_NEGB and
+	PKL_INSN_NEGBU.
+	* libpoke/pvm.jitter (negb): New instruction.
+	(negbu): Likewise.
+
 2021-04-05  Jose E. Marchesi  <jemarch@termi>
 
 	* libpoke/pvm-alloc.c (pvm_alloc_mpz): New function.

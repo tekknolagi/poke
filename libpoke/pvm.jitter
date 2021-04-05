@@ -179,6 +179,7 @@ early-c
 #   include <assert.h>
 #   include <time.h>
 #   include <errno.h>
+#   include <gmp.h>
 #   include "xalloc.h"
 #   include "timespec.h"
 #   include "intprops.h"
@@ -2717,6 +2718,38 @@ instruction neglu ()
   branching # because of PVM_RAISE_DIRECT
   code
     PVM_UNOP (ULONG, ULONG, ulong, -);
+  end
+end
+
+# Instruction: negb
+#
+# Push the result of the negation of the big at the top of
+# the stack.
+#
+# Stack; ( BIG -- BIG BIG )
+
+instruction negb ()
+  branching # because of PVM_RAISE_DIRECT
+  code
+    pvm_val op = JITTER_TOP_STACK ();
+    mpz_t res;
+
+    pvm_alloc_mpz (&res);
+    mpz_neg (res, PVM_VAL_BIG (op));
+    JITTER_PUSH_STACK (PVM_MAKE_BIG (res, PVM_VAL_BIG_SIZE (op)));
+  end
+end
+
+# Instruction: negbu
+#
+# Push the result of the negation of the unsigned big at the top of
+# the stack.
+#
+# Stack; ( BIG -- BIG BIG )
+
+instruction negbu ()
+  code
+    JITTER_DUP_STACK ();
   end
 end
 
