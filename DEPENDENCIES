@@ -1,6 +1,16 @@
 The following packages should be installed before GNU poke is installed
 (runtime dependencies that are also build dependencies):
 
+* The GNU Multiprecision Library (GMP)
+
+  + Mandatory.
+    Poke uses GMP in order to provide arbitrarily big integral types
+    and values.
+  + Homepage:
+    https://gmplib.org
+  + Pre-built package name:
+    - On Debian and Debian-based systems: libgmp-dev
+
 * Boehm GC
   + Mandatory.
     Poke uses the Boehm conservative garbage collector for managing the

@@ -194,6 +194,10 @@ case "$HOST_CPU_C_ABI_32BIT" in
   *) ;;
 esac
 
+dnl We require the GMP library.
+
+AC_CHECK_LIB([gmp],[__gmpz_init],[have_gmp=yes],[have_gmp=no])
+
 dnl Use libtextstyle if available.  Otherwise, use the dummy header
 dnl file provided by gnulib's libtextstyle-optional module.
 
@@ -308,6 +312,10 @@ if test "x$gui_enabled" = "xno"; then
 fi
 
 dnl Report errors
+
+if test "x$have_gmp" = "xno"; then
+   AC_MSG_ERROR([can't find the GMP library.  Please install it.])
+fi
 
 if test "x$have_gc" = "xno"; then
    AC_MSG_ERROR([can't find the Boehm GC library.  Please install it.])
