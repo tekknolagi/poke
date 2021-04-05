@@ -24,6 +24,7 @@
 
 #include <config.h>
 #include <stdarg.h>
+#include <gmp.h>
 
 #include "ios.h"
 #include "pkl-compiler.h"
@@ -209,6 +210,13 @@ pvm_val pvm_make_uint (uint32_t value, int size);
 pvm_val pvm_make_long (int64_t value, int size);
 
 pvm_val pvm_make_ulong (uint64_t value, int size);
+
+/* Make signed and unsigned big PVM values.
+   SIZE is measured in bits, and there is no limit for it.  */
+
+pvm_val pvm_make_big (mpz_t mpz, mp_bitcnt_t size);
+
+pvm_val pvm_make_ubig (mpz_t mpz, mp_bitcnt_t size);
 
 /* Make a string PVM value.  */
 

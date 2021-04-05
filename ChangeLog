@@ -1,3 +1,20 @@
+2021-04-05  Jose E. Marchesi  <jemarch@termi>
+
+	* libpoke/pvm-val.h (PVM_MAKE_BIG_UBIG): Define.
+	(PVM_MAKE_BIG): Likewise.
+	(PVM_MAKE_UBIG): Likewise.
+	(PVM_VAL_BIG): Likewise.
+	(PVM_VAL_BIG_SIZE): Likewise.
+	(PVM_VAL_UBIG): Likewise.
+	(PVM_VAL_UBIG_SIZE): Likewise.
+	* libpoke/pvm.h: Prototypes for pvm_make_big and pvm_make_ubig.
+	* libpoke/pvm-val.c (pvm_make_big): New function.
+	(pvm_make_ubig): Likewise.
+	(pvm_val_equal_p): Support for `big' and `ubig' values.
+	(pvm_sizeof): Likewise.
+	(pvm_print_val_1): Likewise.
+	(pvm_typeof): Likewise.
+
 2021-04-05  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* configure.ac: Check for libgmp.

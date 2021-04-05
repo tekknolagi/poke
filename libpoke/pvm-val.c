@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <string.h>
 #include <inttypes.h>
+#include <gmp.h>
 #include "xalloc.h"
 
 #include "pkt.h"
@@ -62,6 +63,18 @@ pvm_val
 pvm_make_ulong (uint64_t value, int size)
 {
   return PVM_MAKE_LONG_ULONG (value, size, PVM_VAL_TAG_ULONG);
+}
+
+pvm_val
+pvm_make_big (mpz_t value, mp_bitcnt_t size)
+{
+  return PVM_MAKE_BIG_UBIG (value, size, PVM_VAL_TAG_BIG);
+}
+
+pvm_val
+pvm_make_ubig (mpz_t value, mp_bitcnt_t size)
+{
+  return PVM_MAKE_BIG_UBIG (value, size, PVM_VAL_TAG_UBIG);
 }
 
 static pvm_val_box
@@ -522,6 +535,10 @@ pvm_val_equal_p (pvm_val val1, pvm_val val2)
   else if (PVM_IS_ULONG (val1) && PVM_IS_ULONG (val2))
     return (PVM_VAL_ULONG_SIZE (val1) == PVM_VAL_ULONG_SIZE (val2))
            && (PVM_VAL_ULONG (val1) == PVM_VAL_ULONG (val2));
+  else if (PVM_IS_BIG (val1) && PVM_IS_BIG (val2))
+    return (mpz_cmp (PVM_VAL_BIG (val1), PVM_VAL_BIG (val2)) == 0);
+  else if (PVM_IS_UBIG (val1) && PVM_IS_UBIG (val2))
+    return (mpz_cmp (PVM_VAL_UBIG (val1), PVM_VAL_UBIG (val2)) == 0);
   else if (PVM_IS_STR (val1) && PVM_IS_STR (val2))
     return STREQ (PVM_VAL_STR (val1), PVM_VAL_STR (val2));
   else if (PVM_IS_OFF (val1) && PVM_IS_OFF (val2))
@@ -840,6 +857,10 @@ pvm_sizeof (pvm_val val)
     return PVM_VAL_LONG_SIZE (val);
   else if (PVM_IS_ULONG (val))
     return PVM_VAL_ULONG_SIZE (val);
+  else if (PVM_IS_BIG (val))
+    return PVM_VAL_BIG_SIZE (val);
+  else if (PVM_IS_UBIG (val))
+    return PVM_VAL_UBIG_SIZE (val);
   else if (PVM_IS_STR (val))
     return (strlen (PVM_VAL_STR (val)) + 1) * 8;
   else if (PVM_IS_ARR (val))
@@ -1168,6 +1189,37 @@ pvm_print_val_1 (pvm vm, int depth, int mode, int base, int indent,
         }
 
       pk_term_end_class ("integer");
+    }
+  else if (PVM_IS_BIG (val) || PVM_IS_UBIG (val))
+    {
+      int ret;
+      char *str, *fmt;
+
+      switch (base)
+        {
+        case 8: fmt = "%Zo"; break;
+        case 10:
+          if (PVM_IS_BIG (val))
+            fmt = "%Zd";
+          else if (PVM_IS_UBIG (val))
+            fmt = "%Zu";
+          break;
+        case 16: fmt = "%Zx"; break;
+        case 2:
+          /* XXX */
+        default:
+          assert (0);
+        }
+
+      ret = gmp_asprintf (&str, fmt,
+                          PVM_IS_BIG (val) ? PVM_VAL_BIG (val) : PVM_VAL_UBIG (val));
+      assert (ret > 0);
+
+      pk_term_class ("integer");
+      pk_puts (str);
+      pk_term_end_class ("integer");
+
+      free (str);
     }
   else if (PVM_IS_STR (val))
     {
@@ -1537,6 +1589,12 @@ pvm_typeof (pvm_val val)
                                    PVM_MAKE_INT (1, 32));
   else if (PVM_IS_ULONG (val))
     type = pvm_make_integral_type (pvm_make_ulong (PVM_VAL_ULONG_SIZE (val), 64),
+                                   PVM_MAKE_INT (0, 32));
+  else if (PVM_IS_BIG (val))
+    type = pvm_make_integral_type (pvm_make_ulong (PVM_VAL_BIG_SIZE (val), 64),
+                                   PVM_MAKE_INT (1, 32));
+  else if (PVM_IS_UBIG (val))
+    type = pvm_make_integral_type (pvm_make_ulong (PVM_VAL_UBIG_SIZE (val), 64),
                                    PVM_MAKE_INT (0, 32));
   else if (PVM_IS_STR (val))
     type = pvm_make_string_type ();

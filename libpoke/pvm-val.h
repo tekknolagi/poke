@@ -21,6 +21,8 @@
 
 #include <config.h>
 #include <stdint.h>
+#include <gmp.h>
+
 #include "pvm-program-point.h"
 
 /* The least-significative bits of pvm_val are reserved for the tag,
@@ -122,10 +124,45 @@
 
 #define PVM_MAX_ULONG(size) ((1LU << (size)) - 1)
 
-/* Big integers, wider than 64-bit, are boxed.  They are implemented
-   using the GNU mp library.  */
+/* Big integers, wider than 64-bit, are boxed.  A pointer
 
-/* XXX: implement big integers.  */
+                                             tag
+                                             ---
+         pppp pppp pppp pppp pppp pppp pppp pttt
+
+   points to a struct pvm_big value, which has the following
+   fields.
+
+   SIZE is the size of the big integer, in bits.
+   MPZ is a GMP multi-precision value.  */
+
+struct pvm_big
+{
+  mp_bitcnt_t size;
+  mpz_t mpz;
+};
+
+#define PVM_MAKE_BIG_UBIG(V,S,T)                                 \
+  ({ struct pvm_big *big = pvm_alloc (sizeof (struct pvm_big));  \
+    big->size = (S);                                             \
+    /* XXX mpz_init_set should use PVM_ALLOC */                  \
+    mpz_init_set (big->mpz, (V));                                \
+    ((uint64_t) (uintptr_t) big) | (T); })
+
+#define PVM_MAKE_BIG(V,S) \
+  (PVM_MAKE_BIG_UBIG ((V), (S), PVM_VAL_TAG_BIG)
+#define PVM_MAKE_UBIG(V,S) \
+  (PVM_MAKE_BIG_UBIG ((V), (S), PVM_VAL_TAG_UBIG)
+
+#define PVM_VAL_BIG(V)                                          \
+  (((struct pvm_big *) ((((uintptr_t) V) & ~0x7)))->mpz)
+#define PVM_VAL_BIG_SIZE(V)                                     \
+  (((struct pvm_big *) ((((uintptr_t) V) & ~0x7)))->size)
+
+#define PVM_VAL_UBIG(V)                                         \
+  (((struct pvm_big *) ((((uintptr_t) V) & ~0x7)))->mpz)
+#define PVM_VAL_UBIG_SIZE(V)                                    \
+  (((struct pvm_big *) ((((uintptr_t) V) & ~0x7)))->size)
 
 /* A pointer to a boxed value is encoded in the most significative 61
    bits of pvm_val (32 bits for 32-bit hosts).  Note that this assumes
@@ -553,6 +590,8 @@ typedef struct pvm_off *pvm_off;
 #define PVM_IS_UINT(V) (PVM_VAL_TAG(V) == PVM_VAL_TAG_UINT)
 #define PVM_IS_LONG(V) (PVM_VAL_TAG(V) == PVM_VAL_TAG_LONG)
 #define PVM_IS_ULONG(V) (PVM_VAL_TAG(V) == PVM_VAL_TAG_ULONG)
+#define PVM_IS_BIG(V) (PVM_VAL_TAG(V) == PVM_VAL_TAG_BIG)
+#define PVM_IS_UBIG(V) (PVM_VAL_TAG(V) == PVM_VAL_TAG_UBIG)
 #define PVM_IS_STR(V)                                                   \
   (PVM_VAL_TAG(V) == PVM_VAL_TAG_BOX                                    \
    && PVM_VAL_BOX_TAG (PVM_VAL_BOX ((V))) == PVM_VAL_TAG_STR)
@@ -575,7 +614,8 @@ typedef struct pvm_off *pvm_off;
 
 #define PVM_IS_INTEGRAL(V)                                      \
   (PVM_IS_INT (V) || PVM_IS_UINT (V)                            \
-   || PVM_IS_LONG (V) || PVM_IS_ULONG (V))
+   || PVM_IS_LONG (V) || PVM_IS_ULONG (V)                       \
+   || PVM_IS_BIG (V) || PVM_IS_UBIG (V))
 
 #define PVM_VAL_INTEGRAL(V)                      \
   (PVM_IS_INT ((V)) ? PVM_VAL_INT ((V))          \
