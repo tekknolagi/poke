@@ -1,3 +1,12 @@
+2021-04-08  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* libpoke/pkl-typify.c (pkl_typify1_ps_cast): Do not allow casting
+	`any' to a function type.
+	* testsuite/poke.pkl/cast-any-to-function-diag-1.pk: New test.
+	* testsuite/Makefile.am (EXTRA_DIST): Add new test.
+	* etc/poke.rec (support casts from `any' to function types): New
+	task.
+
 2021-04-07  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* libpoke/pvm.jitter (popob): Use jitter macros instead of pvm

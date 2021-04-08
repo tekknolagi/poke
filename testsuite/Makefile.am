@@ -760,6 +760,7 @@ EXTRA_DIST = \
   poke.pkl/break-while-1.pk \
   poke.pkl/break-while-2.pk \
   poke.pkl/builtins-1.pk \
+  poke.pkl/cast-any-to-function-diag-1.pk \
   poke.pkl/cast-array-1.pk \
   poke.pkl/cast-array-2.pk \
   poke.pkl/cast-array-3.pk \
