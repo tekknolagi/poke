@@ -995,7 +995,7 @@ ios_read_string (ios io, ios_off offset, int flags, char **value)
           ret = ios_read_uint (io, offset, flags, 8,
                                IOS_ENDIAN_MSB, /* Arbitrary.  */
                                &abyte);
-          if (ret == IOS_EOF)
+          if (ret != IOS_OK)
             goto error;
 
           str[i] = (char) abyte;

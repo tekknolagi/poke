@@ -1,3 +1,10 @@
+2021-05-01  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* libpoke/pkl-tab.y (yyreport_syntax_error): Fix memory leak.
+	* libpoke/ios.c (ios_open): Avoid freeing an uninitialized
+	pointer.
+	(ios_read_string): Fix handling of errors from ios_read_uint.
+
 2021-04-28  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* poke/pk-dump.pk (Pk_Dump_Offset): New type.
