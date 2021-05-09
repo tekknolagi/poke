@@ -160,6 +160,12 @@ struct pk_mi_msg
     struct pk_mi_resp *response;
     struct pk_mi_event *event;
   } data;
+<<<<<<< HEAD
+=======
+
+  int num_args;
+  pk_val *args;
+>>>>>>> 3d5510b4... Added num_args field to pk_mi_msg.
 };
 
 typedef struct pk_mi_msg *pk_mi_msg;
@@ -196,6 +202,7 @@ pk_mi_make_event (enum pk_mi_event_type type)
 {
   pk_mi_event event = malloc (sizeof (struct pk_mi_event));
 
+<<<<<<< HEAD
   if (event)
     {
       PK_MI_EVENT_TYPE (event) = type;
@@ -211,6 +218,10 @@ pk_mi_make_event (enum pk_mi_event_type type)
     }
 
   return event;
+=======
+  PK_MI_MSG_NUM_ARGS (msg) = nargs;
+  PK_MI_MSG_ARGS (msg) = args;
+>>>>>>> 3d5510b4... Added num_args field to pk_mi_msg.
 }
 
 static pk_mi_msg
