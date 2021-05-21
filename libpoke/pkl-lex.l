@@ -269,6 +269,8 @@ S ::
    if (yyextra->bootstrapped) REJECT; return BUILTIN_TERM_GET_BGCOLOR; }
 "__PKL_BUILTIN_TERM_SET_BGCOLOR__" {
    if (yyextra->bootstrapped) REJECT; return BUILTIN_TERM_SET_BGCOLOR; }
+"__PKL_BUILTIN_UNSAFE_STRING_SET__" {
+   if (yyextra->bootstrapped) REJECT; return BUILTIN_UNSAFE_STRING_SET; }
 
 "uint<"         { return UINTCONSTR; }
 "int<"          { return INTCONSTR; }
