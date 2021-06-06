@@ -1,3 +1,13 @@
+2021-06-06  Mohammad-Reza Nabipoor  <mnabipoor@gnu.org>
+
+	* libpoke/pkl-gen.c (pkl_gen_pr_type_function): Add comment.
+	(pkl_gen_pr_type_array): Save computed closure for printer in
+	AST node.
+	(pkl_gen_pr_type_struct): Likewise.
+	* libpoke/pkl-gen.pks (print_boffset): Use escape sequence in string
+	literal to make RAS happy.
+	(struct_printer): s/struct_type/@struct_type/.
+
 2021-06-05  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* configure.ac: Update for 1.3.
