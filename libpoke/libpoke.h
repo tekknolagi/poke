@@ -411,7 +411,7 @@ int pk_defvar (pk_compiler pkc, const char *varname, pk_val val) LIBPOKE_API;
 
    CLS is the closure for the function to call.
 
-   RET is set to the value returned by the function, or to PK_NULL if
+   RET is set to the value returned by the function, or to NULL if
    it is a void function.
 
    A variable number of function arguments follow, terminated by
