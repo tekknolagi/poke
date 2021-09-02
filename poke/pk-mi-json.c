@@ -111,11 +111,11 @@ jerror (int ok, char **out, const char *fmt, ...)
 /* Message::
    {
      "seq"  : integer
-     "type" : MessageType
+     "kind" : MessageKind
      "data" : Request | Response | Event
    }
 
-   MessageType:: ( 0 => request | 1 => response | 2 => event )
+   MessageKind:: ( 0 => request | 1 => response | 2 => event )
 
    Request::
    {
@@ -170,13 +170,13 @@ pk_mi_msg_to_json_object (pk_mi_msg msg)
     json_object_object_add (json, "seq", number);
   }
 
-  /* Add the type.  */
+  /* Add the kind.  */
   {
     json_object *integer = json_object_new_int (msg_type);
 
     if (!integer)
       goto out_of_memory;
-    json_object_object_add (json, "type", integer);
+    json_object_object_add (json, "kind", integer);
   }
 
   /* Add the data.  */
@@ -334,8 +334,8 @@ pk_mi_json_object_to_msg (json_object *json)
     msg_number = json_object_get_int (number);
   }
 
-  /* Get the message type.  */
-  if (!json_object_object_get_ex (json, "type", &obj))
+  /* Get the message kind.  */
+  if (!json_object_object_get_ex (json, "kind", &obj))
     return NULL;
   if (!json_object_is_type (obj, json_type_int))
     return NULL;
