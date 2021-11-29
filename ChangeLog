@@ -1,3 +1,10 @@
+2021-11-29  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* libpoke/pkl-ast.c (pkl_type_append_to): Generate syntactically
+	correct types for functions.
+	* libpoke/pkl-typify.c (pkl_typify1_ps_funcall): Clarify error
+	message.
+
 2021-09-17  Mohammad-Reza Nabipoor  <mnabipoor@gnu.org>
 
 	* testsuite/poke.map/ass-map-21.pk: New test.
