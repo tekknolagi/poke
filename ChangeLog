@@ -1,5 +1,10 @@
 2021-11-30  Jose E. Marchesi  <jemarch@gnu.org>
 
+	* libpoke/pvm.c (pvm_shutdown): Call pvm_val_finalize instead of
+	pvm_val_initialize.
+
+2021-11-30  Jose E. Marchesi  <jemarch@gnu.org>
+
 	* libpoke/pvm-val.c (pvm_array_set): Avoid calculating the size of
 	the remaining elements of the array.
 

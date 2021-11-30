@@ -212,7 +212,7 @@ pvm_shutdown (pvm apvm)
      apvm->pvm_state.pvm_state_backing.jitter_stack_exceptionstack_backing.element_no);
 
   /* Finalize values.  */
-  pvm_val_initialize ();
+  pvm_val_finalize ();
 
   /* Finalize the VM state.  */
   pvm_state_finalize (&apvm->pvm_state);
