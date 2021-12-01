@@ -316,12 +316,12 @@ pk_cmd_set_oacutoff (int argc, struct pk_cmd_arg argv[], uint64_t uflags)
     {
       int cutoff = PK_CMD_ARG_INT (argv[0]);
 
-      if (cutoff < 0 || cutoff > 15)
+      if (cutoff < 0)
         {
           pk_term_class ("error");
           pk_puts (_("error: "));
           pk_term_end_class ("error");
-          pk_puts (_("cutoff should be between 0 and 15\n"));
+          pk_puts (_("cutoff should be bigger than 0\n"));
           return 0;
         }
 
@@ -344,12 +344,12 @@ pk_cmd_set_odepth (int argc, struct pk_cmd_arg argv[], uint64_t uflags)
     {
       int odepth = PK_CMD_ARG_INT (argv[0]);
 
-      if (odepth < 0 || odepth > 15)
+      if (odepth < 0)
         {
           pk_term_class ("error");
           pk_puts (_("error: "));
           pk_term_end_class ("error");
-          pk_puts (_("odepth should be between 0 and 15\n"));
+          pk_puts (_("odepth should be bigger than 0\n"));
           return 0;
         }
 
@@ -372,12 +372,12 @@ pk_cmd_set_oindent (int argc, struct pk_cmd_arg argv[], uint64_t uflags)
     {
       int oindent = PK_CMD_ARG_INT (argv[0]);
 
-      if (oindent < 1 || oindent > 10)
+      if (oindent < 1)
         {
           pk_term_class ("error");
           pk_puts (_("error: "));
           pk_term_end_class ("error");
-          pk_puts (_("oindent should be >=1 and <= 10\n"));
+          pk_puts (_("oindent should be >=1\n"));
           return 0;
         }
 

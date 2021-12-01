@@ -1,5 +1,13 @@
 2021-12-01  Jose E. Marchesi  <jemarch@gnu.org>
 
+	* poke/pk-cmd-set.c (pk_cmd_set_oacutoff): Do not limit the value
+	of oacutoff to 15.
+	(pk_cmd_set_oindent): Ditto for oindent.
+	(pk_cmd_set_odepth): Ditto for odepth.
+	* doc/poke.texi (set command): Update accordingly.
+
+2021-12-01  Jose E. Marchesi  <jemarch@gnu.org>
+
 	* libpoke/pkl-gen.pks (array_constructor): Generate the correct
 	PVM type for the constructed array.
 	* libpoke/pkl-gen.c (pkl_gen_pr_funcall): Likewise for the array
