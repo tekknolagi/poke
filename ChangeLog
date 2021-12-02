@@ -1,3 +1,8 @@
+2021-12-02  Mohammad-Reza Nabipoor  <mnabipoor@gnu.org>
+
+	* libpoke/pvm.jitter (strace): Re-implement using
+	`JITTER_AT_DEPTH_STACK`.
+
 2021-12-01  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* poke/pk-cmd-set.c (pk_cmd_set_oacutoff): Do not limit the value
