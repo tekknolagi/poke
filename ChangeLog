@@ -1,3 +1,11 @@
+2021-12-04  Mohammad-Reza Nabipoor  <mnabipoor@gnu.org>
+
+	* libpoke/pkl-trans.c (pkl_trans1_ps_print_stmt): Add support for
+	`%%` in format string of `printf`.
+	* doc/poke.texi (printf): Update.
+	* testsuite/poke.pkl/printf-36.pk: New test.
+	* testsuite/Makefile.am (EXTRA_DIST): Update.
+
 2021-12-03  Jordan Yelloz  <jordan@yelloz.me>
 
 	* libpoke/std.pk (atoi): Added code that extracts any single leading '+'
