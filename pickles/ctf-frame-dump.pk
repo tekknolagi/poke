@@ -1,0 +1,39 @@
+/* ctf-frame-dump.pk - Utilities for dumping CTF frame information.  */
+
+/* Copyright (C) 2021 Oracle Inc.  */
+
+/* This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/* This file contains routines for dumping out CTF frame information.  */
+
+load "ctf-frame.pk";
+
+/* Dump each function index entry in the CTF frame section.  */
+
+fun ctf_frame_dump_func_index = (CTF_Frame_section ctf_frame) void:
+{
+  var i = 0;
+  for (index in ctf_frame.funcidx)
+    printf ("%u32d:   %v \n", i++, index);
+}
+
+/* Dump CTF frame FREs.  */
+
+fun ctf_frame_dump_fres = (CTF_Frame_section ctf_frame) void:
+{
+  var i = 0;
+  for (fre in ctf_frame.fres)
+    printf ("%u32d:   %v \n", i++, fre);
+}

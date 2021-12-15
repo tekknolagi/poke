@@ -1,0 +1,173 @@
+/* ctf-frame.pk - CTF Frame implementation for GNU poke.  */
+
+/* Copyright (C) 2021 Oracle Inc.  */
+
+/* This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+load elf;
+
+var CTF_FRAME_VERSION_1 = 1;
+
+var CTF_FRAME_MAGIC = 0xdee2;
+var CTF_FRAME_VERSION = CTF_FRAME_VERSION_1;
+/* Various flags for CTF frame section.  */
+var CTF_FRAME_F_IDXSORTED = 0x1;
+
+type CTF_Frame_Preamble =
+  struct 
+  {
+    uint<16> ctfp_magic = CTF_FRAME_MAGIC;
+    byte ctfp_version;
+    byte ctfp_flags;
+
+    method _print = void:
+      {
+	print "#<\n";
+	printf " Magic Number: %v\n", ctfp_magic;
+	printf " Version: %v\n", ctfp_version;
+	printf " Flags: %v\n", ctfp_flags;
+	print ">\n";
+      }
+  };
+
+type CTF_Frame_FuncIndex_Entry =
+  struct
+  {
+    uint<32> func_start_address;
+    offset<uint32,B> func_freoff;
+    uint<32> func_num_fres;
+
+    method _print = void:
+      {
+	print "#<";
+	printf "pc=%u32d," func_start_address;
+	printf "off=%u32d,", func_freoff/#B;
+	printf "num_fres=%u32d", func_num_fres;
+	print ">";
+      }
+  };
+
+var CTF_FRAME_FRE_TYPE_BASIC = 0x0;
+
+type CTF_Frame_Header = 
+  struct
+  {
+    CTF_Frame_Preamble cth_frame_preamble;
+    byte cth_frame_fre_type : cth_frame_fre_type == CTF_FRAME_FRE_TYPE_BASIC;
+    int<8> cth_cfa_bp_loc;
+    int<8> cth_cfa_ra_loc;
+    uint<32> cth_num_fdes; /* For debugging only at this time.  */
+
+    uint<32> cth_num_fres;
+    offset<uint32,B> cth_frelen;
+
+    offset<uint32,B> cth_funcidxoff;
+    offset<uint32,B> cth_freoff;
+
+    method _print = void:
+      {
+	printf "%v", cth_frame_preamble;
+
+	print "#<\n";
+	printf " Function Index Section: %u32d bytes\n", (cth_freoff-cth_funcidxoff)/#B;
+	printf " FRE Section: %u32d bytes\n", cth_frelen/#B;
+	print ">\n";
+      }
+  };
+
+var CTF_FRAME_FRE_OFFSET_1B = 1;
+var CTF_FRAME_FRE_OFFSET_2B = 2;
+var CTF_FRAME_FRE_OFFSET_4B = 4;
+/* At this time, a max of 3 distinct offsets are supported.  */
+var CTF_FRAME_FRE_OFFSET_NUM = 3;
+
+/* A CTF FRE can be SP or BP based.  */
+var CTF_FRAME_BASE_REG_BP = 0;
+var CTF_FRAME_BASE_REG_SP = 1;
+
+type FRE_Info =
+  struct byte
+  {
+    uint<1> unused;
+    uint<2> offset_size : offset_size in [CTF_FRAME_FRE_OFFSET_1B,
+					  CTF_FRAME_FRE_OFFSET_2B,
+					  CTF_FRAME_FRE_OFFSET_4B];
+    uint<4> offset_num : offset_num <= CTF_FRAME_FRE_OFFSET_NUM;
+    uint<1> base_reg_id : base_reg_id in [CTF_FRAME_BASE_REG_BP,
+					  CTF_FRAME_BASE_REG_SP];
+
+    method _print = void:
+      {
+	print "#<";
+//	printf "base_reg=%u1d, ", base_reg_id;
+	printf " num_offsets=%u4d, ", offset_num;
+//	printf " offset_size=%u2d", offset_size;
+	print ">";
+      }
+  };
+
+type CTF_FRE_offset_1B =
+struct
+{
+  int<8> off;
+};
+
+type CTF_FRE_offset_2B =
+struct
+{
+  int<16> off;
+};
+
+type CTF_FRE_offset_4B =
+struct
+{
+  int<32> off;
+};
+
+
+/* CTF FRE.  */
+type CTF_Frame_Record_Entry_Basic =
+  struct
+  {
+    uint<32> fre_start_address;
+    FRE_Info fre_info;
+    union
+    {
+      CTF_FRE_offset_1B[fre_info.offset_num] offsets_1B : fre_info.offset_size == CTF_FRAME_FRE_OFFSET_1B;
+      CTF_FRE_offset_2B[fre_info.offset_num] offsets_2B : fre_info.offset_size == CTF_FRAME_FRE_OFFSET_2B;
+      CTF_FRE_offset_4B[fre_info.offset_num] offsets_4B : fre_info.offset_size == CTF_FRAME_FRE_OFFSET_4B;
+    } offsets;
+
+    method _print = void:
+      {
+	printf "pc=%u32d," fre_start_address;
+	// printf "%v", fre_info;
+      }
+  };
+
+type CTF_Frame_section =
+  struct
+  {
+    CTF_Frame_Header header;
+
+    var func_index_off = OFFSET + header.cth_funcidxoff;
+    var func_index_size = header.cth_freoff - header.cth_funcidxoff;
+    var fre_off = OFFSET + header.cth_freoff;
+    var fre_size = header.cth_frelen;
+
+    CTF_Frame_FuncIndex_Entry[func_index_size] funcidx @ func_index_off;
+    CTF_Frame_Record_Entry_Basic[fre_size] fres @ fre_off;
+  };
+
