@@ -31,15 +31,6 @@ type CTF_Frame_Preamble =
     uint<16> ctfp_magic = CTF_FRAME_MAGIC;
     byte ctfp_version;
     byte ctfp_flags;
-
-    method _print = void:
-      {
-	print "#<\n";
-	printf " Magic Number: %v\n", ctfp_magic;
-	printf " Version: %v\n", ctfp_version;
-	printf " Flags: %v\n", ctfp_flags;
-	print ">\n";
-      }
   };
 
 type CTF_Frame_FuncIndex_Entry =
@@ -48,15 +39,6 @@ type CTF_Frame_FuncIndex_Entry =
     uint<32> func_start_address;
     offset<uint32,B> func_freoff;
     uint<32> func_num_fres;
-
-    method _print = void:
-      {
-	print "#<";
-	printf "pc=%u32d," func_start_address;
-	printf "off=%u32d,", func_freoff/#B;
-	printf "num_fres=%u32d", func_num_fres;
-	print ">";
-      }
   };
 
 var CTF_FRAME_FRE_TYPE_BASIC = 0x0;
@@ -118,25 +100,6 @@ type FRE_Info =
       }
   };
 
-type CTF_FRE_offset_1B =
-struct
-{
-  int<8> off;
-};
-
-type CTF_FRE_offset_2B =
-struct
-{
-  int<16> off;
-};
-
-type CTF_FRE_offset_4B =
-struct
-{
-  int<32> off;
-};
-
-
 /* CTF FRE.  */
 type CTF_Frame_Record_Entry_Basic =
   struct
@@ -145,9 +108,12 @@ type CTF_Frame_Record_Entry_Basic =
     FRE_Info fre_info;
     union
     {
-      CTF_FRE_offset_1B[fre_info.offset_num] offsets_1B : fre_info.offset_size == CTF_FRAME_FRE_OFFSET_1B;
-      CTF_FRE_offset_2B[fre_info.offset_num] offsets_2B : fre_info.offset_size == CTF_FRAME_FRE_OFFSET_2B;
-      CTF_FRE_offset_4B[fre_info.offset_num] offsets_4B : fre_info.offset_size == CTF_FRAME_FRE_OFFSET_4B;
+      int<8>[fre_info.offset_num] offsets_1B
+         : fre_info.offset_size == CTF_FRAME_FRE_OFFSET_1B;
+      int<16>[fre_info.offset_num] offsets_2B
+         : fre_info.offset_size == CTF_FRAME_FRE_OFFSET_2B;
+      int<32>[fre_info.offset_num] offsets_4B
+         : fre_info.offset_size == CTF_FRAME_FRE_OFFSET_4B;
     } offsets;
 
     method _print = void:
