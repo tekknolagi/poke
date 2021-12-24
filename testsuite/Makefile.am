@@ -997,6 +997,7 @@ EXTRA_DIST = \
   poke.pkl/excond-2.pk \
   poke.pkl/excond-3.pk \
   poke.pkl/excond-4.pk \
+  poke.pkl/excond-5.pk \
   poke.pkl/excond-diag-1.pk \
   poke.pkl/field-init-1.pk \
   poke.pkl/field-init-2.pk \
