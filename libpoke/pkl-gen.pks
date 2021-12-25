@@ -1705,6 +1705,39 @@
         return
         .end
 
+;;; RAS_FUNCTION_STRUCT_DEINTEGTRATOR @type_struct
+;;; ( VAL -- VAL )
+;;;
+;;; Assemble a function that, given an integral value, transforms it
+;;; into an equivalent integral struct with the given type.  The
+;;; integral value in the stack should of the same type than the
+;;; integral type of TYPE_STRUCT.
+;;;
+;;; Macro-arguments:
+;;;
+;;; @type_struct is a pkl_ast_node with the type of the struct to
+;;; which convert the integer.
+
+        .function struct_deintegrator @struct_type
+        prolog
+        ;; Create a struct of the given type using the type
+        ;; constructor.  All the fields of the constructed struct
+        ;; will be 0 (or 0#b).
+        push ulong<64>0
+        dup
+        dup
+        push ulong<64>0
+        push ""
+        mktysct
+        mksct
+  .c    PKL_GEN_PUSH_SET_CONTEXT (PKL_GEN_CTX_IN_CONSTRUCTOR);
+  .c    PKL_PASS_SUBPASS (@struct_type);
+  .c    PKL_GEN_POP_CONTEXT;
+                                ; IVAL SCT
+        nip                ; XXX
+        return
+        .end
+
 ;;; RAS_MACRO_COMPLEX_LMAP @type #writer
 ;;; ( VAL IOS BOFF -- )
 ;;;

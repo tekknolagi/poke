@@ -920,6 +920,8 @@ EXTRA_DIST = \
   poke.pkl/defvar-4.pk \
   poke.pkl/defvar-5.pk \
   poke.pkl/defvar-6.pk \
+  poke.pkl/deint-struct-1.pk \
+  poke.pkl/deint-struct-2.pk \
   poke.pkl/div-integers-1.pk \
   poke.pkl/div-integers-2.pk \
   poke.pkl/div-integers-3.pk \

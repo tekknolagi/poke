@@ -1,3 +1,19 @@
+2021-12-25  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* libpoke/pkl-ast.h (PKL_AST_TYPE_S_DEINTEGRATOR): Define.
+	* libpoke/pkl-ast.c (pkl_ast_make_struct_type): Increase the
+	number of closures to 8.
+	(pkl_ast_make_struct_type): Initialize deintegrator to PVM_NULL.
+	* libpoke/pkl-typify.c (pkl_typify1_ps_cast): Allow casts from
+	integral types to integral structs.
+	* libpoke/pkl-promo.c (pkl_promo_ps_cast): New handler.
+	(pkl_phase_promo): Install handler.
+	* libpoke/pkl-gen.c (pkl_gen_pr_decl): Compile deintegrator
+	closures for named struct types.
+	* libpoke/pkl-gen.pks (struct_deintegrator): New function.
+	* testsuite/poke.pkl/deint-struct-1.pk: New test.
+	* testsuite/poke.pkl/deint-struct-2.pk: Likewise.
+
 2021-12-24  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* libpoke/pvm.jitter: Fix docstring for the instruction `pushe'.
