@@ -1,3 +1,12 @@
+2021-12-27  Mohammad-Reza Nabipoor  <mnabipoor@gnu.org>
+
+	* libpoke/pvm.jitter (state-struct-backing-c): Remove `canary` field.
+	Add `canary_{,return,exception}stack` fields.
+	(state-initialization-c): Init new fields.
+	(canary): Install canaries for stacks.
+	(exit): Add assertions for stack canaries.
+	(strace): s/canary/canary_stack/.
+
 2021-12-26  Mohammad-Reza Nabipoor  <mnabipoor@gnu.org>
 
 	* libpoke/pkl-ast.h (struct pkl_ast_return_stmt): Add new field
