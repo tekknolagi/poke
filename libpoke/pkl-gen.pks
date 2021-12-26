@@ -1744,6 +1744,7 @@
         ;; endianness has to be taken into account in order to determine
         ;; which bits to use for each field.  Note that constraint
         ;; expressions must be evaluated during this process.
+        .let @itype = PKL_AST_TYPE_S_ITYPE (@type_struct)
         .let @field
  .c      uint64_t i;
  .c for (i = 0, @field = PKL_AST_TYPE_S_ELEMS (@type_struct);
