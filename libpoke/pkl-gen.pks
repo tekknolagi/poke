@@ -1705,7 +1705,7 @@
         return
         .end
 
-;;; RAS_FUNCTION_STRUCT_DEINTEGTRATOR @type_struct
+;;; RAS_FUNCTION_STRUCT_DEINTEGRATOR @type_struct
 ;;; ( VAL -- VAL )
 ;;;
 ;;; Assemble a function that, given an integral value, transforms it
@@ -1718,23 +1718,48 @@
 ;;; @type_struct is a pkl_ast_node with the type of the struct to
 ;;; which convert the integer.
 
-        .function struct_deintegrator @struct_type
+        .function struct_deintegrator @type_struct
         prolog
+        pushf 2
+        regvar $ivalue
+        pushend
+        regvar $endianness
         ;; Create a struct of the given type using the type
         ;; constructor.  All the fields of the constructed struct
         ;; will be 0 (or 0#b).
         push ulong<64>0
         dup
         dup
-        push ulong<64>0
+        dup
         push ""
         mktysct
         mksct
   .c    PKL_GEN_PUSH_SET_CONTEXT (PKL_GEN_CTX_IN_CONSTRUCTOR);
-  .c    PKL_PASS_SUBPASS (@struct_type);
+  .c    PKL_PASS_SUBPASS (@type_struct);
   .c    PKL_GEN_POP_CONTEXT;
-                                ; IVAL SCT
-        nip                ; XXX
+                                ; SCT
+        ;; Iterate over the struct fields setting their value, which
+        ;; is extracted from IVAL.  We know that IVAL has the
+        ;; same width than the struct fields all combined.  The current
+        ;; endianness has to be taken into account in order to determine
+        ;; which bits to use for each field.  Note that constraint
+        ;; expressions must be evaluated during this process.
+        .let @field
+ .c      uint64_t i;
+ .c for (i = 0, @field = PKL_AST_TYPE_S_ELEMS (@type_struct);
+ .c      @field;
+ .c      @field = PKL_AST_CHAIN (@field), ++i)
+ .c {
+ .c     if (PKL_AST_CODE (@field) != PKL_AST_STRUCT_TYPE_FIELD)
+ .c       continue;
+        .let @field_type = PKL_AST_STRUCT_TYPE_FIELD_TYPE (@field)
+ .c     size_t field_type_size
+ .c        = (PKL_AST_TYPE_CODE (@field_type) == PKL_TYPE_OFFSET
+ .c           ? PKL_AST_TYPE_I_SIZE (PKL_AST_TYPE_O_BASE_TYPE (@field_type))
+ .c           : PKL_AST_TYPE_I_SIZE (@field_type));
+        .let @field_size = pvm_make_ulong (field_type_size, 64)
+ .c }
+        popf 1
         return
         .end
 
