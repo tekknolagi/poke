@@ -1,3 +1,8 @@
+2022-01-02  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* poke/pk-cmd-ios.c (pk_cmd_load_file): Handle return value of
+	pk_file_readable the proper way.
+
 2021-12-27  Mohammad-Reza Nabipoor  <mnabipoor@gnu.org>
 
 	* libpoke/pvm.jitter (state-struct-backing-c): Remove `canary` field.
