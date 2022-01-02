@@ -1,5 +1,19 @@
 2022-01-02  Jose E. Marchesi  <jemarch@gnu.org>
 
+	* libpoke/pkl-gen.pks (field_location_str): New macro.
+	(check_struct_field_constraint): Use field_location_str.
+	(struct_field_mapper): Add location error message when EOF is
+	raised while mapping.
+	* testsuite/poke.map/maps-structs-eof-1.pk: New test.
+	* testsuite/poke.map/maps-structs-constraints-2.pk: Update.
+	* testsuite/poke.map/maps-structs-constraints-3.pk: Likewise.
+	* testsuite/poke.pkl/scons-constraints-1.pk: Likewise.
+	* testsuite/poke.pkl/scons-constraints-2.pk: Likewise.
+	* testsuite/poke.pktest/pktest-12.pk: Likewise.
+	* testsuite/Makefile.am (EXTRA_DIST): Add new test.
+
+2022-01-02  Jose E. Marchesi  <jemarch@gnu.org>
+
 	* poke/pk-cmd-ios.c (pk_cmd_load_file): Handle return value of
 	pk_file_readable the proper way.
 
