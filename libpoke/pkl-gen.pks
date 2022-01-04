@@ -740,7 +740,7 @@
         pushe .constraint_error
         push PVM_E_EOF
         pushe .eof
-        .c { int endian = PKL_AST_STRUCT_TYPE_FIELD_ENDIAN (@field);
+        .c { int endian = PKL_GEN_PAYLOAD->endian;
         .c PKL_GEN_PAYLOAD->endian = PKL_AST_STRUCT_TYPE_FIELD_ENDIAN (@field);
         .c PKL_PASS_SUBPASS (PKL_AST_STRUCT_TYPE_FIELD_TYPE (@field));
         .c PKL_GEN_PAYLOAD->endian = endian;
@@ -1590,7 +1590,7 @@
         srefio                  ; IOS EVAL SCT I EBOFF
         nip2                    ; IOS EVAL EBOFF
         swap                    ; IOS EOFF EVAL
-        .c { int endian = PKL_AST_STRUCT_TYPE_FIELD_ENDIAN (@field);
+        .c { int endian = PKL_GEN_PAYLOAD->endian;
         .c PKL_GEN_PAYLOAD->endian = PKL_AST_STRUCT_TYPE_FIELD_ENDIAN (@field);
         .c PKL_GEN_PUSH_CONTEXT;
         .c PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
