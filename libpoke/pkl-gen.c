@@ -211,7 +211,10 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_decl)
               {
                 PKL_GEN_DUP_CONTEXT;
                 PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
-                RAS_FUNCTION_STRUCT_WRITER (writer_closure, type_struct);
+                if (PKL_AST_TYPE_S_UNION_P (type_struct))
+                  RAS_FUNCTION_UNION_WRITER (writer_closure, type_struct);
+                else
+                  RAS_FUNCTION_STRUCT_WRITER (writer_closure, type_struct);
                 pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, writer_closure); /* CLS */
                 pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                  /* CLS */
                 pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                 /* _ */
@@ -847,6 +850,8 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_ass_stmt)
               PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);              \
               if (lvalue_type_code == PKL_TYPE_ARRAY)                   \
                 RAS_FUNCTION_ARRAY_WRITER (writer, (TYPE));             \
+              else if (PKL_AST_TYPE_S_UNION_P ((TYPE)))                 \
+                RAS_FUNCTION_UNION_WRITER (writer, (TYPE));             \
               else                                                      \
                 RAS_FUNCTION_STRUCT_WRITER (writer, (TYPE));            \
               pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, writer); /* CLS */ \
@@ -3286,7 +3291,10 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_struct)
           PKL_GEN_DUP_CONTEXT;
           PKL_GEN_CLEAR_CONTEXT (PKL_GEN_CTX_IN_MAPPER);
           PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
-          RAS_FUNCTION_STRUCT_WRITER (writer_closure, type_struct);
+          if (PKL_AST_TYPE_S_UNION_P (type_struct))
+            RAS_FUNCTION_UNION_WRITER (writer_closure, type_struct);
+          else
+            RAS_FUNCTION_STRUCT_WRITER (writer_closure, type_struct);
           PKL_GEN_POP_CONTEXT;
 
           pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, writer_closure); /* VAL CLS */
@@ -3360,7 +3368,10 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_struct)
 
           PKL_GEN_DUP_CONTEXT;
           PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
-          RAS_FUNCTION_STRUCT_WRITER (type_struct_writer, type_struct);
+          if (PKL_AST_TYPE_S_UNION_P (type_struct))
+            RAS_FUNCTION_UNION_WRITER (type_struct_writer, type_struct);
+          else
+            RAS_FUNCTION_STRUCT_WRITER (type_struct_writer, type_struct);
           pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, type_struct_writer); /* CLS */
           pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                      /* CLS */
           pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                     /* _ */
