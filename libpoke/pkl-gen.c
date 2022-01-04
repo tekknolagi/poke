@@ -195,94 +195,103 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_decl)
         {
         case PKL_TYPE_STRUCT:
           {
-            pvm_val mapper_closure;
-            pvm_val writer_closure;
-            pvm_val constructor_closure;
-            pvm_val comparator_closure;
-            pvm_val integrator_closure;
-
             pkl_ast_node type_struct = initial;
 
-            /* Compile the struct closures, complete them using the
-               current environment and install them in the AST node.
-               But only if they haven't been compiled already.  */
+            /* Compile the struct closures and complete them using the
+               current environment.  */
 
             if (PKL_AST_TYPE_S_WRITER (type_struct) == PVM_NULL)
               {
-                PKL_GEN_DUP_CONTEXT;
-                PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
-                if (PKL_AST_TYPE_S_UNION_P (type_struct))
-                  RAS_FUNCTION_UNION_WRITER (writer_closure, type_struct);
-                else
-                  RAS_FUNCTION_STRUCT_WRITER (writer_closure, type_struct);
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, writer_closure); /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                  /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                 /* _ */
-                PKL_GEN_POP_CONTEXT;
+                pvm_val writer_closure;
 
+                PKL_GEN_PUSH_CONTEXT;
+                PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
+                {
+                  if (PKL_AST_TYPE_S_UNION_P (type_struct))
+                    RAS_FUNCTION_UNION_WRITER (writer_closure, type_struct);
+                  else
+                    RAS_FUNCTION_STRUCT_WRITER (writer_closure, type_struct);
+                }
+                PKL_GEN_POP_CONTEXT;
                 PKL_AST_TYPE_S_WRITER (type_struct) = writer_closure;
               }
 
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
+                          PKL_AST_TYPE_S_WRITER (type_struct)); /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);           /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);          /* _ */
+
             if (PKL_AST_TYPE_S_MAPPER (type_struct) == PVM_NULL)
               {
+                pvm_val mapper_closure;
+
                 PKL_GEN_DUP_CONTEXT;
                 PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_MAPPER);
-
                 RAS_FUNCTION_STRUCT_MAPPER (mapper_closure, type_struct);
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, mapper_closure); /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                  /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                 /* _ */
-
                 PKL_GEN_POP_CONTEXT;
-
                 PKL_AST_TYPE_S_MAPPER (type_struct) = mapper_closure;
               }
 
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
+                          PKL_AST_TYPE_S_MAPPER (type_struct)); /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);           /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);          /* _ */
+
             if (PKL_AST_TYPE_S_CONSTRUCTOR (type_struct) == PVM_NULL)
               {
+                pvm_val constructor_closure;
+
                 PKL_GEN_DUP_CONTEXT;
                 PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_CONSTRUCTOR);
                 RAS_FUNCTION_STRUCT_CONSTRUCTOR (constructor_closure,
-                                                 type_struct);          /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, constructor_closure); /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                       /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                      /* _ */
+                                                 type_struct);
                 PKL_GEN_POP_CONTEXT;
-
                 PKL_AST_TYPE_S_CONSTRUCTOR (type_struct) = constructor_closure;
               }
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
+                          PKL_AST_TYPE_S_CONSTRUCTOR (type_struct)); /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);               /* _ */
 
             if (PKL_AST_TYPE_S_COMPARATOR (type_struct) == PVM_NULL)
               {
+                pvm_val comparator_closure;
+
                 PKL_GEN_DUP_CONTEXT;
                 PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_COMPARATOR);
                 RAS_FUNCTION_STRUCT_COMPARATOR (comparator_closure,
-                                                type_struct);           /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, comparator_closure); /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                      /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                     /* _ */
+                                                type_struct);
                 PKL_GEN_POP_CONTEXT;
-
                 PKL_AST_TYPE_S_COMPARATOR (type_struct) = comparator_closure;
               }
 
-            if (PKL_AST_TYPE_S_ITYPE (type_struct)
-                && PKL_AST_TYPE_S_INTEGRATOR (type_struct) == PVM_NULL)
-              {
-                /* Yes, the in_writer context is also used for
-                   integrators, since integrators do not call writers
-                   nor the other way around.  This eases sharing of
-                   code in the pks.  */
-                PKL_GEN_DUP_CONTEXT;
-                PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
-                RAS_FUNCTION_STRUCT_INTEGRATOR (integrator_closure,
-                                                type_struct);           /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, integrator_closure); /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                      /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                     /* _ */
-                PKL_GEN_POP_CONTEXT;
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
+                          PKL_AST_TYPE_S_COMPARATOR (type_struct)); /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);               /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);              /* _ */
 
-                PKL_AST_TYPE_S_INTEGRATOR (type_struct) = integrator_closure;
+            if (PKL_AST_TYPE_S_ITYPE (type_struct))
+              {
+                if (PKL_AST_TYPE_S_INTEGRATOR (type_struct) == PVM_NULL)
+                  {
+                    pvm_val integrator_closure;
+
+                    /* Yes, the in_writer context is also used for
+                       integrators, since integrators do not call
+                       writers nor the other way around.  This eases
+                       sharing of code in the pks.  */
+                    PKL_GEN_DUP_CONTEXT;
+                    PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
+                    RAS_FUNCTION_STRUCT_INTEGRATOR (integrator_closure,
+                                                    type_struct);
+                    PKL_GEN_POP_CONTEXT;
+                    PKL_AST_TYPE_S_INTEGRATOR (type_struct) = integrator_closure;
+                  }
+
+                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
+                              PKL_AST_TYPE_S_INTEGRATOR (type_struct)); /* CLS */
+                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);               /* CLS */
+                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);              /* _ */
               }
 
             PKL_PASS_BREAK;
@@ -290,10 +299,6 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_decl)
           }
         case PKL_TYPE_ARRAY:
           {
-            pvm_val mapper_closure;
-            pvm_val writer_closure;
-            pvm_val constructor_closure;
-
             pkl_ast_node array_type = initial;
 
             /* Compile the arrays closures and complete them using the
@@ -315,46 +320,59 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_decl)
                 PKL_GEN_POP_CONTEXT;
               }
 
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
+                          PKL_AST_TYPE_A_BOUNDER (array_type)); /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);           /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);          /* _ */
+
             if (PKL_AST_TYPE_A_WRITER (array_type) == PVM_NULL)
               {
-                PKL_GEN_DUP_CONTEXT;
+                pvm_val writer_closure;
+
+                PKL_GEN_PUSH_CONTEXT;
                 PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
                 RAS_FUNCTION_ARRAY_WRITER (writer_closure, array_type);
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, writer_closure); /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                  /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                 /* _ */
                 PKL_GEN_POP_CONTEXT;
-
                 PKL_AST_TYPE_A_WRITER (array_type) = writer_closure;
               }
 
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
+                          PKL_AST_TYPE_A_WRITER (array_type)); /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);          /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);         /* _ */
+
             if (PKL_AST_TYPE_A_MAPPER (array_type) == PVM_NULL)
               {
-                PKL_GEN_DUP_CONTEXT;
+                pvm_val mapper_closure;
+
+                PKL_GEN_PUSH_CONTEXT;
                 PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_MAPPER);
-
                 RAS_FUNCTION_ARRAY_MAPPER (mapper_closure, array_type);
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, mapper_closure); /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                  /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                 /* _ */
                 PKL_GEN_POP_CONTEXT;
-
                 PKL_AST_TYPE_A_MAPPER (array_type) = mapper_closure;
               }
 
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
+                          PKL_AST_TYPE_A_MAPPER (array_type)); /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);          /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);         /* _ */
+
             if (PKL_AST_TYPE_A_CONSTRUCTOR (array_type) == PVM_NULL)
               {
-                PKL_GEN_DUP_CONTEXT;
+                pvm_val constructor_closure;
+
+                PKL_GEN_PUSH_CONTEXT;
                 PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_CONSTRUCTOR);
                 RAS_FUNCTION_ARRAY_CONSTRUCTOR (constructor_closure,
-                                                array_type);           /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, constructor_closure); /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                       /* CLS */
-                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                      /* _ */
+                                                array_type);
                 PKL_GEN_POP_CONTEXT;
-
                 PKL_AST_TYPE_A_CONSTRUCTOR (array_type) = constructor_closure;
               }
+
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
+                          PKL_AST_TYPE_A_CONSTRUCTOR (array_type)); /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);               /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);              /* _ */
 
             PKL_PASS_BREAK;
             break;
@@ -840,29 +858,27 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_ass_stmt)
                ? PKL_AST_TYPE_A_WRITER ((TYPE))                         \
                : PKL_AST_TYPE_S_WRITER ((TYPE)));                       \
                                                                         \
-            /* Make sure the type has a writer.  */                     \
-            /* Note how anonymous types from within structs */          \
-            /* need the writer to be re-compiled.  This sucks :/ */     \
-            if (writer == PVM_NULL                                      \
-                || !PKL_AST_TYPE_NAME ((TYPE)))                         \
-            {                                                           \
-              PKL_GEN_DUP_CONTEXT;                                      \
-              PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);              \
-              if (lvalue_type_code == PKL_TYPE_ARRAY)                   \
-                RAS_FUNCTION_ARRAY_WRITER (writer, (TYPE));             \
-              else if (PKL_AST_TYPE_S_UNION_P ((TYPE)))                 \
-                RAS_FUNCTION_UNION_WRITER (writer, (TYPE));             \
-              else                                                      \
-                RAS_FUNCTION_STRUCT_WRITER (writer, (TYPE));            \
-              pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, writer); /* CLS */ \
-              pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);          /* CLS */ \
-              pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);         /* _ */ \
-              PKL_GEN_POP_CONTEXT;                                      \
+            /* If the type is anonymous it wont' have a compiled */     \
+            /* writer.  */                                              \
+            if (!PKL_AST_TYPE_NAME ((TYPE)))                            \
+              {                                                         \
+                assert (writer == PVM_NULL);                            \
                                                                         \
-              if (lvalue_type_code == PKL_TYPE_ARRAY)                   \
-                PKL_AST_TYPE_A_WRITER ((TYPE)) = writer;                \
-              else                                                      \
-                PKL_AST_TYPE_S_WRITER ((TYPE)) = writer;                \
+                PKL_GEN_PUSH_CONTEXT;                                   \
+                PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);            \
+                {                                                       \
+                  if (lvalue_type_code == PKL_TYPE_ARRAY)               \
+                    RAS_FUNCTION_ARRAY_WRITER (writer, (TYPE));         \
+                  else if (PKL_AST_TYPE_S_UNION_P ((TYPE)))             \
+                    RAS_FUNCTION_UNION_WRITER (writer, (TYPE));         \
+                  else                                                  \
+                    RAS_FUNCTION_STRUCT_WRITER (writer, (TYPE));        \
+                }                                                       \
+                PKL_GEN_POP_CONTEXT;                                    \
+                                                                        \
+                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, writer);      \
+                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);               \
+                pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);              \
             }                                                           \
                                                                         \
             /* VAL IOS BOFF */                                          \
@@ -1041,7 +1057,7 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_ass_stmt)
         pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_NIP);  /* VAL SCT ID STRICT_P */
         pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_BZI, label1);
 
-        /* Strict value: set with integriy.  */
+        /* Strict value: set with integrity.  */
         pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);
         pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_ROT);
         pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_SSETI, struct_type);
@@ -2302,11 +2318,10 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_array)
   PKL_GEN_DUP_CONTEXT;
   PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
   RAS_FUNCTION_ARRAY_WRITER (array_type_writer, array_type);
-  PKL_AST_TYPE_A_WRITER (array_type) = array_type_writer;
   PKL_GEN_POP_CONTEXT;
   pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, array_type_writer); /* CLS */
   pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                     /* CLS */
-  pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_MSETW); /* ARR */
+  pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_MSETW);                   /* ARR */
 }
 PKL_PHASE_END_HANDLER
 
@@ -2886,33 +2901,18 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_array)
              pkl_gen_pr_decl.  */
           bounder_created = 1;
 
-          PKL_GEN_DUP_CONTEXT;
-          PKL_GEN_CLEAR_CONTEXT (PKL_GEN_CTX_IN_MAPPER);
+          assert (!PKL_AST_TYPE_NAME (array_type));
+          PKL_GEN_PUSH_CONTEXT;
           PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_ARRAY_BOUNDER);
           PKL_PASS_SUBPASS (array_type);
           PKL_GEN_POP_CONTEXT;
         }
 
-      if (array_type_mapper != PVM_NULL)
-        {
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
-                        array_type_mapper); /* ... STRICT IOS OFF CLS */
-        }
-      else
-        {
-          /* Compile a mapper function and complete it using the
-             current environment.  */
-          pvm_val mapper_closure;
-
-          RAS_FUNCTION_ARRAY_MAPPER (mapper_closure, array_type);
-
-          /* Complete the mapper closure with the current
-             environment.  */
-          /* OFF */
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, mapper_closure);
-                                                      /* ... STRICT IOS OFF CLS */
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);   /* ... STRICT IOS OFF CLS */
-        }
+      if (array_type_mapper == PVM_NULL)
+        RAS_FUNCTION_ARRAY_MAPPER (array_type_mapper, array_type);
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, array_type_mapper);
+      if (!PKL_AST_TYPE_NAME (array_type))
+        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);     /* ... STRICT IOS OFF CLS */
 
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_TOR);       /* ... STRICT IOS OFF [CLS] */
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_ATR);       /* ... STRICT IOS OFF CLS [CLS] */
@@ -2973,27 +2973,16 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_array)
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_SWAP);  /* VAL STRICT */
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_MSETS); /* VAL */
 
-      if (array_type_writer != PVM_NULL)
+      if (array_type_writer == PVM_NULL)
         {
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
-                        array_type_writer); /* VAL CLS */
-        }
-      else
-        {
-          pvm_val writer_closure;
-
-          /* Compile a writer function to a closure.  */
           PKL_GEN_DUP_CONTEXT;
-          PKL_GEN_CLEAR_CONTEXT (PKL_GEN_CTX_IN_MAPPER);
           PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
-          RAS_FUNCTION_ARRAY_WRITER (writer_closure, array_type);
+          RAS_FUNCTION_ARRAY_WRITER (array_type_writer, array_type);
           PKL_GEN_POP_CONTEXT;
-
-          /* Complete the writer closure with the current
-             environment.  */
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, writer_closure); /* VAL CLS */
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                  /* VAL CLS */
         }
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, array_type_writer);
+      if (!PKL_AST_TYPE_NAME (array_type))
+        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC); /* VAL CLS */
 
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_MSETW);                /* VAL */
       /* Yay!, we are done ;) */
@@ -3015,14 +3004,10 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_array)
 
       /* If the array type doesn't have a printer, compile one.  */
       if (printer_closure == PVM_NULL)
-        {
-          RAS_FUNCTION_ARRAY_PRINTER (printer_closure, array_type);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, printer_closure);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);
-          PKL_AST_TYPE_A_PRINTER (array_type) = printer_closure;
-        }
-      else
-        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, printer_closure);
+        RAS_FUNCTION_ARRAY_PRINTER (printer_closure, array_type);
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, printer_closure);
+      if (!PKL_AST_TYPE_NAME (array_type))
+        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);
 
       /* Invoke the printer.  */
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_CALL); /* _ */
@@ -3034,7 +3019,6 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_array)
       pkl_ast_node array_type = PKL_PASS_NODE;
       pkl_ast_node array_type_bound = PKL_AST_TYPE_A_BOUND (array_type);
       pvm_val array_type_constructor = PKL_AST_TYPE_A_CONSTRUCTOR (array_type);
-      pvm_val array_type_writer = PKL_AST_TYPE_A_WRITER (array_type);
       int bounder_created = 0;
 
       PKL_GEN_PAYLOAD->constructor_depth++;
@@ -3050,8 +3034,8 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_array)
              Named array types have their bounder compiled in
              pkl_gen_pr_decl.  */
           bounder_created = 1;
+          assert (!PKL_AST_TYPE_NAME (array_type));
           PKL_GEN_DUP_CONTEXT;
-          PKL_GEN_CLEAR_CONTEXT (PKL_GEN_CTX_IN_CONSTRUCTOR);
           PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_ARRAY_BOUNDER);
           PKL_PASS_SUBPASS (array_type);
           PKL_GEN_POP_CONTEXT;
@@ -3088,38 +3072,13 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_array)
         pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, PVM_NULL);
 
       /* Make sure the array type has a constructor, and call it.  */
-      if (array_type_constructor != PVM_NULL)
-        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
-                      array_type_constructor); /* EBOUND SBOUND CLS */
-      else
-        {
-          RAS_FUNCTION_ARRAY_CONSTRUCTOR (array_type_constructor, array_type);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, array_type_constructor);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);
-        }
+      if (array_type_constructor == PVM_NULL)
+        RAS_FUNCTION_ARRAY_CONSTRUCTOR (array_type_constructor, array_type);
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, array_type_constructor);
+      if (!PKL_AST_TYPE_NAME (array_type))
+        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);
 
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_CALL);          /* ARR */
-
-      /* Install a writer in the constructed array.  This is needed
-         when the value is used as the right-hand-side to a
-         map-assignment operation.  */
-      if (array_type_writer == PVM_NULL)
-        {
-          PKL_GEN_DUP_CONTEXT;
-          PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
-          RAS_FUNCTION_ARRAY_WRITER (array_type_writer, array_type);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, array_type_writer); /* CLS */
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                     /* CLS */
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                    /* _ */
-          PKL_GEN_POP_CONTEXT;
-
-          PKL_AST_TYPE_A_WRITER (array_type) = array_type_writer;
-        }
-
-      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
-                    array_type_writer);           /* ARR CLS */
-      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_MSETW); /* ARR */
-
       PKL_GEN_PAYLOAD->constructor_depth--;
 
       if (bounder_created)
@@ -3219,6 +3178,7 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_struct)
 
       pvm_val type_struct_mapper = PKL_AST_TYPE_S_MAPPER (type_struct);
       pvm_val type_struct_writer = PKL_AST_TYPE_S_WRITER (type_struct);
+      pvm_val type_struct_constructor = PKL_AST_TYPE_S_CONSTRUCTOR (type_struct);
 
       /* Make a copy of the IOS and STRICT.  We will need to install
          them in the resulting value later.  */
@@ -3228,21 +3188,13 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_struct)
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_OVER);
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_FROMR); /* STRICT IOS STRICT IOS OFF */
 
-      if (type_struct_mapper != PVM_NULL)
-        {
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
-                        type_struct_mapper);
-        }
-      else
-        {
-          /* Compile a mapper function and complete it using the
-             current environment.  */
-          pvm_val mapper_closure;
-
-          RAS_FUNCTION_STRUCT_MAPPER (mapper_closure, type_struct);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, mapper_closure);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);
-        } /* ... STRICT IOS OFF CLS */
+      /* Compile a mapper function and complete it using the current
+         environment.  */
+      if (type_struct_mapper == PVM_NULL)
+        RAS_FUNCTION_STRUCT_MAPPER (type_struct_mapper, type_struct);
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, type_struct_mapper);
+      if (!PKL_AST_TYPE_NAME (type_struct))
+        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC); /* ... STRICT IOS OFF CLS */
 
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_TOR);   /* ... STRICT IOS OFF [CLS] */
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_ATR);   /* ... STRICT IOS OFF CLS [CLS] */
@@ -3277,29 +3229,43 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_struct)
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_SWAP);  /* VAL STRICT */
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_MSETS); /* VAL */
 
-      if (type_struct_writer != PVM_NULL)
+      /* Compile a constructor function and complete it using the
+         current environment.  */
+      if (type_struct_constructor == PVM_NULL)
         {
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
-                        type_struct_writer); /* VAL CLS */
+          assert (!PKL_AST_TYPE_NAME (type_struct));
+          PKL_GEN_PUSH_CONTEXT;
+          PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_CONSTRUCTOR);
+          RAS_FUNCTION_STRUCT_CONSTRUCTOR (type_struct_constructor, type_struct);
+          PKL_GEN_POP_CONTEXT;
+          /* We normally do not install closures in anonymous types,
+             but this one is needed by ssetc.  */
+          PKL_AST_TYPE_S_CONSTRUCTOR (type_struct) = type_struct_constructor;
         }
-      else
+      if (!PKL_AST_TYPE_NAME (type_struct))
         {
-          /* Compile a writer function and complete it using the
-             current environment.  */
-          pvm_val writer_closure;
+          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, type_struct_constructor);
+          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);
+          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);
+        }
 
-          PKL_GEN_DUP_CONTEXT;
-          PKL_GEN_CLEAR_CONTEXT (PKL_GEN_CTX_IN_MAPPER);
+      /* Compile a writer function and complete it using the current
+         environment.  */
+      if (type_struct_writer == PVM_NULL)
+        {
+          assert (!PKL_AST_TYPE_NAME (type_struct));
+          PKL_GEN_PUSH_CONTEXT;
           PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
           if (PKL_AST_TYPE_S_UNION_P (type_struct))
-            RAS_FUNCTION_UNION_WRITER (writer_closure, type_struct);
+            RAS_FUNCTION_UNION_WRITER (type_struct_writer, type_struct);
           else
-            RAS_FUNCTION_STRUCT_WRITER (writer_closure, type_struct);
+            RAS_FUNCTION_STRUCT_WRITER (type_struct_writer, type_struct);
           PKL_GEN_POP_CONTEXT;
-
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, writer_closure); /* VAL CLS */
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                  /* VAL CLS */
         }
+
+        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, type_struct_writer); /* VAL CLS */
+        if (!PKL_AST_TYPE_NAME (type_struct))
+          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                  /* VAL CLS */
 
       /* Install the writer into the value.  */
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_MSETW);                /* VAL */
@@ -3334,54 +3300,43 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_struct)
         s = ASTREF(s); pkl_ast_node_free (s);
       }
 
-      if (type_struct_constructor != PVM_NULL)
+      if (type_struct_constructor == PVM_NULL)
         {
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
-                        type_struct_constructor); /* SCT CLS */
+          RAS_FUNCTION_STRUCT_CONSTRUCTOR (type_struct_constructor, type_struct);
+          /* We normally do not install closures in anonymous types,
+             but this one is needed by ssetc.  */
+          PKL_AST_TYPE_S_CONSTRUCTOR (type_struct) = type_struct_constructor;
         }
-      else
-        {
-          /* Compile a constructor function and complete it using the
-             current environment.  */
-          pvm_val constructor_closure;
-
-          RAS_FUNCTION_STRUCT_CONSTRUCTOR (constructor_closure, type_struct);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, constructor_closure);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC); /* SCT CLS */
-
-          /* Since this is an anonymous struct, install the
-             constructor in it.  This is needed by other operations
-             like sseti.  */
-          PKL_AST_TYPE_S_CONSTRUCTOR (type_struct) = constructor_closure;
-        }
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, type_struct_constructor);
+      if (!PKL_AST_TYPE_NAME (type_struct))
+        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC); /* SCT CLS */
 
       /* Call the constructor to get a new struct.  */
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_CALL);    /* NSCT */
 
-      /* Install a writer in the constructed struct.  This is needed
-         when the value is used as the right-hand-side to a
-         map-assignment operation.  */
+      /* Compile a writer function and complete it using the current
+         environment.  */
       if (type_struct_writer == PVM_NULL)
         {
-          /* The struct type is anonymous and doesn't have a writer.
-             Compile one in this environment.  */
-
-          PKL_GEN_DUP_CONTEXT;
+          assert (!PKL_AST_TYPE_NAME (type_struct));
+          PKL_GEN_PUSH_CONTEXT;
           PKL_GEN_SET_CONTEXT (PKL_GEN_CTX_IN_WRITER);
-          if (PKL_AST_TYPE_S_UNION_P (type_struct))
-            RAS_FUNCTION_UNION_WRITER (type_struct_writer, type_struct);
-          else
-            RAS_FUNCTION_STRUCT_WRITER (type_struct_writer, type_struct);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, type_struct_writer); /* CLS */
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);                      /* CLS */
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);                     /* _ */
+          {
+            if (PKL_AST_TYPE_S_UNION_P (type_struct))
+              RAS_FUNCTION_UNION_WRITER (type_struct_writer, type_struct);
+            else
+              RAS_FUNCTION_STRUCT_WRITER (type_struct_writer, type_struct);
+          }
           PKL_GEN_POP_CONTEXT;
 
           PKL_AST_TYPE_S_WRITER (type_struct) = type_struct_writer;
         }
 
-      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
-                    type_struct_writer);          /* NCSCT CLS */
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, type_struct_writer);
+      if (!PKL_AST_TYPE_NAME (type_struct))
+        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC); /* NCSCT CLS */
+
+      /* Install the writer into the value.  */
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_MSETW); /* NCSCT */
 
       /* And we are done.  */
@@ -3399,15 +3354,10 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_struct)
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_OVER);
 
       if (comparator_closure == PVM_NULL)
-        {
-          /* Compile a comparator function and complete it using the
-             current environment.  */
-          RAS_FUNCTION_STRUCT_COMPARATOR (comparator_closure, type_struct);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, comparator_closure);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);
-        }
-      else
-        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, comparator_closure);
+        RAS_FUNCTION_STRUCT_COMPARATOR (comparator_closure, type_struct);
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, comparator_closure);
+      if (!PKL_AST_TYPE_NAME (type_struct))
+        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);
 
       /* Call the comparator.  */
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_CALL); /* SCT1 SCT2 INT */
