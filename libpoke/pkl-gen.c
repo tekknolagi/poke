@@ -3374,12 +3374,11 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_struct)
       if (printer_closure == PVM_NULL)
         {
           RAS_FUNCTION_STRUCT_PRINTER (printer_closure, struct_type);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, printer_closure);
-          pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);
           PKL_AST_TYPE_S_PRINTER (struct_type) = printer_closure;
         }
-      else
-        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, printer_closure);
+
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, printer_closure);
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);
 
       /* Invoke the printer.  */
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_CALL); /* _ */
