@@ -37,6 +37,7 @@ type CTF_Frame_FuncIndex_Entry =
   struct
   {
     uint<32> func_start_address;
+    uint<32> func_size;
     offset<uint32,B> func_freoff;
     uint<32> func_num_fres;
   };
