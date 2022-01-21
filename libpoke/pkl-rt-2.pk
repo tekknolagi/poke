@@ -52,7 +52,8 @@ fun _pkl_assert = (uint<64> cond, string msg, string filename,
    bootstrapped.
 
    Beware: if you do changes to any of the variables or data types
-   below then you have to adapt the code generator accordingly.  */
+   defined below then you have to adapt the code generator
+   accordingly.  */
 
 var PK_TYPE_UNKNOWN =  0;
 var PK_TYPE_INTEGRAL = 1;
