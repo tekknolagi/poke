@@ -16,8 +16,11 @@
 	* libpoke/pkl-gen.c (pkl_phase_gen_or_typeof): New handler.
 	(pkl_phase_gen): Register handler.
 	(pkl_gen_ps_type_integral): Handle IN_TYPIFIER.
-	(pkl_gen_pr_type_offset): Handle IN_TYPIFIER.
+	(pkl_gen_pr_type_offset): Likewise.
+	(pkl_gen_ps_type_string): Likewise.
 	* libpoke/pkl-gen.pks (integral_typifier): New macro.
+	(offset_typifier): Likewise.
+	(string_typifier): Likewise.
 
 2022-01-21  Jose E. Marchesi  <jemarch@gnu.org>
 

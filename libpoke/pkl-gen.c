@@ -3341,6 +3341,10 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_ps_type_string)
       /* Stack: VAL DEPTH */
       RAS_MACRO_STRING_FORMATER; /* _ */
     }
+  else if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPIFIER))
+    {
+      RAS_MACRO_STRING_TYPIFIER (PKL_PASS_NODE); /* SCT */
+    }
   else if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPE))
     pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_MKTYS);
 }
@@ -4142,6 +4146,8 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_op_typeof)
       pk_type_code = 2; /* PK_TYPE_OFFSET */
       break;
     case PKL_TYPE_STRING:
+      pk_type_code = 3; /* PK_TYPE_STRING */
+      break;
     case PKL_TYPE_ARRAY:
     case PKL_TYPE_STRUCT:
     default:

@@ -95,6 +95,8 @@ type Type =
         printf ("offset,signed_p=%i32d,size=%u64d,unit=%u64d",
                 attrs.offset.signed_p, attrs.offset.size,
                 attrs.offset._unit);
+      else if (code == PK_TYPE_STRING)
+        print "string";
       else
         print "unknown";
       if (name != "")

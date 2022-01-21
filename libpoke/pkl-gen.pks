@@ -3290,3 +3290,20 @@
         sset
         drop                    ; SCT(type)
         .end
+
+;;; RAS_MACRO_STRING_TYPIFIER @type
+;;; ( SCT -- SCT )
+;;;
+;;; Given a Type struct, fill in its attributes for the given string
+;;; type @TYPE.
+
+        .macro string_typifier @type
+        .let @type_name = PKL_AST_TYPE_NAME (@type)
+     .c if (@type_name)
+     .c {
+        .let #name = pvm_make_string (PKL_AST_IDENTIFIER_POINTER (@type_name))
+        push "name"
+        push #name
+        sset
+     .c }
+        .end
