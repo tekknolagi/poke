@@ -467,7 +467,7 @@ type Type =
         int<32> union_p;
         int<32> pinned_p;
         int<32> integral_p;
-        int<32> isign;
+        int<32> isigned_p;
         uint<64> isize;
         string[] fields;
         string[] methods;

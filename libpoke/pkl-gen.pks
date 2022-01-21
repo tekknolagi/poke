@@ -3307,3 +3307,104 @@
         sset
      .c }
         .end
+
+;;; RAS_FUNCTION_STRUCT_TYPIFIER @type
+;;; ( SCT -- SCT )
+;;;
+;;; Given a Type struct, fill in its attributes for the given struct
+;;; type @TYPE.
+
+        .function struct_typifier @type
+        prolog
+        ;; First take care of the type name.
+        .let @type_name = PKL_AST_TYPE_NAME (@type)
+ .c if (@type_name)
+ .c {
+        .let #name = pvm_make_string (PKL_AST_IDENTIFIER_POINTER (@type_name))
+        push "name"
+        push #name
+        sset
+ .c }
+        ;; Get the attrs.sct
+        push "attrs"
+        sref
+        nip                     ; SCT(Type) SCT(attrs)
+        push "sct"
+        sref
+        nip2                    ; SCT(Type) SCT(sct)
+        ;; Fill in the attributes of the struct itself.
+        .let #union_p = pvm_make_int (PKL_AST_TYPE_S_UNION_P (@type), 32)
+        .let #pinned_p = pvm_make_int (PKL_AST_TYPE_S_PINNED_P (@type), 32)
+        push "union_p"
+        push #union_p
+        sset
+        push "pinned_p"
+        push #pinned_p
+        sset
+        ;; Some attributes are only set if the struct is integral.
+        .let @itype = PKL_AST_TYPE_S_ITYPE (@type)
+ .c if (@itype)
+ .c {
+        .let #isigned_p = pvm_make_int (PKL_AST_TYPE_I_SIGNED_P (@itype), 32)
+        .let #isize = pvm_make_ulong (PKL_AST_TYPE_I_SIZE (@itype), 64)
+        push "integral_p"
+        push int<32>1
+        sset
+        push "isigned_p"
+        push #isigned_p
+        sset
+        push "isize"
+        push #isize
+        sset
+ .c }
+        ;; Now add field entries.  At the moment these are just the
+        ;; names of the fields.
+        push "fields"
+        sref
+        nip                     ; SCT(Type) SCT(sct) ARR
+        .let @field
+ .c for (@field = PKL_AST_TYPE_S_ELEMS (@type);
+ .c      @field;
+ .c      @field = PKL_AST_CHAIN (@field))
+ .c {
+ .c     if (PKL_AST_CODE (@field) != PKL_AST_STRUCT_TYPE_FIELD)
+ .c       continue;
+        .let @field_name = PKL_AST_STRUCT_TYPE_FIELD_NAME (@field);
+ .c     if (@field_name)
+ .c     {
+        .let #field_name_str \
+          = pvm_make_string (PKL_AST_IDENTIFIER_POINTER (@field_name))
+        sel                     ; ... ARR SEL
+        push #field_name_str    ; ... ARR SEL STR
+        ains                    ; ... ARR
+ .c     }
+ .c }
+        drop                    ; SCT(Type) SCT(sct)
+        ;; Now add method entries.  At the moment these are just the
+        ;; names of the methods.
+        push "methods"
+        sref
+        nip                     ; SCT(Type) SCT(sct) ARR
+        .let @method
+ .c for (@method = PKL_AST_TYPE_S_ELEMS (@type);
+ .c      @method;
+ .c      @method = PKL_AST_CHAIN (@method))
+ .c {
+ .c   if (PKL_AST_CODE (@method) != PKL_AST_DECL
+ .c       || PKL_AST_DECL_KIND (@method) != PKL_AST_DECL_KIND_FUNC
+ .c       || !PKL_AST_FUNC_METHOD_P (PKL_AST_DECL_INITIAL (@method)))
+ .c   {
+ .c     if (PKL_AST_CODE (@method) != PKL_AST_DECL
+ .c         || PKL_AST_DECL_KIND (@method) != PKL_AST_DECL_KIND_TYPE)
+ .c     continue;
+ .c   }
+        .let @decl_name = PKL_AST_DECL_NAME (@method)
+        .let #name_str = pvm_make_string (PKL_AST_IDENTIFIER_POINTER (@decl_name))
+        sel                     ; ... ARR SEL
+        push #name_str          ; ... ARR SEL STR
+        ains                    ; ... ARR
+ .c }
+        drop                    ; SCT(Type) SCT(sct)
+        drop                    ; SCT(Type)
+        return
+        .end

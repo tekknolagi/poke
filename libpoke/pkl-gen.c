@@ -266,6 +266,22 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_decl)
             pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);               /* CLS */
             pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);              /* _ */
 
+            if (PKL_AST_TYPE_S_TYPIFIER (type_struct) == PVM_NULL)
+              {
+                pvm_val typifier_closure;
+
+                PKL_GEN_PUSH_SET_CONTEXT (PKL_GEN_CTX_IN_TYPIFIER);
+                RAS_FUNCTION_STRUCT_TYPIFIER (typifier_closure,
+                                              type_struct);
+                PKL_GEN_POP_CONTEXT;
+                PKL_AST_TYPE_S_TYPIFIER (type_struct) = typifier_closure;
+              }
+
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH,
+                          PKL_AST_TYPE_S_TYPIFIER (type_struct)); /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);             /* CLS */
+            pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);            /* _ */
+
             if (PKL_AST_TYPE_S_ITYPE (type_struct))
               {
                 if (PKL_AST_TYPE_S_INTEGRATOR (type_struct) == PVM_NULL)
@@ -3626,6 +3642,20 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_struct)
       pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_CALL);
       PKL_PASS_BREAK;
     }
+  else if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPIFIER))
+    {
+      pkl_ast_node type_struct = PKL_PASS_NODE;
+      pvm_val typifier_closure = PKL_AST_TYPE_S_TYPIFIER (type_struct);
+
+      if (typifier_closure == PVM_NULL)
+        RAS_FUNCTION_STRUCT_TYPIFIER (typifier_closure, type_struct);
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, typifier_closure);
+      if (!PKL_AST_TYPE_NAME (type_struct))
+        pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PEC);
+
+      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_CALL);
+      PKL_PASS_BREAK;
+    }
   else if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPE))
     {
       /* Do nothing.  See PS hook.  */
@@ -4148,8 +4178,10 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_op_typeof)
     case PKL_TYPE_STRING:
       pk_type_code = 3; /* PK_TYPE_STRING */
       break;
-    case PKL_TYPE_ARRAY:
     case PKL_TYPE_STRUCT:
+      pk_type_code = 5; /* PK_TYPE_STRING */
+      break;
+    case PKL_TYPE_ARRAY:
     default:
       pk_type_code = 0; /* PK_TYPE_UNKNOWN */
       break;

@@ -1,12 +1,15 @@
 2022-01-21  Jose E. Marchesi  <jemarch@gnu.org>
 
-	* libpoke/pkl-env.h: Prototype for pkl_env_lookup_type.
-	* libpoke/pkl-env.c (pkl_env_lookup_type): New function.
-	* libpoke/pkl-ops.def: New unary operator SIZEOF.
 	* libpoke/pkl-rt-2.pk: Define PK_TYPE_* values.
 	(Type): New struct type.
 	(Type_Integral): Likewise.
 	(Type_Offset): Likewise.
+	* libpoke/pkl-ast.h (PKL_AST_TYPE_S_TYPIFIER): Define.
+	* libpoke/pkl-ast.c (pkl_ast_make_struct_type): Initialize the
+	struct typifier to NULL.
+	* libpoke/pkl-env.h: Prototype for pkl_env_lookup_type.
+	* libpoke/pkl-env.c (pkl_env_lookup_type): New function.
+	* libpoke/pkl-ops.def: New unary operator SIZEOF.
 	* libpoke/pkl-tab.y: New token TYPEOF.
 	(expression): Rule for typeof.
 	* libpoke/pkl-lex.l: Handle token TYPEOF.
@@ -18,9 +21,13 @@
 	(pkl_gen_ps_type_integral): Handle IN_TYPIFIER.
 	(pkl_gen_pr_type_offset): Likewise.
 	(pkl_gen_ps_type_string): Likewise.
+	(pkl_gen_pr_type_struct): Likewise.
+	(pkl_gen_pr_decl): Compile typifier closures for declared struct
+	types.
 	* libpoke/pkl-gen.pks (integral_typifier): New macro.
 	(offset_typifier): Likewise.
 	(string_typifier): Likewise.
+	(struct_typifier): New function.
 
 2022-01-21  Jose E. Marchesi  <jemarch@gnu.org>
 
