@@ -3231,6 +3231,14 @@
         .macro integral_typifier @type
         .let #signed_p = pvm_make_int (PKL_AST_TYPE_I_SIGNED_P (@type), 32)
         .let #size = pvm_make_ulong (PKL_AST_TYPE_I_SIZE (@type), 64)
+        .let @type_name = PKL_AST_TYPE_NAME (@type)
+     .c if (@type_name)
+     .c {
+        .let #name = pvm_make_string (PKL_AST_IDENTIFIER_POINTER (@type_name))
+        push "name"
+        push #name
+        sset
+     .c }
         push "attrs"
         sref
         nip                     ; SCT(Type) SCT(attrs)
@@ -3243,5 +3251,42 @@
         push "size"
         push #size
         sset                    ; SCT(Type) SCT(integral)
+        drop                    ; SCT(type)
+        .end
+
+;;; RAS_MACRO_OFFSET_TYPIFIER @type
+;;; ( SCT -- SCT )
+;;;
+;;; Given a Type struct, fill in its attributes for the given offset
+;;; type @TYPE.
+
+        .macro offset_typifier @type
+        .let @base_type = PKL_AST_TYPE_O_BASE_TYPE (@type)
+        .let #signed_p = pvm_make_int (PKL_AST_TYPE_I_SIGNED_P (@base_type), 32)
+        .let #size = pvm_make_ulong (PKL_AST_TYPE_I_SIZE (@base_type), 64)
+        .let #unit = pvm_make_ulong (PKL_AST_INTEGER_VALUE (PKL_AST_TYPE_O_UNIT (@type)), 64)
+        .let @type_name = PKL_AST_TYPE_NAME (@type)
+     .c if (@type_name)
+     .c {
+        .let #name = pvm_make_string (PKL_AST_IDENTIFIER_POINTER (@type_name))
+        push "name"
+        push #name
+        sset
+     .c }
+        push "attrs"
+        sref
+        nip                     ; SCT(Type) SCT(attrs)
+        push "offset"
+        sref
+        nip2                    ; SCT(Type) SCT(offset)
+        push "signed_p"
+        push #signed_p
+        sset
+        push "size"
+        push #size
+        sset
+        push "_unit"
+        push #unit
+        sset
         drop                    ; SCT(type)
         .end

@@ -2092,6 +2092,11 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_offset)
       RAS_MACRO_OFFSET_FORMATER (PKL_PASS_NODE); /* _ */
       PKL_PASS_BREAK;
     }
+  else if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPIFIER))
+    {
+      RAS_MACRO_OFFSET_TYPIFIER (PKL_PASS_NODE); /* SCT */
+      PKL_PASS_BREAK;
+    }
   else if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPE))
     {
     /* Just build an offset type.  */
@@ -4133,8 +4138,10 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_op_typeof)
     case PKL_TYPE_INTEGRAL:
       pk_type_code = 1; /* PK_TYPE_INTEGRAL */
       break;
-    case PKL_TYPE_STRING:
     case PKL_TYPE_OFFSET:
+      pk_type_code = 2; /* PK_TYPE_OFFSET */
+      break;
+    case PKL_TYPE_STRING:
     case PKL_TYPE_ARRAY:
     case PKL_TYPE_STRUCT:
     default:

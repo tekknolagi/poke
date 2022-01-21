@@ -66,6 +66,7 @@ type Type =
   struct
   {
     uint<32> code;
+    string name;
     union
     {
       struct
@@ -76,9 +77,9 @@ type Type =
 
       struct
       {
-        int<32> base_signed_p;
-        uint<64> base_size;
-        uint<64> offset_unit;
+        int<32> signed_p;
+        uint<64> size;
+        uint<64> _unit;
       } offset : code == PK_TYPE_OFFSET;
 
       struct {} empty;
@@ -90,8 +91,14 @@ type Type =
       if (code == PK_TYPE_INTEGRAL)
         printf ("integral,signed_p=%i32d,size=%u64d",
                 attrs.integral.signed_p, attrs.integral.size);
+      else if (code == PK_TYPE_OFFSET)
+        printf ("offset,signed_p=%i32d,size=%u64d,unit=%u64d",
+                attrs.offset.signed_p, attrs.offset.size,
+                attrs.offset._unit);
       else
         print "unknown";
+      if (name != "")
+        printf ",name=%v", name;
       print ">";
     }
   };
