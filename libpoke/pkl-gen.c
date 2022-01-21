@@ -4171,11 +4171,14 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_op_typeof)
   pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, type_constructor);
   pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_CALL); /* Type {} */
 
-  /* Subpass in IN_TYPIFIER context to calculate the values of the
-     Type struct */
-  PKL_GEN_PUSH_SET_CONTEXT (PKL_GEN_CTX_IN_TYPIFIER);
-  PKL_PASS_SUBPASS (op_type);
-  PKL_GEN_POP_CONTEXT;
+  if (pk_type_code != 0)
+    {
+      /* Subpass in IN_TYPIFIER context to calculate the values of the
+         Type struct */
+      PKL_GEN_PUSH_SET_CONTEXT (PKL_GEN_CTX_IN_TYPIFIER);
+      PKL_PASS_SUBPASS (op_type);
+      PKL_GEN_POP_CONTEXT;
+    }
   PKL_PASS_BREAK;
 }
 PKL_PHASE_END_HANDLER
