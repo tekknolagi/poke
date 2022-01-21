@@ -1,14 +1,14 @@
 2022-01-21  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* libpoke/pkl-rt-2.pk: Define PK_TYPE_* values.
-	(Type): New struct type.
-	(Type_Integral): Likewise.
-	(Type_Offset): Likewise.
+	(Pk_Type): New struct type.
 	* libpoke/pkl-ast.h (PKL_AST_TYPE_S_TYPIFIER): Define.
 	* libpoke/pkl-ast.c (pkl_ast_make_struct_type): Initialize the
 	struct typifier to NULL.
-	* libpoke/pkl-env.h: Prototype for pkl_env_lookup_type.
+	* libpoke/pkl-env.h: Prototype for pkl_env_lookup_type and
+	pkl_env_lookup_var.
 	* libpoke/pkl-env.c (pkl_env_lookup_type): New function.
+	(pkl_env_lookup_var): Likewise.
 	* libpoke/pkl-ops.def: New unary operator SIZEOF.
 	* libpoke/pkl-tab.y: New token TYPEOF.
 	(expression): Rule for typeof.

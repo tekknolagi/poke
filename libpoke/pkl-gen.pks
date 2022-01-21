@@ -3272,8 +3272,8 @@
 ;;; RAS_MACRO_OFFSET_TYPIFIER @type
 ;;; ( SCT -- SCT )
 ;;;
-;;; Given a Type struct, fill in its attributes for the given offset
-;;; type @TYPE.
+;;; Given a Pk_Type struct, fill in its attributes for the given
+;;; offset type @TYPE.
 
         .macro offset_typifier @type
         .let @base_type = PKL_AST_TYPE_O_BASE_TYPE (@type)
@@ -3302,8 +3302,8 @@
 ;;; RAS_MACRO_STRING_TYPIFIER @type
 ;;; ( SCT -- SCT )
 ;;;
-;;; Given a Type struct, fill in its attributes for the given string
-;;; type @TYPE.
+;;; Given a Pk_Type struct, fill in its attributes for the given
+;;; string type @TYPE.
 
         .macro string_typifier @type
         .e common_typifier @type
@@ -3312,8 +3312,8 @@
 ;;; RAS_MACRO_ARRAY_TYPIFIER @type
 ;;; ( SCT - SCT )
 ;;;
-;;; Given a Type struct, fill in its attributes for the given string
-;;; type @TYPE.
+;;; Given a Pk_Type struct, fill in its attributes for the given
+;;; string type @TYPE.
 
         .macro array_typifier @type
         .e common_typifier @type
@@ -3335,8 +3335,8 @@
 ;;; RAS_FUNCTION_STRUCT_TYPIFIER @type
 ;;; ( SCT -- SCT )
 ;;;
-;;; Given a Type struct, fill in its attributes for the given struct
-;;; type @TYPE.
+;;; Given a Pk_Type struct, fill in its attributes for the given
+;;; struct type @TYPE.
 
         .function struct_typifier @type
         prolog

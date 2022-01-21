@@ -305,6 +305,19 @@ pkl_env_lookup_type (pkl_env env, const char *name)
   return NULL;
 }
 
+pkl_ast_node
+pkl_env_lookup_var (pkl_env env, const char *name)
+{
+  pkl_ast_node decl
+    = pkl_env_lookup (env, PKL_ENV_NS_MAIN, name,
+                      NULL /* back */, NULL /* over */);
+  if (decl
+      && PKL_AST_DECL_KIND (decl) == PKL_AST_DECL_KIND_VAR)
+    return PKL_AST_DECL_INITIAL (decl);
+
+  return NULL;
+}
+
 int
 pkl_env_toplevel_p (pkl_env env)
 {

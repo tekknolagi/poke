@@ -422,9 +422,12 @@ fun _pkl_unit_name = (uint<64> bits) string:
    so pretty please do not use `typeof' until the compiler has been
    bootstrapped.
 
-   Beware: if you do changes to any of the variables or data types
-   defined below then you have to adapt the code generator
-   accordingly.  */
+   Fun facts:
+   1) If you do changes to the struct Pk_Type defined below it is most
+      likely you will have to adapt the code generator accordingly.
+   2) The PK_TYPE_* values _must_ resolve to a constant integral value
+      at compile-time.  Constant folding is ok.
+*/
 
 var PK_TYPE_UNKNOWN =  0;
 var PK_TYPE_INTEGRAL = 1;
@@ -435,7 +438,7 @@ var PK_TYPE_STRUCT   = 5;
 var PK_TYPE_FUNCTION = 6;
 var PK_TYPE_ANY      = 7;
 
-type Type =
+type Pk_Type =
   struct
   {
     uint<32> code;

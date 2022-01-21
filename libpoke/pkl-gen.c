@@ -4174,29 +4174,40 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_op_typeof)
                 pvm_make_ulong (0, 64)); /* EOFF */
   pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, pvm_make_string ("code"));
                                          /* EOFF ENAME */
+
+#define PK_TYPE_CODE(TYPE)                                              \
+  ({                                                                    \
+    pkl_ast_node initial = pkl_env_lookup_var (pkl_get_env (PKL_PASS_COMPILER), \
+                                               (TYPE));                 \
+    assert (PKL_AST_CODE (initial) == PKL_AST_INTEGER);                 \
+    PKL_AST_INTEGER_VALUE (initial);                                    \
+  })
+
+  int pk_type_unknown = PK_TYPE_CODE ("PK_TYPE_UNKNOWN");
+
   switch (PKL_AST_TYPE_CODE (op_type))
     {
     case PKL_TYPE_INTEGRAL:
-      pk_type_code = 1; /* PK_TYPE_INTEGRAL */
+      pk_type_code = PK_TYPE_CODE ("PK_TYPE_INTEGRAL");
       break;
     case PKL_TYPE_OFFSET:
-      pk_type_code = 2; /* PK_TYPE_OFFSET */
+      pk_type_code = PK_TYPE_CODE ("PK_TYPE_OFFSET");
       break;
     case PKL_TYPE_STRING:
-      pk_type_code = 3; /* PK_TYPE_STRING */
+      pk_type_code = PK_TYPE_CODE ("PK_TYPE_STRING");
       break;
     case PKL_TYPE_ARRAY:
-      pk_type_code = 4; /* PK_TYPE_ARRAY */
+      pk_type_code = PK_TYPE_CODE ("PK_TYPE_ARRAY");
       break;
     case PKL_TYPE_STRUCT:
-      pk_type_code = 5; /* PK_TYPE_STRING */
+      pk_type_code = PK_TYPE_CODE ("PK_TYPE_STRING");
       break;
     case PKL_TYPE_ANY:
-      pk_type_code = 7; /* PK_TYPE_ANY */
+      pk_type_code = PK_TYPE_CODE ("PK_TYPE_ANY");
       break;
     case PKL_TYPE_FUNCTION:
     default:
-      pk_type_code = 0; /* PK_TYPE_UNKNOWN */
+      pk_type_code = pk_type_unknown;
   }
   pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, pvm_make_int (pk_type_code, 32));
                                          /* EOFF ENAME EVAL */
@@ -4215,7 +4226,7 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_op_typeof)
   pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, type_constructor);
   pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_CALL); /* Type {} */
 
-  if (pk_type_code != 0)
+  if (pk_type_code != pk_type_unknown)
     {
       /* Subpass in IN_TYPIFIER context to calculate the values of the
          Type struct */
