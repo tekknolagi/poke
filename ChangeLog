@@ -1,5 +1,25 @@
 2022-01-21  Jose E. Marchesi  <jemarch@gnu.org>
 
+	* libpoke/pkl-env.h: Prototype for pkl_env_lookup_type.
+	* libpoke/pkl-env.c (pkl_env_lookup_type): New function.
+	* libpoke/pkl-ops.def: New unary operator SIZEOF.
+	* libpoke/pkl-rt-2.pk: Define PK_TYPE_* values.
+	(Type): New struct type.
+	(Type_Integral): Likewise.
+	(Type_Offset): Likewise.
+	* libpoke/pkl-tab.y: New token TYPEOF.
+	(expression): Rule for typeof.
+	* libpoke/pkl-lex.l: Handle token TYPEOF.
+	* libpoke/pkl-typify.c (pkl_typify1_pr_op_typeof): New handler.
+	(pkl_phase_typify1): Register handler.
+	* libpoke/pkl-gen.h (PKL_GEN_CTX_IN_TYPIFIER): Define.
+	* libpoke/pkl-gen.c (pkl_phase_gen_or_typeof): New handler.
+	(pkl_phase_gen): Register handler.
+	(pkl_gen_ps_type_integral): Handle IN_TYPIFIER.
+	* libpoke/pkl-gen.pks (integral_typifier): New macro.
+
+2022-01-21  Jose E. Marchesi  <jemarch@gnu.org>
+
 	* libpoke/ras: Check that every .function has a prolog
 	instruction.
 
