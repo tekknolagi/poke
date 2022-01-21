@@ -417,6 +417,66 @@ fun _pkl_unit_name = (uint<64> bits) string:
     return "";
   }
 
+/* The Type struct below describes the values returned by the `typeof'
+   language construction.  This type is used in the compiler phases,
+   so pretty please do not use `typeof' until the compiler has been
+   bootstrapped.
+
+   Beware: if you do changes to any of the variables or data types
+   defined below then you have to adapt the code generator
+   accordingly.  */
+
+var PK_TYPE_UNKNOWN =  0;
+var PK_TYPE_INTEGRAL = 1;
+var PK_TYPE_OFFSET   = 2;
+var PK_TYPE_STRING   = 3;
+var PK_TYPE_ARRAY    = 4;
+var PK_TYPE_STRUCT   = 5;
+var PK_TYPE_FUNCTION = 6;
+
+type Type =
+  struct
+  {
+    uint<32> code;
+    string name;
+    union
+    {
+      struct
+      {
+        int<32> signed_p;
+        uint<64> size;
+      } integral : code == PK_TYPE_INTEGRAL;
+
+      struct
+      {
+        int<32> signed_p;
+        uint<64> size;
+        uint<64> _unit;
+      } offset : code == PK_TYPE_OFFSET;
+
+      struct
+      {
+        int<32> bounded_p;
+        /* size bound closure */
+        /* nelem bound closure */
+        /* etype */
+      } array : code == PK_TYPE_ARRAY;
+
+      struct
+      {
+        int<32> union_p;
+        int<32> pinned_p;
+        int<32> integral_p;
+        int<32> isign;
+        uint<64> isize;
+        string[] fields;
+        string[] methods;
+      } sct : code == PK_TYPE_STRUCT;
+
+      struct {} empty;
+    } attrs;
+  };
+
 /**** Set the default load path ****/
 
 var load_path = "";
