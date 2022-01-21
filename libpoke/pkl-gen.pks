@@ -3222,15 +3222,13 @@
         return
         .end
 
-;;; RAS_MACRO_INTEGRAL_TYPIFIER @type
+;;; RAS_MACRO_COMMON_TYPIFIER @type
 ;;; ( SCT -- SCT )
 ;;;
-;;; Given a Type struct, fill in its attributes for the given integral
-;;; type @TYPE.
+;;; Given a Pk_Type struct, fill in its common attributes for the
+;;; given generic type @TYPE.
 
-        .macro integral_typifier @type
-        .let #signed_p = pvm_make_int (PKL_AST_TYPE_I_SIGNED_P (@type), 32)
-        .let #size = pvm_make_ulong (PKL_AST_TYPE_I_SIZE (@type), 64)
+        .macro common_typifier @type
         .let @type_name = PKL_AST_TYPE_NAME (@type)
      .c if (@type_name)
      .c {
@@ -3239,6 +3237,23 @@
         push #name
         sset
      .c }
+        .let #complete_p = pvm_make_int (PKL_AST_TYPE_COMPLETE (@type) \
+                                         == PKL_AST_TYPE_COMPLETE_YES, 32)
+        push "complete_p"
+        push #complete_p
+        sset
+        .end
+
+;;; RAS_MACRO_INTEGRAL_TYPIFIER @type
+;;; ( SCT -- SCT )
+;;;
+;;; Given a Pk_Type struct, fill in its attributes for the given
+;;; integral type @TYPE.
+
+        .macro integral_typifier @type
+        .let #signed_p = pvm_make_int (PKL_AST_TYPE_I_SIGNED_P (@type), 32)
+        .let #size = pvm_make_ulong (PKL_AST_TYPE_I_SIZE (@type), 64)
+        .e common_typifier @type
         push "attrs"
         sref
         nip                     ; SCT(Type) SCT(attrs)
@@ -3265,14 +3280,7 @@
         .let #signed_p = pvm_make_int (PKL_AST_TYPE_I_SIGNED_P (@base_type), 32)
         .let #size = pvm_make_ulong (PKL_AST_TYPE_I_SIZE (@base_type), 64)
         .let #unit = pvm_make_ulong (PKL_AST_INTEGER_VALUE (PKL_AST_TYPE_O_UNIT (@type)), 64)
-        .let @type_name = PKL_AST_TYPE_NAME (@type)
-     .c if (@type_name)
-     .c {
-        .let #name = pvm_make_string (PKL_AST_IDENTIFIER_POINTER (@type_name))
-        push "name"
-        push #name
-        sset
-     .c }
+        .e common_typifier @type
         push "attrs"
         sref
         nip                     ; SCT(Type) SCT(attrs)
@@ -3298,14 +3306,30 @@
 ;;; type @TYPE.
 
         .macro string_typifier @type
-        .let @type_name = PKL_AST_TYPE_NAME (@type)
-     .c if (@type_name)
-     .c {
-        .let #name = pvm_make_string (PKL_AST_IDENTIFIER_POINTER (@type_name))
-        push "name"
-        push #name
+        .e common_typifier @type
+        .end
+
+;;; RAS_MACRO_ARRAY_TYPIFIER @type
+;;; ( SCT - SCT )
+;;;
+;;; Given a Type struct, fill in its attributes for the given string
+;;; type @TYPE.
+
+        .macro array_typifier @type
+        .e common_typifier @type
+        ;; Get the attr.array
+        push "attrs"
+        sref
+        nip                     ; SCT(Type) SCT(attrs)
+        push "array"
+        sref
+        nip2                    ; SCT(Type) SCT(array)
+        ;; Fill in the array type attributes.
+        .let #bounded_p = pvm_make_int (PKL_AST_TYPE_A_BOUND (@type) != NULL, 32)
+        push "bounded_p"
+        push #bounded_p
         sset
-     .c }
+        drop                    ; SCT(Type)
         .end
 
 ;;; RAS_FUNCTION_STRUCT_TYPIFIER @type
@@ -3316,15 +3340,7 @@
 
         .function struct_typifier @type
         prolog
-        ;; First take care of the type name.
-        .let @type_name = PKL_AST_TYPE_NAME (@type)
- .c if (@type_name)
- .c {
-        .let #name = pvm_make_string (PKL_AST_IDENTIFIER_POINTER (@type_name))
-        push "name"
-        push #name
-        sset
- .c }
+        .e common_typifier @type
         ;; Get the attrs.sct
         push "attrs"
         sref

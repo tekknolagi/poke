@@ -433,12 +433,14 @@ var PK_TYPE_STRING   = 3;
 var PK_TYPE_ARRAY    = 4;
 var PK_TYPE_STRUCT   = 5;
 var PK_TYPE_FUNCTION = 6;
+var PK_TYPE_ANY      = 7;
 
 type Type =
   struct
   {
     uint<32> code;
     string name;
+    uint<32> complete_p;
     union
     {
       struct

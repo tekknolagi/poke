@@ -2766,7 +2766,9 @@ PKL_PHASE_END_HANDLER
 
 PKL_PHASE_BEGIN_HANDLER (pkl_gen_ps_type_any)
 {
-  if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPE))
+  if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPIFIER))
+    ; /* Do nothing here.  */
+  else if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPE))
     pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_MKTYANY);
 }
 PKL_PHASE_END_HANDLER
@@ -3296,6 +3298,11 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_type_array)
       if (bounder_created)
         pkl_ast_array_type_remove_bounders (array_type);
 
+      PKL_PASS_BREAK;
+    }
+  else if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPIFIER))
+    {
+      RAS_MACRO_ARRAY_TYPIFIER (PKL_PASS_NODE); /* SCT */
       PKL_PASS_BREAK;
     }
   else if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPE))
@@ -4178,13 +4185,18 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_pr_op_typeof)
     case PKL_TYPE_STRING:
       pk_type_code = 3; /* PK_TYPE_STRING */
       break;
+    case PKL_TYPE_ARRAY:
+      pk_type_code = 4; /* PK_TYPE_ARRAY */
+      break;
     case PKL_TYPE_STRUCT:
       pk_type_code = 5; /* PK_TYPE_STRING */
       break;
-    case PKL_TYPE_ARRAY:
+    case PKL_TYPE_ANY:
+      pk_type_code = 7; /* PK_TYPE_ANY */
+      break;
+    case PKL_TYPE_FUNCTION:
     default:
       pk_type_code = 0; /* PK_TYPE_UNKNOWN */
-      break;
   }
   pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, pvm_make_int (pk_type_code, 32));
                                          /* EOFF ENAME EVAL */

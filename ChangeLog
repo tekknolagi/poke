@@ -22,11 +22,15 @@
 	(pkl_gen_pr_type_offset): Likewise.
 	(pkl_gen_ps_type_string): Likewise.
 	(pkl_gen_pr_type_struct): Likewise.
+	(pkl_gen_ps_type_any): Likewise.
+	(pkl_gen_pr_type_array): Likewise.
 	(pkl_gen_pr_decl): Compile typifier closures for declared struct
 	types.
 	* libpoke/pkl-gen.pks (integral_typifier): New macro.
 	(offset_typifier): Likewise.
 	(string_typifier): Likewise.
+	(array_typifier): Likewise.
+	(common_typifier): Likewise.
 	(struct_typifier): New function.
 
 2022-01-21  Jose E. Marchesi  <jemarch@gnu.org>
