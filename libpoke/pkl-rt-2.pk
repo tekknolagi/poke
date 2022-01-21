@@ -82,6 +82,23 @@ type Type =
         uint<64> _unit;
       } offset : code == PK_TYPE_OFFSET;
 
+      struct
+      {
+        int<32> bounded_p;
+        /* etype */
+      } array : code == PK_TYPE_ARRAY;
+
+      struct
+      {
+        int<32> union_p;
+        int<32> pinned_p;
+        int<32> integral_p;
+        int<32> isign;
+        uint<64> isize;
+        string[] fields;
+        string[] methods;
+      } sct : code == PK_TYPE_STRUCT;
+
       struct {} empty;
     } attrs;
 
@@ -97,6 +114,15 @@ type Type =
                 attrs.offset._unit);
       else if (code == PK_TYPE_STRING)
         print "string";
+      else if (code == PK_TYPE_ARRAY)
+        printf ("array%s", attrs.array.bounded_p ? "" : ",unbounded");
+      else if (code == PK_TYPE_STRUCT)
+        printf ("%s%s%s",
+                attrs.sct.union_p ? "union" : "struct",
+                attrs.sct.pinned_p ? ",pinned" : "",
+                attrs.sct.integral_p ? format (",isign=%i32d,isize=%i32d",
+                                               attrs.sct.isign, attrs.sct.isize)
+                                     : "");
       else
         print "unknown";
       if (name != "")
