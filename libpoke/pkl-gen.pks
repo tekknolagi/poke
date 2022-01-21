@@ -3222,33 +3222,26 @@
         return
         .end
 
-;;; RAS_MACRO_INTEGRAL_TYPIFIER @type_integral_type @type
-;;; ( -- SCT )
+;;; RAS_MACRO_INTEGRAL_TYPIFIER @type
+;;; ( SCT -- SCT )
 ;;;
-;;; Given an integral type, create an instance of the Type_Integral
-;;; struct as defined in the compiler runtime, that reflects the
-;;; properties of the integral type.
+;;; Given a Type struct, fill in its attributes for the given integral
+;;; type @TYPE.
 
-        .macro integral_typifier @type_integral_type @type
-        ;; Make a Type_Integral struct using its constructor.
-        push ulong<64>0                                   ; OFF
-        push ulong<64>0                                   ; OFF 0UL
-        push ulong<64>0                                   ; OFF 0UL 0UL
-        .c PKL_GEN_PUSH_SET_CONTEXT (PKL_GEN_CTX_IN_TYPE);
-        .c PKL_PASS_SUBPASS (@type_integral_type);
-        .c PKL_GEN_POP_CONTEXT;
-                                                          ; OFF 0UL 0UL TYP
-        mksct                                             ; SCT
-        .let #constructor = PKL_AST_TYPE_S_CONSTRUCTOR (@type_integral_type)
-        push #constructor
-        call                                              ; SCT
-        ;; Set the attributes for this integral type.
+        .macro integral_typifier @type
         .let #signed_p = pvm_make_int (PKL_AST_TYPE_I_SIGNED_P (@type), 32)
         .let #size = pvm_make_ulong (PKL_AST_TYPE_I_SIZE (@type), 64)
+        push "attrs"
+        sref
+        nip                     ; SCT(Type) SCT(attrs)
+        push "integral"
+        sref
+        nip2                    ; SCT(Type) SCT(integral)
         push "signed_p"
         push #signed_p
         sset
         push "size"
         push #size
-        sset
+        sset                    ; SCT(Type) SCT(integral)
+        drop                    ; SCT(type)
         .end

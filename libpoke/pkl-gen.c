@@ -2837,18 +2837,7 @@ PKL_PHASE_BEGIN_HANDLER (pkl_gen_ps_type_integral)
     }
   else if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPIFIER))
     {
-      pkl_ast_node type_integral_type
-        = pkl_env_lookup_type (pkl_get_env (PKL_PASS_COMPILER),
-                               "Type_Integral");
-
-      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, pvm_make_string ("attrs"));
-      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_SREF);
-      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_NIP);
-      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_PUSH, pvm_make_string ("integral"));
-      assert (type_integral_type);
-      RAS_MACRO_INTEGRAL_TYPIFIER (type_integral_type, PKL_PASS_NODE); /* SCT */
-      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_SSET);
-      pkl_asm_insn (PKL_GEN_ASM, PKL_INSN_DROP);
+      RAS_MACRO_INTEGRAL_TYPIFIER (PKL_PASS_NODE); /* SCT */
     }
   else if (PKL_GEN_IN_CTX_P (PKL_GEN_CTX_IN_TYPE))
     {
