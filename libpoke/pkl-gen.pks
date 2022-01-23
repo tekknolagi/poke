@@ -3371,6 +3371,77 @@
         .e common_typifier @type
         .end
 
+;;; RAS_FUNCTION_TYPIFIER_WRITER_WRAPPER @type
+;;; ( VAL -- )
+;;;
+;;; Assemble a function that type-checks VAL to be of some given
+;;; type and then calls its writer.
+;;;
+;;; Macro arguments:
+;;; @type is an AST node with the type of the entity being written,
+;;; which can be either an array or a struct.
+
+        .function typifier_writer_wrapper @type
+        prolog
+        ;; If the argument is not of the right type, raise an
+        ;; exception.
+     .c PKL_GEN_PUSH_SET_CONTEXT (PKL_GEN_CTX_IN_TYPE);
+     .c PKL_PASS_SUBPASS (@type);
+     .c PKL_GEN_POP_CONTEXT;
+        isa
+        nip
+        bnzi .type_ok
+        drop
+        push PVM_E_CONV
+        raise
+.type_ok:
+        drop
+        ;; Call the writer.
+        .let #writer = PKL_AST_TYPE_CODE (@type) == PKL_TYPE_ARRAY \
+                       ? PKL_AST_TYPE_A_WRITER (@type) \
+	               : PKL_AST_TYPE_S_WRITER (@type)
+        push #writer
+        call
+        return
+        .end
+
+;;; RAS_FUNCTION_TYPIFIER_FORMATER_WRAPPER @type
+;;; ( VAL INT -- STR )
+;;;
+;;; Assemble a function that type-checks VAL to be of some given
+;;; type and then calls its formater.
+;;;
+;;; Macro arguments:
+;;; @type is an AST node with the type of the entity being written,
+;;; which can be either an array or a struct.
+
+        .function typifier_formater_wrapper @type
+        prolog
+        ;; If the first argument is not of the right type, raise an
+        ;; exception.
+        swap
+     .c PKL_GEN_PUSH_SET_CONTEXT (PKL_GEN_CTX_IN_TYPE);
+     .c PKL_PASS_SUBPASS (@type);
+     .c PKL_GEN_POP_CONTEXT;
+        isa
+        nip
+        bnzi .type_ok
+        drop
+        push PVM_E_CONV
+        raise
+.type_ok:
+        drop
+        swap
+        strace 0
+        ;; Call the formater.
+        .let #formater = PKL_AST_TYPE_CODE (@type) == PKL_TYPE_ARRAY \
+                       ? PKL_AST_TYPE_A_FORMATER (@type) \
+	               : PKL_AST_TYPE_S_FORMATER (@type)
+        push #formater
+        call
+        return
+        .end
+
 ;;; RAS_MACRO_ARRAY_TYPIFIER @type
 ;;; ( SCT - SCT )
 ;;;
@@ -3391,18 +3462,24 @@
         push #mapper
         sset
   .c }
-        .let #writer = PKL_AST_TYPE_A_WRITER (@type)
- .c if (#writer != PVM_NULL)
- .c {
+  .c if (PKL_AST_TYPE_A_WRITER (@type) != PVM_NULL)
+  .c {
+  .c    pvm_val writer_closure;
+  .c    RAS_FUNCTION_TYPIFIER_WRITER_WRAPPER (writer_closure, @type);
+        .let #writer = writer_closure
         push "writer"
         push #writer
+        pec
         sset
   .c }
-        .let #formater = PKL_AST_TYPE_A_FORMATER (@type)
- .c if (#formater != PVM_NULL)
- .c {
+  .c if (PKL_AST_TYPE_A_FORMATER (@type) != PVM_NULL)
+  .c {
+  .c    pvm_val formater_closure;
+  .c    RAS_FUNCTION_TYPIFIER_FORMATER_WRAPPER (formater_closure, @type);
+        .let #formater = formater_closure
         push "formater"
         push #formater
+        pec
         sset
   .c }
         .let #printer = PKL_AST_TYPE_A_PRINTER (@type)
@@ -3456,11 +3533,14 @@
         push #mapper
         sset
   .c }
-        .let #writer = PKL_AST_TYPE_S_WRITER (@type)
- .c if (#writer != PVM_NULL)
- .c {
+  .c if (PKL_AST_TYPE_S_WRITER (@type) != PVM_NULL)
+  .c {
+  .c    pvm_val writer_closure;
+  .c    RAS_FUNCTION_TYPIFIER_WRITER_WRAPPER (writer_closure, @type);
+        .let #writer = writer_closure
         push "writer"
         push #writer
+        pec
         sset
   .c }
         .let #comparator = PKL_AST_TYPE_S_COMPARATOR (@type)
@@ -3470,11 +3550,14 @@
         push #comparator
         sset
   .c }
-        .let #formater = PKL_AST_TYPE_S_FORMATER (@type)
- .c if (#formater != PVM_NULL)
- .c {
+  .c if (PKL_AST_TYPE_S_FORMATER (@type) != PVM_NULL)
+  .c {
+  .c    pvm_val formater_closure;
+  .c    RAS_FUNCTION_TYPIFIER_FORMATER_WRAPPER (formater_closure, @type);
+        .let #formater = formater_closure
         push "formater"
         push #formater
+        pec
         sset
   .c }
         .let #printer = PKL_AST_TYPE_S_PRINTER (@type)

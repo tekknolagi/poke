@@ -1,5 +1,14 @@
 2022-01-23  Jose E. Marchesi  <jemarch@gnu.org>
 
+	* libpoke/pkl-gen.pks (typifier_writer_wrapper): New function.
+	(typifier_formater_wrapper): Likewise.
+	(array_typifier): Use the wrappers.
+	(struct_typifier): Likewise.
+	* testsuite/poke.pkl/typeof-11.pk: New test.
+	* testsuite/poke.pkl/typeof-12.pk: Likewise.
+
+2022-01-23  Jose E. Marchesi  <jemarch@gnu.org>
+
 	* libpoke/pkl-gen.c (pkl_gen_pr_decl): Compile formaters and
 	printers for named array and struct types.
 	* testsuite/poke.pkl/printf-38.pk: New test.
