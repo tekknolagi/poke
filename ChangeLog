@@ -1,3 +1,8 @@
+2022-01-30  Sergio Durigan Junior  <sergiodj@sergiodj.net>
+
+	* poke/Makefile.am (dist_pkgdata_DATA): Always install
+	pk-hserver.pk.
+
 2022-01-29  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* poke/poke.c (parse_args_2): Really restore proper behavior with
