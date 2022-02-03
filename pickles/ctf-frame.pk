@@ -70,9 +70,9 @@ type CTF_Frame_Header =
       }
   };
 
-var CTF_FRAME_FRE_OFFSET_1B = 1;
-var CTF_FRAME_FRE_OFFSET_2B = 2;
-var CTF_FRAME_FRE_OFFSET_4B = 4;
+var CTF_FRAME_FRE_OFFSET_1B = 0;
+var CTF_FRAME_FRE_OFFSET_2B = 1;
+var CTF_FRAME_FRE_OFFSET_4B = 2;
 /* At this time, a max of 3 distinct offsets are supported.  */
 var CTF_FRAME_FRE_OFFSET_NUM = 3;
 
