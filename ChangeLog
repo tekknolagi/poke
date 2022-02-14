@@ -1,3 +1,14 @@
+2022-02-14  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* doc/poke.texi (Integer Attributes): Update accordingly.
+	(Offset Attributes): Likewise.
+
+	* libpoke/pkl-typify.c (pkl_typify1_ps_attr): Allow using 'length
+	in any kind of value.
+	* testsuite/poke.pkl/attr-length-12.pk: New test.
+	* testsuite/poke.pkl/attr-length-13.pk: Likewise.
+	* testsuite/Makefile.am (EXTRA_DIST): Add new tests.
+
 2022-02-09  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* poke/pk-ios.c (pk_open_proc_maps): Use PRIx64 instead of %lx.
