@@ -151,3 +151,20 @@ type Eh_Frame_Section =
   {
     Eh_Frame_Section_Entry[] eh_frame_entries;
   };
+
+
+fun eh_frame_dump_fde_code_offset = (Eh_Frame_Section eh_frame) void:
+{
+    var i = 0;
+      for (ent in eh_frame.eh_frame_entries)
+	{
+	  try
+	    {
+	      printf ("%u32d:   %v \n", i++, ent.fde.code_offset);
+	    }
+	    catch if E_elem
+	    {
+	    }
+	}
+}
+
