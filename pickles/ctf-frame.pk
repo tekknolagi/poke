@@ -42,12 +42,20 @@ type CTF_Frame_FuncIndex_Entry =
     uint<32> func_num_fres;
   };
 
+/* Supported ABIs/Arch.  */
+var CTF_FRAME_ABI_AARCH64_ENDIAN_BIG = 1; /* AARCH64 little endian.  */
+var CTF_FRAME_ABI_AARCH64_ENDIAN_LITTLE = 2; /* AARCH64 big endian.  */
+var CTF_FRAME_ABI_AMD64_ENDIAN_LITTLE = 3; /* AMD64 little endian.  */
+
 var CTF_FRAME_FRE_TYPE_BASIC = 0x0;
 
 type CTF_Frame_Header = 
   struct
   {
     CTF_Frame_Preamble cth_frame_preamble;
+    byte cth_frame_abi_arch : cth_frame_abi_arch in [CTF_FRAME_ABI_AARCH64_ENDIAN_BIG,
+						    CTF_FRAME_ABI_AARCH64_ENDIAN_LITTLE,
+					            CTF_FRAME_ABI_AMD64_ENDIAN_LITTLE];
     byte cth_frame_fre_type : cth_frame_fre_type == CTF_FRAME_FRE_TYPE_BASIC;
     int<8> cth_cfa_bp_loc;
     int<8> cth_cfa_ra_loc;
