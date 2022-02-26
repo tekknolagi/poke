@@ -39,6 +39,9 @@
         tyisc
         bzi .not_a_function
         push PVM_E_CONV
+        push "msg"
+        push "evaluating a 'size attribute"
+        sset
         raise
 .not_a_function:
         drop
@@ -67,7 +70,11 @@
   .c {
         mm                      ; VAL MAPPED
         bnzi .mapped
+  .c }
         push PVM_E_MAP
+        push "msg"
+        push "evaluating an 'offset attribute"
+        sset
         raise
 .mapped:
         drop                    ; VAL
@@ -75,12 +82,6 @@
         nip                     ; BOFF
         push ulong<64>1
         mko                     ; OFF
-  .c }
-  .c else
-  .c {
-        push PVM_E_MAP
-        raise
-  .c }
         .end
 
 ;;; RAS_MACRO_ATTR_IOS @type
@@ -101,18 +102,16 @@
   .c {
         mm                      ; VAL MAPPED
         bnzi .mapped
+  .c }
         push PVM_E_MAP
+        push "msg"
+        push "evaluating an 'ios attribute"
+        sset
         raise
 .mapped:
         drop                    ; VAL
         mgetios                 ; VAL INT
         nip                     ; INT
-  .c }
-  .c else
-  .c {
-        push PVM_E_MAP
-        raise
-  .c }
         .end
 
 ;;; RAS_MACRO_ATTR_STRICT @type
