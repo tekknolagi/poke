@@ -588,6 +588,7 @@ my_decl_map_fn (pkl_ast_node decl, void *data)
   char *source =  PKL_AST_DECL_SOURCE (decl);
   int order = PKL_AST_DECL_ORDER (decl);
   char *type = NULL;
+  pk_val value = PK_NULL;
   int kind;
 
   /* Skip mappers, i.e. function declarations whose initials are
@@ -607,6 +608,9 @@ my_decl_map_fn (pkl_ast_node decl, void *data)
       return;
     }
 
+  if (PKL_AST_DECL_KIND (decl) != PKL_AST_DECL_KIND_TYPE)
+    value = pvm_env_lookup (payload->runtime_env, 0, order);
+
   type
     = (PKL_AST_TYPE (initial)
        ? pkl_type_str (PKL_AST_TYPE (initial), 1)
@@ -617,7 +621,7 @@ my_decl_map_fn (pkl_ast_node decl, void *data)
                type,
                loc.first_line, loc.last_line,
                loc.first_column, loc.last_column,
-               pvm_env_lookup (payload->runtime_env, 0, order),
+               value,
                payload->data);
   free (type);
 }
