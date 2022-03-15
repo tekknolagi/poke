@@ -1,3 +1,9 @@
+2022-03-16  Jose E. Marchesi  <jemarch@gnu.org>
+2022-03-16  Mohammad-Reza Nabipoor  <mnabipoor@gnu.org>
+
+	* libpoke/ios-dev-stream.c (ios_dev_stream_pread): Fix call to
+	fread.
+
 2022-03-10  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* libpoke/libpoke.c (my_decl_map_fn): Always return PK_NULL as
